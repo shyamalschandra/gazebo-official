@@ -80,6 +80,7 @@ OgreAdaptor::OgreAdaptor()
   Param::Begin(&this->parameters);
   this->ambientP = new ParamT<Vector4>("ambient",Vector4(.1,.1,.1,.1),0);
   this->shadowsP = new ParamT<bool>("shadows", true, 0);
+  this->shadowsTechniqueP = new ParamT<std::string>("shadowTechnique", "stencil", 0);
   this->skyMaterialP = new ParamT<std::string>("material","",1);
   this->backgroundColorP = new ParamT<Vector3>("backgroundColor",Vector3(0.5,0.5,0.5), 0);
 
@@ -99,6 +100,7 @@ OgreAdaptor::~OgreAdaptor()
 
   delete this->ambientP;
   delete this->shadowsP;
+  delete this->shadowsTechniqueP;
   delete this->backgroundColorP;
   delete this->skyMaterialP;
 
@@ -204,6 +206,7 @@ void OgreAdaptor::Init(XMLConfigNode *rootNode)
 
   this->ambientP->Load(node);
   this->shadowsP->Load(node);
+  this->shadowsTechniqueP->Load(node);
   this->backgroundColorP->Load(node);
 
   ambient.r = (**(this->ambientP)).x;
@@ -220,11 +223,11 @@ void OgreAdaptor::Init(XMLConfigNode *rootNode)
   // Ambient lighting
   this->sceneMgr->setAmbientLight(ambient);
 
-  // Not sure if this does something useful.
-  if (**(this->shadowsP))
+
+  if (this->shadowsP->GetValue() && this->shadowsTechniqueP->GetValue() == "stencil")
   {
     this->sceneMgr->setShadowTechnique( Ogre::SHADOWTYPE_STENCIL_MODULATIVE );
-    this->sceneMgr->setShadowTextureSettings(512,2);
+    this->sceneMgr->setShadowTextureSettings(512, 2);
     this->sceneMgr->setShadowColour(Ogre::ColourValue(0.5,0.5,0.5));
 
     this->sceneMgr->setShadowTexturePixelFormat(Ogre::PF_FLOAT16_R);
@@ -232,6 +235,22 @@ void OgreAdaptor::Init(XMLConfigNode *rootNode)
     this->sceneMgr->setShadowCasterRenderBackFaces(false);
 
     this->sceneMgr->setShadowFarDistance(20);
+  }
+  else if (this->shadowsP->GetValue() && this->shadowsTechniqueP->GetValue() == "texture")
+  {
+	this->sceneMgr->setShadowTechnique( Ogre::SHADOWTYPE_TEXTURE_MODULATIVE );
+    this->sceneMgr->setShadowTextureSettings(512, 2);
+    this->sceneMgr->setShadowColour(Ogre::ColourValue(0.5,0.5,0.5));
+
+    this->sceneMgr->setShadowTexturePixelFormat(Ogre::PF_FLOAT16_R);
+    this->sceneMgr->setShadowTextureSelfShadow(true);
+    this->sceneMgr->setShadowCasterRenderBackFaces(false);
+
+    this->sceneMgr->setShadowFarDistance(20);
+  }
+  else if (this->shadowsP->GetValue())
+  {
+	std::cerr << "Unsupported shadows type: \"" << this->shadowsTechniqueP->GetValue().c_str() << "\". Supported types are \"stencil\" and \"texture\". Not rendering shadows." << std::endl;
   }
 
   // Add a sky dome to our scene
@@ -299,6 +318,7 @@ void OgreAdaptor::Save(std::string &prefix, std::ostream &stream)
 
   OgreCreator::SaveFog(prefix, stream);
   stream << prefix << "  " << *(this->shadowsP) << "\n";
+  stream << prefix << "  " << *(this->shadowsTechniqueP) << "\n";
   stream << prefix << "</rendering:ogre>\n";
 }
 
