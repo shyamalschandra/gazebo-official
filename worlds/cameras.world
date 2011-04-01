@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+
+<gazebo:world 
+  xmlns:gazebo="http://playerstage.sourceforge.net/gazebo/xmlschema/#gz" 
+  xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model" 
+  xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" 
+  xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body" 
+  xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom" 
+  xmlns:joint="http://playerstage.sourceforge.net/gazebo/xmlschema/#joint" 
+  xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" 
+  xmlns:rendering="http://playerstage.sourceforge.net/gazebo/xmlschema/#rendering" 
+  xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+  xmlns:physics="http://playerstage.sourceforge.net/gazebo/xmlschema/#physics" >
+
+  <verbosity>4</verbosity>
+
+  <physics:ode>
+    <stepTime>0.001</stepTime>
+    <gravity>0 0 -9.8</gravity>
+    <cfm>0.0000000001</cfm>
+    <erp>0.2</erp>
+
+    <stepType>quick</stepType>
+    <stepIters>10</stepIters>
+    <stepW>1.3</stepW>
+    <contactMaxCorrectingVel>100.0</contactMaxCorrectingVel>
+    <contactSurfaceLayer>0.0</contactSurfaceLayer>
+  </physics:ode>
+
+  <rendering:gui>
+    <type>fltk</type>
+    <size>200 200</size>
+    <pos>0 0</pos>
+  </rendering:gui>
+
+  <rendering:ogre>
+    <ambient>.2 .2 .2 1</ambient>
+    <shadows>false</shadows>
+    <grid>false</grid>
+  </rendering:ogre>
+
+  <!-- Ground Plane -->
+  <model:physical name="plane1_model">
+    <xyz>0 0 0</xyz>
+    <rpy>0 0 0</rpy>
+    <static>true</static>
+
+    <body:plane name="plane1_body">
+      <geom:plane name="plane1_geom">
+        <normal>0 0 1</normal>
+        <size>100 100</size>
+        <segments>1  1</segments>
+        <uvTile>100 100</uvTile>
+        <mu1>109999.0</mu1>
+        <mu2>1000.0</mu2>
+        <material>Gazebo/GrayGrid</material>
+      </geom:plane>
+    </body:plane>
+  </model:physical>
+
+  <model:physical name="wg_model">
+    <xyz>-8 -4 0</xyz>
+    <static>true</static>
+
+    <body:box name="wg_body">
+      <geom:trimesh name="wg_geom">
+        <scale>0.0254 0.0254 0.0254</scale>
+        <mesh>willowgarage.dae</mesh>
+        <visual>
+          <mesh>willowgarage.dae</mesh>
+          <scale>0.0254 0.0254 0.0254</scale>
+        </visual>
+      </geom:trimesh>
+    </body:box>
+  </model:physical>
+
+  <!--
+  <model:physical name="camera">
+    <xyz> 0 0 5 </xyz>
+    <static>true</static>
+    <body:box name="body">
+      <geom:box name="geom">
+        <size> 1 1 1</size>
+        <visual>
+          <scale> 1 1 1</scale>
+          <mesh>unit_box</mesh>
+          <material>Gazebo/Red</material>
+        </visual>
+      </geom:box>
+
+    <sensor:camera name="big_texture">
+      <alwaysActive>true</alwaysActive>
+      <imageSize>320 240</imageSize>
+      <updateRate>25</updateRate>
+      <imageFormat>R8G8B8</imageFormat>
+      <hfov>90</hfov>
+      <nearClip>0.1</nearClip>
+      <farClip>10</farClip>
+      <saveFrames>false</saveFrames>
+      <saveFramePath>/tmp/frames</saveFramePath>
+    </sensor:camera>
+
+    <sensor:camera name="big_texture2">
+      <alwaysActive>true</alwaysActive>
+      <imageSize>320 240</imageSize>
+      <updateRate>25</updateRate>
+      <imageFormat>R8G8B8</imageFormat>
+      <hfov>90</hfov>
+      <nearClip>0.1</nearClip>
+      <farClip>10</farClip>
+      <saveFrames>false</saveFrames>
+      <saveFramePath>/tmp/frames</saveFramePath>
+    </sensor:camera>
+
+    <sensor:camera name="big_texture3">
+      <alwaysActive>true</alwaysActive>
+      <imageSize>320 240</imageSize>
+      <updateRate>25</updateRate>
+      <imageFormat>R8G8B8</imageFormat>
+      <hfov>90</hfov>
+      <nearClip>0.1</nearClip>
+      <farClip>10</farClip>
+      <saveFrames>false</saveFrames>
+      <saveFramePath>/tmp/frames</saveFramePath>
+    </sensor:camera>
+
+    <sensor:camera name="big_texture4">
+      <alwaysActive>true</alwaysActive>
+      <imageSize>320 240</imageSize>
+      <updateRate>25</updateRate>
+      <imageFormat>R8G8B8</imageFormat>
+      <hfov>90</hfov>
+      <nearClip>0.1</nearClip>
+      <farClip>10</farClip>
+      <saveFrames>false</saveFrames>
+      <saveFramePath>/tmp/frames</saveFramePath>
+    </sensor:camera>
+    </body:box>
+  </model:physical>
+  -->
+  
+<!--
+  <model:physical name="pr2">
+    <include embedded="true">
+      <xi:include href="models/pr2_fixed.model"/>
+    </include>
+  </model:physical>
+  -->
+
+
+  <!-- White Point light -->
+  <model:renderable name="point_white">
+    <xyz>0.0 5.0 10</xyz>
+    <static>true</static>
+    <light>
+      <type>point</type>
+      <diffuseColor>0.4 0.4 0.4</diffuseColor>
+      <specularColor>.1 .1 .1</specularColor>
+      <attenuation>0.2 0.01 0.001</attenuation>
+      <range>30</range>
+      <castShadows>true</castShadows>
+    </light>
+  </model:renderable>
+</gazebo:world>
