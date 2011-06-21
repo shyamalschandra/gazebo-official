@@ -1,0 +1,28 @@
+package gazebo.msgs;
+import "header.proto";
+import "pose.proto";
+import "point.proto";
+import "color.proto";
+
+message Light
+{
+  required Header header           = 1;
+  enum LightType
+  {
+    POINT       = 1;
+    SPOT        = 2;
+    DIRECTIONAL = 3;
+  }
+  optional LightType type         = 2;
+
+  optional Pose pose              = 3;
+  optional Color diffuse          = 4;
+  optional Color specular         = 5;
+  optional Point attenuation      = 6;
+  optional Point direction        = 7;
+  optional float range            = 8;
+  optional bool cast_shadows      = 9;
+  optional float spot_inner_angle = 10;
+  optional float spot_outer_angle = 11;
+  optional float spot_falloff     = 12;
+}
