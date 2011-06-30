@@ -1,0 +1,436 @@
+/*
+ * Copyright 2011 Nate Koenig & Andrew Howard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+/* Desc: Body class
+ * Author: Nate Koenig
+ * Date: 13 Feb 2006
+ */
+
+#include <sstream>
+#include <float.h>
+
+#include "common/Messages.hh"
+#include "common/Events.hh"
+#include "math/Quaternion.hh"
+#include "common/Console.hh"
+#include "common/Global.hh"
+#include "common/Exception.hh"
+
+#include "physics/Model.hh"
+#include "physics/World.hh"
+#include "physics/PhysicsEngine.hh"
+#include "physics/Geom.hh"
+#include "physics/Body.hh"
+
+#include "transport/Publisher.hh"
+
+using namespace gazebo;
+using namespace physics;
+
+////////////////////////////////////////////////////////////////////////////////
+// Constructor
+Body::Body(EntityPtr parent)
+    : Entity(parent)
+{
+  this->AddType(Base::BODY);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Destructor
+Body::~Body()
+{
+  std::vector<Entity*>::iterator iter;
+
+  for (unsigned int i=0; i < this->visuals.size(); i++)
+  {
+    msgs::Visual msg;
+    common::Message::Init(msg, this->visuals[i]);
+    msg.set_action( msgs::Visual::DELETE );
+    this->visPub->Publish(msg);
+  }
+  this->visuals.clear();
+
+  if (this->cgVisuals.size() > 0)
+  {
+    for (unsigned int i=0; i < this->cgVisuals.size(); i++)
+    {
+      msgs::Visual msg;
+      common::Message::Init(msg, this->cgVisuals[i]);
+      msg.set_action( msgs::Visual::DELETE );
+      this->visPub->Publish(msg);
+    }
+    this->cgVisuals.clear();
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Load the body
+void Body::Load( sdf::ElementPtr &_sdf )
+{
+  Entity::Load(_sdf);
+
+  if (this->sdf->GetElement("inertial"))
+    this->inertial.Load(this->sdf->GetElement("inertial"));
+
+  // before loading child geometry, we have to figure out of selfCollide is true
+  // and modify parent class Entity so this body has its own spaceId
+  this->SetSelfCollide( this->sdf->GetValueDouble("self_collide") );
+
+  // TODO: this shouldn't be in the physics sim
+  sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
+  while (visualElem)
+  {
+    std::ostringstream visname;
+    visname << this->GetCompleteScopedName() << "::VISUAL_" << 
+               this->visuals.size();
+
+    msgs::Visual msg = common::Message::VisualFromSDF(visualElem);
+    common::Message::Init(msg, visname.str());
+    msg.set_parent_id( this->GetCompleteScopedName() );
+    msg.set_is_static( this->IsStatic() );
+
+    this->visPub->Publish(msg);
+    this->visuals.push_back(msg.header().str_id());
+  
+    visualElem = this->sdf->GetNextElement("visual", visualElem); 
+  }
+ 
+  // Load the geometries
+  sdf::ElementPtr collisionElem = this->sdf->GetElement("collision");
+  while (collisionElem)
+  {
+    // Create and Load a geom, which will belong to this body.
+    this->LoadGeom(collisionElem);
+    collisionElem = this->sdf->GetNextElement("collision", collisionElem); 
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Initialize the body
+void Body::Init()
+{
+  Base_V::iterator iter;
+  for (iter = this->children.begin(); iter != this->children.end(); iter++)
+  {
+    if ((*iter)->HasType(Base::GEOM))
+    {
+      GeomPtr g = boost::shared_static_cast<Geom>(*iter);
+      g->Init();
+    }
+  }
+
+  // save transform from this Parent Model Frame to this Body Frame
+  // this is only used in setting Model pose from canonicalBody
+  // the true model pose given a canonical body is
+  //   this body's pose - this body's offsetFromModelFrame
+  this->initModelOffset = this->GetRelativePose().CoordPoseSolve(math::Pose());
+
+  this->SetKinematic( this->sdf->GetValueBool("kinematic") );
+
+  // If no geoms are attached, then don't let gravity affect the body.
+  if (this->children.size()==0 || !this->sdf->GetValueDouble("gravity"))
+    this->SetGravityMode(false);
+
+  // global-inertial damping is implemented in ode svn trunk
+  if(this->GetId())
+  {
+    this->SetLinearDamping( this->inertial.GetLinearDamping() );
+    this->SetAngularDamping( this->inertial.GetAngularDamping() );
+  }
+
+  this->linearAccel.Set(0,0,0);
+  this->angularAccel.Set(0,0,0);
+
+  /// Attach mesh for CG visualization
+  /// Add a renderable visual for CG, make visible in Update()
+  /// TODO: this shouldn't be in the physics sim
+  /*if (this->mass.GetAsDouble() > 0.0)
+  {
+    std::ostringstream visname;
+    visname << this->GetCompleteScopedName() + ":" + this->GetName() << "_CGVISUAL" ;
+
+    msgs::Visual msg;
+    common::Message::Init(msg, visname.str());
+    msg.set_parent_id( this->comEntity->GetCompleteScopedName() );
+    msg.set_render_type( msgs::Visual::MESH_RESOURCE );
+    msg.set_mesh( "unit_box" );
+    msg.set_material( "Gazebo/RedGlow" );
+    msg.set_cast_shadows( false );
+    msg.set_attach_axes( true );
+    msg.set_visible( false );
+    common::Message::Set(msg.mutable_scale(), math::Vector3(0.1, 0.1, 0.1));
+    this->vis_pub->Publish(msg);
+    this->cgVisuals.push_back( msg.header().str_id() );
+
+    if (this->children.size() > 1)
+    {
+      msgs::Visual g_msg;
+      common::Message::Init(g_msg, visname.str() + "_connectors");
+
+      g_msg.set_parent_id( this->comEntity->GetCompleteScopedName() );
+      g_msg.set_render_type( msgs::Visual::LINE_LIST );
+      g_msg.set_attach_axes( false );
+      g_msg.set_material( "Gazebo/GreenGlow" );
+      g_msg.set_visible( false );
+
+      // Create a line to each geom
+      for (Base_V::iterator giter = this->children.begin(); 
+           giter != this->children.end(); giter++)
+      {
+        EntityPtr e = boost::shared_dynamic_cast<Entity>(*giter);
+
+        msgs::Point *pt;
+        pt = g_msg.add_points();
+        pt->set_x(0);
+        pt->set_y(0);
+        pt->set_z(0);
+
+        pt = g_msg.add_points();
+        pt->set_x(e->GetRelativePose().pos.x);
+        pt->set_y(e->GetRelativePose().pos.y);
+        pt->set_z(e->GetRelativePose().pos.z);
+      }
+      this->vis_pub->Publish(msg);
+      this->cgVisuals.push_back( g_msg.header().str_id() );
+    }
+  }*/
+
+  this->enabled = true;
+
+  // DO THIS LAST!
+  sdf::ElementPtr originElem = this->sdf->GetOrCreateElement("origin");
+  this->SetRelativePose( originElem->GetValuePose("pose") );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Finalize the body
+void Body::Fini()
+{
+  Base_V::iterator giter;
+
+  this->connections.clear();
+
+  for (giter = this->children.begin(); giter != this->children.end(); giter++)
+    (*giter)->Fini();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set the collide mode of the body
+void Body::SetCollideMode( const std::string &m )
+{
+  Base_V::iterator giter;
+
+  unsigned int collideBits;
+
+  if (m == "all")
+    collideBits =  GZ_ALL_COLLIDE;
+  else if (m == "none")
+    collideBits =  GZ_NONE_COLLIDE;
+  else if (m == "sensors")
+    collideBits = GZ_SENSOR_COLLIDE;
+  else if (m == "ghost")
+    collideBits = GZ_GHOST_COLLIDE;
+  else
+  {
+    gzerr << "Unknown collide mode[" << m << "]\n";
+    return;
+  }
+
+  // TODO: Put this back in
+  /*for (giter = this->geoms.begin(); giter != this->geoms.end(); giter++)
+  {
+    (*giter)->SetCategoryBits(collideBits);
+    (*giter)->SetCollideBits(collideBits);
+  }*/
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Return Self-Collision Setting
+bool Body::GetSelfCollide()
+{
+  return this->sdf->GetValueBool("self_collide");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set the laser retro reflectiveness of this body
+void Body::SetLaserRetro(float retro)
+{
+  Base_V::iterator iter;
+
+  for (iter = this->children.begin(); iter != this->children.end(); iter++)
+  {
+    if ((*iter)->HasType(Base::GEOM))
+      boost::shared_static_cast<Geom>(*iter)->SetLaserRetro( retro );
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Update the body
+void Body::Update()
+{
+  // Apply our linear accel
+  this->SetForce(this->linearAccel);
+
+  // Apply our angular accel
+  this->SetTorque(this->angularAccel);
+
+  // FIXME: FIXME: @todo: @todo: race condition on factory-based model loading!!!!!
+   if (this->GetEnabled() != this->enabled)
+   {
+     this->enabled = this->GetEnabled();
+     this->enabledSignal(this->enabled);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Load a new geom helper function
+void Body::LoadGeom( sdf::ElementPtr &_sdf )
+{
+  GeomPtr geom;
+  std::string type = _sdf->GetElement("geometry")->GetFirstElement()->GetName();
+
+  /*if (type == "heightmap" || type == "map")
+    this->SetStatic(true);
+    */
+
+  geom = this->GetWorld()->GetPhysicsEngine()->CreateGeom( type, 
+      boost::shared_static_cast<Body>(shared_from_this()) );
+
+  if (!geom)
+    gzthrow("Unknown Geometry Type["+type +"]");
+
+  geom->Load(_sdf);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set the linear acceleration of the body
+void Body::SetLinearAccel(const math::Vector3 &accel)
+{
+  //this->SetEnabled(true); Disabled this line to make autoDisable work
+  this->linearAccel = accel;// * this->GetMass();
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set the angular acceleration of the body
+void Body::SetAngularAccel(const math::Vector3 &accel)
+{
+  //this->SetEnabled(true); Disabled this line to make autoDisable work
+  this->angularAccel = accel * this->inertial.GetMass().GetAsDouble();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the linear velocity of the body
+math::Vector3 Body::GetRelativeLinearVel() const
+{
+  return this->GetWorldPose().rot.RotateVectorReverse(this->GetWorldLinearVel());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the angular velocity of the body
+math::Vector3 Body::GetRelativeAngularVel() const
+{
+  return this->GetWorldPose().rot.RotateVectorReverse(this->GetWorldAngularVel());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the linear acceleration of the body
+math::Vector3 Body::GetRelativeLinearAccel() const
+{
+  return this->GetRelativeForce() / this->inertial.GetMass().GetAsDouble();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the angular acceleration of the body
+math::Vector3 Body::GetWorldLinearAccel() const
+{
+  return this->GetWorldForce() / this->inertial.GetMass().GetAsDouble();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the angular acceleration of the body
+math::Vector3 Body::GetRelativeAngularAccel() const
+{
+  return this->GetRelativeTorque() / this->inertial.GetMass().GetAsDouble();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the angular acceleration of the body
+math::Vector3 Body::GetWorldAngularAccel() const
+{
+  return this->GetWorldTorque() / this->inertial.GetMass().GetAsDouble();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the force applied to the body
+math::Vector3 Body::GetRelativeForce() const
+{
+  return this->GetWorldPose().rot.RotateVectorReverse(this->GetWorldForce());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the torque applied to the body
+math::Vector3 Body::GetRelativeTorque() const
+{
+  return this->GetWorldPose().rot.RotateVectorReverse(this->GetWorldTorque());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the model that this body belongs to
+ModelPtr Body::GetModel() const
+{
+  return boost::shared_dynamic_cast<Model>(this->GetParent());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the size of the body
+math::Box Body::GetBoundingBox() const
+{
+  math::Box box;
+  Base_V::const_iterator iter;
+
+  box.min.Set(FLT_MAX, FLT_MAX, FLT_MAX);
+  box.max.Set(0,0,0);
+
+  for (iter = this->children.begin(); iter != this->children.end(); iter++)
+  {
+    if ((*iter)->HasType(Base::GEOM))
+      box += boost::shared_static_cast<Geom>(*iter)->GetBoundingBox();
+  }
+
+  return box;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set whether this entity has been selected by the user through the gui
+bool Body::SetSelected( bool s )
+{
+  Entity::SetSelected(s);
+
+  if (s == false)
+    this->SetEnabled(true);
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Set Mass
+void Body::SetMass(Mass /*_mass*/)
+{
+  gzwarn << "Body::SetMass is empty\n";
+}
