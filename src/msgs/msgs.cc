@@ -353,7 +353,7 @@ msgs::Visual VisualFromSDF( sdf::ElementPtr _sdf )
     }
     else if (geomElem->GetName() == "mesh")
     {
-      scale= geomElem->GetValueDouble("scale");
+      scale= geomElem->GetValueVector3("scale");
       result.set_mesh_type( msgs::Visual::MESH );
     }
     else
@@ -388,24 +388,7 @@ msgs::Visual VisualFromSDF( sdf::ElementPtr _sdf )
   return result;
 }
 
-msgs::Shadows ShadowsFromSDF( sdf::ElementPtr _sdf )
-{
-  msgs::Shadows result;
 
-  std::string type = _sdf->GetValueString("type");
-  if (type == "stencil_modulative")
-    result.set_type( msgs::Shadows::STENCIL_MODULATIVE);
-  else if (type == "stencil_additive")
-    result.set_type( msgs::Shadows::STENCIL_ADDITIVE);
-  else if (type == "texture_additive")
-    result.set_type( msgs::Shadows::TEXTURE_ADDITIVE);
-  else if (type == "texture_modulative")
-    result.set_type( msgs::Shadows::TEXTURE_MODULATIVE);
-
-  result.mutable_color()->CopyFrom( Convert(_sdf->GetValueColor("rgba")) );
-
-  return result;
-}
 
 msgs::Fog FogFromSDF( sdf::ElementPtr _sdf )
 {
@@ -454,8 +437,7 @@ msgs::Scene SceneFromSDF(sdf::ElementPtr _sdf)
     result.mutable_fog()->CopyFrom( FogFromSDF(_sdf->GetElement("fog")) );
 
   if (_sdf->HasElement("shadows"))
-    result.mutable_shadows()->CopyFrom( ShadowsFromSDF(_sdf->GetElement("shadows")) );
-
+    result.set_shadows(_sdf->GetElement("shadows")->GetValueBool("enabled"));
 
   return result;
 }
