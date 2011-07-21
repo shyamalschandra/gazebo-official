@@ -37,12 +37,9 @@ namespace gazebo
 
   namespace sensors
   {
-    /// \addtogroup gazebo_sensor
-    /// \brief Sensor with one or more rays.
+
+    /// \addtogroup gazebo_sensors
     /// \{
-    /// \defgroup gazebo_ray Ray
-    /// \brief Sensor with one or more rays.
-    // \{
     
     /// \brief Sensor with one or more rays.
     ///
@@ -127,7 +124,6 @@ namespace gazebo
       private: gazebo::physics::Geom *laserGeom;
       private: gazebo::physics::MultiRayShape *laserShape;
     };
-    /// \}
     /// \}
   }
 }

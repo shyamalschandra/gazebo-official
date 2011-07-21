@@ -39,6 +39,10 @@ namespace gazebo
 {
   namespace transport
   {
+    /// \addtogroup gazebo_transport
+    /// \{
+
+
     /// \brief Manages topics and their subscriptions
     class TopicManager : public SingletonT<TopicManager>
     {
@@ -50,6 +54,12 @@ namespace gazebo
       public: void Fini();
 
       public: PublicationPtr FindPublication(const std::string &topic);
+
+      public: void AddNode( NodePtr _node );
+
+      public: void RemoveNode( NodePtr _node );
+
+      public: void ProcessNodes();
 
       /// \brief Returns true if the topic has been advertised
       /// \param _topic The name of the topic to check
@@ -172,10 +182,12 @@ namespace gazebo
 
       private: std::vector<PublicationPtr> advertisedTopics;
       private: SubMap subscribed_topics; 
+      private: std::vector<NodePtr> nodes;
 
       //Singleton implementation
       private: friend class SingletonT<TopicManager>;
     };
+    /// \}
   }
 }
 

@@ -21,12 +21,16 @@
 #ifndef PUBLISHER_HH
 #define PUBLISHER_HH
 
+#include <boost/thread.hpp>
 #include <google/protobuf/message.h>
 
 namespace gazebo
 {
   namespace transport
   {
+    /// \addtogroup gazebo_transport
+    /// \{
+
     /// \brief A publisher of messages on a topic
     class Publisher
     {
@@ -50,13 +54,19 @@ namespace gazebo
       /// \brief Get the message type
       public: std::string GetMsgType() const;
 
+      /// \brief Send latest message over the wire. For internal use only
+      public: void SendMessage();
+
       /// \brief Callback when a publish is completed
       private: void OnPublishComplete();
                
       private: std::string topic;
       private: std::string msgType;
       private: unsigned int pubCount;
+      private: google::protobuf::Message *message;
+      private: boost::recursive_mutex *mutex;
     };
+    /// \}
   }
 }
 
