@@ -1,0 +1,108 @@
+/*
+ * Copyright 2011 Nate Koenig & Andrew Howard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+/* Desc: Handles pushing messages out on a named topic
+ * Author: Nate Koenig
+ */
+
+#include "common/Exception.hh"
+#include "transport/TopicManager.hh"
+#include "transport/Publisher.hh"
+
+using namespace gazebo;
+using namespace transport;
+
+////////////////////////////////////////////////////////////////////////////////
+// Constructor
+Publisher::Publisher(const std::string &topic, const std::string &msg_type)
+  : topic(topic), msgType(msg_type)
+{
+  this->pubCount = 0;
+  this->mutex = new boost::recursive_mutex();
+  this->message = NULL;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Destructor
+Publisher::~Publisher()
+{
+  if (this->pubCount > 0)
+    gzerr << "Deleting Publisher on topic[" << this->topic << "] With " << this->pubCount << " outstanding publications.\n";
+
+  if (!this->topic.empty())
+    TopicManager::Instance()->Unadvertise(this->topic);
+
+  delete this->message;
+  delete this->mutex;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Publish a message
+void Publisher::Publish(google::protobuf::Message &_message )
+{
+  if (_message.GetTypeName() != this->msgType)
+    gzthrow("Invalid message type\n");
+
+  // Save the latest message
+  this->mutex->lock();
+  this->pubCount = 1;
+  if (!this->message)
+    this->message = _message.New();
+  this->message->CopyFrom( _message );
+  this->mutex->unlock();
+
+  /*this->pubCount += 1;
+  TopicManager::Instance()->Publish(this->topic, message, 
+      boost::bind(&Publisher::OnPublishComplete, this));
+      */
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Send the lastest message
+void Publisher::SendMessage()
+{
+  this->mutex->lock();
+  if (this->pubCount > 0)
+  {
+    // Send the latested message.
+    TopicManager::Instance()->Publish(this->topic, *this->message, 
+        boost::bind(&Publisher::OnPublishComplete, this));
+  }
+
+  this->pubCount = 0;
+  this->mutex->unlock();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the topic name
+std::string Publisher::GetTopic() const
+{
+  return this->topic;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Get the message type
+std::string Publisher::GetMsgType() const
+{
+  return this->msgType;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Callback when a publish is completed
+void Publisher::OnPublishComplete()
+{
+  //this->pubCount -= 1;
+}
