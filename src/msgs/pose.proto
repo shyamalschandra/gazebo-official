@@ -1,0 +1,19 @@
+package gazebo.msgs;
+
+/// \ingroup gazebo_msgs
+/// \interface Pose 
+/// \brief Message for a pose
+/// \verbatim
+
+import "header.proto";
+import "point.proto";
+import "quaternion.proto";
+
+message Pose
+{
+  optional Header header = 1;
+  required Point position = 2;
+  required Quaternion orientation = 3;
+}
+
+/// \endverbatim
