@@ -1,0 +1,26 @@
+<gazebo version="1.0">
+<model name="man_standing" static="true">
+  <origin pose="-1.0 0 0 0 0 0"/>
+  <link name="body">
+    <inertial mass="1.0">
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+
+    <collision name="collision">
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+    <visual>
+      <geometry>
+        <!--<mesh filename="stovetop/stovetop.dae"/>-->
+        <!--<mesh filename="man_standing.dae"/>-->
+        <!--<mesh filename="hanoi_blue_disk.dae"/>-->
+        <mesh filename="willowgarage.dae"/>
+      </geometry>
+      <!--<material script="Gazebo/Grey"/>-->
+    </visual>
+  </link>
+</model>
+
+
