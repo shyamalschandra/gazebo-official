@@ -1,0 +1,15 @@
+package gazebo.msgs;
+
+/// \ingroup gazebo_msgs
+/// \interface Request
+/// \brief A message containing a string request
+/// \verbatim
+
+message Request
+{
+  required string request = 1;
+  optional string str_data = 2;
+  optional int32 index = 3;
+}
+
+/// \endverbatim
