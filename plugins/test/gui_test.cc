@@ -37,8 +37,6 @@ namespace gazebo
       this->connections.push_back( 
           event::Events::ConnectPreRender( 
             boost::bind(&GUITest::PreRender, this) ) );
-
-
     }
 
     private: void PreRender()
@@ -74,10 +72,36 @@ namespace gazebo
                  userCam->GetGUIOverlay()->AttachCameraToImage( this->camera, 
                      "Root/CameraView");
 
+                 userCam->GetGUIOverlay()->ButtonCallback( 
+                     "Root/PrepositionButton", 
+                     &GUITest::OnPrepositionButton, this  );
+
+                 userCam->GetGUIOverlay()->ButtonCallback( 
+                     "Root/VerbButton", &GUITest::OnVerbButton, this  );
+
+                 userCam->GetGUIOverlay()->GetWindow("Root/PrepositionButton")->hide();
+                 userCam->GetGUIOverlay()->GetWindow("Root/NounButton")->hide();
+                 userCam->GetGUIOverlay()->GetWindow("Root/VerbList")->hide();
+                 userCam->GetGUIOverlay()->GetWindow("Root/PrepositionList")->hide();
+                 userCam->GetGUIOverlay()->GetWindow("Root/NounList")->hide();
+
                  connected = true;
                }
-
              }
+    private: void OnPrepositionButton()
+             {
+               printf("GUITest::Prep Button\n");
+             }
+
+    private: void OnVerbButton()
+             {
+               rendering::UserCameraPtr userCam = gui::get_active_camera();
+               CEGUI::Listbox *win = (CEGUI::Listbox*)(userCam->GetGUIOverlay()->GetWindow("Root/VerbList"));
+               win->show();
+               
+               win->addItem(new CEGUI::ListboxTextItem("Hello") );
+             }
+
 
     private: void Init()
     {
