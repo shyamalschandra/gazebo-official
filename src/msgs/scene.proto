@@ -1,0 +1,33 @@
+package gazebo.msgs;
+
+/// \ingroup gazebo_msgs
+/// \interface Scene
+/// \brief A message containing a description of a scene
+/// \verbatim
+
+import "header.proto";
+import "color.proto";
+import "fog.proto";
+import "shadows.proto";
+import "visual.proto";
+import "pose.proto";
+import "light.proto";
+import "joint.proto";
+import "model.proto";
+
+message Scene
+{
+  optional Color ambient       = 2;
+  optional Color background    = 3;
+  optional string sky_material = 4;
+  optional bool shadows        = 5 [default = true];
+  optional Fog fog             = 6;
+  optional bool grid           = 7;
+
+  repeated Visual visual       = 8;
+  repeated Model model         = 9;
+  repeated Light light         = 10; 
+  repeated Joint joint         = 11;
+}
+
+/// \endverbatim
