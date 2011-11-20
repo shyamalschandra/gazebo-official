@@ -174,16 +174,17 @@ namespace gazebo
       public: void AttachStaticModel(ModelPtr &_model, 
                   const std::string &_linkName, math::Pose _offset);
 
+      public: void DetachStaticModel(const std::string &_model);
+
       protected: virtual void OnPoseChange();
-
-      private: void SlideBodyAndChildren(LinkPtr _body1, 
-                   const math::Vector3 &_anchor, const math::Vector3 &_axis, 
-                   double _dangle, bool _updateChildren);
-
 
       private: void RotateBodyAndChildren(LinkPtr _body1, 
                    const math::Vector3 &_anchor, const math::Vector3 &_axis, 
                    double _dangle, bool _updateChildren);
+               
+      private: void SlideBodyAndChildren(LinkPtr _body1,
+                   const math::Vector3 &_anchor, const math::Vector3 &_axis,
+                   double _dposition, bool _updateChildren);
 
       private: void GetAllChildrenBodies(std::vector<LinkPtr> &_bodies, 
                    const LinkPtr &_body);
@@ -216,6 +217,7 @@ namespace gazebo
       private: boost::recursive_mutex *updateMutex;
 
       protected: std::vector<ModelPtr> attachedModels;
+      protected: std::vector<std::string> attachedModelsLinks;
       protected: std::vector<math::Pose> attachedModelsOffset;
 
     };

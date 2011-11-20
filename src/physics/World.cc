@@ -72,7 +72,6 @@ class ModelUpdate_TBB
 // constructor
 World::World(const std::string &_name)
 {
-  this->initialized = false;
   this->receiveMutex = new boost::mutex();
 
   this->stepInc = false;
@@ -119,7 +118,6 @@ World::~World()
 // Load the world
 void World::Load( sdf::ElementPtr _sdf )
 {
-  this->initialized = false;
   this->sdf = _sdf;
 
   if (this->sdf->GetValueString("name").empty())
@@ -222,7 +220,6 @@ void World::Init()
 
   // Initialize the physics engine
   this->physicsEngine->Init();
-  this->initialized = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

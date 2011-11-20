@@ -30,6 +30,7 @@
 #include "transport/Transport.hh"
 #include "transport/Node.hh"
 
+#include "physics/RayShape.hh"
 #include "physics/Collision.hh"
 #include "physics/Model.hh"
 #include "physics/Collision.hh"
@@ -496,4 +497,48 @@ void Entity::UpdateAnimation()
 const math::Pose &Entity::GetDirtyPose() const
 {
   return this->dirtyPose;
+}
+
+math::Box Entity::GetCollisionBoundingBox() const
+{
+  math::Box box;
+  for (Base_V::const_iterator iter = this->children.begin();
+       iter != this->children.end(); iter++)
+  {
+    box += this->GetCollisionBoundingBoxHelper(*iter);
+  }
+
+  return box;
+}
+
+math::Box Entity::GetCollisionBoundingBoxHelper(BasePtr _base) const
+{
+  if (_base->HasType(COLLISION))
+    return boost::shared_dynamic_cast<Collision>(_base)->GetBoundingBox();
+
+  math::Box box;
+
+  for (unsigned int i=0; i < _base->GetChildCount(); i++)
+  {
+    box += this->GetCollisionBoundingBoxHelper(_base->GetChild(i));
+  }
+
+  return box;
+}
+
+void Entity::GetNearestEntityBelow(double &_distBelow,
+                                   std::string &_entityName)
+{
+  RayShapePtr rayShape = boost::shared_dynamic_cast<RayShape>(
+    this->GetWorld()->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
+
+  math::Box box = this->GetCollisionBoundingBox();
+
+  math::Vector3 start = this->GetWorldPose().pos; 
+  math::Vector3 end = start;
+  start.z = box.min.z - 0.00001;
+  end.z -= 1000;
+  rayShape->SetPoints(start, end);
+  rayShape->GetIntersection(_distBelow, _entityName);
+  _distBelow += 0.00001;
 }
