@@ -47,8 +47,17 @@ void Node::Init(const std::string &_space)
     this->topicNamespace = "default";
     std::list<std::string> namespaces;
     TopicManager::Instance()->GetTopicNamespaces(namespaces);
-    if (namespaces.size() > 0)
-      this->topicNamespace = namespaces.front();
+
+    std::string ns;
+    if (namespaces.size() == 0)
+    {
+      ns = "default";
+      gzerr << "No namespace found";
+    }
+    else
+      ns = namespaces.front();
+
+    this->topicNamespace = namespaces.front();
   }
   else
     TopicManager::Instance()->RegisterTopicNamespace(_space);
