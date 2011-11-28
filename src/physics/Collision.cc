@@ -55,8 +55,14 @@ Collision::Collision( LinkPtr link )
   this->transparency = 0;
   this->contactsEnabled = false;
 
-  this->connections.push_back( event::Events::ConnectShowBoundingBoxes( boost::bind(&Collision::ShowBoundingBox, this, _1) ) );
-  this->connections.push_back( this->link->ConnectEnabled( boost::bind(&Collision::EnabledCB, this, _1) ) );
+  this->surface.reset(new SurfaceParams());
+
+  this->connections.push_back(
+      event::Events::ConnectShowBoundingBoxes(
+        boost::bind(&Collision::ShowBoundingBox, this, _1)));
+  this->connections.push_back(
+      this->link->ConnectEnabled(
+        boost::bind(&Collision::EnabledCB, this, _1)));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,6 +89,7 @@ void Collision::Fini()
   Entity::Fini();
   this->link.reset();
   this->shape.reset();
+  this->surface.reset();
   this->connections.clear();
 }
 
@@ -91,6 +98,9 @@ void Collision::Fini()
 void Collision::Load( sdf::ElementPtr &_sdf )
 {
   Entity::Load(_sdf);
+
+  if (this->sdf->HasElement("surface"))
+    this->surface->Load(this->sdf->GetElement("surface"));
 
   if (this->shape)
     this->shape->Load(this->sdf->GetElement("geometry")->GetFirstElement());
@@ -432,10 +442,12 @@ void Collision::UpdateParameters( sdf::ElementPtr &_sdf )
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Fill a collision message
-void Collision::FillCollisionMsg( msgs::Collision &_msg )
+void Collision::FillCollisionMsg(msgs::Collision &_msg)
 {
-  msgs::Set( _msg.mutable_pose(), this->GetWorldPose() );
-  _msg.set_name( this->GetCompleteScopedName() );
-  _msg.set_laser_retro( this->GetLaserRetro() );
+  msgs::Set(_msg.mutable_pose(), this->GetWorldPose());
+  _msg.set_name(this->GetName());
+  _msg.set_laser_retro(this->GetLaserRetro());
+  this->shape->FillShapeMsg(*_msg.mutable_geometry());
+  this->surface->FillSurfaceMsg(*_msg.mutable_surface());
 }
  

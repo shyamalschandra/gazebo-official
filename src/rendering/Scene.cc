@@ -742,7 +742,7 @@ void Scene::PrintSceneGraphHelper(const std::string &prefix_, Ogre::Node *node_)
 
   std::cout << prefix_ << nodeName << "\n";
   std::cout << prefix_ << "  Num Objs[" << numAttachedObjs << "]\n";
-  for (unsigned int i=0; i < numAttachedObjs; i++)
+  for (int i=0; i < numAttachedObjs; i++)
   {
     std::cout << prefix_ << "    Obj[" << snode->getAttachedObject(i)->getName() << "]\n";
   }
@@ -996,17 +996,17 @@ void Scene::ProcessSceneMsg( const boost::shared_ptr<msgs::Scene const> &_msg)
     pm->set_name(_msg->model(i).name());
     this->poseMsgs.push_front(pm);
 
-    for (int j=0; j < _msg->model(i).links_size(); j++)
+    for (int j=0; j < _msg->model(i).link_size(); j++)
     {
       boost::shared_ptr<msgs::Pose> pm2(
-          new msgs::Pose(_msg->model(i).links(j).pose()));
-      pm2->set_name(_msg->model(i).links(j).name());
+          new msgs::Pose(_msg->model(i).link(j).pose()));
+      pm2->set_name(_msg->model(i).link(j).name());
       this->poseMsgs.push_front(pm2);
 
-      for (int k=0; k < _msg->model(i).links(j).sensors_size(); k++)
+      for (int k=0; k < _msg->model(i).link(j).sensor_size(); k++)
       {
         boost::shared_ptr<msgs::Sensor> sm(new msgs::Sensor(
-              _msg->model(i).links(j).sensors(k)));
+              _msg->model(i).link(j).sensor(k)));
         this->sensorMsgs.push_back(sm);
       }
     }
@@ -1252,14 +1252,13 @@ void Scene::OnRequest(const boost::shared_ptr<msgs::Request const> &_msg)
   //std::cout << _msg->DebugString() << "\n";
   if (_msg->request() == "entity_delete")
   {
-    /*std::cout << "Delete entity[" << _msg->data() << "]\n";
+    //std::cout << "Delete entity[" << _msg->data() << "]\n";
     Visual_M::iterator iter;
     iter = this->visuals.find(_msg->data());
     if (iter != this->visuals.end())
     {
       this->RemoveVisual(iter->second);
     }
-    */
   }
   else if (_msg->request() == "show_collision")
   {
@@ -1273,13 +1272,7 @@ void Scene::OnRequest(const boost::shared_ptr<msgs::Request const> &_msg)
     if (vis)
       vis->ShowCollision(false);
   }
-  printf("Request complete\n");
 
-  if (_msg->data() == "default::plane1_model")
-  {
-    std::cout << "Size[" << this->visuals.size() << "]\n";
-    this->PrintSceneGraph();
-  }
 }
 
 void Scene::ProcessVisualMsg(const boost::shared_ptr<msgs::Visual const> &_msg)
@@ -1421,10 +1414,7 @@ void Scene::RemoveVisual(VisualPtr _vis)
     Visual_M::iterator iter = this->visuals.find(_vis->GetName());
     if (iter != this->visuals.end())
     {
-      if (_vis->GetName() == "default::pr2")
-        gzerr << "\n\n\n\n DELETE PR2 \n\n\n\n";
-      std::cout << "Remove Visual[" << _vis->GetName() << "] Use[" << iter->second.use_count() << "]...\n";
-      
+
       iter->second->Fini();
       this->visuals.erase(iter);
       std::cout << "Visual After Erase[" << _vis.use_count() << "]\n"; 
