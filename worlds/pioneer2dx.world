@@ -46,33 +46,34 @@
     </frames>
   </rendering:gui>
 
-
   <rendering:ogre>
     <ambient>0.5 0.5 0.5 0.5</ambient>
+    <sky>
+      <material>Gazebo/CloudySky</material>
+    </sky>
     <grid>false</grid>
-    <maxUpdateRate>10</maxUpdateRate>
+    <maxUpdateRate>10.</maxUpdateRate>
     <shadowTechnique>none</shadowTechnique>
     <shadows>false</shadows>
   </rendering:ogre>
 
-
-  <!-- ground plane -->
-  <model:physical name="gplane">
-    <xyz>0 0 0</xyz>	
+   <!-- Ground Plane -->
+  <model:physical name="plane1_model">
+    <xyz>0 0 0</xyz>
     <rpy>0 0 0</rpy>
     <static>true</static>
 
-    <body:plane name="plane">
-      <geom:plane name="plane">
-        <laserRetro>2000.0</laserRetro>
-        <mu1>50.0</mu1>
-        <mu2>50.0</mu2>
+    <body:plane name="plane1_body">
+      <geom:plane name="plane1_geom">
+        <normal>0 0 1</normal>
+        <mu1>100000.0</mu1>
+        <mu2>100000.0</mu2>
         <kp>1000000000.0</kp>
         <kd>1.0</kd>
-        <normal>0 0 1</normal>
-        <size>51.3 51.3</size>
+
+        <size>2000 2000</size>
         <segments>10 10</segments>
-        <uvTile>100 100</uvTile>
+        <uvTile>2000 2000</uvTile>
         <material>Gazebo/GrayGrid</material>
       </geom:plane>
     </body:plane>
