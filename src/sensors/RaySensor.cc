@@ -150,6 +150,8 @@ int RaySensor::GetRayCount() const
 //////////////////////////////////////////////////
 int RaySensor::GetRangeCount() const
 {
+  // todo: maybe should check against this->laserMsg.ranges_size()
+  //       as users use this to loop through GetRange() calls
   return this->laserShape->GetSampleCount() *
          this->laserShape->GetScanResolution();
 }
@@ -191,9 +193,14 @@ void RaySensor::GetRanges(std::vector<double> &_ranges)
 //////////////////////////////////////////////////
 double RaySensor::GetRange(int _index)
 {
-  if (_index < 0 || _index > this->laserMsg.ranges_size())
+  if (this->laserMsg.ranges_size() == 0)
   {
-    //gzerr << "Invalid range index[" << _index << "]\n";
+    gzwarn << "ranges not constructed yet (zero sized)\n";
+    return 0.0;
+  }
+  if (_index < 0 || _index >= this->laserMsg.ranges_size())
+  {
+    gzerr << "Invalid range index[" << _index << "]\n";
     return 0.0;
   }
 
@@ -218,10 +225,14 @@ int RaySensor::GetFiducial(int index)
 //////////////////////////////////////////////////
 void RaySensor::UpdateImpl(bool /*_force*/)
 {
+  // do the collision checks
   this->laserShape->Update();
+
+  this->mutex->lock();
+
   this->lastUpdateTime = this->world->GetSimTime();
 
-  // Store the latest laser scan.
+  // Store the latest laser scans into laserMsg
   msgs::Set(this->laserMsg.mutable_offset(), this->GetPose());
   this->laserMsg.set_angle_min(this->GetAngleMin().GetAsRadian());
   this->laserMsg.set_angle_max(this->GetAngleMax().GetAsRadian());
@@ -229,17 +240,17 @@ void RaySensor::UpdateImpl(bool /*_force*/)
 
   this->laserMsg.set_range_min(this->GetRangeMin());
   this->laserMsg.set_range_max(this->GetRangeMax());
-  this->mutex->lock();
+
   this->laserMsg.clear_ranges();
   this->laserMsg.clear_intensities();
 
+  // todo: add loop for vertical range count
   for (unsigned int j = 0; j < (unsigned int)this->GetVerticalRayCount(); j++)
-    for (unsigned int i = 0; i < (unsigned int)this->GetRayCount(); i++)
-    {
-      int index = j * this->GetRayCount() + i;
-      this->laserMsg.add_ranges(this->laserShape->GetRange(index));
-      this->laserMsg.add_intensities(0);
-    }
+  for (unsigned int i = 0; i < (unsigned int)this->GetRayCount(); i++)
+  {
+    this->laserMsg.add_ranges(this->laserShape->GetRange(j*this->GetRayCount()+i));
+    this->laserMsg.add_intensities(0);
+  }
   this->mutex->unlock();
 
   if (this->scanPub)
