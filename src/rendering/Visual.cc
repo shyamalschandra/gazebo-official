@@ -383,11 +383,12 @@ void Visual::Load()
   }
 
   Ogre::Entity *ent = (Ogre::Entity *) obj;
-  
+
   if (ent)
   {
     for (unsigned int i = 0; i < ent->getNumSubEntities(); i++)
-      ent->getSubEntity(i)->setCustomParameter(1, Ogre::Vector4(this->sdf->GetValueDouble("laser_retro"),0.0,0.0,0.0));
+      ent->getSubEntity(i)->setCustomParameter(1, Ogre::Vector4(
+          this->sdf->GetValueDouble("laser_retro"), 0.0, 0.0, 0.0));
   }
 
   // Set the pose of the scene node
@@ -726,12 +727,12 @@ void Visual::SetMaterial(const std::string &_materialName)
     }
 
     // Apply material to all child scene nodes
-    for (unsigned int i=0; i < this->sceneNode->numChildren(); ++i)
+    for (unsigned int i = 0; i < this->sceneNode->numChildren(); ++i)
     {
       Ogre::SceneNode *sn = (Ogre::SceneNode*)(this->sceneNode->getChild(i));
       for (int j = 0; j < sn->numAttachedObjects(); j++)
       {
-        Ogre::MovableObject *obj = sn->getAttachedObject(j); 
+        Ogre::MovableObject *obj = sn->getAttachedObject(j);
 
         if (dynamic_cast<Ogre::Entity*>(obj))
           ((Ogre::Entity*)obj)->setMaterialName(this->myMaterialName);
