@@ -53,7 +53,8 @@ void RayPlugin::Load(sensors::SensorPtr _parent, sdf::ElementPtr /*_sdf*/)
 
   this->world = physics::get_world(this->parentSensor->GetWorldName());
 
-  this->newLaserScansConnection = this->parentSensor->GetLaserShape()->ConnectNewLaserScans(
+  this->newLaserScansConnection =
+    this->parentSensor->GetLaserShape()->ConnectNewLaserScans(
       boost::bind(&RayPlugin::OnNewLaserScans, this));
 }
 
