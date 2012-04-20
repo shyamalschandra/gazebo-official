@@ -1,5 +1,6 @@
-/* Copyright (C)
- *     Jonas Mellin & Zakiruz Zaman
+/*
+ * Copyright 2011 Nate Koenig & Andrew Howard
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,20 +12,39 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/* Desc: Gazebo RFID Tag Manager
- * Author: Jonas Mellin & Zakiruz Zaman 
- * Date: 6th December 2011
- */
+ *
+*/
+#ifndef BVHLOADER_HH
+#define BVHLOADER_HH
 
-#include "RFIDTagManager.hh"
+#include <vector>
+#include <map>
+#include <string>
 
-using namespace gazebo;
-using namespace sensors;
+#include "math/Pose.hh"
 
-/////////////////////////////////////////////////
-void RFIDTagManager::AddTaggedModel(RFIDTag *_model)
+#define X_POSITION 0
+#define Y_POSITION 1
+#define Z_POSITION 2
+#define X_ROTATION 3
+#define Y_ROTATION 4
+#define Z_ROTATION 5
+
+namespace gazebo
 {
-  this->taggedModels.push_back(_model);
-  std::cout << " added tagged model to the queue" << std::endl;
+  namespace common
+  {
+    class Skeleton;
+
+    class BVHLoader
+    {
+      public: BVHLoader();
+
+      public: ~BVHLoader();
+
+      public: Skeleton* Load(const std::string &filename, double scale);
+    };
+  }
 }
+
+#endif
