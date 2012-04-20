@@ -29,7 +29,6 @@ DiffDrivePlugin::DiffDrivePlugin()
   : leftPID(0.01, 0.0, 0.001), rightPID(0.01, 0.0, 0.001)
 {
   this->wheelSpeed[LEFT] = this->wheelSpeed[RIGHT] = 0;
-  this->sum = 0;
 }
 
 /////////////////////////////////////////////////
@@ -37,9 +36,6 @@ void DiffDrivePlugin::Load(physics::ModelPtr _model,
                            sdf::ElementPtr _sdf)
 {
   this->model = _model;
-  this->link = this->model->GetLink();
-  this->leftWheelLink = this->model->GetLink("left_wheel");
-  this->rightWheelLink = this->model->GetLink("right_wheel");
 
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(model->GetWorld()->GetName());
@@ -124,6 +120,7 @@ void DiffDrivePlugin::OnUpdate()
 
   dr = (d1 + d2) / 2;
   da = (d1 - d2) / this->wheelSeparation;
+
   double leftVel = this->leftJoint->GetVelocity(0);
   double rightVel = this->rightJoint->GetVelocity(0);
 

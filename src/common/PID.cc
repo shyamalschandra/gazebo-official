@@ -26,10 +26,7 @@ using namespace common;
 PID::PID(double _p, double _i, double _d, double _imax, double _imin)
   : pGain(_p), iGain(_i), dGain(_d), iMax(_imax), iMin(_imin)
 {
-  this->pErrLast = 0.0;
-  this->pErr = 0.0;
-  this->iErr = 0.0;
-  this->dErr = 0.0;
+  this->Reset();
 }
 
 /////////////////////////////////////////////////
@@ -38,9 +35,31 @@ PID::~PID()
 }
 
 /////////////////////////////////////////////////
+void PID::Init(double _p, double _i, double _d, double _imax, double _imin)
+{
+  this->pGain = _p;
+  this->iGain = _i;
+  this->dGain = _d;
+  this->iMax = _imax;
+  this->iMin = _imin;
+
+  this->Reset();
+}
+
+/////////////////////////////////////////////////
+void PID::Reset()
+{
+  this->pErrLast = 0.0;
+  this->pErr = 0.0;
+  this->iErr = 0.0;
+  this->dErr = 0.0;
+  this->cmd = 0.0;
+}
+
+/////////////////////////////////////////////////
 double PID::Update(double _error, common::Time _dt)
 {
-   double pTerm, dTerm, iTerm, cmd;
+   double pTerm, dTerm, iTerm;
    this->pErr = _error; //this is pError = pState-pTarget
  
    if (_dt == common::Time(0,0) || isnan(_error) || isinf(_error))
@@ -76,9 +95,27 @@ double PID::Update(double _error, common::Time _dt)
 
    // Calculate derivative contribution to command
    dTerm = this->dGain * this->dErr;
-
-   printf("Err[%f] P[%f] I[%f] D[%f]\n", _error, pTerm, iTerm, dTerm);
-   cmd = -pTerm - iTerm - dTerm;
+   this->cmd = -pTerm - iTerm - dTerm;
  
-   return cmd;
+   return this->cmd;
+}
+
+/////////////////////////////////////////////////
+void PID::SetCmd(double _cmd)
+{
+  this->cmd = _cmd;
+}
+
+/////////////////////////////////////////////////
+double PID::GetCmd()
+{
+  return this->cmd;
+}
+
+/////////////////////////////////////////////////
+void PID::GetErrors(double &_pe, double &_ie, double &_de)
+{
+  _pe = this->pErr;
+  _ie = this->iErr;
+  _de = this->dErr;
 }
