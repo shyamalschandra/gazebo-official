@@ -1,0 +1,17 @@
+<?xml version="1.0"?> 
+<gazebo version="1.0">
+  <world name="default">
+
+    <include filename="ground_plane.model"/>
+    <include filename="sun.light"/>
+
+    <actor name="actor1" static="true">
+      <origin pose="0 0 0 0 0 0"/>
+      <skin filename="cmu_16_15-new.dae" scale="1.0"/>
+      <animation loop="true" delay_start="0.0" time_scale="1">
+        <!--external filename="poses000.s1.dae" scale="1"/-->
+      </animation>
+    </actor>
+
+  </world>
+</gazebo>
