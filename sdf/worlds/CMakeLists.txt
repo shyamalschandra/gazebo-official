@@ -15,6 +15,7 @@ set (files
   plugin.world
   pr2.world
   presentation.world
+  projector_test.world
   shapes.world
   weshare2012.world
   willowgarage.world)

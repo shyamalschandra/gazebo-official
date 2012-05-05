@@ -121,7 +121,7 @@ TEST_F(PhysicsTest, CollisionTest)
                 << "]\n";
 
           if (i == 0)
-            box_model->GetLink("link")->SetForce(math::Vector3(1000,0,0));
+            box_model->GetLink("link")->SetForce(math::Vector3(1000, 0, 0));
           EXPECT_TRUE(fabs(pose.pos.x - x) < 0.00001);
           EXPECT_TRUE(fabs(vel.x - v) < 0.00001);
         }
@@ -139,8 +139,8 @@ TEST_F(PhysicsTest, CollisionTest)
                 << "]\n";
           if (t < 1.001)
           {
-            EXPECT_TRUE(pose.pos.x == 2);
-            EXPECT_TRUE(vel.x == 0);
+            EXPECT_EQ(pose.pos.x, 2);
+            EXPECT_EQ(vel.x, 0);
           }
           else
           {
@@ -148,16 +148,13 @@ TEST_F(PhysicsTest, CollisionTest)
             EXPECT_TRUE(fabs(vel.x - v) < 0.00001);
           }
         }
-
       }
 
       // integrate here to see when the collision should happen
       double impulse = dt*f;
       if (i == 0) v = v + impulse;
-      else if (t < 1.0) v = v;
-      else        v = dt*f/ 2.0; // perfectly inelastic of equal mass
+      else if (t >= 1.0) v = dt*f/ 2.0;  // inelastic col. w/ eqal mass.
       x = x + dt * v;
-
     }
   }
   Unload();
@@ -210,7 +207,7 @@ TEST_F(PhysicsTest, DropStuff)
           }
           else
           {
-            EXPECT_TRUE(fabs(vel.z) < 0.0101); // sometimes -0.01, why?
+            EXPECT_TRUE(fabs(vel.z) < 0.0101);  // sometimes -0.01, why?
             EXPECT_TRUE(fabs(pose.pos.z - 0.5) < 0.00001);
           }
         }
@@ -275,7 +272,7 @@ TEST_F(PhysicsTest, SimplePendulumTest)
   EXPECT_TRUE(physicsEngine);
   physics::ModelPtr model = world->GetModel("model_1");
   EXPECT_TRUE(model);
-  physics::LinkPtr link = model->GetLink("link_2"); // sphere link at end
+  physics::LinkPtr link = model->GetLink("link_2");  // sphere link at end
   EXPECT_TRUE(link);
 
   double g = 9.81;
@@ -297,7 +294,6 @@ TEST_F(PhysicsTest, SimplePendulumTest)
           << "] p[" << pos.pos.z
           << "] v[" << vel
           << "]\n";
-
   }
   physicsEngine->SetStepTime(0.0001);
   physicsEngine->SetSORPGSIters(1000);
@@ -307,7 +303,7 @@ TEST_F(PhysicsTest, SimplePendulumTest)
        here we expect significant energy loss as the velocity correction
        is set to 0
     */
-    int steps=10; // @todo: make this more general
+    int steps = 10;  // @todo: make this more general
     for (int i = 0; i < steps; i ++)
     {
       world->StepWorld(2000);
@@ -318,7 +314,8 @@ TEST_F(PhysicsTest, SimplePendulumTest)
         double pe = 9.81 * m * pos.pos.z;
         double ke = 0.5 * m * (vel.x*vel.x + vel.y*vel.y + vel.z*vel.z);
         double e = pe + ke;
-        double e_tol = 3.0*(double)(i+1) / (double)steps;
+        double e_tol = 3.0*static_cast<double>(i+1)
+          / static_cast<double>(steps);
         gzdbg << "total energy [" << e
               << "] pe[" << pe
               << "] ke[" << ke
@@ -335,8 +332,8 @@ TEST_F(PhysicsTest, SimplePendulumTest)
       if (joint)
       {
         double integ_theta = (
-          PendulumAngle(g, l, 1.57079633, 0.0, world->GetSimTime().Double(), 0.000001)
-          - 1.5707963);
+          PendulumAngle(g, l, 1.57079633, 0.0, world->GetSimTime().Double(),
+          0.000001) - 1.5707963);
         double actual_theta = joint->GetAngle(0).GetAsRadian();
         gzdbg << "time [" << world->GetSimTime().Double()
               << "] exact [" << integ_theta
@@ -357,7 +354,7 @@ TEST_F(PhysicsTest, SimplePendulumTest)
     world->Reset();
     physicsEngine->SetContactMaxCorrectingVel(100);
 
-    int steps=10; // @todo: make this more general
+    int steps = 10;  // @todo: make this more general
     for (int i = 0; i < steps; i ++)
     {
       world->StepWorld(2000);
@@ -368,7 +365,8 @@ TEST_F(PhysicsTest, SimplePendulumTest)
         double pe = 9.81 * m * pos.pos.z;
         double ke = 0.5 * m * (vel.x*vel.x + vel.y*vel.y + vel.z*vel.z);
         double e = pe + ke;
-        double e_tol = 3.0*(double)(i+1) / (double)steps;
+        double e_tol = 3.0*static_cast<double>(i+1)
+          / static_cast<double>(steps);
         gzdbg << "total energy [" << e
               << "] pe[" << pe
               << "] ke[" << ke
@@ -385,8 +383,8 @@ TEST_F(PhysicsTest, SimplePendulumTest)
       if (joint)
       {
         double integ_theta = (
-          PendulumAngle(g, l, 1.57079633, 0.0, world->GetSimTime().Double(), 0.000001)
-          - 1.5707963);
+          PendulumAngle(g, l, 1.57079633, 0.0, world->GetSimTime().Double(),
+          0.000001) - 1.5707963);
         double actual_theta = joint->GetAngle(0).GetAsRadian();
         gzdbg << "time [" << world->GetSimTime().Double()
               << "] exact [" << integ_theta
