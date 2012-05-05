@@ -26,14 +26,18 @@
 #ifndef GAZEBO_PROJECTOR_PLUGIN_HH
 #define GAZEBO_PROJECTOR_PLUGIN_HH
 
+#include <OGRE/OgrePrerequisites.h>
+#include <OGRE/OgreTexture.h>
+#include <OGRE/OgreFrameListener.h>
+
+#include <map>
+#include <string>
+#include <list>
+
 #include "common/Plugin.hh"
 #include "sensors/SensorTypes.hh"
 #include "rendering/RenderTypes.hh"
 #include "gazebo.h"
-
-#include <OGRE/OgrePrerequisites.h>
-#include <OGRE/OgreTexture.h>
-#include <OGRE/OgreFrameListener.h>
 
 namespace Ogre
 {
@@ -55,7 +59,8 @@ namespace gazebo
 
     /// \brief Load the controller
     /// \param node XML config node
-    protected: virtual void Load( physics::ModelPtr _parent, sdf::ElementPtr _sdf );
+    protected: virtual void Load(physics::ModelPtr _parent,
+      sdf::ElementPtr _sdf);
 
     /// \brief pointer to the world
     private: physics::WorldPtr world;
@@ -67,79 +72,83 @@ namespace gazebo
     private: physics::ModelPtr myParent;
 
     /// \brief The parent Model
-    private: physics::LinkPtr myBody; //Gazebo/ODE body
+    private: physics::LinkPtr myBody;  // Gazebo/ODE body
 
     rendering::VisualPtr myVisual;
     Ogre::SceneNode* mySceneNode;
 
     /// \brief Callback when a texture is published
-    private: void LoadImage(const std::string _texture_name);
+    private: void LoadImage(const std::string &_texture_name);
 
     /// \brief Callbakc when a projector toggle is published
-    private: void ToggleProjector(bool _projectorOn);  
+    private: void ToggleProjector(bool _projectorOn);
 
     /// \brief Utility method for accessing the root Ogre object
     private: Ogre::Root *getRootP();
-    
-    /// \brief A mutex to lock access to fields that are used in plugin callbacks
+
+    /// \brief A mutex to lock access to fields that are used in
+    ///        plugin callbacks
     private: boost::mutex lock;
 
     // \brief Projector parameters
     private: std::string bodyName;
     private: std::string textureName;
-    private: std::string filterTextureName;    
+    private: std::string filterTextureName;
     private: double fov;
     private: double nearClipDist;
     private: double farClipDist;
     private: math::Vector3 xyz;
     private: math::Quaternion rpy;
-    
+
     private: std::string projectorNodeName;
     private: std::string projectorFilterNodeName;
 
     private: void UpdateShaders();
     private: event::ConnectionPtr add_model_event_;
 
-    private: 
+    private:
       class Projector : public Ogre::FrameListener
       {
-
         public: Projector();
         public: virtual ~Projector();
 
-        public: void init( Ogre::SceneNode *sceneNodePtr = NULL,
-                           Ogre::SceneManager *sceneMgrPtr = NULL,
-                           Ogre::String textureName = "stereo_projection_pattern_alpha.png",
-                           Ogre::String filterTextureName = "stereo_projection_pattern_filter.png",                         
-                           double nearDist = .5,
-                           double farDist = 10,
-                           double fov = 0.785398163,
-                           std::string projectorNodeName = "projectorNodeName",
-                           std::string projectorFilterNodeName = "projectorFilterNodeName"
-                           );
+        public: void init(Ogre::SceneNode *sceneNodePtr = NULL,
+                          Ogre::SceneManager *sceneMgrPtr = NULL,
+                          Ogre::String textureName =
+                            "stereo_projection_pattern_alpha.png",
+                          Ogre::String filterTextureName =
+                            "stereo_projection_pattern_filter.png",
+                          double nearDist = .5,
+                          double farDist = 10,
+                          double fov = 0.785398163,
+                          std::string projectorNodeName =
+                            "projectorNodeName",
+                          std::string projectorFilterNodeName =
+                            "projectorFilterNodeName");
 
         public: virtual bool frameStarted(const Ogre::FrameEvent &evt);
         public: virtual bool frameEnded(const Ogre::FrameEvent &evt);
         public: virtual bool frameRenderingQueued(const Ogre::FrameEvent &evt);
 
-        public: void setEnabled( bool enabled );
-        public: void setUsingShaders( bool usingShaders );      
+        public: void setEnabled(bool enabled);
+        public: void setUsingShaders(bool usingShaders);
         public: void setSceneNode();
-        public: void setTextureName( const Ogre::String& textureName );
-        public: void setFilterTextureName( const Ogre::String& textureName );      
-        public: void setFrustumClipDistance( double nearDist, double farDist );
-        public: void setFrustumFOV( double fovInRadians );
-        public: void setPose( math::Vector3 xyz, math::Quaternion rpy );
-                                 
+        public: void setTextureName(const Ogre::String& textureName);
+        public: void setFilterTextureName(const Ogre::String& textureName);
+        public: void setFrustumClipDistance(double nearDist, double farDist);
+        public: void setFrustumFOV(double fovInRadians);
+        public: void setPose(math::Vector3 xyz, math::Quaternion rpy);
+
         private: void addProjectorPassToVisibleMaterials();
         private: void addProjectorPassToAllMaterials();
-        private: void addProjectorPassToMaterials(std::list<std::string>& matList);
+        private: void addProjectorPassToMaterials(
+                        std::list<std::string>& matList);
         private: void addProjectorPassToMaterial(std::string matName);
-        private: void removeProjectorPassFromMaterials();      
+        private: void removeProjectorPassFromMaterials();
         private: void removeProjectorPassFromMaterial(std::string matName);
 
         private: Ogre::SceneNode* parentSceneNode;
-        
+
         private: bool isEnabled;
         public:  bool isInit;
         private: bool isUsingShaders;
@@ -152,16 +161,15 @@ namespace gazebo
         private: Ogre::SceneManager *sceneMgr;
 
         private: Ogre::String projectedTextureName;
-        private: Ogre::String projectedFilterTextureName;      
+        private: Ogre::String projectedFilterTextureName;
 
-        private: std::map<std::string,Ogre::Pass*> projectorTargets;
-        
+        private: std::map<std::string, Ogre::Pass*> projectorTargets;
+
         private: std::string projectorNodeName;
         private: std::string projectorFilterNodeName;
       };
 
     private: Projector projector_;
-
   };
 }
 

@@ -11,7 +11,6 @@ set (plugins CameraPlugin
              ContactPlugin
              ProjectorPlugin
              RayPlugin
-             JointPIDControl
              DiffDrivePlugin)
 
 foreach (src ${plugins})
