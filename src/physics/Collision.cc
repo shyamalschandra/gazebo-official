@@ -108,7 +108,6 @@ void Collision::Init()
   this->shape->Init();
 }
 
-
 //////////////////////////////////////////////////
 void Collision::SetCollision(bool _placeable)
 {
@@ -196,7 +195,7 @@ void Collision::AddContact(const Contact &_contact)
       this->HasType(Base::PLANE_SHAPE))
     return;
 
-  this->contact(this->GetName(), _contact);
+  this->contact(this->GetScopedName(), _contact);
 }
 
 //////////////////////////////////////////////////
@@ -365,7 +364,7 @@ msgs::Visual Collision::CreateCollisionVisual()
 
     geom->mutable_heightmap()->set_filename(hgt->GetFilename());
     msgs::Set(geom->mutable_heightmap()->mutable_size(), hgt->GetSize());
-    msgs::Set(geom->mutable_heightmap()->mutable_offset(), hgt->GetOffset());
+    msgs::Set(geom->mutable_heightmap()->mutable_origin(), hgt->GetOrigin());
   }
 
   else if (this->shape->HasType(MAP_SHAPE))

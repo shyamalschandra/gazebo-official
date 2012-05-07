@@ -123,7 +123,7 @@ void Inertial::SetAngularDamping(double _damping)
 //////////////////////////////////////////////////
 double Inertial::GetLinearDamping()
 {
-  double value = 0;
+  double value = 0.0;
   if (this->sdf->HasElement("damping"))
   {
     sdf::ElementPtr dampingElem = this->sdf->GetElement("damping");
@@ -136,7 +136,7 @@ double Inertial::GetLinearDamping()
 //////////////////////////////////////////////////
 double Inertial::GetAngularDamping()
 {
-  double value = 0;
+  double value = 0.0;
   if (this->sdf->HasElement("damping"))
   {
     sdf::ElementPtr dampingElem = this->sdf->GetElement("damping");
@@ -335,4 +335,38 @@ void Inertial::ProcessMsg(const msgs::Inertial &_msg)
     this->SetIYZ(_msg.iyz());
   if (_msg.has_izz())
     this->SetIZZ(_msg.izz());
+}
+
+/////////////////////////////////////////////////
+void Inertial::SetBox(const math::Vector3 &_size, double _density)
+{
+  this->mass = _size.x * _size.y * _size.z * _density;
+  this->SetBox(_density);
+}
+
+/////////////////////////////////////////////////
+void Inertial::SetBox(const math::Vector3 &_size)
+{
+  this->principals.x = this->mass/12.0 * (size.y*size.y + size.z*size.z);
+  this->principals.y = this->mass/12.0 * (size.x*size.x + size.z*size.z);
+  this->principals.z = this->mass/12.0 * (size.x*size.x + size.y*size.y);
+}
+
+/////////////////////////////////////////////////
+void Inertial::SetCylinder(double _radius, double _length, double _density)
+{
+  this->mass = M_PI * _radius * _radius * _length * _density;
+  this->SetCylinder(_radius, _length);
+}
+
+/////////////////////////////////////////////////
+void Inertial::SetCylinder(double _radius, double _length)
+{
+  double r2 = _radius * _radius;
+  double i = this->mass * (0.25 * r2 + (1.0/12.0) * _length * _length);
+  this->principals.x = i;
+  this->principals.y = i;
+  this->principals.z = i;
+  // cylinders are oriented along the z axis
+  this->products.z = this->mass * 0.5 * r2;
 }

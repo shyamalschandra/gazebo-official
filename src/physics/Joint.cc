@@ -47,10 +47,20 @@ Joint::Joint()
     event::Events::ConnectShowJoints(boost::bind(&Joint::ShowJoints, this, _1));
 }
 
-
 //////////////////////////////////////////////////
 Joint::~Joint()
 {
+}
+
+//////////////////////////////////////////////////
+void Joint::Load(LinkPtr _parent, LinkPtr _child, const math::Pose &_origin)
+{
+  this->world = _parent->GetWorld();
+  this->model = _parent->GetModel();
+
+  this->parentLink = _parent;
+  this->childLink = _child;
+  this->LoadImpl(_origin);
 }
 
 //////////////////////////////////////////////////
@@ -58,22 +68,20 @@ void Joint::Load(sdf::ElementPtr _sdf)
 {
   Base::Load(_sdf);
 
-  std::ostringstream visname;
-
   std::string parentName = _sdf->GetElement("parent")->GetValueString("link");
   std::string childName = _sdf->GetElement("child")->GetValueString("link");
 
+  math::Pose origin;
+  if (_sdf->HasElement("origin"))
+    origin = _sdf->GetElement("origin")->GetValuePose("pose");
+
   if (this->model)
   {
-    visname << this->model->GetScopedName()
-            << "::" << this->GetName() << "_VISUAL";
-
     this->childLink = this->model->GetLink(childName);
     this->parentLink = this->model->GetLink(parentName);
   }
   else
   {
-    visname << this->GetName() << "_VISUAL";
     this->childLink = boost::shared_dynamic_cast<Link>(
         this->GetWorld()->GetByName(childName));
 
@@ -81,32 +89,27 @@ void Joint::Load(sdf::ElementPtr _sdf)
         this->GetWorld()->GetByName(parentName));
   }
 
-  BasePtr myBase = shared_from_this();
-
-  if (!this->parentLink)
-  {
-    if (parentName != std::string("world"))
-    {
-      gzthrow("Couldn't Find Parent Link[" + parentName);
-    }
-  }
-  else
-  {
-    this->parentLink->AddChildJoint(boost::shared_static_cast<Joint>(myBase));
-  }
+  if (!this->parentLink && parentName != std::string("world"))
+    gzthrow("Couldn't Find Parent Link[" + parentName);
 
   if (!this->childLink && childName != std::string("world"))
     gzthrow("Couldn't Find Child Link[" + childName);
 
-  this->childLink->AddParentJoint(boost::shared_static_cast<Joint>(myBase));
+  this->LoadImpl(origin);
+}
 
-  math::Pose offset;
-  if (_sdf->HasElement("origin"))
-    offset = _sdf->GetElement("origin")->GetValuePose("pose");
+/////////////////////////////////////////////////
+void Joint::LoadImpl(const math::Pose &_origin)
+{
+  BasePtr myBase = shared_from_this();
+
+  if (this->parentLink)
+    this->parentLink->AddChildJoint(boost::shared_static_cast<Joint>(myBase));
+  this->childLink->AddParentJoint(boost::shared_static_cast<Joint>(myBase));
 
   // setting anchor relative to gazebo link frame origin
   if (this->childLink)
-    this->anchorPos = (offset + this->childLink->GetWorldPose()).pos;
+    this->anchorPos = (_origin + this->childLink->GetWorldPose()).pos;
   else
     this->anchorPos = math::Vector3(0, 0, 0);
 }
@@ -119,9 +122,45 @@ void Joint::Init()
   // Set the anchor vector
   this->SetAnchor(0, this->anchorPos);
 
+  if (this->sdf->HasElement("axis"))
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
+    this->SetAxis(0, axisElem->GetValueVector3("xyz"));
+    //if (axisElem->HasElement("limit"))
+    {
+      sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+      // Perform this three step ordering to ensure the
+      // parameters are set properly.
+      // This is taken from the ODE wiki.
+      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
+      this->SetLowStop(0, limitElem->GetValueDouble("lower"));
+      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
+    }
+  }
+
+  if (this->sdf->HasElement("axis2"))
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis2");
+    this->SetAxis(1, axisElem->GetValueVector3("xyz"));
+    if (axisElem->HasElement("limit"))
+    {
+      sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+      // Perform this three step ordering to ensure the
+      // parameters  are set properly.
+      // This is taken from the ODE wiki.
+      limitElem = axisElem->GetElement("limit");
+      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
+      this->SetLowStop(1, limitElem->GetValueDouble("lower"));
+      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
+    }
+  }
+
   if (this->parentLink)
   {
     math::Pose modelPose = this->parentLink->GetModel()->GetWorldPose();
+
     // Set joint axis
     if (this->sdf->HasElement("axis"))
     {
@@ -166,8 +205,10 @@ math::Vector3 Joint::GetLocalAxis(int _index) const
   if (_index == 0 && this->sdf->HasElement("axis"))
     vec = this->sdf->GetElement("axis")->GetValueVector3("xyz");
   else if (this->sdf->HasElement("axis2"))
-    vec = this->sdf->GetElement("axis2")->GetValueVector3("xyz");
+    vec = this->sdf->GetElement("axis2")->GetValueVector3("xyz"); 
 
+  vec = this->childLink->GetWorldPose().rot.RotateVectorReverse(vec);
+  vec.Round();
   return vec;
 }
 
