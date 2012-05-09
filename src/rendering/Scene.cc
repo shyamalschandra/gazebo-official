@@ -255,6 +255,13 @@ void Scene::Init()
 
   // Register this scene the the real time shaders system
   this->selectionObj->Init();
+
+  /* TODO: Add GUI option to view all contacts
+  ContactVisualPtr contactVis(new ContactVisual(
+        "_GUIONLY_world_contact_vis",
+        this->worldVisual, "~/physics/contacts"));
+  this->visuals[contactVis->GetName()] = contactVis;
+  */
 }
 
 //////////////////////////////////////////////////
@@ -456,6 +463,31 @@ LightPtr Scene::GetLight(const std::string &_name) const
   Light_M::const_iterator iter = this->lights.find(_name);
   if (iter != this->lights.end())
     result = iter->second;
+  return result;
+}
+
+//////////////////////////////////////////////////
+unsigned int Scene::GetLightCount() const
+{
+  return this->lights.size();
+}
+
+//////////////////////////////////////////////////
+LightPtr Scene::GetLight(unsigned int _index) const
+{
+  LightPtr result;
+  if (_index < this->lights.size())
+  {
+    Light_M::const_iterator iter = this->lights.begin();
+    std::advance(iter, _index);
+    result = iter->second;
+  }
+  else
+  {
+    gzerr << "Error: light index(" << _index << ") larger than light count("
+          << this->lights.size() << "\n";
+  }
+
   return result;
 }
 
@@ -1350,7 +1382,7 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
       return false;
 
     RFIDTagVisualPtr rfidVis(new RFIDTagVisual(
-          _msg->name() + "_rfidtag_vis", parentVis, _msg->topic()));
+          _msg->name() + "_GUIONLY_rfidtag_vis", parentVis, _msg->topic()));
 
     std::cout << "rfid vis message recieved" << std::endl;
     this->visuals[rfidVis->GetName()] = rfidVis;
@@ -1363,7 +1395,7 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
       return false;
 
     RFIDVisualPtr rfidVis(new RFIDVisual(
-          _msg->name() + "_rfid_vis", parentVis, _msg->topic()));
+          _msg->name() + "_GUIONLY_rfid_vis", parentVis, _msg->topic()));
     this->visuals[rfidVis->GetName()] = rfidVis;
   }
 
@@ -1506,7 +1538,8 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
         _msg->geometry().type() == msgs::Geometry::HEIGHTMAP)
     {
       // Ignore collision visuals for the heightmap
-      if (_msg->name().find("__COLLISION_VISUAL__") == std::string::npos)
+      if (_msg->name().find("__COLLISION_VISUAL__") == std::string::npos &&
+          this->heightmap == NULL)
       {
         try
         {
@@ -1517,6 +1550,7 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
           return false;
         }
       }
+      return true;
     }
 
     // If the visual has a parent which is not the name of the scene...

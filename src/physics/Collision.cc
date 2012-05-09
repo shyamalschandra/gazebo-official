@@ -56,6 +56,7 @@ Collision::Collision(LinkPtr _link)
   this->contactsEnabled = false;
 
   this->surface.reset(new SurfaceParams());
+  this->inertial.reset(new Inertial());
 }
 
 //////////////////////////////////////////////////
@@ -87,6 +88,7 @@ void Collision::Load(sdf::ElementPtr _sdf)
 
   this->surface->Load(this->sdf->GetOrCreateElement("surface"));
 
+
   if (this->shape)
     this->shape->Load(this->sdf->GetElement("geometry")->GetFirstElement());
   else
@@ -97,6 +99,45 @@ void Collision::Load(sdf::ElementPtr _sdf)
   {
     this->visPub->Publish(this->CreateCollisionVisual());
   }
+
+  this->inertial->SetCoG(this->GetRelativePose().pos);
+
+  // Get the mass of the shape
+  double mass = 0.0;
+  if (this->sdf->HasElement("mass"))
+    mass = this->sdf->GetValueDouble("mass");
+  else if (this->sdf->HasElement("density"))
+    mass = this->shape->GetMass(this->sdf->HasElement("density"));
+
+  this->shape->GetInertial(mass, this->inertial);
+
+  // Calculate the inertial properties for the shape
+  /*if (this->shape->GetType() == Base::BOX_SHAPE)
+  {
+    this->inertial->SetBoxMass(mass,
+        boost::shared_static_cast<BoxShape>(this->shape)->GetSize());
+  }
+  else if (this->shape->GetType() == Base::SPHERE_SHAPE)
+  {
+    this->inertial->SetSphereMass(mass,
+        boost::shared_static_cast<SphereShape>(this->shape)->GetRadius());
+  }
+  else if (this->shape->GetType() == Base::CYLINDER_SHAPE)
+  {
+    CylinderShapePtr cylShape =
+      boost::shared_static_cast<CylinderShape>(this->shape);
+    this->inertial->SetCylinderMass(mass, cylShape->GetRadius(),
+        cylShape->GetLength() );
+  }
+  else if (this->shape->GetType() == Base::TRIMESH_SHAPE)
+  {
+    this->inertial->SetMeshMass(mass, "filename");
+  }
+  else
+    gzerr << "Unable to set inertial for shape["
+      << this->shape->GetType() << "]\n";
+      */
+  std::cout << "Collision Mass[" << mass << "] In[" << *this->inertial << "]\n";
 }
 
 //////////////////////////////////////////////////
@@ -107,7 +148,6 @@ void Collision::Init()
 
   this->shape->Init();
 }
-
 
 //////////////////////////////////////////////////
 void Collision::SetCollision(bool _placeable)
@@ -137,7 +177,7 @@ bool Collision::IsPlaceable() const
 //////////////////////////////////////////////////
 void Collision::SetLaserRetro(float _retro)
 {
-  this->sdf->GetAttribute("laser_retro")->Set(_retro);
+  this->sdf->GetElement("laser_retro")->Set(_retro);
 }
 
 //////////////////////////////////////////////////
@@ -196,7 +236,7 @@ void Collision::AddContact(const Contact &_contact)
       this->HasType(Base::PLANE_SHAPE))
     return;
 
-  this->contact(this->GetName(), _contact);
+  this->contact(this->GetScopedName(), _contact);
 }
 
 //////////////////////////////////////////////////
@@ -365,7 +405,7 @@ msgs::Visual Collision::CreateCollisionVisual()
 
     geom->mutable_heightmap()->set_filename(hgt->GetFilename());
     msgs::Set(geom->mutable_heightmap()->mutable_size(), hgt->GetSize());
-    msgs::Set(geom->mutable_heightmap()->mutable_offset(), hgt->GetOffset());
+    msgs::Set(geom->mutable_heightmap()->mutable_origin(), hgt->GetOrigin());
   }
 
   else if (this->shape->HasType(MAP_SHAPE))
@@ -403,4 +443,16 @@ CollisionState Collision::GetState()
 void Collision::SetState(const CollisionState &_state)
 {
   this->SetWorldPose(_state.GetPose());
+}
+
+/////////////////////////////////////////////////
+const InertialPtr Collision::GetInertial() const
+{
+  return this->inertial;
+}
+
+/////////////////////////////////////////////////
+void Collision::SetInertial(InertialPtr _inertial)
+{
+  this->inertial = _inertial;
 }
