@@ -17,6 +17,7 @@ set (msgs axis.proto
           heightmapgeom.proto
           imagegeom.proto
           image.proto
+          image_stamped.proto
           inertial.proto
           int.proto
           joint.proto
@@ -30,7 +31,7 @@ set (msgs axis.proto
           packet.proto
           physics.proto
           planegeom.proto
-          vector3d.proto
+          pid.proto
           pose.proto
           projector.proto
           publishers.proto
@@ -52,6 +53,7 @@ set (msgs axis.proto
           time.proto
           topic_info.proto
           vector2d.proto
+          vector3d.proto
           visual.proto
           world_control.proto
           world_stats.proto 
