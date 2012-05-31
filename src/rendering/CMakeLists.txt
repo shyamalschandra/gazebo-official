@@ -87,7 +87,8 @@ foreach (hdr ${headers})
   APPEND_TO_CACHED_STRING(rendering_headers
                           "Rendering Headers" "#include \"rendering/${hdr}\"\n")
 endforeach()
-configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/rendering.hh.in ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh )
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rendering.hh.in
+                ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
 
 gz_add_library(gazebo_rendering ${sources})
 
