@@ -14,12 +14,30 @@
  * limitations under the License.
  *
 */
+#ifndef __GAZEBO_SPRING_TEST_PLUGIN_HH__
+#define __GAZEBO_SPRING_TEST_PLUGIN_HH__
 
-#ifndef SDF_HH_
-#define SDF_HH_
+#include "common/common.h"
+#include "physics/physics.h"
+#include "gazebo.hh"
 
-#include "sdf/interface/SDF.hh"
-#include "sdf/interface/Param.hh"
-#include "sdf/interface/parser.hh"
+namespace gazebo
+{
+  class SpringTestPlugin : public ModelPlugin
+  {
+    public: SpringTestPlugin();
+    public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+    public: virtual void Init();
 
+    private: void OnUpdate();
+
+    private: event::ConnectionPtr updateConnection;
+
+    private: physics::ModelPtr model;
+
+    private: common::Time prevUpdateTime;
+
+    private: double k;
+  };
+}
 #endif
