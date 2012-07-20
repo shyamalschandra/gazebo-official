@@ -28,6 +28,11 @@ set (models
   14_4v_cordless_drill.model
   coke_can.model
   car.model
+  cabinet.model
+  actor_circle.model
+  actor_demo.model
+  actor.model
+  japanese_restaurant.model
   )
 
 set (lights

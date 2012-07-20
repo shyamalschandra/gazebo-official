@@ -1,16 +1,16 @@
 include_directories (
-  ${PROJECT_SOURCE_DIR}/src 
-  ${PROJECT_BINARY_DIR}/src 
+  ${PROJECT_SOURCE_DIR}/gazebo 
+  ${PROJECT_BINARY_DIR}/gazebo
   ${ODE_INCLUDE_DIRS}
   ${OPENGL_INCLUDE_DIR}
   ${OGRE_INCLUDE_DIRS}
-  ${BOOST_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
   ${PROTOBUF_INCLUDE_DIR}
 )
 
 link_directories(  
   ${OGRE_LIBRARY_PATH}
-  ${BOOST_LIBRARY_DIRS} 
+  ${Boost_LIBRARY_DIRS} 
   ${ODE_LIBRARY_DIRS}
 )
 
@@ -49,7 +49,7 @@ endforeach (src ${plugins})
 # Build tests
 foreach(GTEST_SOURCE_file ${gtest_sources})
   string(REGEX REPLACE ".cc" "" BINARY_NAME ${GTEST_SOURCE_file})
-  add_executable(${BINARY_NAME} ${GTEST_SOURCE_file} ${PROJECT_SOURCE_DIR}/src/Server.cc ${PROJECT_SOURCE_DIR}/src/Master.cc ${PROJECT_SOURCE_DIR}/src/gazebo.cc)
+  add_executable(${BINARY_NAME} ${GTEST_SOURCE_file} ${PROJECT_SOURCE_DIR}/gazebo/Server.cc ${PROJECT_SOURCE_DIR}/gazebo/Master.cc ${PROJECT_SOURCE_DIR}/gazebo/gazebo.cc)
 
 target_link_libraries( ${BINARY_NAME} ${GTEST_BOTH_LIBRARIES} 
     gazebo_common
@@ -60,7 +60,7 @@ target_link_libraries( ${BINARY_NAME} ${GTEST_BOTH_LIBRARIES}
     gazebo_rendering
     gazebo_msgs
     pthread
-    ${tinyxml_libraries}
+    ${TINYXML_LIBRARIES}
     )
   add_test(${BINARY_NAME} ${CMAKE_CURRENT_BINARY_DIR}/${BINARY_NAME} --gtest_output=xml:${CMAKE_BINARY_DIR}/test_results/${BINARY_NAME}.xml)
 endforeach()
