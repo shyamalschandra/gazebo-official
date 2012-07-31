@@ -173,7 +173,7 @@ void Quaternion::Normalize()
   s = sqrt(this->w * this->w + this->x * this->x + this->y * this->y +
            this->z * this->z);
 
-  if (math::equal(s, 0))
+  if (math::equal(s, 0.0))
   {
     this->w = 1.0;
     this->x = 0.0;
@@ -387,8 +387,8 @@ Vector3 Quaternion::operator*(const Vector3 &v) const
 {
   Vector3 uv, uuv;
   Vector3 qvec(this->x, this->y, this->z);
-  uv = qvec.GetCrossProd(v);
-  uuv = qvec.GetCrossProd(uv);
+  uv = qvec.Cross(v);
+  uuv = qvec.Cross(uv);
   uv *= (2.0f * this->w);
   uuv *= 2.0f;
 

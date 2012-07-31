@@ -15,6 +15,7 @@
  *
 */
 #include <boost/lexical_cast.hpp>
+#include "gazebo/rendering/skyx/include/SkyX.h"
 
 #include "rendering/ogre_gazebo.h"
 #include "msgs/msgs.hh"
@@ -23,27 +24,37 @@
 #include "common/Exception.hh"
 #include "common/Console.hh"
 
-#include "rendering/Projector.hh"
-#include "rendering/Heightmap.hh"
-#include "rendering/RenderEvents.hh"
-#include "rendering/LaserVisual.hh"
-#include "rendering/CameraVisual.hh"
-#include "rendering/JointVisual.hh"
-#include "rendering/COMVisual.hh"
-#include "rendering/ContactVisual.hh"
-#include "rendering/Conversions.hh"
-#include "rendering/Light.hh"
-#include "rendering/Visual.hh"
-#include "rendering/RenderEngine.hh"
-#include "rendering/UserCamera.hh"
-#include "rendering/Camera.hh"
-#include "rendering/DepthCamera.hh"
-#include "rendering/GpuLaser.hh"
-#include "rendering/Grid.hh"
-#include "rendering/SelectionObj.hh"
-#include "rendering/DynamicLines.hh"
-#include "rendering/RFIDVisual.hh"
-#include "rendering/RFIDTagVisual.hh"
+#include "gazebo/rendering/Road2d.hh"
+#include "gazebo/rendering/Projector.hh"
+#include "gazebo/rendering/Heightmap.hh"
+#include "gazebo/rendering/RenderEvents.hh"
+#include "gazebo/rendering/LaserVisual.hh"
+#include "gazebo/rendering/CameraVisual.hh"
+#include "gazebo/rendering/JointVisual.hh"
+#include "gazebo/rendering/COMVisual.hh"
+#include "gazebo/rendering/ContactVisual.hh"
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/Light.hh"
+#include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/RenderEngine.hh"
+#include "gazebo/rendering/UserCamera.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/rendering/DepthCamera.hh"
+#include "gazebo/rendering/GpuLaser.hh"
+#include "gazebo/rendering/Grid.hh"
+#include "gazebo/rendering/SelectionObj.hh"
+#include "gazebo/rendering/DynamicLines.hh"
+#include "gazebo/rendering/RFIDVisual.hh"
+#include "gazebo/rendering/RFIDTagVisual.hh"
+#include "gazebo/rendering/VideoVisual.hh"
+
+#if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
+#include "gazebo/rendering/deferred_shading/SSAOLogic.hh"
+#include "gazebo/rendering/deferred_shading/GBufferSchemeHandler.hh"
+#include "gazebo/rendering/deferred_shading/NullSchemeHandler.hh"
+#include "gazebo/rendering/deferred_shading/MergeSchemeHandler.hh"
+#include "gazebo/rendering/deferred_shading/DeferredLightCP.hh"
+#endif
 
 #include "rendering/RTShaderSystem.hh"
 #include "transport/Transport.hh"
@@ -69,6 +80,8 @@ struct VisualMessageLess {
 //////////////////////////////////////////////////
 Scene::Scene(const std::string &_name, bool _enableVisualizations)
 {
+  this->requestMsg = NULL;
+  this->iterations = 0;
   this->enableVisualizations = _enableVisualizations;
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(_name);
@@ -78,6 +91,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations)
   this->name = _name;
   this->manager = NULL;
   this->raySceneQuery = NULL;
+  this->skyx = NULL;
 
   this->receiveMutex = new boost::mutex();
 
@@ -95,8 +109,11 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations)
           &Scene::OnSkeletonPoseMsg, this);
   this->selectionSub = this->node->Subscribe("~/selection",
       &Scene::OnSelectionMsg, this);
-  this->requestSub = this->node->Subscribe("~/request",
-      &Scene::OnRequest, this);
+  this->skySub = this->node->Subscribe("~/sky", &Scene::OnSkyMsg, this);
+
+  this->requestPub = this->node->Advertise<msgs::Request>("~/request");
+  this->responseSub = this->node->Subscribe("~/response",
+      &Scene::OnResponse, this);
 
   this->lightPub = this->node->Advertise<msgs::Light>("~/light");
 
@@ -152,10 +169,6 @@ Scene::~Scene()
   this->jointSub.reset();
   this->skeletonPoseSub.reset();
   this->selectionSub.reset();
-  this->responseSub.reset();
-  this->requestSub.reset();
-  this->requestPub.reset();
-
 
   Visual_M::iterator iter;
   this->visuals.clear();
@@ -207,6 +220,7 @@ void Scene::Load()
     root->destroySceneManager(this->manager);
 
   this->manager = root->createSceneManager(Ogre::ST_GENERIC);
+  this->manager->setAmbientLight(Ogre::ColourValue(0.1, 0.1, 0.1, 0.1));
 }
 
 //////////////////////////////////////////////////
@@ -220,14 +234,21 @@ void Scene::Init()
 {
   this->worldVisual.reset(new Visual("__world_node__", shared_from_this()));
 
+  // RTShader system self-enables if the render path type is FORWARD,
   RTShaderSystem::Instance()->AddScene(this);
+  RTShaderSystem::Instance()->ApplyShadows(this);
+
+  if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
+    this->InitDeferredShading();
 
   for (uint32_t i = 0; i < this->grids.size(); i++)
     this->grids[i]->Init();
 
   // Create the sky
-  if (this->sdf->HasElement("sky"))
-    this->SetSky(this->sdf->GetElement("sky")->GetValueString("material"));
+  // if (this->sdf->HasElement("sky"))
+  //  this->SetSky(this->sdf->GetElement("sky")->GetValueString("material"));
+
+  this->SetSky();
 
   // Create Fog
   if (this->sdf->HasElement("fog"))
@@ -248,12 +269,7 @@ void Scene::Init()
   // Force shadows on.
   sdf::ElementPtr shadowElem = this->sdf->GetOrCreateElement("shadows");
   shadowElem->GetAttribute("enabled")->Set(true);
-  RTShaderSystem::Instance()->ApplyShadows(this);
-
-  // Send a request to get the current world state
-  this->requestPub = this->node->Advertise<msgs::Request>("~/request", 5, true);
-  this->responseSub = this->node->Subscribe("~/response",
-      &Scene::OnResponse, this, true);
+  this->SetShadowsEnabled(true);
 
   this->requestMsg = msgs::CreateRequest("scene_info");
   this->requestPub->Publish(*this->requestMsg);
@@ -261,12 +277,77 @@ void Scene::Init()
   // Register this scene the the real time shaders system
   this->selectionObj->Init();
 
+
   // TODO: Add GUI option to view all contacts
   /*ContactVisualPtr contactVis(new ContactVisual(
         "_GUIONLY_world_contact_vis",
         this->worldVisual, "~/physics/contacts"));
   this->visuals[contactVis->GetName()] = contactVis;
   */
+
+  Road2d *road = new Road2d();
+  road->Load(this->worldVisual);
+}
+
+//////////////////////////////////////////////////
+void Scene::InitDeferredShading()
+{
+#if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
+  Ogre::CompositorManager &compMgr = Ogre::CompositorManager::getSingleton();
+
+  // Deferred Shading scheme handler
+  Ogre::MaterialManager::getSingleton().addListener(
+      new GBufferSchemeHandler(GBufferMaterialGenerator::GBT_FAT),
+      "DSGBuffer");
+
+  // Deferred Lighting scheme handlers
+  Ogre::MaterialManager::getSingleton().addListener(
+      new GBufferSchemeHandler(GBufferMaterialGenerator::GBT_NORMAL_AND_DEPTH),
+      "DLGBuffer");
+  Ogre::MaterialManager::getSingleton().addListener(
+      new MergeSchemeHandler(false), "DLMerge");
+
+  Ogre::MaterialManager::getSingleton().addListener(
+      new NullSchemeHandler, "NoGBuffer");
+
+  compMgr.registerCustomCompositionPass("DeferredShadingLight",
+      new DeferredLightCompositionPass<DeferredShading>);
+  compMgr.registerCustomCompositionPass("DeferredLightingLight",
+      new DeferredLightCompositionPass<DeferredLighting>);
+
+  compMgr.registerCompositorLogic("SSAOLogic", new SSAOLogic);
+
+  // Create and instance geometry for VPL
+  Ogre::MeshPtr VPLMesh =
+    Ogre::MeshManager::getSingleton().createManual("VPLMesh",
+        Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
+
+  Ogre::SubMesh *submeshMesh = VPLMesh->createSubMesh();
+  submeshMesh->operationType = Ogre::RenderOperation::OT_TRIANGLE_LIST;
+  submeshMesh->indexData = new Ogre::IndexData();
+  submeshMesh->vertexData = new Ogre::VertexData();
+  submeshMesh->useSharedVertices = false;
+  VPLMesh->_setBoundingSphereRadius(10.8f);
+  VPLMesh->_setBounds(Ogre::AxisAlignedBox(
+        Ogre::Vector3(-10.8, -10.8, -10.8), Ogre::Vector3(10.8, 10.8, 10.8)));
+
+  GeomUtils::CreateSphere(submeshMesh->vertexData, submeshMesh->indexData,
+      1.0, 6, 6, false, false);
+
+  int numVPLs = 400;
+  Ogre::InstanceManager *im =
+    this->manager->createInstanceManager("VPL_InstanceMgr",
+      "VPLMesh", Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
+          Ogre::InstanceManager::HWInstancingBasic, numVPLs, Ogre::IM_USEALL);
+
+  for (int i = 0; i < numVPLs; ++i)
+  {
+    // Ogre::InstancedEntity *new_entity =
+    im->createInstancedEntity("DeferredLighting/VPL");
+  }
+
+  im->setBatchesAsStaticAndUpdate(true);
+#endif
 }
 
 //////////////////////////////////////////////////
@@ -1015,21 +1096,6 @@ void Scene::GetMeshInformation(const Ogre::Mesh *mesh,
 }
 
 /////////////////////////////////////////////////
-void Scene::OnResponse(ConstResponsePtr &_msg)
-{
-  if (!this->requestMsg || _msg->id() != this->requestMsg->id())
-    return;
-
-  boost::shared_ptr<msgs::Scene> sm(new msgs::Scene());
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
-  if (_msg->has_type() && _msg->type() == sm->GetTypeName())
-  {
-    sm->ParseFromString(_msg->serialized_data());
-    this->sceneMsgs.push_back(sm);
-  }
-}
-
-/////////////////////////////////////////////////
 void Scene::ProcessSceneMsg(ConstScenePtr &_msg)
 {
   std::string modelName, linkName;
@@ -1186,6 +1252,47 @@ void Scene::OnVisualMsg(ConstVisualPtr &_msg)
 //////////////////////////////////////////////////
 void Scene::PreRender()
 {
+  /* Deferred shading debug code. Delete me soon (July 17, 2012)
+  static bool first = true;
+
+  if (!first)
+  {
+    Ogre::RenderSystem *renderSys = this->manager->getDestinationRenderSystem();
+    Ogre::RenderSystem::RenderTargetIterator renderIter =
+      renderSys->getRenderTargetIterator();
+
+    int i = 0;
+    for (; renderIter.current() != renderIter.end(); renderIter.moveNext())
+    {
+      if (renderIter.current()->second->getNumViewports() > 0)
+      {
+        std::ostringstream filename, filename2;
+        filename << "/tmp/render_targets/iter_" << this->iterations
+                 << "_" << i << ".png";
+        filename2 << "/tmp/render_targets/iter_"
+                  << this->iterations << "_" << i << "_b.png";
+
+        Ogre::MultiRenderTarget *mtarget = dynamic_cast<Ogre::MultiRenderTarget*>(renderIter.current()->second);
+        if (mtarget)
+        {
+          // std::cout << renderIter.current()->first << "\n";
+          mtarget->getBoundSurface(0)->writeContentsToFile(filename.str());
+
+          mtarget->getBoundSurface(1)->writeContentsToFile(filename2.str());
+          i++;
+        }
+        else
+        {
+          renderIter.current()->second->writeContentsToFile(filename.str());
+          i++;
+        }
+      }
+    }
+    this->iterations++;
+  }
+  else
+    first = false;
+  */
   boost::mutex::scoped_lock lock(*this->receiveMutex);
 
   static RequestMsgs_L::iterator rIter;
@@ -1215,6 +1322,14 @@ void Scene::PreRender()
       ++sensorIter;
   }
 
+  // Process the light messages
+  for (lIter =  this->lightMsgs.begin();
+       lIter != this->lightMsgs.end(); ++lIter)
+  {
+    this->ProcessLightMsg(*lIter);
+  }
+  this->lightMsgs.clear();
+
   // Process the visual messages
   this->visualMsgs.sort(VisualMessageLessOp);
   vIter = this->visualMsgs.begin();
@@ -1225,14 +1340,6 @@ void Scene::PreRender()
     else
       ++vIter;
   }
-
-  // Process the light messages
-  for (lIter =  this->lightMsgs.begin();
-       lIter != this->lightMsgs.end(); ++lIter)
-  {
-    this->ProcessLightMsg(*lIter);
-  }
-  this->lightMsgs.clear();
 
   // Process all the model messages last. Remove pose message from the list
   // only when a corresponding visual exits. We may receive pose updates
@@ -1425,10 +1532,7 @@ bool Scene::ProcessLinkMsg(ConstLinkPtr &_msg)
 
   if (this->visuals.find(_msg->name() + "_COM_VISUAL__") == this->visuals.end())
   {
-    COMVisualPtr comVis(new COMVisual(_msg->name() + "_COM_VISUAL__", linkVis));
-    comVis->Load(_msg);
-    comVis->SetVisible(false);
-    this->visuals[comVis->GetName()] = comVis;
+    this->CreateCOMVisual(_msg, linkVis);
   }
 
   for (int i = 0; i < _msg->projector_size(); ++i)
@@ -1468,6 +1572,20 @@ bool Scene::ProcessJointMsg(ConstJointPtr &_msg)
   this->visuals[jointVis->GetName()] = jointVis;
   return true;
 }
+
+/////////////////////////////////////////////////
+void Scene::OnResponse(ConstResponsePtr &_msg)
+{
+  if (!this->requestMsg || _msg->id() != this->requestMsg->id())
+    return;
+
+  msgs::Scene sceneMsg;
+  sceneMsg.ParseFromString(_msg->serialized_data());
+  boost::shared_ptr<msgs::Scene> sm(new msgs::Scene(sceneMsg));
+  this->sceneMsgs.push_back(sm);
+  this->requestMsg = NULL;
+}
+
 
 /////////////////////////////////////////////////
 void Scene::OnRequest(ConstRequestPtr &_msg)
@@ -1694,15 +1812,153 @@ void Scene::OnSelectionMsg(ConstSelectionPtr &_msg)
 }
 
 /////////////////////////////////////////////////
+void Scene::OnSkyMsg(ConstSkyPtr &_msg)
+{
+  SkyX::VClouds::VClouds *vclouds =
+    this->skyx->getVCloudsManager()->getVClouds();
+
+  if (_msg->has_time())
+  {
+    Ogre::Vector3 t = this->skyxController->getTime();
+    t.x = math::clamp(_msg->time(), 0.0, 24.0);
+    this->skyxController->setTime(t);
+  }
+
+  if (_msg->has_sunrise())
+  {
+    Ogre::Vector3 t = this->skyxController->getTime();
+    t.y = math::clamp(_msg->sunrise(), 0.0, 24.0);
+    this->skyxController->setTime(t);
+  }
+
+  if (_msg->has_sunset())
+  {
+    Ogre::Vector3 t = this->skyxController->getTime();
+    t.z = math::clamp(_msg->sunset(), 0.0, 24.0);
+    this->skyxController->setTime(t);
+  }
+
+  if (_msg->has_wind_speed())
+    vclouds->setWindSpeed(_msg->wind_speed());
+
+  if (_msg->has_wind_direction())
+    vclouds->setWindDirection(Ogre::Radian(_msg->wind_direction()));
+
+  if (_msg->has_cloud_ambient())
+  {
+    vclouds->setAmbientFactors(Ogre::Vector4(
+          _msg->cloud_ambient().r(),
+          _msg->cloud_ambient().g(),
+          _msg->cloud_ambient().b(),
+          _msg->cloud_ambient().a()));
+  }
+
+  if (_msg->has_humidity())
+  {
+    Ogre::Vector2 wheater = vclouds->getWheater();
+    vclouds->setWheater(math::clamp(_msg->humidity(), 0.0, 1.0),
+                        wheater.y, true);
+  }
+
+  if (_msg->has_avg_cloud_size())
+  {
+    Ogre::Vector2 wheater = vclouds->getWheater();
+    vclouds->setWheater(wheater.x,
+                        math::clamp(_msg->avg_cloud_size(), 0.0, 1.0), true);
+  }
+
+ this->skyx->update(0);
+}
+
+/////////////////////////////////////////////////
+void Scene::SetSky()
+{
+  // Create SkyX
+  this->skyxController = new SkyX::BasicController();
+  this->skyx = new SkyX::SkyX(this->manager, this->skyxController);
+  this->skyx->create();
+
+  this->skyx->setTimeMultiplier(0);
+
+  // Set the time: x = current time[0-24], y = sunrise time[0-24],
+  // z = sunset time[0-24]
+  this->skyxController->setTime(Ogre::Vector3(10.0, 6.0, 20.0f));
+
+  // Moon phase in [-1,1] range, where -1 means fully covered Moon,
+  // 0 clear Moon and 1 fully covered Moon
+  this->skyxController->setMoonPhase(0);
+
+  this->skyx->getAtmosphereManager()->setOptions(
+      SkyX::AtmosphereManager::Options(
+        9.77501f,   // Inner radius
+        10.2963f,   // Outer radius
+        0.01f,      // Height position
+        0.0017f,    // RayleighMultiplier
+        0.000675f,  // MieMultiplier
+        30,         // Sun Intensity
+        Ogre::Vector3(0.57f, 0.54f, 0.44f),  // Wavelength
+        -0.991f, 2.5f, 4));
+
+  this->skyx->getVCloudsManager()->setWindSpeed(0.6);
+
+  // Use true to update volumetric clouds based on the time multiplier
+  this->skyx->getVCloudsManager()->setAutoupdate(false);
+
+  SkyX::VClouds::VClouds *vclouds =
+    this->skyx->getVCloudsManager()->getVClouds();
+
+  // Set wind direction in radians
+  vclouds->setWindDirection(Ogre::Radian(0.0));
+  vclouds->setAmbientColor(Ogre::Vector3(0.63f,0.63f,0.7f));
+
+  // x = sun light power
+  // y = sun beta multiplier
+  // z = ambient color multiplier
+  // w = distance attenuation
+  vclouds->setLightResponse(Ogre::Vector4(0.25, 0.4, 0.5, 0.1));
+  vclouds->setAmbientFactors(Ogre::Vector4(0.45, 0.3, 0.6, 0.1));
+  vclouds->setWheater(.6, .6, false);
+
+  // Disable volumetric clouds for now
+  if (false) // If using clouds
+  {
+    // Create VClouds
+    if (!this->skyx->getVCloudsManager()->isCreated())
+    {
+      // SkyX::MeshManager::getSkydomeRadius(...) works for both finite and infinite(=0) camera far clip distances
+      this->skyx->getVCloudsManager()->create(80.0);
+          //this->skyx->getMeshManager()->getSkydomeRadius(mRenderingCamera));
+    }
+  }
+  else
+  {
+    // Remove VClouds
+    if (this->skyx->getVCloudsManager()->isCreated())
+    {
+      this->skyx->getVCloudsManager()->remove();
+    }
+  }
+
+  //vclouds->getLightningManager()->setEnabled(preset.vcLightnings);
+  //vclouds->getLightningManager()->setAverageLightningApparitionTime(preset.vcLightningsAT);
+  //vclouds->getLightningManager()->setLightningColor(preset.vcLightningsColor);
+  //vclouds->getLightningManager()->setLightningTimeMultiplier(preset.vcLightningsTM);
+  
+  Ogre::Root::getSingletonPtr()->addFrameListener(this->skyx);
+
+  this->skyx->update(0);
+}
+
+/////////////////////////////////////////////////
 void Scene::SetSky(const std::string &_material)
 {
   this->sdf->GetOrCreateElement("background")->GetOrCreateElement(
       "sky")->GetAttribute("material")->Set(_material);
 
-  try
+  /*try
   {
     Ogre::Quaternion orientation;
-    orientation.FromAngleAxis(Ogre::Degree(90), Ogre::Vector3(1, 0, 0));
+    orientation.FromAngleAxis(Ogre::Degree(90), Ogre::Vector3(0, 1, 0));
     double curvature = 10;  // ogre recommended default
     double tiling = 8;  // ogre recommended default
     double distance = 100;
@@ -1712,20 +1968,52 @@ void Scene::SetSky(const std::string &_material)
   catch(int)
   {
     gzwarn << "Unable to set sky dome to material[" << _material << "]\n";
-  }
+  }*/
 }
 
 /////////////////////////////////////////////////
 void Scene::SetShadowsEnabled(bool _value)
 {
   sdf::ElementPtr shadowElem = this->sdf->GetOrCreateElement("shadows");
-  if (_value != shadowElem->GetValueBool("enabled"))
+  shadowElem->GetAttribute("enabled")->Set(_value);
+
+  if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
   {
-    shadowElem->GetAttribute("enabled")->Set(_value);
+#if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
+    this->manager->setShadowTechnique(Ogre::SHADOWTYPE_TEXTURE_ADDITIVE);
+    this->manager->setShadowTextureCasterMaterial(
+        "DeferredRendering/Shadows/RSMCaster_Spot");
+    this->manager->setShadowTextureCount(1);
+    this->manager->setShadowFarDistance(150);
+    // Use a value of "2" to use a different depth buffer pool and
+    // avoid sharing this with the Backbuffer's
+    this->manager->setShadowTextureConfig(0, 1024, 1024,
+        Ogre::PF_FLOAT32_RGBA, 0, 2);
+    this->manager->setShadowDirectionalLightExtrusionDistance(75);
+    this->manager->setShadowCasterRenderBackFaces(false);
+    this->manager->setShadowTextureSelfShadow(true);
+    this->manager->setShadowDirLightTextureOffset(1.75);
+#endif
+  }
+  else if (RenderEngine::Instance()->GetRenderPathType() ==
+      RenderEngine::FORWARD)
+  {
+    // RT Shader shadows
     if (_value)
       RTShaderSystem::Instance()->ApplyShadows(this);
     else
       RTShaderSystem::Instance()->RemoveShadows(this);
+  }
+  else
+  {
+    this->manager->setShadowCasterRenderBackFaces(false);
+    this->manager->setShadowTextureSize(512);
+
+    // The default shadows.
+    if (_value)
+      this->manager->setShadowTechnique(Ogre::SHADOWTYPE_TEXTURE_ADDITIVE);
+    else
+      this->manager->setShadowTechnique(Ogre::SHADOWTYPE_NONE);
   }
 }
 
@@ -1786,11 +2074,11 @@ void Scene::SetGrid(bool _enabled)
 {
   if (_enabled)
   {
-    Grid *grid = new Grid(this, 1, 1, 10, common::Color(1, 1, 0, 1));
+    Grid *grid = new Grid(this, 20, 1, 10, common::Color(0.3, 0.3, 0.3, 0.5));
     grid->Init();
     this->grids.push_back(grid);
 
-    grid = new Grid(this, 20, 1, 10, common::Color(1, 1, 1, 1));
+    grid = new Grid(this, 4, 5, 20, common::Color(0.8, 0.8, 0.8, 0.5));
     grid->Init();
     this->grids.push_back(grid);
   }
@@ -1823,4 +2111,24 @@ std::string Scene::StripSceneName(const std::string &_name) const
 Heightmap *Scene::GetHeightmap() const
 {
   return this->heightmap;
+}
+
+/////////////////////////////////////////////////
+void Scene::CreateCOMVisual(ConstLinkPtr &_msg, VisualPtr _linkVisual)
+{
+  COMVisualPtr comVis(new COMVisual(_msg->name() + "_COM_VISUAL__",
+                                    _linkVisual));
+  comVis->Load(_msg);
+  comVis->SetVisible(false);
+  this->visuals[comVis->GetName()] = comVis;
+}
+
+/////////////////////////////////////////////////
+void Scene::CreateCOMVisual(sdf::ElementPtr _elem, VisualPtr _linkVisual)
+{
+  COMVisualPtr comVis(new COMVisual(_linkVisual->GetName() + "_COM_VISUAL__",
+                                    _linkVisual));
+  comVis->Load(_elem);
+  comVis->SetVisible(false);
+  this->visuals[comVis->GetName()] = comVis;
 }

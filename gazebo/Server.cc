@@ -242,6 +242,7 @@ bool Server::Load(const std::string &_filename)
 void Server::Init()
 {
   gazebo::init();
+
   sensors::init();
 
   physics::init_worlds();
