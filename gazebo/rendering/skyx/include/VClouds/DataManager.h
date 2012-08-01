@@ -140,7 +140,7 @@ namespace SkyX
             const bool& delayedResponse = true);
 
         /** Add ellipsoid: clouds are modelled as ellipsoids in our
-         * simulation approach, so.. different kind of clouds 
+          simulation approach, so.. different kind of clouds 
           can be modelled with ellipsoids compositions.
           @param e Ellipsoid
           @param UpdateProbabilities Update probabilities?
@@ -288,7 +288,7 @@ namespace SkyX
           @param nz Z size
           */
         void _createVolTexture(const VolTextureId& TexId, const int& nx,
-            const int& ny, const int& nz);
+                               const int& ny, const int& nz);
 
         /// SkyX parent pointer
         VClouds *mVClouds;
