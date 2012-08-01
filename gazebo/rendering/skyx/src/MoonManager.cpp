@@ -291,11 +291,12 @@ namespace SkyX
 			mMoonSceneNode->setVisible(mSkyX->isVisible());
 
 			mMoonMaterial->getTechnique(0)->getPass(0)
-				->getVertexProgramParameters()->setNamedConstant("uSkydomeCenter", c->getDerivedPosition());
+				->getVertexProgramParameters()->setNamedConstant("uSkydomeCenter",
+            c->getDerivedPosition());
 		}
 
 		if (!gazebo::math::equal(mMoonBillboard->getBoundingBox().getMaximum().x,
-                             size))
+          size))
 		{
 			_updateMoonBounds(c);
 		}
