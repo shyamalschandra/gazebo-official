@@ -46,11 +46,9 @@ extern ModelRightMenu *g_modelRightMenu;
 GLWidget::GLWidget(QWidget *_parent)
   : QWidget(_parent)
 {
+  this->setObjectName("GLWidget");
   this->state = "normal";
 
-  // This mouse offset is a hack. The glwindow window is not properly sized
-  // when first created....
-  this->mouseOffset = -10;
   this->setFocusPolicy(Qt::StrongFocus);
 
   this->windowId = -1;
@@ -60,12 +58,11 @@ GLWidget::GLWidget(QWidget *_parent)
 //  setMinimumSize(320, 240);
 
   this->renderFrame = new QFrame;
-  this->renderFrame->setLineWidth(1);
-  this->renderFrame->setFrameShadow(QFrame::Sunken);
-  this->renderFrame->setFrameShape(QFrame::Box);
+  this->renderFrame->setFrameShape(QFrame::NoFrame);
   this->renderFrame->show();
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->addWidget(this->renderFrame);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   this->setLayout(mainLayout);
 
   this->connections.push_back(
@@ -216,7 +213,6 @@ void GLWidget::keyPressEvent(QKeyEvent *_event)
   // Toggle full screen
   if (_event->key() == Qt::Key_F11)
   {
-    this->mouseOffset = 0;
     g_fullscreen = !g_fullscreen;
     gui::Events::fullScreen(g_fullscreen);
   }
@@ -297,8 +293,7 @@ void GLWidget::mousePressEvent(QMouseEvent *_event)
   if (!this->scene)
     return;
 
-  this->mouseEvent.pressPos.Set(_event->pos().x() + this->mouseOffset,
-                                 _event->pos().y() + this->mouseOffset);
+  this->mouseEvent.pressPos.Set(_event->pos().x(), _event->pos().y());
   this->mouseEvent.prevPos = this->mouseEvent.pressPos;
 
   /// Set the button which cause the press event
@@ -350,8 +345,9 @@ void GLWidget::OnMousePressRing()
 {
   if (this->selectionObj)
   {
-    this->scene->GetVisualAt(this->userCamera, this->mouseEvent.pressPos,
-                             this->selectionMod);
+    this->userCamera->GetVisual(this->mouseEvent.pressPos, this->selectionMod);
+    // this->scene->GetVisualAt(this->userCamera, this->mouseEvent.pressPos,
+    //                         this->selectionMod);
     if (!this->selectionMod.empty())
     {
       this->mouseMoveVisStartPose = this->mouseMoveVis->GetWorldPose();
@@ -394,8 +390,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *_event)
 
   this->setFocus(Qt::MouseFocusReason);
 
-  this->mouseEvent.pos.Set(_event->pos().x()+this->mouseOffset,
-                            _event->pos().y()+this->mouseOffset);
+  this->mouseEvent.pos.Set(_event->pos().x(), _event->pos().y());
   this->mouseEvent.type = common::MouseEvent::MOVE;
   this->mouseEvent.buttons |= _event->buttons() & Qt::LeftButton ?
     common::MouseEvent::LEFT : 0x0;
@@ -518,8 +513,9 @@ void GLWidget::OnMouseMoveRing()
   {
     rendering::VisualPtr newHoverVis;
     std::string mod;
-    newHoverVis = this->scene->GetVisualAt(this->userCamera,
-                                           this->mouseEvent.pos, mod);
+    newHoverVis = this->userCamera->GetVisual(this->mouseEvent.pos, mod);
+    // newHoverVis = this->scene->GetVisualAt(this->userCamera,
+    //                                       this->mouseEvent.pos, mod);
     if (!mod.empty())
     {
       this->setCursor(Qt::PointingHandCursor);
@@ -583,8 +579,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *_event)
   if (!this->scene)
     return;
 
-  this->mouseEvent.pos.Set(_event->pos().x()+this->mouseOffset,
-                            _event->pos().y()+this->mouseOffset);
+  this->mouseEvent.pos.Set(_event->pos().x(), _event->pos().y());
   this->mouseEvent.prevPos = this->mouseEvent.pos;
 
   if (_event->button() == Qt::LeftButton)
@@ -633,8 +628,10 @@ void GLWidget::OnMouseReleaseRing()
   {
     if (this->mouseEvent.button == common::MouseEvent::LEFT)
     {
-      this->hoverVis = this->scene->GetVisualAt(this->userCamera,
-                                                this->mouseEvent.pos);
+      this->hoverVis = this->userCamera->GetVisual(this->mouseEvent.pos);
+
+      // this->hoverVis = this->scene->GetVisualAt(this->userCamera,
+      //                                           this->mouseEvent.pos);
 
       // Select the current hovervis for positioning
       if (this->hoverVis && !this->hoverVis->IsPlane())
@@ -707,7 +704,7 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
   gui::set_active_camera(this->userCamera);
   this->scene = _scene;
 
-  this->userCamera->SetWorldPose(math::Pose(-5, 0, 1, 0, GZ_DTOR(11.31), 0));
+  this->userCamera->SetWorldPose(math::Pose(-5, 0, 1, 0, GZ_DTOR(11.31), 0.0));
 
   if (this->windowId >= 0)
   {
@@ -875,7 +872,7 @@ void GLWidget::RotateEntity(rendering::VisualPtr &_vis)
 
   // Compute the normal to the plane on which to rotate
   planeNorm = pose.rot.RotateVector(ray);
-  double d = -pose.pos.GetDotProd(planeNorm);
+  double d = -pose.pos.Dot(planeNorm);
 
   if (!this->userCamera->GetWorldPointOnPlane(this->mouseEvent.pos.x,
        this->mouseEvent.pos.y, math::Plane(planeNorm, d), p1))
@@ -898,17 +895,17 @@ void GLWidget::RotateEntity(rendering::VisualPtr &_vis)
 
   // Get the angle between the two vectors. This is the amount to
   // rotate the entity
-  float angle = acos(a.GetDotProd(b));
+  float angle = acos(a.Dot(b));
   if (math::isnan(angle))
     angle = 0;
 
   // Compute the normal to the plane which is defined by the
   // direction of rotation
-  planeNorm2 = a.GetCrossProd(b);
+  planeNorm2 = a.Cross(b);
   planeNorm2.Normalize();
 
   // Switch rotation direction if the two normals don't line up
-  if (planeNorm.GetDotProd(planeNorm2) > 0)
+  if (planeNorm.Dot(planeNorm2) > 0)
     angle *= -1;
 
     math::Quaternion delta;
@@ -965,7 +962,7 @@ void GLWidget::TranslateEntity(rendering::VisualPtr &_vis)
     moveVector.Set(1, 1, 0);
 
   // Compute the distance from the camera to plane of translation
-  double d = -pose.pos.GetDotProd(planeNorm);
+  double d = -pose.pos.Dot(planeNorm);
   math::Plane plane(planeNorm, d);
   double dist1 = plane.Distance(origin1, dir1);
   double dist2 = plane.Distance(origin2, dir2);

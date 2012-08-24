@@ -67,12 +67,7 @@ RenderEngine::RenderEngine()
 
   this->initialized = false;
 
-  this->connections.push_back(event::Events::ConnectPreRender(
-        boost::bind(&RenderEngine::PreRender, this)));
-  this->connections.push_back(event::Events::ConnectRender(
-        boost::bind(&RenderEngine::Render, this)));
-  this->connections.push_back(event::Events::ConnectPostRender(
-        boost::bind(&RenderEngine::PostRender, this)));
+  this->renderPathType = NONE;
 }
 
 
@@ -85,7 +80,18 @@ RenderEngine::~RenderEngine()
 //////////////////////////////////////////////////
 void RenderEngine::Load()
 {
-  this->CreateContext();
+  if (!this->CreateContext())
+  {
+    gzwarn << "Unable to create X window. Rendering will be disabled\n";
+    return;
+  }
+
+  this->connections.push_back(event::Events::ConnectPreRender(
+        boost::bind(&RenderEngine::PreRender, this)));
+  this->connections.push_back(event::Events::ConnectRender(
+        boost::bind(&RenderEngine::Render, this)));
+  this->connections.push_back(event::Events::ConnectPostRender(
+        boost::bind(&RenderEngine::PostRender, this)));
 
   // Create a new log manager and prevent output from going to stdout
   this->logManager = new Ogre::LogManager();
@@ -114,7 +120,6 @@ void RenderEngine::Load()
   // Load all the plugins
   this->LoadPlugins();
 
-
   // Setup the rendering system, and create the context
   this->SetupRenderSystem();
 
@@ -128,12 +133,16 @@ void RenderEngine::Load()
   stream << (int32_t)this->dummyWindowId;
 
   WindowManager::Instance()->CreateWindow(stream.str(), 1, 1);
+  this->CheckSystemCapabilities();
 }
 
 //////////////////////////////////////////////////
 ScenePtr RenderEngine::CreateScene(const std::string &_name,
                                    bool _enableVisualizations)
 {
+  if (this->renderPathType == NONE)
+    return ScenePtr();
+
   ScenePtr scene(new Scene(_name, _enableVisualizations));
   this->scenes.push_back(scene);
 
@@ -151,6 +160,9 @@ ScenePtr RenderEngine::CreateScene(const std::string &_name,
 //////////////////////////////////////////////////
 void RenderEngine::RemoveScene(const std::string &_name)
 {
+  if (this->renderPathType == NONE)
+    return;
+
   std::vector<ScenePtr>::iterator iter;
 
   for (iter = this->scenes.begin(); iter != this->scenes.end(); ++iter)
@@ -171,6 +183,9 @@ void RenderEngine::RemoveScene(const std::string &_name)
 //////////////////////////////////////////////////
 ScenePtr RenderEngine::GetScene(const std::string &_name)
 {
+  if (this->renderPathType == NONE)
+    return ScenePtr();
+
   std::vector<ScenePtr>::iterator iter;
 
   for (iter = this->scenes.begin(); iter != this->scenes.end(); ++iter)
@@ -198,6 +213,7 @@ unsigned int RenderEngine::GetSceneCount() const
   return this->scenes.size();
 }
 
+//////////////////////////////////////////////////
 void RenderEngine::PreRender()
 {
   this->root->_fireFrameStarted();
@@ -219,6 +235,9 @@ void RenderEngine::PostRender()
 //////////////////////////////////////////////////
 void RenderEngine::Init()
 {
+  if (this->renderPathType == NONE)
+    return;
+
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init();
   this->initialized = false;
@@ -339,6 +358,10 @@ void RenderEngine::LoadPlugins()
     plugins.push_back(path+"/Plugin_ParticleFX.so");
     plugins.push_back(path+"/Plugin_BSPSceneManager.so");
     plugins.push_back(path+"/Plugin_OctreeSceneManager.so");
+
+    // This is needed by the Ogre::Terrain System.
+    // We should spend some tim fixing Ogre::Terrain so that GLSL is
+    // supported.
     plugins.push_back(path+"/Plugin_CgProgramManager.so");
 
     for (piter = plugins.begin(); piter!= plugins.end(); ++piter)
@@ -357,11 +380,19 @@ void RenderEngine::LoadPlugins()
           description.append("]...This won't end well.");
           gzerr << description << "\n";
         }
+        else if ((*piter).find("CgProgramManager") != std::string::npos)
+        {
+          std::string description("Unable to load Ogre Plugin[");
+          description.append(*piter);
+          description.append("]Heightmaps(Terrain) will not display properly.");
+          gzerr << description << "\n";
+        }
       }
     }
   }
 }
 
+/////////////////////////////////////////////////
 void RenderEngine::AddResourcePath(const std::string &_path)
 {
   try
@@ -377,6 +408,12 @@ void RenderEngine::AddResourcePath(const std::string &_path)
 }
 
 //////////////////////////////////////////////////
+RenderEngine::RenderPathType RenderEngine::GetRenderPathType() const
+{
+  return this->renderPathType;
+}
+
+//////////////////////////////////////////////////
 void RenderEngine::SetupResources()
 {
   std::vector< std::pair<std::string, std::string> > archNames;
@@ -384,6 +421,10 @@ void RenderEngine::SetupResources()
   std::list<std::string>::const_iterator iter;
   std::list<std::string> paths =
     common::SystemPaths::Instance()->GetGazeboPaths();
+
+  std::list<std::string> mediaDirs;
+  mediaDirs.push_back("media");
+  mediaDirs.push_back("Media");
 
   for (iter = paths.begin(); iter != paths.end(); ++iter)
   {
@@ -396,32 +437,41 @@ void RenderEngine::SetupResources()
 
     archNames.push_back(
         std::make_pair((*iter)+"/", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/rtshaderlib", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/materials/programs", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/materials/scripts", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/materials/textures", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/models", "General"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/fonts", "Fonts"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/looknfeel", "LookNFeel"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/schemes", "Schemes"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/imagesets", "Imagesets"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/fonts", "Fonts"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/layouts", "Layouts"));
-    archNames.push_back(
-        std::make_pair((*iter)+"/Media/gui/animations", "Animations"));
+
+    for (std::list<std::string>::iterator mediaIter = mediaDirs.begin();
+         mediaIter != mediaDirs.end(); ++mediaIter)
+    {
+      std::string prefix = (*iter) + "/" + (*mediaIter);
+
+      archNames.push_back(
+          std::make_pair(prefix, "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/skyx", "SkyX"));
+      archNames.push_back(
+          std::make_pair(prefix + "/rtshaderlib", "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/materials/programs", "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/materials/scripts", "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/materials/textures", "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/media/models", "General"));
+      archNames.push_back(
+          std::make_pair(prefix + "/fonts", "Fonts"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/looknfeel", "LookNFeel"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/schemes", "Schemes"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/imagesets", "Imagesets"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/fonts", "Fonts"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/layouts", "Layouts"));
+      archNames.push_back(
+          std::make_pair(prefix + "/gui/animations", "Animations"));
+    }
 
     for (aiter = archNames.begin(); aiter!= archNames.end(); ++aiter)
     {
@@ -447,10 +497,11 @@ void RenderEngine::SetupRenderSystem()
 
   // Set parameters of render system (window size, etc.)
 #if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR == 6
-    rsList = this->root->getAvailableRenderers();
+  rsList = this->root->getAvailableRenderers();
 #else
-    rsList = &(this->root->getAvailableRenderers());
+  rsList = &(this->root->getAvailableRenderers());
 #endif
+
 
   int c = 0;
 
@@ -468,7 +519,11 @@ void RenderEngine::SetupRenderSystem()
          renderSys->getName().compare("OpenGL Rendering Subsystem") != 0);
 
   if (renderSys == NULL)
-    gzthrow("unable to find rendering system");
+  {
+    gzthrow("unable to find OpenGL rendering system. OGRE is probably\
+        installed incorrectly. Double check the OGRE cmake output, and make\
+        sure OpenGL is enabled.");
+  }
 
   // We operate in windowed mode
   renderSys->setConfigOption("Full Screen", "No");
@@ -485,8 +540,64 @@ void RenderEngine::SetupRenderSystem()
   this->root->setRenderSystem(renderSys);
 }
 
-//////////////////////////////////////////////////
-bool RenderEngine::HasGLSL()
+/////////////////////////////////////////////////
+bool RenderEngine::CreateContext()
+{
+  bool result = true;
+
+  try
+  {
+    this->dummyDisplay = XOpenDisplay(0);
+    if (!this->dummyDisplay)
+    {
+      gzerr << "Can't open display: " << XDisplayName(0) << "\n";
+      return false;
+    }
+
+    int screen = DefaultScreen(this->dummyDisplay);
+
+    int attribList[] = {GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 16,
+      GLX_STENCIL_SIZE, 8, None };
+
+    XVisualInfo *dummyVisual = glXChooseVisual(
+        static_cast<Display*>(this->dummyDisplay),
+        screen, static_cast<int *>(attribList));
+
+    if (!dummyVisual)
+    {
+      gzerr << "Unable to create glx visual\n";
+      return false;
+    }
+
+    this->dummyWindowId = XCreateSimpleWindow(
+        static_cast<Display*>(this->dummyDisplay),
+        RootWindow(static_cast<Display*>(this->dummyDisplay), screen),
+        0, 0, 1, 1, 0, 0, 0);
+
+    this->dummyContext = glXCreateContext(
+        static_cast<Display*>(this->dummyDisplay),
+        dummyVisual, NULL, 1);
+
+    if (!this->dummyContext)
+    {
+      gzerr << "Unable to create glx context\n";
+      return false;
+    }
+
+    glXMakeCurrent(static_cast<Display*>(this->dummyDisplay),
+        this->dummyWindowId, static_cast<GLXContext>(this->dummyContext));
+  }
+  catch(...)
+  {
+    result = false;
+  }
+
+
+  return result;
+}
+
+/////////////////////////////////////////////////
+void RenderEngine::CheckSystemCapabilities()
 {
   const Ogre::RenderSystemCapabilities *capabilities;
   Ogre::RenderSystemCapabilities::ShaderProfiles profiles;
@@ -495,36 +606,41 @@ bool RenderEngine::HasGLSL()
   capabilities = this->root->getRenderSystem()->getCapabilities();
   profiles = capabilities->getSupportedShaderProfiles();
 
-  iter = std::find(profiles.begin(), profiles.end(), "glsl");
+  bool hasFragmentPrograms =
+    capabilities->hasCapability(Ogre::RSC_FRAGMENT_PROGRAM);
 
-  return iter != profiles.end();
-}
+  bool hasVertexPrograms =
+    capabilities->hasCapability(Ogre::RSC_VERTEX_PROGRAM);
 
+  // bool hasGeometryPrograms =
+  //  capabilities->hasCapability(Ogre::RSC_GEOMETRY_PROGRAM);
 
-void RenderEngine::CreateContext()
-{
-  this->dummyDisplay = XOpenDisplay(0);
-  if (!this->dummyDisplay)
-    gzthrow(std::string("Can't open display: ") + XDisplayName(0) + "\n");
+  // bool hasRenderToVertexBuffer =
+  //  capabilities->hasCapability(Ogre::RSC_HWRENDER_TO_VERTEX_BUFFER);
 
-  int screen = DefaultScreen(this->dummyDisplay);
+  // int multiRenderTargetCount = capabilities->getNumMultiRenderTargets();
 
-  int attribList[] = {GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 16,
-    GLX_STENCIL_SIZE, 8, None };
+  bool hasFBO =
+    capabilities->hasCapability(Ogre::RSC_FBO);
 
-  XVisualInfo *dummyVisual = glXChooseVisual(
-      static_cast<Display*>(this->dummyDisplay),
-      screen, static_cast<int *>(attribList));
+  bool hasGLSL =
+    std::find(profiles.begin(), profiles.end(), "glsl") != profiles.end();
 
-  this->dummyWindowId = XCreateSimpleWindow(
-      static_cast<Display*>(this->dummyDisplay),
-      RootWindow(static_cast<Display*>(this->dummyDisplay), screen),
-      0, 0, 1, 1, 0, 0, 0);
+  if (!hasGLSL || !hasFBO)
+  {
+    gzerr << "Your machine does not meet the minimal rendering requirements.\n";
+    if (!hasGLSL)
+      gzerr << "   GLSL is missing.\n";
+    if (!hasFBO)
+      gzerr << "   Frame Buffer Objects (FBO) is missing.\n";
+  }
 
-  this->dummyContext = glXCreateContext(
-      static_cast<Display*>(this->dummyDisplay),
-      dummyVisual, NULL, 1);
+  if (hasVertexPrograms && hasFragmentPrograms)
+    this->renderPathType = RenderEngine::FORWARD;
+  else
+    this->renderPathType = RenderEngine::VERTEX;
 
-  glXMakeCurrent(static_cast<Display*>(this->dummyDisplay),
-      this->dummyWindowId, static_cast<GLXContext>(this->dummyContext));
+  // Disable deferred rendering for now. Needs more work.
+  // if (hasRenderToVertexBuffer && multiRenderTargetCount >= 8)
+  //  this->renderPathType = RenderEngine::DEFERRED;
 }

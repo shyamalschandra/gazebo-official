@@ -27,18 +27,20 @@
 #include "common/Exception.hh"
 #include "common/Events.hh"
 
-#include "rendering/GUIOverlay.hh"
-#include "rendering/Conversions.hh"
-#include "rendering/WindowManager.hh"
-#include "rendering/FPSViewController.hh"
-#include "rendering/OrbitViewController.hh"
-#include "rendering/RenderTypes.hh"
-#include "rendering/Scene.hh"
-#include "rendering/RTShaderSystem.hh"
-#include "rendering/Camera.hh"
-#include "rendering/Visual.hh"
-#include "rendering/DynamicLines.hh"
-#include "rendering/UserCamera.hh"
+#include "gazebo/rendering/selection_buffer/SelectionBuffer.hh"
+#include "gazebo/rendering/RenderEngine.hh"
+#include "gazebo/rendering/GUIOverlay.hh"
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/WindowManager.hh"
+#include "gazebo/rendering/FPSViewController.hh"
+#include "gazebo/rendering/OrbitViewController.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/RTShaderSystem.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/DynamicLines.hh"
+#include "gazebo/rendering/UserCamera.hh"
 
 using namespace gazebo;
 using namespace rendering;
@@ -47,19 +49,17 @@ using namespace rendering;
 int UserCamera::count = 0;
 
 //////////////////////////////////////////////////
-UserCamera::UserCamera(const std::string &name_, Scene *scene_)
-  : Camera(name_, scene_)
+UserCamera::UserCamera(const std::string &_name, Scene *_scene)
+  : Camera(_name, _scene)
 {
   std::stringstream stream;
-
-  stream << "UserCamera_" << this->count++;
-  this->name = stream.str();
 
   this->gui = new GUIOverlay();
 
   this->orbitViewController = new OrbitViewController(this);
   this->fpsViewController = new FPSViewController(this);
   this->viewController = this->orbitViewController;
+  this->selectionBuffer = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -91,7 +91,67 @@ void UserCamera::Init()
 {
   Camera::Init();
   this->SetHFOV(GZ_DTOR(60));
-  this->SetClipDist(0.1, 200);
+
+  // Careful when setting this value.
+  // A far clip that is too close will have bad side effects on the
+  // lighting. When using deferred shading, the light's use geometry that
+  // trigger shaders. If the far clip is too close, the light's geometry is
+  // clipped and wholes appear in the lighting.
+  if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::VERTEX)
+  {
+    this->SetClipDist(0.1, 100);
+  }
+  else if (RenderEngine::Instance()->GetRenderPathType() ==
+           RenderEngine::FORWARD)
+  {
+    this->SetClipDist(0.1, 5000);
+  }
+  else
+  {
+    this->SetClipDist(0.1, 5000);
+  }
+
+  this->axisNode =
+    this->pitchNode->createChildSceneNode(this->name + "AxisNode");
+
+  const Ogre::Vector3 *corners =
+    this->camera->getWorldSpaceCorners();
+
+  double width = corners[1].y - corners[0].y;
+
+  this->axisNode->setPosition(corners[0].x + 0.01,
+                              corners[0].y + 0.0005,
+                              corners[0].z + 0.0005);
+  axisNode->setScale(width * 0.05, width * 0.05, width * 0.05);
+  axisNode->setInheritOrientation(false);
+
+  Ogre::ManualObject *x =
+    this->scene->GetManager()->createManualObject("MyXAxis");
+  x->begin("Gazebo/Red", Ogre::RenderOperation::OT_LINE_LIST);
+  x->position(0, 0, 0);
+  x->position(1, 0, 0);
+  x->end();
+  x->setVisibilityFlags(GZ_VISIBILITY_GUI);
+
+  Ogre::ManualObject *y =
+    this->scene->GetManager()->createManualObject("MyYAxis");
+  y->begin("Gazebo/Green", Ogre::RenderOperation::OT_LINE_LIST);
+  y->position(0, 0, 0);
+  y->position(0, 1, 0);
+  y->end();
+  y->setVisibilityFlags(GZ_VISIBILITY_GUI);
+
+  Ogre::ManualObject *z =
+    this->scene->GetManager()->createManualObject("MyZAxis");
+  z->begin("Gazebo/Blue", Ogre::RenderOperation::OT_LINE_LIST);
+  z->position(0, 0, 0);
+  z->position(0, 0, 1);
+  z->end();
+  z->setVisibilityFlags(GZ_VISIBILITY_GUI);
+
+  this->axisNode->attachObject(x);
+  this->axisNode->attachObject(y);
+  this->axisNode->attachObject(z);
 }
 
 //////////////////////////////////////////////////
@@ -114,7 +174,7 @@ void UserCamera::Update()
 void UserCamera::PostRender()
 {
   Camera::PostRender();
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("save");
+  sdf::ElementPtr elem = this->sdf->GetElement("save");
 
   if (elem->GetValueBool("enabled"))
   {
@@ -150,21 +210,33 @@ void UserCamera::Fini()
 void UserCamera::HandleMouseEvent(const common::MouseEvent &_evt)
 {
   if (!this->gui || !this->gui->HandleMouseEvent(_evt))
+  {
+    if (this->selectionBuffer)
+      this->selectionBuffer->Update();
+
+    // DEBUG: this->selectionBuffer->ShowOverlay(true);
+    // Ogre::Entity *entity =
+    // this->selectionBuffer->OnSelectionClick(_evt.pos.x, _evt.pos.y);
+
     this->viewController->HandleMouseEvent(_evt);
+  }
 }
 
+/////////////////////////////////////////////////
 void UserCamera::HandleKeyPressEvent(const std::string &_key)
 {
   if (this->gui)
     this->gui->HandleKeyPressEvent(_key);
 }
 
+/////////////////////////////////////////////////
 void UserCamera::HandleKeyReleaseEvent(const std::string &_key)
 {
   if (this->gui)
     this->gui->HandleKeyReleaseEvent(_key);
 }
 
+/////////////////////////////////////////////////
 bool UserCamera::AttachToVisualImpl(VisualPtr _visual, bool _inheritOrientation,
                                      double _minDist, double _maxDist)
 {
@@ -258,7 +330,7 @@ void UserCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
                    static_cast<double>(this->viewport->getActualHeight());
 
     double hfov =
-      this->sdf->GetOrCreateElement("horizontal_fov")->GetValueDouble("angle");
+      this->sdf->GetValueDouble("horizontal_fov");
     double vfov = 2.0 * atan(tan(hfov / 2.0) / ratio);
     this->camera->setAspectRatio(ratio);
     this->camera->setFOVy(Ogre::Radian(vfov));
@@ -423,6 +495,9 @@ void UserCamera::SetRenderTarget(Ogre::RenderTarget *_target)
   this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL);
   this->gui->Init(this->renderTarget);
   this->initialized = true;
+
+  this->selectionBuffer = new SelectionBuffer(this->name,
+      this->scene->GetManager(), this->renderTarget);
 }
 
 //////////////////////////////////////////////////
@@ -437,3 +512,48 @@ void UserCamera::EnableViewController(bool _value) const
   this->viewController->SetEnabled(_value);
 }
 
+//////////////////////////////////////////////////
+VisualPtr UserCamera::GetVisual(math::Vector2i _mousePos, std::string &_mod)
+{
+  VisualPtr result;
+
+  Ogre::Entity *entity =
+    this->selectionBuffer->OnSelectionClick(_mousePos.x, _mousePos.y);
+
+  _mod = "";
+  if (entity)
+  {
+    // Make sure we set the _mod only if we have found a selection object
+    if (entity->getName().substr(0, 15) == "__SELECTION_OBJ" &&
+        !entity->getUserAny().isEmpty() &&
+        entity->getUserAny().getType() == typeid(std::string))
+    {
+      _mod = Ogre::any_cast<std::string>(entity->getUserAny());
+    }
+
+    if (!entity->getUserAny().isEmpty())
+    {
+      result = this->scene->GetVisual(
+          Ogre::any_cast<std::string>(entity->getUserAny()));
+    }
+  }
+
+  return result;
+}
+
+//////////////////////////////////////////////////
+VisualPtr UserCamera::GetVisual(math::Vector2i _mousePos)
+{
+  VisualPtr result;
+
+  Ogre::Entity *entity =
+    this->selectionBuffer->OnSelectionClick(_mousePos.x, _mousePos.y);
+
+  if (entity && !entity->getUserAny().isEmpty())
+  {
+    result = this->scene->GetVisual(
+        Ogre::any_cast<std::string>(entity->getUserAny()));
+  }
+
+  return result;
+}

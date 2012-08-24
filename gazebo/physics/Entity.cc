@@ -98,16 +98,15 @@ void Entity::Load(sdf::ElementPtr _sdf)
 
   this->visualMsg->set_name(this->GetScopedName());
 
-  if (this->sdf->HasElement("origin"))
+  if (this->sdf->HasElement("pose"))
   {
-    sdf::ElementPtr originElem = this->sdf->GetElement("origin");
     if (this->parent && this->parentEntity)
-      this->worldPose = originElem->GetValuePose("pose") +
+      this->worldPose = this->sdf->GetValuePose("pose") +
                         this->parentEntity->worldPose;
     else
-      this->worldPose = originElem->GetValuePose("pose");
+      this->worldPose = this->sdf->GetValuePose("pose");
 
-    this->initialRelativePose = originElem->GetValuePose("pose");
+    this->initialRelativePose = this->sdf->GetValuePose("pose");
   }
 
   if (this->parent)
@@ -534,7 +533,7 @@ void Entity::UpdateParameters(sdf::ElementPtr _sdf)
   if (this->parent && this->parentEntity)
     parentPose = this->parentEntity->worldPose;
 
-  math::Pose newPose = _sdf->GetElement("origin")->GetValuePose("pose");
+  math::Pose newPose = _sdf->GetValuePose("pose");
   if (newPose != this->GetRelativePose())
   {
     this->SetRelativePose(newPose);
