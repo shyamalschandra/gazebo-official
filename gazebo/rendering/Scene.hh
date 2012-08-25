@@ -34,6 +34,11 @@
 #include "common/Color.hh"
 #include "math/Vector2i.hh"
 
+namespace SkyX
+{
+  class SkyX;
+  class BasicController;
+}
 
 namespace Ogre
 {
@@ -68,8 +73,9 @@ namespace gazebo
     /// \brief Representation of an entire scene graph
     class Scene : public boost::enable_shared_from_this<Scene>
     {
-      public: enum SceneType {BSP, GENERIC};
+      /// \brief Constructor
       private: Scene() {}
+
       /// \brief Constructor
       public: Scene(const std::string &_name,
                     bool _enableVisualizations = false);
@@ -233,7 +239,6 @@ namespace gazebo
       private: void PrintSceneGraphHelper(const std::string &prefix,
                                           Ogre::Node *node);
 
-      public: void SetSky(const std::string &_material);
 
       /// \brief Set whether shadows are on or off
       /// \param _value True to enable shadows, False to disable
@@ -263,6 +268,10 @@ namespace gazebo
 
       public: Heightmap *GetHeightmap() const;
 
+      private: void SetSky();
+
+      private: void InitDeferredShading();
+
       // \brief Get the mesh information for the given mesh.
       // Code found in Wiki: www.ogre3d.org/wiki/index.php/RetrieveVertexData
       private: void GetMeshInformation(const Ogre::Mesh *mesh,
@@ -274,8 +283,8 @@ namespace gazebo
                                        const Ogre::Quaternion &orient,
                                        const Ogre::Vector3 &scale);
 
-      private: void OnRequest(ConstRequestPtr &_msg);
       private: void OnResponse(ConstResponsePtr &_msg);
+      private: void OnRequest(ConstRequestPtr &_msg);
       private: void OnJointMsg(ConstJointPtr &_msg);
 
       private: bool ProcessSensorMsg(ConstSensorPtr &_msg);
@@ -295,6 +304,8 @@ namespace gazebo
 
       private: void OnSelectionMsg(ConstSelectionPtr &_msg);
 
+      private: void OnSkyMsg(ConstSkyPtr &_msg);
+
       private: void OnPoseMsg(ConstPosePtr &_msg);
 
       private: void OnSkeletonPoseMsg(ConstPoseAnimationPtr &_msg);
@@ -302,6 +313,11 @@ namespace gazebo
       public: void Clear();
 
       public: void RegisterVisual(VisualPtr _vis);
+
+      private: void CreateCOMVisual(ConstLinkPtr &_msg, VisualPtr _linkVisual);
+
+      private: void CreateCOMVisual(sdf::ElementPtr _elem,
+                                    VisualPtr _linkVisual);
 
       // private: void ClearImpl();
       private: std::string name;
@@ -367,11 +383,10 @@ namespace gazebo
       private: transport::SubscriberPtr jointSub;
       private: transport::SubscriberPtr selectionSub;
       private: transport::SubscriberPtr responseSub;
-      private: transport::SubscriberPtr requestSub;
       private: transport::SubscriberPtr skeletonPoseSub;
-      private: transport::SubscriberPtr triggerSub;
-      private: transport::PublisherPtr requestPub;
+      private: transport::SubscriberPtr skySub;
       private: transport::PublisherPtr lightPub;
+      private: transport::PublisherPtr requestPub;
 
       private: std::vector<event::ConnectionPtr> connections;
 
@@ -386,10 +401,13 @@ namespace gazebo
       private: Heightmap *heightmap;
 
       private: std::map<std::string, Projector *> projectors;
+
+      private: int iterations;
+
+      public: SkyX::SkyX *skyx;
+      private: SkyX::BasicController *skyxController;
     };
     /// \}
   }
 }
 #endif
-
-

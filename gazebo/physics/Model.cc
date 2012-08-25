@@ -88,8 +88,10 @@ void Model::Load(sdf::ElementPtr _sdf)
   this->jointPub = this->node->Advertise<msgs::Joint>("~/joint");
 
   this->SetStatic(this->sdf->GetValueBool("static"));
-  this->sdf->GetAttribute("static")->SetUpdateFunc(
+  this->sdf->GetElement("static")->GetValue()->SetUpdateFunc(
       boost::bind(&Entity::IsStatic, this));
+
+  this->SetAutoDisable(this->sdf->GetValueBool("allow_auto_disable"));
 
   // TODO: check for duplicate model, and raise an error
   // BasePtr dup = Base::GetByName(this->GetScopedName());
@@ -870,3 +872,16 @@ void Model::SetLinkWorldPose(const math::Pose &_pose, const LinkPtr &_link)
   math::Pose targetModelPose =  linkRelPose * _pose;
   this->SetWorldPose(targetModelPose);
 }
+
+/////////////////////////////////////////////////
+void Model::SetAutoDisable(bool _auto)
+{
+  if (this->joints.size() > 0)
+    return;
+
+  Base_V::iterator iter;
+  for (iter = this->children.begin(); iter != this->children.end(); ++iter)
+    if (*iter && (*iter)->HasType(LINK))
+      boost::static_pointer_cast<Link>(*iter)->SetAutoDisable(_auto);
+}
+

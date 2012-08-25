@@ -65,7 +65,7 @@ void DepthCamera::Load(sdf::ElementPtr &_sdf)
 {
   Camera::Load(_sdf);
   this->output_points =
-    (_sdf->GetOrCreateElement("depth_camera")->GetValueString("output")
+    (_sdf->GetElement("depth_camera")->GetValueString("output")
     == "points");
 }
 
@@ -328,6 +328,8 @@ void DepthCamera::RenderImpl()
 {
   Ogre::SceneManager *sceneMgr = this->scene->GetManager();
 
+  Ogre::ShadowTechnique shadowTech = sceneMgr->getShadowTechnique();
+
   sceneMgr->setShadowTechnique(Ogre::SHADOWTYPE_NONE);
   sceneMgr->_suppressRenderStateChanges(true);
 
@@ -338,8 +340,7 @@ void DepthCamera::RenderImpl()
   this->depthTarget->update(false);
 
   sceneMgr->_suppressRenderStateChanges(false);
-  sceneMgr->setShadowTechnique(
-    Ogre::SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED);
+  sceneMgr->setShadowTechnique(shadowTech);
 
   // for camera image
   Camera::RenderImpl();
@@ -355,8 +356,7 @@ void DepthCamera::RenderImpl()
     this->pcdTarget->update(false);
 
     sceneMgr->_suppressRenderStateChanges(false);
-    sceneMgr->setShadowTechnique(
-            Ogre::SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED);
+    sceneMgr->setShadowTechnique(shadowTech);
   }
 }
 
