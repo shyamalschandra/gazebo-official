@@ -33,20 +33,23 @@ set (sources
   ModelMaker.cc
   ModelRightMenu.cc
   JointControlWidget.cc
+  SkyWidget.cc
 )
 
-set (qt_headers MainWindow.hh 
-                RenderWidget.hh 
-                GLWidget.hh 
-                TimePanel.hh
-                InsertModelWidget.hh
-                LightListWidget.hh
-                ModelListWidget.hh
-                WorldPropertiesWidget.hh
-                ModelEditWidget.hh
-                LightRightMenu.hh
-                ModelRightMenu.hh
-                JointControlWidget.hh
+set (qt_headers
+  MainWindow.hh 
+  RenderWidget.hh 
+  GLWidget.hh 
+  TimePanel.hh
+  InsertModelWidget.hh
+  LightListWidget.hh
+  ModelListWidget.hh
+  WorldPropertiesWidget.hh
+  ModelEditWidget.hh
+  LightRightMenu.hh
+  ModelRightMenu.hh
+  JointControlWidget.hh
+  SkyWidget.hh
 )
 
 set (headers Gui.hh
@@ -61,7 +64,7 @@ set (headers Gui.hh
              qt.h
 )
 
-set (resources images.qrc)
+set (resources resources.qrc)
 
 QT4_WRAP_CPP(headers_MOC ${qt_headers})
 QT4_ADD_RESOURCES(resources_RCC ${resources})

@@ -14,7 +14,6 @@
  * limitations under the License.
  *
 */
-
 /* Desc: A camera sensor using OpenGL
  * Author: Nate Koenig
  * Date: 15 July 2003
@@ -24,18 +23,21 @@
 #include <sstream>
 
 #include "sdf/sdf.hh"
-#include "rendering/ogre_gazebo.h"
-#include "rendering/RTShaderSystem.hh"
 
-#include "common/Events.hh"
-#include "common/Console.hh"
-#include "common/Exception.hh"
-#include "math/Pose.hh"
+#include "gazebo/rendering/skyx/include/SkyX.h"
 
-#include "rendering/Visual.hh"
-#include "rendering/Conversions.hh"
-#include "rendering/Scene.hh"
-#include "rendering/Camera.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/math/Pose.hh"
+
+#include "gazebo/rendering/ogre_gazebo.h"
+#include "gazebo/rendering/RTShaderSystem.hh"
+#include "gazebo/rendering/RenderEngine.hh"
+#include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/Camera.hh"
 
 using namespace gazebo;
 using namespace rendering;
@@ -44,15 +46,15 @@ using namespace rendering;
 unsigned int Camera::cameraCounter = 0;
 
 //////////////////////////////////////////////////
-Camera::Camera(const std::string &namePrefix_, Scene *scene_, bool _autoRender)
+Camera::Camera(const std::string &_namePrefix, Scene *_scene, bool _autoRender)
 {
   this->initialized = false;
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/camera.sdf", this->sdf);
+  sdf::initFile("camera.sdf", this->sdf);
 
   this->animState = NULL;
   this->windowId = 0;
-  this->scene = scene_;
+  this->scene = _scene;
 
   this->newData = false;
 
@@ -65,7 +67,7 @@ Camera::Camera(const std::string &namePrefix_, Scene *scene_, bool _autoRender)
   this->myCount = cameraCounter++;
 
   std::ostringstream stream;
-  stream << namePrefix_ << "(" << this->myCount << ")";
+  stream << _namePrefix << "(" << this->myCount << ")";
   this->name = stream.str();
 
   this->renderTarget = NULL;
@@ -130,7 +132,7 @@ void Camera::Load(sdf::ElementPtr _sdf)
 //////////////////////////////////////////////////
 void Camera::Load()
 {
-  sdf::ElementPtr imgElem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr imgElem = this->sdf->GetElement("image");
   if (imgElem)
   {
     this->imageWidth = imgElem->GetValueInt("width");
@@ -155,8 +157,7 @@ void Camera::Load()
 
   if (this->sdf->HasElement("horizontal_fov"))
   {
-    sdf::ElementPtr elem = this->sdf->GetElement("horizontal_fov");
-    double angle = elem->GetValueDouble("angle");
+    double angle = this->sdf->GetValueDouble("horizontal_fov");
     if (angle < 0.01 || angle > M_PI)
     {
       gzthrow("Camera horizontal field of veiw invalid.");
@@ -208,11 +209,10 @@ unsigned int Camera::GetWindowId() const
 }
 
 //////////////////////////////////////////////////
-void Camera::SetScene(Scene *scene_)
+void Camera::SetScene(Scene *_scene)
 {
-  this->scene = scene_;
+  this->scene = _scene;
 }
-
 
 //////////////////////////////////////////////////
 void Camera::Update()
@@ -282,6 +282,7 @@ void Camera::Render()
   this->RenderImpl();
 }
 
+//////////////////////////////////////////////////
 void Camera::RenderImpl()
 {
   if (this->renderTarget)
@@ -437,7 +438,7 @@ void Camera::RotatePitch(float angle)
 //////////////////////////////////////////////////
 void Camera::SetClipDist()
 {
-  sdf::ElementPtr clipElem = this->sdf->GetOrCreateElement("clip");
+  sdf::ElementPtr clipElem = this->sdf->GetElement("clip");
   if (!clipElem)
     gzthrow("Camera has no <clip> tag.");
 
@@ -454,26 +455,24 @@ void Camera::SetClipDist()
 //////////////////////////////////////////////////
 void Camera::SetClipDist(float _near, float _far)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("clip");
+  sdf::ElementPtr elem = this->sdf->GetElement("clip");
 
-  elem->GetAttribute("near")->Set(_near);
-  elem->GetAttribute("far")->Set(_far);
+  elem->GetElement("near")->Set(_near);
+  elem->GetElement("far")->Set(_far);
 
   this->SetClipDist();
 }
 
 //////////////////////////////////////////////////
-void Camera::SetHFOV(float radians)
+void Camera::SetHFOV(float _radians)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("horizontal_fov");
-  elem->GetAttribute("angle")->Set(radians);
+  this->sdf->GetElement("horizontal_fov")->Set(_radians);
 }
 
 //////////////////////////////////////////////////
 math::Angle Camera::GetHFOV() const
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("horizontal_fov");
-  return math::Angle(elem->GetValueDouble("angle"));
+  return math::Angle(this->sdf->GetValueDouble("horizontal_fov"));
 }
 
 //////////////////////////////////////////////////
@@ -492,28 +491,28 @@ void Camera::SetImageSize(unsigned int _w, unsigned int _h)
 //////////////////////////////////////////////////
 void Camera::SetImageWidth(unsigned int _w)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("image");
-  elem->GetAttribute("width")->Set(_w);
+  sdf::ElementPtr elem = this->sdf->GetElement("image");
+  elem->GetElement("width")->Set(_w);
 }
 
 //////////////////////////////////////////////////
 void Camera::SetImageHeight(unsigned int _h)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("image");
-  elem->GetAttribute("height")->Set(_h);
+  sdf::ElementPtr elem = this->sdf->GetElement("image");
+  elem->GetElement("height")->Set(_h);
 }
 
 //////////////////////////////////////////////////
 unsigned int Camera::GetImageWidth() const
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr elem = this->sdf->GetElement("image");
   return elem->GetValueInt("width");
 }
 
 //////////////////////////////////////////////////
 unsigned int Camera::GetImageHeight() const
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr elem = this->sdf->GetElement("image");
   // gzerr << "image height " << elem->GetValueInt("height") << "\n";
   return elem->GetValueInt("height");
 }
@@ -521,7 +520,7 @@ unsigned int Camera::GetImageHeight() const
 //////////////////////////////////////////////////
 unsigned int Camera::GetImageDepth() const
 {
-  sdf::ElementPtr imgElem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr imgElem = this->sdf->GetElement("image");
   std::string imgFmt = imgElem->GetValueString("format");
 
   if (imgFmt == "L8")
@@ -544,7 +543,7 @@ unsigned int Camera::GetImageDepth() const
 //////////////////////////////////////////////////
 std::string Camera::GetImageFormat() const
 {
-  sdf::ElementPtr imgElem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr imgElem = this->sdf->GetElement("image");
   return imgElem->GetValueString("format");
 }
 
@@ -564,7 +563,7 @@ unsigned int Camera::GetTextureHeight() const
 //////////////////////////////////////////////////
 size_t Camera::GetImageByteSize() const
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("image");
+  sdf::ElementPtr elem = this->sdf->GetElement("image");
   return this->GetImageByteSize(elem->GetValueInt("width"),
                                 elem->GetValueInt("height"),
                                 this->GetImageFormat());
@@ -616,7 +615,7 @@ int Camera::GetOgrePixelFormat(const std::string &_format)
 //////////////////////////////////////////////////
 void Camera::EnableSaveFrame(bool enable)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("save");
+  sdf::ElementPtr elem = this->sdf->GetElement("save");
   elem->GetAttribute("enabled")->Set(enable);
   this->captureData = true;
 
@@ -628,8 +627,8 @@ void Camera::EnableSaveFrame(bool enable)
 //////////////////////////////////////////////////
 void Camera::SetSaveFramePathname(const std::string &_pathname)
 {
-  sdf::ElementPtr elem = this->sdf->GetOrCreateElement("save");
-  elem->GetAttribute("path")->Set(_pathname);
+  sdf::ElementPtr elem = this->sdf->GetElement("save");
+  elem->GetElement("path")->Set(_pathname);
 
   // Create the directory to store frames
   if (elem->GetValueBool("enabled"))
@@ -766,7 +765,7 @@ bool Camera::SaveFrame(const std::string &_filename)
 //////////////////////////////////////////////////
 std::string Camera::GetFrameFilename()
 {
-  sdf::ElementPtr saveElem = this->sdf->GetOrCreateElement("save");
+  sdf::ElementPtr saveElem = this->sdf->GetElement("save");
 
   std::string path = saveElem->GetValueString("path");
 
@@ -1020,7 +1019,6 @@ void Camera::CreateRenderTexture(const std::string &textureName)
       Ogre::TU_RENDERTARGET)).getPointer();
 
   this->SetRenderTarget(this->renderTexture->getBuffer()->getRenderTarget());
-  RTShaderSystem::AttachViewport(this->GetViewport(), this->GetScene());
   this->initialized = true;
 }
 
@@ -1059,7 +1057,7 @@ bool Camera::GetWorldPointOnPlane(int _x, int _y,
 
   _result = origin + dir * dist;
 
-  if (!math::equal(dist, -1))
+  if (!math::equal(dist, -1.0))
     return true;
   else
     return false;
@@ -1075,6 +1073,10 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *target)
     // Setup the viewport to use the texture
     this->viewport = this->renderTarget->addViewport(this->camera);
     this->viewport->setClearEveryFrame(true);
+    this->viewport->setShadowsEnabled(true);
+
+    RTShaderSystem::AttachViewport(this->viewport, this->GetScene());
+
     this->viewport->setBackgroundColour(
         Conversions::Convert(this->scene->GetBackgroundColor()));
     this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL & ~GZ_VISIBILITY_GUI);
@@ -1086,6 +1088,47 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *target)
     double vfov = 2.0 * atan(tan(hfov / 2.0) / ratio);
     this->camera->setAspectRatio(ratio);
     this->camera->setFOVy(Ogre::Radian(vfov));
+
+    // Setup Deferred rendering for the camera
+    if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
+    {
+      // Deferred shading GBuffer compositor
+      this->dsGBufferInstance =
+        Ogre::CompositorManager::getSingleton().addCompositor(this->viewport,
+            "DeferredShading/GBuffer");
+
+      // Deferred lighting GBuffer compositor
+      this->dlGBufferInstance =
+        Ogre::CompositorManager::getSingleton().addCompositor(this->viewport,
+            "DeferredLighting/GBuffer");
+
+      // Deferred shading: Merging compositor
+      this->dsMergeInstance =
+        Ogre::CompositorManager::getSingleton().addCompositor(this->viewport,
+            "DeferredShading/ShowLit");
+
+      // Deferred lighting: Merging compositor
+      this->dlMergeInstance =
+        Ogre::CompositorManager::getSingleton().addCompositor(this->viewport,
+            "DeferredLighting/ShowLit");
+
+
+      // Screen space ambient occlusion
+      // this->ssaoInstance =
+      //  Ogre::CompositorManager::getSingleton().addCompositor(this->viewport,
+      //      "DeferredShading/SSAO");
+
+      this->dsGBufferInstance->setEnabled(false);
+      this->dsMergeInstance->setEnabled(false);
+
+      this->dlGBufferInstance->setEnabled(true);
+      this->dlMergeInstance->setEnabled(true);
+
+      // this->ssaoInstance->setEnabled(false);
+    }
+
+    if (this->GetScene()->skyx != NULL)
+      this->renderTarget->addListener(this->GetScene()->skyx);
   }
 }
 

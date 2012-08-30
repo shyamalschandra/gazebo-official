@@ -70,7 +70,7 @@ void HeightmapShape::Init()
   this->scale.x = terrainSize.x / this->vertSize;
   this->scale.y = terrainSize.y / this->vertSize;
 
-  if (math::equal(this->img.GetMaxColor().R(), 0))
+  if (math::equal(this->img.GetMaxColor().r, 0.0f))
     this->scale.z = fabs(terrainSize.z);
   else
     this->scale.z = fabs(terrainSize.z) / this->img.GetMaxColor().R();
@@ -167,7 +167,7 @@ math::Vector3 HeightmapShape::GetSize() const
 //////////////////////////////////////////////////
 math::Vector3 HeightmapShape::GetOrigin() const
 {
-  return this->sdf->GetValueVector3("origin");
+  return this->sdf->GetValueVector3("pose");
 }
 
 //////////////////////////////////////////////////
