@@ -67,11 +67,11 @@ void MapShape::Load(sdf::ElementPtr _sdf)
 
   // Make sure they are ok
   if (_sdf->GetValueDouble("scale") <= 0)
-    _sdf->GetAttribute("scale")->Set(0.1);
+    _sdf->GetElement("scale")->Set(0.1);
   if (this->sdf->GetValueInt("threshold") <= 0)
-    _sdf->GetAttribute("threshold")->Set(200);
+    _sdf->GetElement("threshold")->Set(200);
   if (this->sdf->GetValueDouble("height") <= 0)
-    _sdf->GetAttribute("height")->Set(1.0);
+    _sdf->GetElement("height")->Set(1.0);
 
   // Load the image
   this->mapImage = new common::Image();
@@ -402,7 +402,7 @@ void MapShape::GetPixelCount(unsigned int xStart, unsigned int yStart,
       pixColor = this->mapImage->GetPixel(x, y);
 
       v = (unsigned char)(255 *
-          ((pixColor.R() + pixColor.G() + pixColor.B()) / 3.0));
+          ((pixColor.r + pixColor.g + pixColor.b) / 3.0));
       // if (this->sdf->GetValueBool("negative"))
         // v = 255 - v;
 

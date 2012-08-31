@@ -1,4 +1,5 @@
 set (models
+  pioneer2at.model
   pioneer2dx.model
   pr2.model
   pr2_visual_only.model
@@ -33,6 +34,9 @@ set (models
   actor_demo.model
   actor.model
   japanese_restaurant.model
+  multi_visuals.model
+  turtlebot.model
+  ragdoll.model
   )
 
 set (lights
