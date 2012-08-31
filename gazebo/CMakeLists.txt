@@ -1,10 +1,7 @@
-add_definitions(${TINYXML_CFLAGS})
-
 include_directories(SYSTEM
   ${OPENGL_INCLUDE_DIR}
   ${OGRE_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${TINYXML_INCLUDE_DIRS}
   ${PROTOBUF_INCLUDE_DIR}
 )
 
@@ -16,7 +13,6 @@ include_directories(
 link_directories(  
   ${OGRE_LIBRARY_PATH}
   ${Boost_LIBRARY_DIRS} 
-  ${TINYXML_LIBRARY_DIRS}
 )
 
 add_subdirectory(msgs)
@@ -47,9 +43,9 @@ target_link_libraries(gzmaster gazebo_common
                                gazebo_transport
                                gazebo_sdf_interface
                                gazebo_msgs
-                               ${Boost_LIBRARIES}
-                               ${freeimage_library}
-                               ${PROTOBUF_LIBRARY})
+                               pthread
+)
+
 
 target_link_libraries(gzserver gazebo_common
                                gazebo_sdf_interface
@@ -59,8 +55,7 @@ target_link_libraries(gzserver gazebo_common
                                gazebo_rendering
                                gazebo_msgs
                                pthread
-                               ${TINYXML_LIBRARIES}
-                               ${Boost_LIBRARIES})
+)
 
 target_link_libraries(gazebo gazebo_common
                              gazebo_sdf_interface
@@ -71,8 +66,7 @@ target_link_libraries(gazebo gazebo_common
                              gazebo_msgs
                              gazebo_gui
                              pthread
-                             ${TINYXML_LIBRARIES}
-                             ${Boost_LIBRARIES})
+)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "CHECK")
   target_link_libraries(gzserver gcov)
