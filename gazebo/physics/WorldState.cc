@@ -30,7 +30,7 @@ WorldState::WorldState()
   : State()
 {
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/state.sdf", this->sdf);
+  sdf::initFile("state.sdf", this->sdf);
 }
 
 /////////////////////////////////////////////////
@@ -38,9 +38,9 @@ WorldState::WorldState(WorldPtr _world)
   : State(_world->GetName(), _world->GetSimTime(), _world->GetRealTime())
 {
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/state.sdf", this->sdf);
+  sdf::initFile("state.sdf", this->sdf);
 
-  this->sdf->GetAttribute("time")->Set(_world->GetSimTime());
+  this->sdf->GetElement("time")->Set(_world->GetSimTime());
 
   for (unsigned int i = 0; i < _world->GetModelCount(); ++i)
   {

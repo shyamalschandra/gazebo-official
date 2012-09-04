@@ -41,6 +41,12 @@ namespace gazebo
     static const double NAN_D = std::numeric_limits<double>::quiet_NaN();
     static const double NAN_I = std::numeric_limits<int>::quiet_NaN();
 
+    template<typename T>
+    inline T clamp(T _v, T _min, T _max)
+    {
+      return std::max(std::min(_v, _max), _min);
+    }
+
     /// \brief check if a float is NaN
     inline bool isnan(float _v)
     {
@@ -92,26 +98,17 @@ namespace gazebo
       return min;
     }
 
-    inline bool equal(const double &_a, const double &_b,
-                      const double &_epsilon = 1e-6)
+    template<typename T>
+    inline bool equal(const T &_a, const T &_b,
+                      const T &_epsilon = 1e-6)
     {
       return std::fabs(_a - _b) <= _epsilon;
     }
 
-    inline bool equal(const float &_a, const float &_b,
-                      const float &_epsilon = 1e-6)
-    {
-      return std::fabs(_a - _b) <= _epsilon;
-    }
-
-    inline double precision(const double &_a, const unsigned int &_precision)
+    template<typename T>
+    inline T precision(const T &_a, const unsigned int &_precision)
     {
       return round(_a * pow(10, _precision)) / pow(10, _precision);
-    }
-
-    inline float precision(const float &_a, const unsigned int &_precision)
-    {
-      return roundf(_a * pow(10, _precision)) / pow(10, _precision);
     }
 
     inline bool isPowerOfTwo(unsigned int _x)
@@ -209,6 +206,3 @@ namespace gazebo
   }
 }
 #endif
-
-
-

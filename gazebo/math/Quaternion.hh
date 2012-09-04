@@ -87,7 +87,7 @@ namespace gazebo
               s = sqrt(q.w * q.w + q.x * q.x + q.y * q.y +
                        q.z * q.z);
 
-              if (math::equal(s, 0))
+              if (math::equal(s, 0.0))
               {
                 q.w = 1.0;
                 q.x = 0.0;
@@ -246,10 +246,10 @@ namespace gazebo
               if (!finite(this->w))
                 this->w = 1;
 
-              if (math::equal(this->w, 0) &&
-                  math::equal(this->x, 0) &&
-                  math::equal(this->y, 0) &&
-                  math::equal(this->z, 0))
+              if (math::equal(this->w, 0.0) &&
+                  math::equal(this->x, 0.0) &&
+                  math::equal(this->y, 0.0) &&
+                  math::equal(this->z, 0.0))
               {
                 this->w = 1;
               }
