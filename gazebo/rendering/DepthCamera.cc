@@ -36,7 +36,6 @@
 #include "rendering/Conversions.hh"
 #include "rendering/Scene.hh"
 #include "rendering/DepthCamera.hh"
-#include "rendering/RenderEngine.hh"
 
 using namespace gazebo;
 using namespace rendering;
@@ -66,7 +65,7 @@ void DepthCamera::Load(sdf::ElementPtr &_sdf)
 {
   Camera::Load(_sdf);
   this->output_points =
-    (_sdf->GetOrCreateElement("depth_camera")->GetValueString("output")
+    (_sdf->GetElement("depth_camera")->GetValueString("output")
     == "points");
 }
 
@@ -93,12 +92,6 @@ void DepthCamera::CreateDepthTexture(const std::string &_textureName)
 {
   // Create the depth buffer
   std::string depthMaterialName = this->GetName() + "_RttMat_Camera_Depth";
-
-  if (!rendering::RenderEngine::Instance()->xAvailable)
-  {
-    gzwarn <<  "No X, no camera\n";
-    return;
-  }
 
   this->depthTexture = Ogre::TextureManager::getSingleton().createManual(
       _textureName,
@@ -186,11 +179,6 @@ void DepthCamera::CreateDepthTexture(const std::string &_textureName)
 //////////////////////////////////////////////////
 void DepthCamera::PostRender()
 {
-  if (this->depthTarget == NULL)
-  {
-    // gzwarn <<  "No X, no camera\n";
-    return;
-  }
   this->depthTarget->swapBuffers();
   if (this->output_points)
     this->pcdTarget->swapBuffers();
@@ -340,11 +328,7 @@ void DepthCamera::RenderImpl()
 {
   Ogre::SceneManager *sceneMgr = this->scene->GetManager();
 
-  if (sceneMgr == NULL)
-  {
-    // gzwarn <<  "No X, no camera\n";
-    return;
-  }
+  Ogre::ShadowTechnique shadowTech = sceneMgr->getShadowTechnique();
 
   sceneMgr->setShadowTechnique(Ogre::SHADOWTYPE_NONE);
   sceneMgr->_suppressRenderStateChanges(true);
@@ -356,8 +340,7 @@ void DepthCamera::RenderImpl()
   this->depthTarget->update(false);
 
   sceneMgr->_suppressRenderStateChanges(false);
-  sceneMgr->setShadowTechnique(
-    Ogre::SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED);
+  sceneMgr->setShadowTechnique(shadowTech);
 
   // for camera image
   Camera::RenderImpl();
@@ -373,8 +356,7 @@ void DepthCamera::RenderImpl()
     this->pcdTarget->update(false);
 
     sceneMgr->_suppressRenderStateChanges(false);
-    sceneMgr->setShadowTechnique(
-            Ogre::SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED);
+    sceneMgr->setShadowTechnique(shadowTech);
   }
 }
 
