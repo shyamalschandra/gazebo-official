@@ -25,6 +25,7 @@
 
 #include "gui/Gui.hh"
 #include "gui/InsertModelWidget.hh"
+#include "gui/SkyWidget.hh"
 #include "gui/ModelListWidget.hh"
 #include "gui/LightListWidget.hh"
 #include "gui/WorldPropertiesWidget.hh"
@@ -75,43 +76,83 @@ MainWindow::MainWindow()
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainWidget->show();
   this->setCentralWidget(mainWidget);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
-  this->setDockOptions(QMainWindow::ForceTabbedDocks |
-                       QMainWindow::AllowTabbedDocks |
-                       QMainWindow::AnimatedDocks);
-                       // QMainWindow::VerticalTabs);
+  this->setDockOptions(QMainWindow::AnimatedDocks);
 
-  this->modelsDock = new QDockWidget(tr("Models"), this);
-  this->modelsDock->setAllowedAreas(Qt::LeftDockWidgetArea);
   ModelListWidget *modelListWidget = new ModelListWidget(this);
-  this->modelsDock->setWidget(modelListWidget);
-  this->addDockWidget(Qt::LeftDockWidgetArea, this->modelsDock);
+  LightListWidget *lightListWidget = new LightListWidget(this);
+  InsertModelWidget *insertModel = new InsertModelWidget(this);
+  SkyWidget *skyWidget = new SkyWidget(this);
 
-  this->lightsDock = new QDockWidget(tr("Lights"), this);
-  this->lightsDock->setAllowedAreas(Qt::LeftDockWidgetArea);
-  LightListWidget *lightListWidget = new LightListWidget();
-  this->lightsDock->setWidget(lightListWidget);
-  this->addDockWidget(Qt::LeftDockWidgetArea, this->lightsDock);
 
-  this->insertModelsDock = new QDockWidget(tr("Insert Model"), this);
-  this->insertModelsDock->setAllowedAreas(Qt::LeftDockWidgetArea);
-  InsertModelWidget *insertModel = new InsertModelWidget();
-  this->insertModelsDock->setWidget(insertModel);
-  this->addDockWidget(Qt::LeftDockWidgetArea, this->insertModelsDock);
+  this->treeWidget = new QTreeWidget();
+  this->treeWidget->setColumnCount(1);
+  this->treeWidget->setIndentation(0);
+  this->treeWidget->setRootIsDecorated(true);
+  this->treeWidget->setExpandsOnDoubleClick(true);
+  this->treeWidget->setFocusPolicy(Qt::NoFocus);
+  this->treeWidget->setAnimated(true);
+  this->treeWidget->setObjectName("mainTree");
+
+  this->treeWidget->header()->hide();
+  this->treeWidget->header()->setResizeMode(QHeaderView::Stretch);
+  this->treeWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+  this->treeWidget->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+  this->treeWidget->setItemDelegate(
+      new TreeViewDelegate(this->treeWidget, this->treeWidget));
+
+  connect(this->treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
+          this, SLOT(ItemSelected(QTreeWidgetItem *, int)));
+
+  QTreeWidgetItem *topItem = new QTreeWidgetItem(this->treeWidget,
+      QStringList("Models"));
+  this->treeWidget->addTopLevelItem(topItem);
+  QTreeWidgetItem *subItem = new QTreeWidgetItem(topItem);
+  this->treeWidget->setItemWidget(subItem, 0, modelListWidget);
+
+  topItem = new QTreeWidgetItem(this->treeWidget, QStringList("Lights"));
+  this->treeWidget->addTopLevelItem(topItem);
+  subItem = new QTreeWidgetItem(topItem);
+  this->treeWidget->setItemWidget(subItem, 0, lightListWidget);
+
+  topItem = new QTreeWidgetItem(this->treeWidget, QStringList("InsertModel"));
+  this->treeWidget->addTopLevelItem(topItem);
+  subItem = new QTreeWidgetItem(topItem);
+  this->treeWidget->setItemWidget(subItem, 0, insertModel);
+
+  topItem = new QTreeWidgetItem(this->treeWidget, QStringList("Sky"));
+  this->treeWidget->addTopLevelItem(topItem);
+  subItem = new QTreeWidgetItem(topItem);
+  this->treeWidget->setItemWidget(subItem, 0, skyWidget);
 
   this->renderWidget = new RenderWidget(mainWidget);
-  this->renderWidget->hide();
-
   this->timePanel = new TimePanel(mainWidget);
 
-  mainLayout->addWidget(this->renderWidget);
-  mainLayout->addWidget(this->timePanel);
-  mainWidget->setLayout(mainLayout);
+  QHBoxLayout *centerLayout = new QHBoxLayout;
 
-  this->tabifyDockWidget(this->modelsDock, this->lightsDock);
-  this->tabifyDockWidget(this->lightsDock, this->insertModelsDock);
-  this->modelsDock->raise();
-  this->setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::North);
+  this->collapseButton = new QPushButton("<");
+  this->collapseButton->setObjectName("collapseButton");
+  this->collapseButton->setSizePolicy(QSizePolicy::Fixed,
+                                      QSizePolicy::Expanding);
+  this->collapseButton->setFocusPolicy(Qt::NoFocus);
+  connect(this->collapseButton, SIGNAL(clicked()), this, SLOT(OnCollapse()));
+
+  centerLayout->addWidget(this->treeWidget, 0);
+  centerLayout->addWidget(collapseButton, 0);
+  centerLayout->addWidget(this->renderWidget, 1);
+  centerLayout->setContentsMargins(0, 0, 0, 0);
+  centerLayout->setSpacing(0);
+
+  QHBoxLayout *timePanelLayout = new QHBoxLayout;
+  timePanelLayout->addSpacing(5);
+  timePanelLayout->addWidget(this->timePanel);
+  timePanelLayout->addSpacing(5);
+
+  mainLayout->addLayout(centerLayout);
+  mainLayout->addLayout(timePanelLayout);
+  mainWidget->setLayout(mainLayout);
 
   this->setWindowIcon(QIcon(":/images/gazebo.svg"));
 
@@ -374,33 +415,27 @@ void MainWindow::OnFullScreen(bool _value)
 {
   if (_value)
   {
-    this->centralWidget()->layout()->setContentsMargins(0, 0, 0, 0);
     this->showFullScreen();
-    this->removeDockWidget(this->modelsDock);
-    this->removeDockWidget(this->lightsDock);
-    this->removeDockWidget(this->insertModelsDock);
+    this->renderWidget->showFullScreen();
+    this->treeWidget->hide();
+    this->menuBar->hide();
     this->playToolbar->hide();
     this->editToolbar->hide();
     this->mouseToolbar->hide();
-    this->menuBar()->hide();
+    this->timePanel->hide();
+    this->collapseButton->hide();
   }
   else
   {
-    this->centralWidget()->layout()->setContentsMargins(4, 4, 4, 4);
     this->showNormal();
-    this->addDockWidget(Qt::LeftDockWidgetArea, this->modelsDock);
-    this->addDockWidget(Qt::LeftDockWidgetArea, this->lightsDock);
-    this->addDockWidget(Qt::LeftDockWidgetArea, this->insertModelsDock);
-    this->modelsDock->show();
-    this->lightsDock->show();
-    this->insertModelsDock->show();
+    this->renderWidget->showNormal();
+    this->treeWidget->show();
+    this->menuBar->show();
     this->playToolbar->show();
     this->editToolbar->show();
     this->mouseToolbar->show();
-    this->menuBar()->show();
-
-    this->tabifyDockWidget(this->modelsDock, this->lightsDock);
-    this->tabifyDockWidget(this->modelsDock, this->insertModelsDock);
+    this->timePanel->show();
+    this->collapseButton->show();
   }
 }
 
@@ -480,7 +515,7 @@ void MainWindow::CreateActions()
     SLOT(OnResetModelOnly()));
 
   this->resetWorldAct = new QAction(tr("&Reset World"), this);
-  this->resetWorldAct->setShortcut(tr("Ctrl+Shift+R"));
+  this->resetWorldAct->setShortcut(tr("Ctrl+R"));
   this->resetWorldAct->setStatusTip(tr("Reset the world"));
   connect(this->resetWorldAct, SIGNAL(triggered()), this, SLOT(OnResetWorld()));
 
@@ -594,7 +629,22 @@ void MainWindow::CreateActions()
 /////////////////////////////////////////////////
 void MainWindow::CreateMenus()
 {
-  this->fileMenu = this->menuBar()->addMenu(tr("&File"));
+  QHBoxLayout *menuLayout = new QHBoxLayout;
+
+  QFrame *frame = new QFrame;
+  this->menuBar =  new QMenuBar;
+  this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+  menuLayout->addWidget(this->menuBar);
+  menuLayout->addStretch(5);
+  menuLayout->setContentsMargins(0, 0, 0, 0);
+
+  frame->setLayout(menuLayout);
+  frame->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+
+  this->setMenuWidget(frame);
+
+  this->fileMenu = this->menuBar->addMenu(tr("&File"));
   this->fileMenu->addAction(this->openAct);
   this->fileMenu->addAction(this->importAct);
   this->fileMenu->addAction(this->newAct);
@@ -603,20 +653,20 @@ void MainWindow::CreateMenus()
   this->fileMenu->addSeparator();
   this->fileMenu->addAction(this->quitAct);
 
-  this->editMenu = this->menuBar()->addMenu(tr("&Edit"));
+  this->editMenu = this->menuBar->addMenu(tr("&Edit"));
   this->editMenu->addAction(this->resetModelsAct);
   this->editMenu->addAction(this->resetWorldAct);
   this->editMenu->addAction(this->editWorldPropertiesAct);
 
-  this->viewMenu = this->menuBar()->addMenu(tr("&View"));
+  this->viewMenu = this->menuBar->addMenu(tr("&View"));
   this->viewMenu->addAction(this->viewResetAct);
   this->viewMenu->addAction(this->viewFullScreenAct);
   this->viewMenu->addAction(this->viewFPSAct);
   this->viewMenu->addAction(this->viewOrbitAct);
 
-  this->menuBar()->addSeparator();
+  this->menuBar->addSeparator();
 
-  this->helpMenu = this->menuBar()->addMenu(tr("&Help"));
+  this->helpMenu = this->menuBar->addMenu(tr("&Help"));
   this->helpMenu->addAction(this->aboutAct);
 }
 
@@ -675,20 +725,32 @@ void MainWindow::OnGUI(ConstGUIPtr &_msg)
 
     if (_msg->camera().has_origin())
     {
-      const msgs::Pose &msg_origin = _msg->camera().origin();
-      math::Vector3 cam_origin_pos = math::Vector3(\
-        msg_origin.position().x(), \
-        msg_origin.position().y(), \
-        msg_origin.position().z()
-);
-      math::Quaternion cam_origin_rot = math::Quaternion(\
-        msg_origin.orientation().w(), \
-        msg_origin.orientation().x(), \
-        msg_origin.orientation().y(), \
-        msg_origin.orientation().z()
-);
-      math::Pose cam_origin(cam_origin_pos, cam_origin_rot);
-      cam->SetWorldPose(cam_origin);
+      const msgs::Pose &msg_pose = _msg->camera().origin();
+
+      math::Vector3 cam_pose_pos = math::Vector3(
+        msg_pose.position().x(),
+        msg_pose.position().y(),
+        msg_pose.position().z());
+
+      math::Quaternion cam_pose_rot = math::Quaternion(
+        msg_pose.orientation().w(),
+        msg_pose.orientation().x(),
+        msg_pose.orientation().y(),
+        msg_pose.orientation().z());
+
+      math::Pose cam_pose(cam_pose_pos, cam_pose_rot);
+
+      cam->SetWorldPose(cam_pose);
+    }
+
+    if (_msg->camera().has_view_controller())
+    {
+      cam->SetViewController(_msg->camera().view_controller());
+    }
+
+    if (_msg->camera().has_view_controller())
+    {
+      cam->SetViewController(_msg->camera().view_controller());
     }
 
     if (_msg->camera().has_track())
@@ -832,3 +894,109 @@ void MainWindow::OnStats(ConstWorldStatisticsPtr &_msg)
     this->pauseAct->setChecked(false);
   }
 }
+
+/////////////////////////////////////////////////
+void MainWindow::ItemSelected(QTreeWidgetItem *_item, int)
+{
+  _item->setExpanded(!_item->isExpanded());
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnCollapse()
+{
+  if (this->treeWidget->isVisible())
+  {
+    this->treeWidget->close();
+    this->collapseButton->setText(">");
+    this->collapseButton->setStyleSheet(tr("QPushButton{margin-left: 10px;}"));
+  }
+  else
+  {
+    this->treeWidget->show();
+    this->collapseButton->setText("<");
+    this->collapseButton->setStyleSheet("QPushButton{margin-left:0px;}");
+  }
+}
+
+/////////////////////////////////////////////////
+TreeViewDelegate::TreeViewDelegate(QTreeView *_view, QWidget *_parent)
+  : QItemDelegate(_parent), view(_view)
+{
+}
+
+/////////////////////////////////////////////////
+void TreeViewDelegate::paint(QPainter *painter,
+                          const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const
+{
+  const QAbstractItemModel *model = index.model();
+  Q_ASSERT(model);
+
+  if (!model->parent(index).isValid())
+  {
+    QRect r = option.rect;
+
+    QColor orange(245, 129, 19);
+    QColor blue(71, 99, 183);
+    QColor grey(100, 100, 100);
+
+    if (option.state & QStyle::State_Open ||
+        option.state & QStyle::State_MouseOver)
+    {
+      painter->setPen(blue);
+      painter->setBrush(QBrush(blue));
+    }
+    else
+    {
+      painter->setPen(grey);
+      painter->setBrush(QBrush(grey));
+    }
+
+    if (option.state & QStyle::State_Open)
+      painter->drawLine(r.left()+8, r.top() + (r.height()*0.5 - 5),
+                        r.left()+8, r.top() + r.height()-1);
+
+    painter->save();
+    painter->setRenderHints(QPainter::Antialiasing |
+                            QPainter::TextAntialiasing);
+
+    painter->drawRoundedRect(r.left()+4, r.top() + (r.height()*0.5 - 5),
+                             10, 10, 20.0, 10.0, Qt::RelativeSize);
+
+
+    // draw text
+    QRect textrect = QRect(r.left() + 20, r.top(),
+                           r.width() - 40,
+                           r.height());
+
+    QString text = elidedText(
+        option.fontMetrics,
+        textrect.width(),
+        Qt::ElideMiddle,
+        model->data(index, Qt::DisplayRole).toString());
+
+    if (option.state & QStyle::State_MouseOver)
+      painter->setPen(QPen(orange, 1));
+    else
+      painter->setPen(QPen(grey, 1));
+
+    this->view->style()->drawItemText(painter, textrect, Qt::AlignLeft,
+        option.palette, this->view->isEnabled(), text);
+
+    painter->restore();
+  }
+  else
+  {
+      QItemDelegate::paint(painter, option, index);
+  }
+}
+
+/////////////////////////////////////////////////
+QSize TreeViewDelegate::sizeHint(const QStyleOptionViewItem &_opt,
+    const QModelIndex &_index) const
+{
+  QStyleOptionViewItem option = _opt;
+  QSize sz = QItemDelegate::sizeHint(_opt, _index) + QSize(2, 2);
+  return sz;
+}
+
