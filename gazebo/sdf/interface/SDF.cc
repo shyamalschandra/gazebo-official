@@ -24,6 +24,8 @@
 
 using namespace sdf;
 
+std::string SDF::version = SDF_VERSION;
+
 /////////////////////////////////////////////////
 Element::Element()
 {
@@ -110,85 +112,97 @@ bool Element::GetCopyChildren() const
 
 /////////////////////////////////////////////////
 void Element::AddValue(const std::string &_type,
-    const std::string &_defaultValue, bool _required)
+    const std::string &_defaultValue, bool _required,
+    const std::string &_description)
 {
-  this->value = this->CreateParam(this->name, _type, _defaultValue, _required);
+  this->value = this->CreateParam(this->name, _type, _defaultValue, _required,
+      _description);
 }
 
 /////////////////////////////////////////////////
 boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
-    const std::string &_type, const std::string &_defaultValue, bool _required)
+    const std::string &_type, const std::string &_defaultValue, bool _required,
+    const std::string &_description)
 {
   if (_type == "double")
   {
     boost::shared_ptr<ParamT<double> > param(
-        new ParamT<double>(_key, _defaultValue, _required));
+        new ParamT<double>(_key, _defaultValue, _required, _type,
+                           _description));
     return param;
   }
   else if (_type == "int")
   {
     boost::shared_ptr<ParamT<int> > param(
-        new ParamT<int>(_key, _defaultValue, _required));
+        new ParamT<int>(_key, _defaultValue, _required, _type, _description));
     return param;
   }
   else if (_type == "unsigned int")
   {
     boost::shared_ptr<ParamT<unsigned int> > param(
-        new ParamT<unsigned int>(_key, _defaultValue, _required));
+        new ParamT<unsigned int>(_key, _defaultValue, _required, _type,
+                                 _description));
     return param;
   }
   else if (_type == "float")
   {
     boost::shared_ptr<ParamT<float> > param(
-        new ParamT<float>(_key, _defaultValue, _required));
+        new ParamT<float>(_key, _defaultValue, _required, _type, _description));
     return param;
   }
   else if (_type == "bool")
   {
     boost::shared_ptr<ParamT<bool> > param(
-        new ParamT<bool>(_key, _defaultValue, _required));
+        new ParamT<bool>(_key, _defaultValue, _required, _type, _description));
     return param;
   }
   else if (_type == "string")
   {
     boost::shared_ptr<ParamT<std::string> > param(
-        new ParamT<std::string>(_key, _defaultValue, _required));
+        new ParamT<std::string>(_key, _defaultValue, _required, _type,
+                                _description));
     return param;
   }
   else if (_type == "color")
   {
     boost::shared_ptr<ParamT<gazebo::common::Color> > param(
-        new ParamT<gazebo::common::Color>(_key, _defaultValue, _required));
+        new ParamT<gazebo::common::Color>(_key, _defaultValue, _required,
+                                          _type, _description));
     return param;
   }
   else if (_type == "vector3")
   {
     boost::shared_ptr<ParamT<gazebo::math::Vector3> > param(
-        new ParamT<gazebo::math::Vector3>(_key, _defaultValue, _required));
+        new ParamT<gazebo::math::Vector3>(_key, _defaultValue, _required,
+                                          _type, _description));
     return param;
   }
   else if (_type == "vector2i")
   {
     boost::shared_ptr<ParamT<gazebo::math::Vector2i> > param(
-        new ParamT<gazebo::math::Vector2i>(_key, _defaultValue, _required));
+        new ParamT<gazebo::math::Vector2i>(_key, _defaultValue, _required,
+                                           _type, _description));
     return param;
   }
   else if (_type == "vector2d")
   {
     boost::shared_ptr<ParamT<gazebo::math::Vector2d> > param(
-        new ParamT<gazebo::math::Vector2d>(_key, _defaultValue, _required));
+        new ParamT<gazebo::math::Vector2d>(_key, _defaultValue, _required,
+                                           _type, _description));
     return param;
   }
   else if (_type == "pose")
   {
     boost::shared_ptr<ParamT<gazebo::math::Pose> > param(
-        new ParamT<gazebo::math::Pose>(_key, _defaultValue, _required));
+        new ParamT<gazebo::math::Pose>(_key, _defaultValue, _required,
+                                       _type, _description));
     return param;
   }
   else if (_type == "time")
   {
     boost::shared_ptr<ParamT<gazebo::common::Time> > param(
-        new ParamT<gazebo::common::Time>(_key, _defaultValue, _required));
+        new ParamT<gazebo::common::Time>(_key, _defaultValue, _required,
+                                         _type, _description));
     return param;
   }
   else
@@ -200,16 +214,18 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
 
 /////////////////////////////////////////////////
 void Element::AddAttribute(const std::string &_key, const std::string &_type,
-    const std::string &_defaultValue, bool _required)
+    const std::string &_defaultValue, bool _required,
+    const std::string &_description)
 {
   this->attributes.push_back(
-      this->CreateParam(_key, _type, _defaultValue, _required));
+      this->CreateParam(_key, _type, _defaultValue, _required, _description));
 }
 
 /////////////////////////////////////////////////
 ElementPtr Element::Clone() const
 {
   ElementPtr clone(new Element);
+  clone->description = this->description;
   clone->name = this->name;
   clone->required = this->required;
   // clone->parent = this->parent;
@@ -246,6 +262,7 @@ ElementPtr Element::Clone() const
 void Element::Copy(const ElementPtr _elem)
 {
   this->name = _elem->GetName();
+  this->description = _elem->GetDescription();
   this->required = _elem->GetRequired();
   this->copyChildren = _elem->GetCopyChildren();
   this->includeFilename = _elem->includeFilename;
@@ -291,6 +308,9 @@ void Element::PrintDescription(std::string _prefix)
   std::cout << _prefix << "<element name ='" << this->name
             << "' required ='" << this->required << "'>\n";
 
+  std::cout << _prefix << "  <description>" << this->description
+            << "</description>\n";
+
   Param_V::iterator aiter;
   for (aiter = this->attributes.begin();
       aiter != this->attributes.end(); ++aiter)
@@ -314,6 +334,99 @@ void Element::PrintDescription(std::string _prefix)
   std::cout << _prefix << "</element>\n";
 }
 
+
+/////////////////////////////////////////////////
+void Element::PrintDoc(std::string &_divs, std::string &_html,
+                       int _spacing, int &_index)
+{
+  std::ostringstream stream;
+  ElementPtr_V::iterator eiter;
+
+  int start = _index++;
+  _divs += "animatedcollapse.addDiv('" +
+    boost::lexical_cast<std::string>(start) + "', 'fade=1')\n";
+
+
+  std::string childHTML;
+  for (eiter = this->elementDescriptions.begin();
+      eiter != this->elementDescriptions.end(); ++eiter)
+  {
+    (*eiter)->PrintDoc(_divs, childHTML, _spacing + 10, _index);
+  }
+  int end = _index;
+
+  stream << "<a href=\"javascript:animatedcollapse.toggle('"
+            << start << "')\">+ &lt" << this->name << "&gt</a>";
+  stream << "<a style='padding-left: 5px' "
+         << "href=\"javascript:animatedcollapse.toggle([";
+  int i;
+  for (i = start; i < end - 1; ++i)
+    stream << "'" << i << "',";
+  stream << "'" << i << "'])\">all</a><br>";
+
+  stream << "<div id='" << start << "' style='padding-left:" << _spacing
+         << "px; display:none; width: 404px;'>\n";
+
+  stream << "<div style='background-color: #ffffff'>\n";
+
+  stream << "<font style='font-weight:bold'>Description: </font>";
+  if (!this->description.empty())
+    stream << this->description << "<br>\n";
+  else
+    stream << "none<br>\n";
+
+  stream << "<font style='font-weight:bold'>Required: </font>"
+         << this->required << "&nbsp;&nbsp;&nbsp;\n";
+
+  stream << "<font style='font-weight:bold'>Type: </font>";
+  if (this->value)
+    stream << this->value->GetTypeName() << "\n";
+  else
+    stream << "n/a\n";
+
+  stream << "</div>";
+
+  if (this->attributes.size() > 0)
+  {
+    stream << "<div style='background-color: #dedede; padding-left:10px; "
+           << "display:inline-block;'>\n";
+    stream << "<font style='font-weight:bold'>Attributes</font><br>";
+
+    Param_V::iterator aiter;
+    for (aiter = this->attributes.begin();
+        aiter != this->attributes.end(); ++aiter)
+    {
+      stream << "<div style='display: inline-block;padding-bottom: 4px;'>\n";
+
+      stream << "<div style='float:left; width: 80px;'>\n";
+      stream << "<font style='font-style: italic;'>" << (*aiter)->GetKey()
+        << "</font>: ";
+      stream << "</div>\n";
+
+      stream << "<div style='float:left; padding-left: 4px; width: 300px;'>\n";
+
+      if (!(*aiter)->GetDescription().empty())
+          stream << (*aiter)->GetDescription() << "<br>\n";
+      else
+          stream << "no description<br>\n";
+
+      stream << "<font style='font-weight:bold'>Type: </font>"
+             << (*aiter)->GetTypeName() << "&nbsp;&nbsp;&nbsp;"
+        << "<font style='font-weight:bold'>Default: </font>"
+        << (*aiter)->GetDefaultAsString() << "<br>";
+      stream << "</div>\n";
+
+      stream << "</div>\n";
+    }
+    stream << "</div>\n";
+    stream << "<br>\n";
+  }
+
+  _html += stream.str();
+  _html += childHTML;
+  _html += "</div>\n";
+}
+
 /////////////////////////////////////////////////
 void Element::PrintValues(std::string _prefix)
 {
@@ -321,7 +434,7 @@ void Element::PrintValues(std::string _prefix)
 
   Param_V::iterator aiter;
   for (aiter = this->attributes.begin();
-      aiter != this->attributes.end(); ++aiter)
+       aiter != this->attributes.end(); ++aiter)
   {
     std::cout << " " << (*aiter)->GetKey() << "='"
       << (*aiter)->GetAsString() << "'";
@@ -502,7 +615,7 @@ bool Element::HasElement(const std::string &_name) const
 }
 
 /////////////////////////////////////////////////
-ElementPtr Element::GetElement(const std::string &_name) const
+ElementPtr Element::GetElementImpl(const std::string &_name) const
 {
   ElementPtr_V::const_iterator iter;
   for (iter = this->elements.begin(); iter != this->elements.end(); ++iter)
@@ -557,10 +670,16 @@ ElementPtr Element::GetNextElement(const std::string &_name) const
 }
 
 /////////////////////////////////////////////////
-boost::shared_ptr<Element> Element::GetOrCreateElement(const std::string &_name)
+ElementPtr Element::GetOrCreateElement(const std::string &_name)
+{
+  return this->GetElement(_name);
+}
+
+/////////////////////////////////////////////////
+ElementPtr Element::GetElement(const std::string &_name)
 {
   if (this->HasElement(_name))
-    return this->GetElement(_name);
+    return this->GetElementImpl(_name);
   else
     return this->AddElement(_name);
 }
@@ -621,7 +740,7 @@ bool Element::GetValueBool(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueBool();
+      result = this->GetElementImpl(_key)->GetValueBool();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueBool();
     else
@@ -642,7 +761,7 @@ int Element::GetValueInt(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueInt();
+      result = this->GetElementImpl(_key)->GetValueInt();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueInt();
     else
@@ -663,7 +782,7 @@ float Element::GetValueFloat(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueFloat();
+      result = this->GetElementImpl(_key)->GetValueFloat();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueFloat();
     else
@@ -689,7 +808,7 @@ double Element::GetValueDouble(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueDouble();
+      result = this->GetElementImpl(_key)->GetValueDouble();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueDouble();
     else
@@ -715,7 +834,7 @@ unsigned int Element::GetValueUInt(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueUInt();
+      result = this->GetElementImpl(_key)->GetValueUInt();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueUInt();
     else
@@ -741,7 +860,7 @@ char Element::GetValueChar(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueChar();
+      result = this->GetElementImpl(_key)->GetValueChar();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueChar();
     else
@@ -762,7 +881,7 @@ std::string Element::GetValueString(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueString();
+      result = this->GetElementImpl(_key)->GetValueString();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueString();
     else
@@ -783,7 +902,7 @@ gazebo::math::Vector3 Element::GetValueVector3(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueVector3();
+      result = this->GetElementImpl(_key)->GetValueVector3();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueVector3();
     else
@@ -804,7 +923,7 @@ gazebo::math::Vector2d Element::GetValueVector2d(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueVector2d();
+      result = this->GetElementImpl(_key)->GetValueVector2d();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueVector2d();
     else
@@ -825,7 +944,7 @@ gazebo::math::Quaternion Element::GetValueQuaternion(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueQuaternion();
+      result = this->GetElementImpl(_key)->GetValueQuaternion();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueQuaternion();
     else
@@ -846,7 +965,7 @@ gazebo::math::Pose Element::GetValuePose(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValuePose();
+      result = this->GetElementImpl(_key)->GetValuePose();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValuePose();
     else
@@ -867,7 +986,7 @@ gazebo::common::Color Element::GetValueColor(const std::string &_key)
     if (param)
       param->Get(result);
     else if (this->HasElement(_key))
-      result = this->GetElement(_key)->GetValueColor();
+      result = this->GetElementImpl(_key)->GetValueColor();
     else if (this->HasElementDescription(_key))
       result = this->GetElementDescription(_key)->GetValueColor();
     else
@@ -1105,6 +1224,18 @@ bool Element::Set(const gazebo::common::Time &_value)
   return false;
 }
 
+/////////////////////////////////////////////////
+std::string Element::GetDescription() const
+{
+  return this->description;
+}
+
+/////////////////////////////////////////////////
+void Element::SetDescription(const std::string &_desc)
+{
+  this->description = _desc;
+}
+
 
 
 
@@ -1127,6 +1258,55 @@ void SDF::PrintValues()
 }
 
 /////////////////////////////////////////////////
+void SDF::PrintDoc()
+{
+  std::string divs, html;
+  int index = 0;
+  this->root->PrintDoc(divs, html, 10, index);
+
+  std::cout << "<!DOCTYPE HTML>\n"
+  << "<html>\n"
+  << "<head>\n"
+  << "  <link href='style.css' rel='stylesheet' type='text/css'>\n"
+  << "  <script type='text/javascript'"
+  << "  src='http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js'>"
+  << "  </script>\n"
+  << "  <script type='text/javascript' src='animatedcollapse.js'>\n"
+  << "  /***********************************************\n"
+  << "   * Animated Collapsible DIV v2.4- (c) Dynamic Drive DHTML code\n"
+  << "   * library (www.dynamicdrive.com)\n"
+  << "   * This notice MUST stay intact for legal use\n"
+  << "   * Visit Dynamic Drive at http://www.dynamicdrive.com/ for this\n"
+  << "   * script and 100s more\n"
+  << "   ***********************************************/\n"
+  << "  </script>\n"
+  << "  <script type='text/javascript'>\n";
+
+  std::cout << divs << "\n";
+
+  std::cout << "animatedcollapse.ontoggle=function($, divobj, state)\n"
+      << "{ }\n animatedcollapse.init()\n </script>\n";
+  std::cout << "</head>\n<body>\n";
+
+  std::cout << "<div style='padding:4px'>\n"
+            << "<h1>SDF " << SDF::version << "</h1>\n";
+
+  std::cout << "<p>The Simulation Description Format (SDF) is an XML file "
+    << "format used to describe all the elements in a simulation "
+    << "environment.\n</p>";
+
+  std::cout << "<div style='margin-left: 20px'>\n";
+  std::cout << html;
+  std::cout << "</div>\n";
+
+  std::cout << "</div>\n";
+
+  std::cout << "\
+    </body>\
+    </html>\n";
+}
+
+/////////////////////////////////////////////////
 void SDF::Write(const std::string &_filename)
 {
   std::string string = this->root->ToString("");
@@ -1145,23 +1325,23 @@ void SDF::Write(const std::string &_filename)
 /////////////////////////////////////////////////
 std::string SDF::ToString() const
 {
-  std::string result;
+  std::ostringstream stream;
 
   if (this->root->GetName() != "gazebo")
-    result = std::string("<gazebo version ='") + SDF_VERSION + "'>";
+    stream << "<gazebo version='" << SDF::version << "'>\n";
 
-  result += this->root->ToString("");
+  stream << this->root->ToString("");
 
   if (this->root->GetName() != "gazebo")
-    result += "</gazebo>";
+    stream << "</gazebo>";
 
-  return result;
+  return stream.str();
 }
 
 /////////////////////////////////////////////////
 void SDF::SetFromString(const std::string &_sdfData)
 {
-  sdf::initFile("sdf/gazebo.sdf", this->root);
+  sdf::initFile("gazebo.sdf", this->root);
   if (!sdf::readString(_sdfData, this->root))
   {
     gzerr << "Unable to parse sdf string[" << _sdfData << "]\n";

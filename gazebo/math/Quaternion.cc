@@ -21,7 +21,6 @@
 #include <math.h>
 #include "math/Helpers.hh"
 #include "math/Quaternion.hh"
-#include "common/Console.hh"
 
 using namespace gazebo;
 using namespace math;
@@ -37,6 +36,8 @@ Quaternion::Quaternion(const double &_w, const double &_x,
                        const double &_y, const double &_z)
     : w(_w), x(_x), y(_y), z(_z)
 {
+  // FIXME:  why does this break pr2?
+  // this->Normalize();
 }
 
 //////////////////////////////////////////////////
@@ -171,7 +172,7 @@ void Quaternion::Normalize()
   s = sqrt(this->w * this->w + this->x * this->x + this->y * this->y +
            this->z * this->z);
 
-  if (math::equal(s, 0))
+  if (math::equal(s, 0.0))
   {
     this->w = 1.0;
     this->x = 0.0;
@@ -194,7 +195,7 @@ void Quaternion::SetFromAxis(double _ax, double _ay, double _az, double _aa)
 
   l = _ax * _ax + _ay * _ay + _az * _az;
 
-  if (math::equal(l, 0))
+  if (math::equal(l, 0.0))
   {
     this->w = 1;
     this->x = 0;
@@ -264,8 +265,6 @@ Vector3 Quaternion::GetAsEuler() const
   sqy = copy.y * copy.y;
   sqz = copy.z * copy.z;
 
-  copy.Normalize();
-
   // Roll
   vec.x = atan2(2 * (copy.y*copy.z + copy.w*copy.x), squ - sqx - sqy + sqz);
 
@@ -315,7 +314,7 @@ double Quaternion::GetYaw()
 void Quaternion::GetAsAxis(Vector3 &_axis, double &_angle) const
 {
   double len = this->x*this->x + this->y*this->y + this->z*this->z;
-  if (math::equal(len, 0))
+  if (math::equal(len, 0.0))
   {
     _angle = 0.0;
     _axis.Set(1, 0, 0);
@@ -385,8 +384,8 @@ Vector3 Quaternion::operator*(const Vector3 &v) const
 {
   Vector3 uv, uuv;
   Vector3 qvec(this->x, this->y, this->z);
-  uv = qvec.GetCrossProd(v);
-  uuv = qvec.GetCrossProd(uv);
+  uv = qvec.Cross(v);
+  uuv = qvec.Cross(uv);
   uv *= (2.0f * this->w);
   uuv *= 2.0f;
 
