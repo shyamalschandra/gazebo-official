@@ -17,18 +17,18 @@
 #include <sys/stat.h>
 #include <string>
 
-#include "math/Plane.hh"
-#include "math/Matrix3.hh"
-#include "math/Matrix4.hh"
+#include "gazebo/math/Plane.hh"
+#include "gazebo/math/Matrix3.hh"
+#include "gazebo/math/Matrix4.hh"
 
-#include "common/SystemPaths.hh"
-#include "common/Exception.hh"
-#include "common/Console.hh"
-#include "common/Mesh.hh"
-#include "common/ColladaLoader.hh"
-#include "common/STLLoader.hh"
+#include "gazebo/common/Common.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Mesh.hh"
+#include "gazebo/common/ColladaLoader.hh"
+#include "gazebo/common/STLLoader.hh"
 
-#include "common/MeshManager.hh"
+#include "gazebo/common/MeshManager.hh"
 
 using namespace gazebo;
 using namespace common;
@@ -41,8 +41,8 @@ MeshManager::MeshManager()
   this->stlLoader = new STLLoader();
 
   // Create some basic shapes
-  this->CreatePlane("unit_plane", math::Plane(math::Vector3(0, 0, 1),
-        math::Vector2d(100, 100), 0),
+  this->CreatePlane("unit_plane",
+      math::Plane(math::Vector3(0, 0, 1), math::Vector2d(1, 1), 0),
       math::Vector2d(1, 1),
       math::Vector2d(1, 1));
 
@@ -105,8 +105,7 @@ const Mesh *MeshManager::Load(const std::string &_filename)
     */
   }
 
-  std::string fullname =
-    SystemPaths::Instance()->FindFileWithGazeboPaths(_filename);
+  std::string fullname = common::find_file(_filename);
 
   if (!fullname.empty())
   {
@@ -282,8 +281,8 @@ void MeshManager::CreateSphere(const std::string &name, float radius,
 
 //////////////////////////////////////////////////
 void MeshManager::CreatePlane(const std::string &name, const math::Plane &plane,
-    const math::Vector2d &segments,
-    const math::Vector2d &uvTile)
+                              const math::Vector2d &segments,
+                              const math::Vector2d &uvTile)
 {
   this->CreatePlane(name, plane.normal, plane.d, plane.size, segments, uvTile);
 }
@@ -310,7 +309,7 @@ void MeshManager::CreatePlane(const std::string &name,
   zAxis = normal;
   zAxis.Normalize();
   yAxis = zAxis.GetPerpendicular();
-  xAxis = yAxis.GetCrossProd(zAxis);
+  xAxis = yAxis.Cross(zAxis);
 
   math::Matrix4 xlate, xform, rot;
   xlate = rot = math::Matrix4::IDENTITY;

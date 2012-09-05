@@ -19,8 +19,8 @@
  * Date: 15 July 2003
  */
 
-#ifndef RENDERING_CAMERA_HH
-#define RENDERING_CAMERA_HH
+#ifndef _RENDERING_CAMERA_HH_
+#define _RENDERING_CAMERA_HH_
 
 #include <boost/enable_shared_from_this.hpp>
 #include <string>
@@ -48,6 +48,7 @@ namespace Ogre
   class Viewport;
   class SceneNode;
   class AnimationState;
+  class CompositorInstance;
 }
 
 namespace gazebo
@@ -358,7 +359,7 @@ namespace gazebo
       // Create the ogre camera
       private: void CreateCamera();
 
-      private: std::string name;
+      protected: std::string name;
       protected: sdf::ElementPtr sdf;
 
       protected: unsigned int windowId;
@@ -410,6 +411,14 @@ namespace gazebo
       protected: Ogre::AnimationState *animState;
       protected: common::Time prevAnimTime;
       protected: boost::function<void()> onAnimationComplete;
+
+      private: Ogre::CompositorInstance *dsGBufferInstance;
+      private: Ogre::CompositorInstance *dsMergeInstance;
+
+      private: Ogre::CompositorInstance *dlGBufferInstance;
+      private: Ogre::CompositorInstance *dlMergeInstance;
+
+      private: Ogre::CompositorInstance *ssaoInstance;
     };
     /// \}
   }
