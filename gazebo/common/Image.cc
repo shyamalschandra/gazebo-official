@@ -84,6 +84,15 @@ int Image::Load(const std::string &_filename)
          iter != gazeboPaths.end() && !found; ++iter)
     {
       std::vector<std::string> pathNames;
+      pathNames.push_back((*iter)+"/media");
+      pathNames.push_back((*iter)+"/media/fonts");
+      pathNames.push_back((*iter)+"/media/materials/programs");
+      pathNames.push_back((*iter)+"/media/materials/scripts");
+      pathNames.push_back((*iter)+"/media/materials/textures");
+      pathNames.push_back((*iter)+"/media/models");
+      pathNames.push_back((*iter)+"/media/sets");
+      pathNames.push_back((*iter)+"/media/maps");
+
       pathNames.push_back((*iter)+"/Media");
       pathNames.push_back((*iter)+"/Media/fonts");
       pathNames.push_back((*iter)+"/Media/materials/programs");
@@ -144,6 +153,12 @@ int Image::Load(const std::string &_filename)
 }
 
 //////////////////////////////////////////////////
+void Image::SavePNG(const std::string &_filename)
+{
+  FreeImage_Save(FIF_PNG, this->bitmap, _filename.c_str(), 0);
+}
+
+//////////////////////////////////////////////////
 void Image::SetFromData(const unsigned char *data, unsigned int width,
     unsigned int height, int scanline_bytes, unsigned int bpp)
 {
@@ -173,13 +188,13 @@ void Image::SetFromData(const unsigned char *_data, unsigned int _width,
   this->bitmap = NULL;
 
   // int redmask = FI_RGBA_RED_MASK;
-  int redmask = 0xff0000;
+  int redmask = 0x0000ff;
 
   // int greenmask = FI_RGBA_GREEN_MASK;
   int greenmask = 0x00ff00;
 
   // int bluemask = FI_RGBA_BLUE_MASK;
-  int bluemask = 0x0000ff;
+  int bluemask = 0xff0000;
 
   unsigned int bpp;
   int scanlineBytes;
@@ -220,7 +235,7 @@ void Image::SetFromData(const unsigned char *_data, unsigned int _width,
   }
 
   this->bitmap = FreeImage_ConvertFromRawBits(const_cast<BYTE*>(_data),
-      _width, _height, scanlineBytes, bpp, redmask, greenmask, bluemask);
+      _width, _height, scanlineBytes, bpp, redmask, greenmask, bluemask, true);
 }
 
 //////////////////////////////////////////////////
@@ -382,9 +397,9 @@ Color Image::GetAvgColor()
     for (x = 0; x < this->GetWidth(); ++x)
     {
       pixel = this->GetPixel(x, y);
-      rsum += pixel.R();
-      gsum += pixel.G();
-      bsum += pixel.B();
+      rsum += pixel.r;
+      gsum += pixel.g;
+      bsum += pixel.b;
     }
   }
 
@@ -410,7 +425,7 @@ Color Image::GetMaxColor()
     {
       clr = this->GetPixel(x, y);
 
-      if (clr.R() + clr.G() + clr.B() > maxClr.R() + maxClr.G() + maxClr.B())
+      if (clr.r + clr.g + clr.b > maxClr.r + maxClr.g + maxClr.b)
       {
         maxClr = clr;
       }

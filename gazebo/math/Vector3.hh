@@ -26,6 +26,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "gazebo/common/CommonTypes.hh"
+
 namespace gazebo
 {
   namespace math
@@ -64,7 +66,7 @@ namespace gazebo
       public: double GetSquaredLength() const;
 
       /// \brief Normalize the vector length
-      public: void Normalize();
+      public: Vector3 Normalize();
 
       /// \brief Round to near whole number, return the result.
       public: Vector3 Round();
@@ -81,10 +83,18 @@ namespace gazebo
               }
 
       /// \brief Return the cross product of this vector and pt
-      public: Vector3 GetCrossProd(const Vector3 &_pt) const;
+      public: Vector3 Cross(const Vector3 &_pt) const;
+      public: Vector3 GetCrossProd(const Vector3 &_pt) const GAZEBO_DEPRECATED
+              {
+                return this->Cross(_pt);
+              }
 
       /// \brief Return the dot product of this vector and pt
-      public: double GetDotProd(const Vector3 &_pt) const;
+      public: double Dot(const Vector3 &_pt) const;
+      public: double GetDotProd(const Vector3 &_pt) const GAZEBO_DEPRECATED
+              {
+                return this->Dot(_pt);
+              }
 
       /// \breif Get the absolute value of the vector
       public: Vector3 GetAbs() const;
@@ -117,7 +127,7 @@ namespace gazebo
       public: Vector3 &operator =(const Vector3 &_pt);
 
       /// \brief Equal operator
-      public: const Vector3 &operator =(double _value);
+      public: Vector3 &operator =(double _value);
 
       /// \brief Addition operator
       public: Vector3 operator+(const Vector3 &_pt) const;

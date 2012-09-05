@@ -64,7 +64,7 @@ void ModelMaker::InitFromModel(const std::string &_modelName)
   }
 
   // this->modelSDF.reset(new sdf::SDF);
-  // sdf::initFile("sdf/gazebo.sdf", this->modelSDF);
+  // sdf::initFile("gazebo.sdf", this->modelSDF);
   this->modelVisual = scene->CloneVisual(_modelName, _modelName + "_clone_tmp");
 
   if (!this->modelVisual)
@@ -87,7 +87,7 @@ void ModelMaker::InitFromFile(const std::string &_filename)
   }
 
   this->modelSDF.reset(new sdf::SDF);
-  sdf::initFile("sdf/gazebo.sdf", this->modelSDF);
+  sdf::initFile("gazebo.sdf", this->modelSDF);
   sdf::readFile(_filename, this->modelSDF);
 
   // Load the world file
@@ -95,8 +95,8 @@ void ModelMaker::InitFromFile(const std::string &_filename)
   math::Pose modelPose, linkPose, visualPose;
 
   sdf::ElementPtr modelElem = this->modelSDF->root->GetElement("model");
-  if (modelElem->HasElement("origin"))
-    modelPose = modelElem->GetElement("origin")->GetValuePose("pose");
+  if (modelElem->HasElement("pose"))
+    modelPose = modelElem->GetValuePose("pose");
 
   modelName = this->node->GetTopicNamespace() + "::" +
               modelElem->GetValueString("name");
@@ -118,8 +118,8 @@ void ModelMaker::InitFromFile(const std::string &_filename)
     while (linkElem)
     {
       std::string linkName = linkElem->GetValueString("name");
-      if (linkElem->HasElement("origin"))
-        linkPose = linkElem->GetElement("origin")->GetValuePose("pose");
+      if (linkElem->HasElement("pose"))
+        linkPose = linkElem->GetValuePose("pose");
 
       rendering::VisualPtr linkVisual(new rendering::Visual(modelName + "::" +
             linkName, this->modelVisual));
@@ -135,8 +135,8 @@ void ModelMaker::InitFromFile(const std::string &_filename)
 
       while (visualElem)
       {
-        if (visualElem->HasElement("origin"))
-          visualPose = visualElem->GetElement("origin")->GetValuePose("pose");
+        if (visualElem->HasElement("pose"))
+          visualPose = visualElem->GetValuePose("pose");
 
         std::ostringstream visualName;
         visualName << modelName << "::" << linkName << "::Visual_"
@@ -254,7 +254,6 @@ void ModelMaker::OnMouseDrag(const common::MouseEvent &/*_event*/)
 /////////////////////////////////////////////////
 void ModelMaker::CreateTheEntity()
 {
-  std::cout << "Create the entity\n";
   msgs::Factory msg;
   if (!this->clone)
   {
@@ -275,7 +274,7 @@ void ModelMaker::CreateTheEntity()
 
     // The the SDF model's name
     modelElem->GetAttribute("name")->Set(modelName);
-    modelElem->GetOrCreateElement("origin")->GetAttribute("pose")->Set(
+    modelElem->GetElement("pose")->Set(
         this->modelVisual->GetWorldPose());
 
     // Spawn the model in the physics server

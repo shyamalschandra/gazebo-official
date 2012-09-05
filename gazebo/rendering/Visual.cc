@@ -52,7 +52,7 @@ Visual::Visual(const std::string &_name, VisualPtr _parent, bool _useRTShader)
   this->useRTShader = _useRTShader;
 
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/visual.sdf", this->sdf);
+  sdf::initFile("visual.sdf", this->sdf);
 
   this->SetName(_name);
   this->sceneNode = NULL;
@@ -85,7 +85,7 @@ Visual::Visual(const std::string &_name, ScenePtr _scene, bool _useRTShader)
   this->useRTShader = _useRTShader;
 
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/visual.sdf", this->sdf);
+  sdf::initFile("visual.sdf", this->sdf);
 
   this->SetName(_name);
   this->sceneNode = NULL;
@@ -232,7 +232,7 @@ void Visual::Init()
 //////////////////////////////////////////////////
 void Visual::LoadFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
 {
-  sdf::ElementPtr geomElem = this->sdf->GetOrCreateElement("geometry");
+  sdf::ElementPtr geomElem = this->sdf->GetElement("geometry");
   geomElem->ClearElements();
 
   if (_msg->has_geometry())
@@ -240,84 +240,85 @@ void Visual::LoadFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
     if (_msg->geometry().type() == msgs::Geometry::BOX)
     {
       sdf::ElementPtr elem = geomElem->AddElement("box");
-      elem->GetAttribute("size")->Set(
+      elem->GetElement("size")->Set(
           msgs::Convert(_msg->geometry().box().size()));
     }
     else if (_msg->geometry().type() == msgs::Geometry::SPHERE)
     {
       sdf::ElementPtr elem = geomElem->AddElement("sphere");
-      elem->GetAttribute("radius")->Set(_msg->geometry().sphere().radius());
+      elem->GetElement("radius")->Set(_msg->geometry().sphere().radius());
     }
     else if (_msg->geometry().type() == msgs::Geometry::CYLINDER)
     {
       sdf::ElementPtr elem = geomElem->AddElement("cylinder");
-      elem->GetAttribute("radius")->Set(_msg->geometry().cylinder().radius());
-      elem->GetAttribute("length")->Set(_msg->geometry().cylinder().length());
+      elem->GetElement("radius")->Set(_msg->geometry().cylinder().radius());
+      elem->GetElement("length")->Set(_msg->geometry().cylinder().length());
     }
     else if (_msg->geometry().type() == msgs::Geometry::PLANE)
     {
       math::Plane plane = msgs::Convert(_msg->geometry().plane());
       sdf::ElementPtr elem = geomElem->AddElement("plane");
-      elem->GetAttribute("normal")->Set(plane.normal);
+      elem->GetElement("normal")->Set(plane.normal);
+      elem->GetElement("size")->Set(plane.size);
     }
     else if (_msg->geometry().type() == msgs::Geometry::MESH)
     {
       sdf::ElementPtr elem = geomElem->AddElement("mesh");
-      elem->GetAttribute("filename")->Set(_msg->geometry().mesh().filename());
+      elem->GetElement("filename")->Set(_msg->geometry().mesh().filename());
     }
   }
 
   if (_msg->has_pose())
   {
-    sdf::ElementPtr elem = this->sdf->GetOrCreateElement("origin");
+    sdf::ElementPtr elem = this->sdf->GetElement("pose");
     math::Pose p(msgs::Convert(_msg->pose().position()),
                   msgs::Convert(_msg->pose().orientation()));
 
-    elem->GetAttribute("pose")->Set(p);
+    elem->Set(p);
   }
 
   if (_msg->has_material())
   {
     if (_msg->material().has_script())
     {
-      sdf::ElementPtr elem = this->sdf->GetOrCreateElement("material");
-      elem->GetAttribute("script")->Set(_msg->material().script());
+      sdf::ElementPtr elem = this->sdf->GetElement("material");
+      elem->GetElement("script")->Set(_msg->material().script());
     }
 
     if (_msg->material().has_ambient())
     {
-      sdf::ElementPtr elem = this->sdf->GetOrCreateElement("material");
-      elem->GetOrCreateElement("ambient")->GetAttribute("rgba")->Set(
+      sdf::ElementPtr elem = this->sdf->GetElement("material");
+      elem->GetElement("ambient")->Set(
           msgs::Convert(_msg->material().ambient()));
     }
 
     if (_msg->material().has_diffuse())
     {
-      sdf::ElementPtr elem = this->sdf->GetOrCreateElement("material");
-      elem->GetOrCreateElement("diffuse")->GetAttribute("rgba")->Set(
+      sdf::ElementPtr elem = this->sdf->GetElement("material");
+      elem->GetElement("diffuse")->Set(
           msgs::Convert(_msg->material().diffuse()));
     }
 
     if (_msg->material().has_specular())
     {
-      sdf::ElementPtr elem = this->sdf->GetOrCreateElement("material");
-      elem->GetOrCreateElement("specular")->GetAttribute("rgba")->Set(
+      sdf::ElementPtr elem = this->sdf->GetElement("material");
+      elem->GetElement("specular")->Set(
           msgs::Convert(_msg->material().specular()));
     }
 
     if (_msg->material().has_emissive())
     {
-      sdf::ElementPtr elem = this->sdf->GetOrCreateElement("material");
-      elem->GetOrCreateElement("emissive")->GetAttribute("rgba")->Set(
+      sdf::ElementPtr elem = this->sdf->GetElement("material");
+      elem->GetElement("emissive")->Set(
           msgs::Convert(_msg->material().emissive()));
     }
   }
 
   if (_msg->has_cast_shadows())
-    this->sdf->GetAttribute("cast_shadows")->Set(_msg->cast_shadows());
+    this->sdf->GetElement("cast_shadows")->Set(_msg->cast_shadows());
 
   if (_msg->has_laser_retro())
-    this->sdf->GetAttribute("laser_retro")->Set(_msg->laser_retro());
+    this->sdf->GetElement("laser_retro")->Set(_msg->laser_retro());
 
   this->Load();
   this->UpdateFromMsg(_msg);
@@ -343,7 +344,7 @@ void Visual::Load()
     this->parent->AttachVisual(shared_from_this());
 
   // Read the desired position and rotation of the mesh
-  pose = this->sdf->GetOrCreateElement("origin")->GetValuePose("pose");
+  pose = this->sdf->GetValuePose("pose");
 
   std::string meshName = this->GetMeshName();
 
@@ -393,13 +394,13 @@ void Visual::Load()
     if (!script.empty())
       this->SetMaterial(script);
     else if (matElem->HasElement("ambient"))
-      this->SetAmbient(matElem->GetElement("ambient")->GetValueColor("rgba"));
+      this->SetAmbient(matElem->GetValueColor("ambient"));
     else if (matElem->HasElement("diffuse"))
-      this->SetDiffuse(matElem->GetElement("diffuse")->GetValueColor("rgba"));
+      this->SetDiffuse(matElem->GetValueColor("diffuse"));
     else if (matElem->HasElement("specular"))
-      this->SetSpecular(matElem->GetElement("speclar")->GetValueColor("rgba"));
+      this->SetSpecular(matElem->GetValueColor("specular"));
     else if (matElem->HasElement("emissive"))
-      this->SetEmissive(matElem->GetElement("emissive")->GetValueColor("rgba"));
+      this->SetEmissive(matElem->GetValueColor("emissive"));
   }
 
   // Allow the mesh to cast shadows
@@ -504,9 +505,9 @@ void Visual::AttachObject(Ogre::MovableObject *_obj)
 {
   // This code makes plane render before grids. This allows grids to overlay
   // planes, and then other elements to overlay both planes and grids.
-  if (this->sdf->HasElement("geometry"))
-    if (this->sdf->GetElement("geometry")->HasElement("plane"))
-      _obj->setRenderQueueGroup(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_1 - 2);
+  // if (this->sdf->HasElement("geometry"))
+  // if (this->sdf->GetElement("geometry")->HasElement("plane"))
+  // _obj->setRenderQueueGroup(Ogre::RENDER_QUEUE_SKIES_EARLY+1);
 
   if (!this->HasAttachedObject(_obj->getName()))
   {
@@ -519,7 +520,7 @@ void Visual::AttachObject(Ogre::MovableObject *_obj)
     gzerr << "Visual[" << this->GetName() << "] already has object["
           << _obj->getName() << "] attached.";
 
-  _obj->setVisibilityFlags(GZ_VISIBILITY_ALL);
+  _obj->setVisibilityFlags(GZ_VISIBILITY_ALL & ~GZ_VISIBILITY_NOT_SELECTABLE);
 }
 
 //////////////////////////////////////////////////
@@ -598,19 +599,19 @@ Ogre::MovableObject *Visual::AttachMesh(const std::string &_meshName,
 //////////////////////////////////////////////////
 void Visual::SetScale(const math::Vector3 &_scale)
 {
-  sdf::ElementPtr geomElem = this->sdf->GetOrCreateElement("geometry");
+  sdf::ElementPtr geomElem = this->sdf->GetElement("geometry");
 
   if (geomElem->HasElement("box"))
-    geomElem->GetElement("box")->GetAttribute("size")->Set(_scale);
+    geomElem->GetElement("box")->GetElement("size")->Set(_scale);
   else if (geomElem->HasElement("sphere"))
-    geomElem->GetElement("sphere")->GetAttribute("radius")->Set(_scale.x/2.0);
+    geomElem->GetElement("sphere")->GetElement("radius")->Set(_scale.x/2.0);
   else if (geomElem->HasElement("cylinder"))
   {
-    geomElem->GetElement("cylinder")->GetAttribute("radius")->Set(_scale.x/2.0);
-    geomElem->GetElement("cylinder")->GetAttribute("length")->Set(_scale.z);
+    geomElem->GetElement("cylinder")->GetElement("radius")->Set(_scale.x/2.0);
+    geomElem->GetElement("cylinder")->GetElement("length")->Set(_scale.z);
   }
   else if (geomElem->HasElement("mesh"))
-    geomElem->GetElement("mesh")->GetAttribute("scale")->Set(_scale);
+    geomElem->GetElement("mesh")->GetElement("scale")->Set(_scale);
 
   this->sceneNode->setScale(Conversions::Convert(_scale));
 }
@@ -640,7 +641,9 @@ math::Vector3 Visual::GetScale()
     }
     else if (geomElem->HasElement("plane"))
     {
-      result.Set(1, 1, 1);
+      math::Vector2d size =
+        geomElem->GetElement("plane")->GetValueVector2d("size");
+      result.Set(size.x, size.y, 1);
     }
     else if (geomElem->HasElement("mesh"))
     {
@@ -1247,15 +1250,15 @@ void Visual::DisableTrackVisual()
 //////////////////////////////////////////////////
 std::string Visual::GetNormalMap() const
 {
-  return this->sdf->GetOrCreateElement("material")->GetOrCreateElement(
-      "shader")->GetOrCreateElement("normal_map")->GetValueString();
+  return this->sdf->GetElement("material")->GetElement(
+      "shader")->GetElement("normal_map")->GetValueString();
 }
 
 //////////////////////////////////////////////////
 void Visual::SetNormalMap(const std::string &_nmap)
 {
-  this->sdf->GetOrCreateElement("material")->GetOrCreateElement(
-      "shader")->GetOrCreateElement("normal_map")->GetValue()->Set(_nmap);
+  this->sdf->GetElement("material")->GetElement(
+      "shader")->GetElement("normal_map")->GetValue()->Set(_nmap);
   if (this->useRTShader)
     RTShaderSystem::Instance()->UpdateShaders();
 }
@@ -1263,14 +1266,14 @@ void Visual::SetNormalMap(const std::string &_nmap)
 //////////////////////////////////////////////////
 std::string Visual::GetShaderType() const
 {
-  return this->sdf->GetOrCreateElement("material")->GetOrCreateElement(
+  return this->sdf->GetElement("material")->GetElement(
       "shader")->GetValueString("type");
 }
 
 //////////////////////////////////////////////////
 void Visual::SetShaderType(const std::string &_type)
 {
-  this->sdf->GetOrCreateElement("material")->GetOrCreateElement(
+  this->sdf->GetElement("material")->GetElement(
       "shader")->GetAttribute("type")->Set(_type);
   if (this->useRTShader)
     RTShaderSystem::Instance()->UpdateShaders();
