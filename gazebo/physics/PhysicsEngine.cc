@@ -40,7 +40,7 @@ PhysicsEngine::PhysicsEngine(WorldPtr _world)
   : world(_world)
 {
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("sdf/physics.sdf", this->sdf);
+  sdf::initFile("physics.sdf", this->sdf);
 
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->world->GetName());
@@ -64,7 +64,7 @@ PhysicsEngine::PhysicsEngine(WorldPtr _world)
 void PhysicsEngine::Load(sdf::ElementPtr _sdf)
 {
   this->sdf->Copy(_sdf);
-  if (this->sdf->HasAttribute("update_rate"))
+  if (this->sdf->HasElement("update_rate"))
     this->SetUpdateRate(this->sdf->GetValueDouble("update_rate"));
 }
 
@@ -90,7 +90,7 @@ PhysicsEngine::~PhysicsEngine()
 //////////////////////////////////////////////////
 math::Vector3 PhysicsEngine::GetGravity() const
 {
-  return this->sdf->GetOrCreateElement("gravity")->GetValueVector3("xyz");
+  return this->sdf->GetValueVector3("gravity");
 }
 
 //////////////////////////////////////////////////
@@ -112,7 +112,7 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
 //////////////////////////////////////////////////
 void PhysicsEngine::SetUpdateRate(double _value)
 {
-  this->sdf->GetAttribute("update_rate")->Set(_value);
+  this->sdf->GetElement("update_rate")->Set(_value);
   this->updateRateDouble = _value;
 }
 

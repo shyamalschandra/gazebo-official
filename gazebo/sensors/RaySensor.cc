@@ -161,7 +161,7 @@ int RaySensor::GetRangeCount() const
   // todo: maybe should check against this->laserMsg.ranges_size()
   //       as users use this to loop through GetRange() calls
   return this->laserShape->GetSampleCount() *
-         this->laserShape->GetScanResolution();
+    this->laserShape->GetScanResolution();
 }
 
 //////////////////////////////////////////////////
@@ -201,6 +201,7 @@ void RaySensor::GetRanges(std::vector<double> &_ranges)
 //////////////////////////////////////////////////
 double RaySensor::GetRange(int _index)
 {
+  boost::mutex::scoped_lock(*this->mutex);
   if (this->laserMsg.ranges_size() == 0)
   {
     gzwarn << "ranges not constructed yet (zero sized)\n";
@@ -212,7 +213,6 @@ double RaySensor::GetRange(int _index)
     return 0.0;
   }
 
-  boost::mutex::scoped_lock(*this->mutex);
   return this->laserMsg.ranges(_index);
 }
 
@@ -262,7 +262,8 @@ void RaySensor::UpdateImpl(bool /*_force*/)
   {
     this->laserMsg.add_ranges(
       this->laserShape->GetRange(j * this->GetRayCount() + i));
-    this->laserMsg.add_intensities(0);
+    this->laserMsg.add_intensities(
+        this->laserShape->GetRetro(j * this->GetRayCount() + i));
   }
   this->mutex->unlock();
 
