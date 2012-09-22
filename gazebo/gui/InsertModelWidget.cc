@@ -18,6 +18,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <curl/curl.h>
+
 #include "sdf/sdf.hh"
 #include "common/SystemPaths.hh"
 #include "common/Console.hh"
@@ -63,15 +65,14 @@ InsertModelWidget::InsertModelWidget(QWidget *_parent)
   this->layout()->setContentsMargins(0, 0, 0, 0);
 
   std::list<std::string> gazeboPaths =
-    common::SystemPaths::Instance()->GetGazeboPaths();
+    common::SystemPaths::Instance()->GetModelPaths();
 
   // Iterate over all the gazebo paths
   for (std::list<std::string>::iterator iter = gazeboPaths.begin();
       iter != gazeboPaths.end(); ++iter)
   {
     // This is the full model path
-    std::string path = (*iter) +
-      common::SystemPaths::Instance()->GetModelPathExtension();
+    std::string path = (*iter);
 
     // Create a top-level tree item for the path
     QTreeWidgetItem *topItem =
@@ -91,30 +92,144 @@ InsertModelWidget::InsertModelWidget(QWidget *_parent)
                 std::back_inserter(paths));
       std::sort(paths.begin(), paths.end());
 
-      // Iterate over all the model in the current gazebo path
+      // Iterate over all the models in the current gazebo path
       for (std::vector<boost::filesystem::path>::iterator dIter = paths.begin();
           dIter != paths.end(); ++dIter)
       {
-        if (boost::filesystem::is_regular_file(*dIter))
-        {
-          // This is for boost::filesystem version 3+
-          // std::string modelName = dIter->path().filename().string();
-          std::string modelName = dIter->filename();
+        // This is for boost::filesystem version 3+
+        std::string modelName;
+        std::string fullPath = path + "/" + dIter->filename();
+        std::string manifest = fullPath + "/manifest.xml";
 
-          if (modelName.find(".model") != std::string::npos)
-          {
-            // Add a child item for the model
-            QTreeWidgetItem *childItem = new QTreeWidgetItem(topItem,
-                QStringList(QString("%1").arg(
-                    QString::fromStdString(dIter->filename()))));
-            this->fileTreeWidget->addTopLevelItem(childItem);
-          }
+        TiXmlDocument xmlDoc;
+        if (xmlDoc.LoadFile(manifest))
+        {
+          TiXmlElement *modelXML = xmlDoc.FirstChildElement("model");
+          if (!modelXML || !modelXML->FirstChildElement("name"))
+            gzerr << "No model name in manifest[" << manifest << "]\n";
+          else
+            modelName = modelXML->FirstChildElement("name")->GetText();
         }
+
+        // Add a child item for the model
+        QTreeWidgetItem *childItem = new QTreeWidgetItem(topItem,
+            QStringList(QString("%1").arg(
+                QString::fromStdString(modelName))));
+        childItem->setData(0, Qt::UserRole, QVariant(fullPath.c_str()));
+        this->fileTreeWidget->addTopLevelItem(childItem);
       }
     }
 
     // Make all top-level items expanded. Trying to reduce mouse clicks.
     this->fileTreeWidget->expandItem(topItem);
+  }
+
+  this->ConnectToModelDatabase();
+}
+
+size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp)
+{
+  /*
+  std::string *str = static_cast<std::string*>(userp);
+  size *= nmemb;
+
+  str->append(buffer, size);
+  std::cout << "Size[" << size << "] NMemb[" << nmemb << "]\n";
+  */
+  return size;
+}
+
+
+/////////////////////////////////////////////////
+void InsertModelWidget::ConnectToModelDatabase()
+{
+  char *uriStr = getenv("GAZEBO_MODEL_DATABASE_URI");
+
+  if (uriStr)
+  {
+    /*
+    std::string manifestURI = uriStr;
+    manifestURI += "/manifest.xml";
+
+    std::string result;
+    CURL *curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, manifestURI.c_str());
+    std::cout << "Manifest URI[" << manifestURI << "]\n";
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
+
+    CURLcode success = curl_easy_perform(curl);
+    if (success != CURLE_OK)
+    {
+      gzerr << "Unable to connect to model database using [" << uriStr << "]\n";
+      gzerr << "Error code[" << success << "]\n";
+    }
+    else
+      printf("Success\n");
+
+    std::cout << "Result[" << result << "]\n";
+    curl_easy_cleanup(curl);
+    */
+  }
+
+
+  /*if (uriStr)
+  {
+    std::string uri = uriStr;
+    unsigned int colon = uri.find_last_of(":");
+    if (colon == uri.find("://"))
+    {
+      gzerr << "No port specified for the GAZEBO_MODEL_DATABASE_URI env var\n";
+    }
+    else
+    {
+      std::string host = uri.substr(0, colon);
+      unsigned int port = boost::lexical_cast<unsigned int>(
+          uri.substr(colon + 1, uri.size() - colon));
+
+      transport::Connection *conn = new transport::Connection();
+      conn->Connect(host, port);
+      conn->AsyncRead(boost::bind(&InsertModelWidget::OnResponse, this, _1));
+
+      msgs::Request *request = msgs::CreateRequest("models");
+      std::string requestData;
+      request->SerializeToString(&requestData);
+      conn->EnqueueMsg(requestData);
+
+      conn->ProcessWriteQueue();
+    }
+  }*/
+  else
+  {
+    gzwarn << "GAZEBO_MODEL_DATABASE_URI env var not specified\n";
+  }
+}
+
+/////////////////////////////////////////////////
+void InsertModelWidget::OnResponse(const std::string &_data)
+{
+  std::cout << "InsertModelWidget::OnResponse\n";
+  msgs::Response response;
+  msgs::GzString_V models;
+
+  response.ParseFromString(_data);
+  models.ParseFromString(response.serialized_data());
+
+  // Create a top-level tree item for the model database
+  QTreeWidgetItem *topItem =
+    new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0),
+        QStringList(QString("%1").arg("Model Database")));
+  this->fileTreeWidget->addTopLevelItem(topItem);
+
+  for (int i = 0; i < models.data_size(); i++)
+  {
+    // Add a child item for the model
+    QTreeWidgetItem *childItem = new QTreeWidgetItem(topItem,
+        QStringList(QString("%1").arg(
+            QString::fromStdString(models.data(i)))));
+    childItem->setData(0, Qt::UserRole, QVariant("database"));
+    this->fileTreeWidget->addTopLevelItem(childItem);
   }
 }
 
@@ -125,74 +240,43 @@ InsertModelWidget::~InsertModelWidget()
 
 /////////////////////////////////////////////////
 void InsertModelWidget::OnModelSelection(QTreeWidgetItem *_item,
-    int /*_column*/)
+                                         int /*_column*/)
 {
+  std::cout << "OnModelSelection\n";
   if (_item)
   {
-    std::string path, filename;
+    printf("_item valid\n");
+    std::string path, manifest, filename;
 
     QApplication::setOverrideCursor(Qt::BusyCursor);
 
     if (_item->parent())
       path = _item->parent()->text(0).toStdString() + "/";
 
-    filename = _item->text(0).toStdString();
+    path = _item->data(0, Qt::UserRole).toString().toStdString();
+    manifest = path + "/manifest.xml";
 
-    if (filename.find(".model") == std::string::npos)
-      return;
 
-    gui::Events::createEntity("model", path + filename);
-    this->fileTreeWidget->clearSelection();
+    TiXmlDocument xmlDoc;
+    if (xmlDoc.LoadFile(manifest))
+    {
+      TiXmlElement *modelXML = xmlDoc.FirstChildElement("model");
+      if (!modelXML)
+        gzerr << "No <model> element in manifest[" << manifest << "]\n";
+      else
+      {
+        filename = path + "/" + modelXML->FirstChildElement("sdf")->GetText();
+      }
+    }
+    else
+      gzerr << "Unable to load manifest[" << manifest << "]\n";
+
+    if (!filename.empty())
+    {
+      gui::Events::createEntity("model", filename);
+      this->fileTreeWidget->clearSelection();
+    }
 
     QApplication::setOverrideCursor(Qt::ArrowCursor);
   }
 }
-
-/////////////////////////////////////////////////
-/*void InsertModelWidget::OnMouseRelease(const common::MouseEvent &_event)
-{
-  if (!this->modelSDF || _event.dragging ||
-      (_event.button != common::MouseEvent::LEFT &&
-       _event.button != common::MouseEvent::RIGHT))
-  {
-    return;
-  }
-
-  if (_event.button == common::MouseEvent::LEFT)
-  {
-    sdf::ElementPtr modelElem = this->modelSDF->root->GetElement("model");
-    std::string modelName = modelElem->GetValueString("name");
-
-    // Automatically create a new name if the model exists
-    int i = 0;
-    while (has_entity_name(modelName))
-    {
-      modelName = modelElem->GetValueString("name") + "_" +
-                  boost::lexical_cast<std::string>(i++);
-    }
-
-    // Remove the topic namespace from the model name. This will get re-inserted
-    // by the World automatically
-    modelName.erase(0, this->node->GetTopicNamespace().size()+2);
-
-    // The the SDF model's name
-    modelElem->GetAttribute("name")->Set(modelName);
-    modelElem->GetElement("origin")->GetAttribute("pose")->Set(
-        this->modelVisual->GetWorldPose());
-
-    // Spawn the model in the physics server
-    msgs::Factory msg;
-    msg.set_sdf(this->modelSDF->ToString());
-    this->factoryPub->Publish(msg);
-  }
-
-  // Remove the temporary visual from the scene
-  rendering::Scene *scene = gui::get_active_camera()->GetScene();
-  scene->RemoveVisual(this->modelVisual);
-  this->modelVisual.reset();
-  this->visuals.clear();
-
-  this->fileTreeWidget->clearSelection();
-
-  this->modelSDF.reset();
-}*/

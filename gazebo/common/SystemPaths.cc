@@ -18,6 +18,9 @@
  * Author: Nate Koenig, Jordi Polo
  * Date: 3 May 2008
  */
+#define BOOST_FILESYSTEM_VERSION 2
+#include <boost/filesystem.hpp>
+
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -42,6 +45,10 @@ SystemPaths::SystemPaths()
   this->gazeboPaths.clear();
   this->ogrePaths.clear();
   this->pluginPaths.clear();
+  this->modelPaths.clear();
+
+  //Nate:
+  this->modelPaths.push_back("/home/nkoenig/local/share/gazebo_models");
 
   char *path = getenv("GAZEBO_LOG_PATH");
   std::string fullPath;
@@ -100,6 +107,12 @@ const std::list<std::string> &SystemPaths::GetPluginPaths()
   if (this->pluginPathsFromEnv)
     this->UpdatePluginPaths();
   return this->pluginPaths;
+}
+
+/////////////////////////////////////////////////
+const std::list<std::string> &SystemPaths::GetModelPaths()
+{
+  return this->modelPaths;
 }
 
 /////////////////////////////////////////////////
@@ -191,11 +204,6 @@ void SystemPaths::UpdateOgrePaths()
   this->InsertUnique(path.substr(pos1, path.size()-pos1), this->ogrePaths);
 }
 
-//////////////////////////////////////////////////
-std::string SystemPaths::GetModelPathExtension()
-{
-  return "/models";
-}
 
 //////////////////////////////////////////////////
 std::string SystemPaths::GetWorldPathExtension()
@@ -210,60 +218,93 @@ std::string SystemPaths::FindFileWithGazeboPaths(const std::string &_filename)
 }
 
 //////////////////////////////////////////////////
+std::string SystemPaths::FindFileURI(const std::string &_uri)
+{
+  int index = _uri.find("://");
+  std::string prefix = _uri.substr(0, index);
+  std::string suffix = _uri.substr(index + 3, _uri.size() - index - 3);
+  std::string filename;
+
+  if (prefix == "models")
+    filename = "/home/nkoenig/local/share/gazebo_models/" + suffix;
+  else
+    gzerr << "Unknown URI prefix[" << prefix << "]\n";
+
+  return filename;
+}
+
+//////////////////////////////////////////////////
 std::string SystemPaths::FindFile(const std::string &_filename)
 {
-  if (_filename[0] == '/')
-    return _filename;
+  std::string result;
 
-  struct stat st;
-  std::string fullname = std::string("./")+_filename;
-  bool found = false;
-
-  std::list<std::string> paths = this->GetGazeboPaths();
-
-  if (stat(fullname.c_str(), &st) == 0)
+  if (_filename.find("://") != std::string::npos)
   {
-    found = true;
+    result = this->FindFileURI(_filename);
   }
-  else if (stat(_filename.c_str(), &st) == 0)
+  else if (_filename[0] == '/')
   {
-    fullname = _filename;
-    found = true;
+    result = _filename;
   }
   else
   {
-    for (std::list<std::string>::const_iterator iter = paths.begin();
-        iter != paths.end() && !found; ++iter)
-    {
-      fullname = (*iter) + "/" + _filename;
-      if (stat(fullname.c_str(), &st) == 0)
-      {
-        found = true;
-        break;
-      }
+    struct stat st;
+    result = std::string("./")+_filename;
+    bool found = false;
 
-      std::list<std::string>::iterator suffixIter;
-      for (suffixIter = this->suffixPaths.begin();
-           suffixIter != this->suffixPaths.end(); ++suffixIter)
+    std::list<std::string> paths = this->GetGazeboPaths();
+
+    if (stat(result.c_str(), &st) == 0)
+    {
+      found = true;
+    }
+    else if (stat(_filename.c_str(), &st) == 0)
+    {
+      result = _filename;
+      found = true;
+    }
+    else
+    {
+      for (std::list<std::string>::const_iterator iter = paths.begin();
+          iter != paths.end() && !found; ++iter)
       {
-        fullname = (*iter) + *suffixIter + _filename;
-        if (stat(fullname.c_str(), &st) == 0)
+        result = (*iter) + "/" + _filename;
+        if (stat(result.c_str(), &st) == 0)
         {
           found = true;
           break;
         }
+
+        std::list<std::string>::iterator suffixIter;
+        for (suffixIter = this->suffixPaths.begin();
+            suffixIter != this->suffixPaths.end(); ++suffixIter)
+        {
+          result = (*iter) + *suffixIter + _filename;
+          if (stat(result.c_str(), &st) == 0)
+          {
+            found = true;
+            break;
+          }
+        }
       }
+    }
+
+    if (!found)
+    {
+      result.clear();
+      gzerr << "cannot load file [" << _filename << "]in GAZEBO_RESOURCE_PATH["
+        << getenv("GAZEBO_RESOURCE_PATH") << "]\n";
     }
   }
 
-  if (!found)
+  boost::filesystem::path dir(result);
+  if (!boost::filesystem::exists(dir))
   {
-    fullname.clear();
-    gzerr << "cannot load file [" << _filename << "]in GAZEBO_RESOURCE_PATH["
-      << getenv("GAZEBO_RESOURCE_PATH") << "]\n";
+    gzerr << "File or path does not exist[" << result << "]\n";
+    result.clear();
   }
 
-  return fullname;
+  return result;
 }
 
 /////////////////////////////////////////////////

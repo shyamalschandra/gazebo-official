@@ -14,6 +14,9 @@
  * limitations under the License.
  *
 */
+#define BOOST_FILESYSTEM_VERSION 2
+#include <boost/filesystem.hpp>
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -383,9 +386,10 @@ bool readDoc(TiXmlDocument *_xmlDoc, SDFPtr _sdf, const std::string &_source)
   {
     // try to use the old deprecated parser
     if (!gazeboNode)
-      gzwarn << "Gazebo SDF has no gazebo element\n";
+      gzwarn << "Gazebo SDF has no gazebo element in file[" << _source << "]\n";
     else if (!gazeboNode->Attribute("version"))
-      gzwarn << "Gazebo SDF gazebo element has no version\n";
+      gzwarn << "Gazebo SDF gazebo element has no version in file["
+             << _source << "]\n";
     else if (strcmp(gazeboNode->Attribute("version"),
                     SDF::version.c_str()) != 0)
       gzwarn << "Gazebo SDF version ["
@@ -534,8 +538,66 @@ bool readXml(TiXmlElement *_xml, ElementPtr _sdf)
     {
       if (std::string("include") == elemXml->Value())
       {
-        std::string filename = gazebo::common::find_file(
-              std::string("models/") + elemXml->Attribute("filename"));
+        std::string modelPath;
+
+        if (elemXml->FirstChildElement("uri"))
+        {
+          modelPath = gazebo::common::find_file(
+              elemXml->FirstChildElement("uri")->GetText());
+
+          // Test the model path
+          if (modelPath.empty())
+          {
+            gzerr << "Unable to find uri["
+              << elemXml->FirstChildElement("uri")->GetText() << "]\n";
+
+            std::string uri = elemXml->FirstChildElement("uri")->GetText();
+            if (uri.find("models://") != 0)
+            {
+              gzerr << "Invalid uri[" << uri << "]. Should be models://"
+                    << uri << "\n";
+            }
+            continue;
+          }
+          else
+          {
+            boost::filesystem::path dir(modelPath);
+            if (!boost::filesystem::exists(dir) ||
+                !boost::filesystem::is_directory(dir))
+            {
+              gzerr << "Directory doesn't exist[" << modelPath << "]\n";
+              continue;
+            }
+          }
+        }
+        else
+        {
+          if (elemXml->Attribute("filename"))
+          {
+            gzerr << "<include filename='...'/> should be <include><uri='...'/>\n";
+          }
+          else
+            gzerr << "<include> element missing 'uri' attribute\n";
+
+          continue;
+        }
+
+
+        std::string manifest = modelPath + "/manifest.xml";
+        std::string filename;
+
+        TiXmlDocument manifestDoc;
+        if (manifestDoc.LoadFile(manifest))
+        {
+          TiXmlElement *modelXML = manifestDoc.FirstChildElement("model");
+          if (!modelXML)
+            gzerr << "No <model> element in manifest[" << manifest << "]\n";
+          else
+          {
+            filename = modelPath + "/" +
+                       modelXML->FirstChildElement("sdf")->GetText();
+          }
+        }
 
         SDFPtr includeSDF(new SDF);
         init(includeSDF);
@@ -546,17 +608,18 @@ bool readXml(TiXmlElement *_xml, ElementPtr _sdf)
           return false;
         }
 
-        if (elemXml->Attribute("model_name"))
+        if (elemXml->FirstChildElement("name"))
         {
           includeSDF->root->GetElement("model")->GetAttribute(
-              "name")->SetFromString(elemXml->Attribute("model_name"));
+              "name")->SetFromString(
+                elemXml->FirstChildElement("name")->GetText());
         }
 
-        if (elemXml->Attribute("model_pose"))
+        if (elemXml->FirstChildElement("pose"))
         {
           includeSDF->root->GetElement("model")->GetElement(
               "pose")->GetValue()->SetFromString(
-                elemXml->Attribute("model_pose"));
+                elemXml->FirstChildElement("pose")->GetText());
         }
 
         for (TiXmlElement *childElemXml = elemXml->FirstChildElement();
@@ -583,8 +646,12 @@ bool readXml(TiXmlElement *_xml, ElementPtr _sdf)
         {
           includeSDF->root->GetFirstElement()->SetParent(_sdf);
           _sdf->InsertElement(includeSDF->root->GetFirstElement());
-          includeSDF->root->GetFirstElement()->SetInclude(elemXml->Attribute(
-                "filename"));
+          // TODO: This was used to store the included filename so that when
+          // a world is saved, the included model's SDF is not stored in the
+          // world file. This highlights the need to make model inclusion
+          // a core feature of SDF, and not a hack that that parser handles
+          // includeSDF->root->GetFirstElement()->SetInclude(elemXml->Attribute(
+          //      "filename"));
         }
 
         continue;

@@ -37,8 +37,11 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~InsertModelWidget();
 
+      private: void ConnectToModelDatabase();
+
       /// \brief Received model selection user input
       private slots: void OnModelSelection(QTreeWidgetItem *item, int column);
+      private: void OnResponse(const std::string &_data);
 
       private: QTreeWidget *fileTreeWidget;
     };
