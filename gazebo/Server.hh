@@ -42,7 +42,7 @@ namespace gazebo
   class Master;
 
   /// \brief Base class for simulation server that handles commandline options,
-  ///        starts a Master, runs World update and sensor generation loops.
+  /// starts a Master, runs World update and sensor generation loops.
   class Server
   {
     public: Server();

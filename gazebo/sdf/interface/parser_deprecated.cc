@@ -385,11 +385,11 @@ bool initRay(xmlNodePtr _config, sdf::ElementPtr _sdf)
     int verticalRangeCount =
       boost::lexical_cast<int>(getNodeValue(_config, "verticalRangeCount"));
     int verticalRayCount = boost::lexical_cast<int>(getNodeValue(_config,
-      "verticalRayCount"));
+          "verticalRayCount"));
 
     if (!sdfVerti->GetAttribute("resolution")->SetFromString(
-          boost::lexical_cast<std::string>(verticalRangeCount
-          / verticalRayCount)))
+          boost::lexical_cast<std::string>(verticalRangeCount /
+                                           verticalRayCount)))
     {
       gzerr << "Unable to parse ray sensor verticalRayCount";
       return false;
