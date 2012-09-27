@@ -26,6 +26,7 @@
 #include "gazebo/sdf/interface/Param.hh"
 #include "gazebo/sdf/interface/parser.hh"
 #include "gazebo/sdf/interface/parser_deprecated.hh"
+#include "gazebo/sdf/interface/parser_urdf.hh"
 
 #include "gazebo/common/Common.hh"
 #include "gazebo/common/Console.hh"
@@ -310,8 +311,18 @@ bool readString(const std::string &_xmlString, SDFPtr _sdf)
       }
       else
       {
-        gzerr << "parse as old deprecated model file failed.\n";
-        return false;
+        urdf2gazebo::URDF2Gazebo u2g;
+        TiXmlDocument doc = u2g.initModelString(_xmlString);
+        if (sdf::readDoc(&doc, _sdf, "urdf string"))
+        {
+          gzwarn << "parse from urdf.\n";
+          return true;
+        }
+        else
+        {
+          gzerr << "parse as old deprecated model file failed.\n";
+          return false;
+        }
       }
     }
   }
