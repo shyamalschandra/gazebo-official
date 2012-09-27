@@ -31,6 +31,8 @@
 #include "gazebo/transport/Publisher.hh"
 #include "gazebo/transport/Subscriber.hh"
 
+#include "gazebo/common/ModelDatabase.hh"
+#include "gazebo/common/Common.hh"
 #include "gazebo/common/Diagnostics.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Exception.hh"
@@ -232,12 +234,6 @@ void World::Save(const std::string &_filename)
 //////////////////////////////////////////////////
 void World::Init()
 {
-  for (std::vector<WorldPluginPtr>::iterator iter = this->plugins.begin();
-       iter != this->plugins.end(); ++iter)
-  {
-    (*iter)->Init();
-  }
-
   // Initialize all the entities
   for (unsigned int i = 0; i < this->rootElement->GetChildCount(); i++)
     this->rootElement->GetChild(i)->Init();
@@ -366,6 +362,19 @@ void World::StepWorld(int _steps)
 //////////////////////////////////////////////////
 void World::Update()
 {
+  static bool first = true;
+
+
+  /// Plugins that manipulate joints (and probably other properties) require
+  /// one iteration of the physics engine. Do not remove this.
+  if (first)
+  {
+    this->physicsEngine->UpdatePhysics();
+    this->LoadPlugins();
+    first = false;
+    return;
+  }
+
   if (this->needsReset)
   {
     if (this->resetAll)
@@ -438,23 +447,6 @@ void World::Clear()
 std::string World::GetName() const
 {
   return this->name;
-}
-
-//////////////////////////////////////////////////
-unsigned int World::GetParamCount() const
-{
-  return this->parameters.size();
-}
-
-//////////////////////////////////////////////////
-common::Param *World::GetParam(unsigned int index) const
-{
-  if (index < this->parameters.size())
-    return this->parameters[index];
-  else
-    gzerr << "World::GetParam - Invalid param index\n";
-
-  return NULL;
 }
 
 //////////////////////////////////////////////////
@@ -592,17 +584,6 @@ void World::LoadEntities(sdf::ElementPtr _sdf, BasePtr _parent)
       childElem = childElem->GetNextElement("road");
     }
   }
-
-  // Load the plugins
-  if (_sdf->HasElement("plugin"))
-  {
-    sdf::ElementPtr pluginElem = _sdf->GetElement("plugin");
-    while (pluginElem)
-    {
-      this->LoadPlugin(pluginElem);
-      pluginElem = pluginElem->GetNextElement("plugin");
-    }
-  }
 }
 
 //////////////////////////////////////////////////
@@ -612,7 +593,7 @@ unsigned int World::GetModelCount() const
 }
 
 //////////////////////////////////////////////////
-ModelPtr World::GetModel(unsigned int _index)
+ModelPtr World::GetModel(unsigned int _index) const
 {
   ModelPtr model;
 
@@ -628,6 +609,18 @@ ModelPtr World::GetModel(unsigned int _index)
   }
 
   return model;
+}
+
+//////////////////////////////////////////////////
+std::list<ModelPtr> World::GetModels() const
+{
+  std::list<ModelPtr> models;
+  for (unsigned int i = 0; i < this->GetModelCount(); ++i)
+  {
+    models.push_back(this->GetModel(i));
+  }
+
+  return models;
 }
 
 //////////////////////////////////////////////////
@@ -884,6 +877,37 @@ void World::ModelUpdateSingleLoop()
 
 
 //////////////////////////////////////////////////
+void World::LoadPlugins()
+{
+  for (unsigned int i = 0; i < this->rootElement->GetChildCount(); i++)
+  {
+    if (boost::shared_dynamic_cast<Model>(this->rootElement->GetChild(i)))
+    {
+      boost::shared_dynamic_cast<Model>(
+          this->rootElement->GetChild(i))->LoadPlugins();
+    }
+  }
+
+  // Load the plugins
+  if (this->sdf->HasElement("plugin"))
+  {
+    sdf::ElementPtr pluginElem = this->sdf->GetElement("plugin");
+    while (pluginElem)
+    {
+      this->LoadPlugin(pluginElem);
+      pluginElem = pluginElem->GetNextElement("plugin");
+    }
+  }
+
+
+  for (std::vector<WorldPluginPtr>::iterator iter = this->plugins.begin();
+       iter != this->plugins.end(); ++iter)
+  {
+    (*iter)->Init();
+  }
+}
+
+//////////////////////////////////////////////////
 void World::LoadPlugin(const std::string &_filename,
                        const std::string &_name,
                        sdf::ElementPtr _sdf)
@@ -1136,7 +1160,10 @@ void World::ProcessFactoryMsgs()
     }
     else if ((*iter).has_sdf_filename() && !(*iter).sdf_filename().empty())
     {
-      if (!sdf::readFile((*iter).sdf_filename(), factorySDF))
+      std::string filename = common::ModelDatabase::GetModelFile(
+          (*iter).sdf_filename());
+
+      if (!sdf::readFile(filename, factorySDF))
       {
         gzerr << "Unable to read sdf file.\n";
         continue;

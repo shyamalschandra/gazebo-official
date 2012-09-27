@@ -29,21 +29,18 @@
 
 namespace gazebo
 {
-////////////////////////////////////////////////////////////////////////////////
-// Constructor
+/////////////////////////////////////////////////
 JointTrajectoryPlugin::JointTrajectoryPlugin()
 {
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Destructor
+/////////////////////////////////////////////////
 JointTrajectoryPlugin::~JointTrajectoryPlugin()
 {
   event::Events::DisconnectWorldUpdateStart(this->update_connection_);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Load the controller
+/////////////////////////////////////////////////
 void JointTrajectoryPlugin::Load(physics::ModelPtr _parent,
                                  sdf::ElementPtr /*_sdf*/)
 {
@@ -60,8 +57,7 @@ void JointTrajectoryPlugin::Load(physics::ModelPtr _parent,
       boost::bind(&JointTrajectoryPlugin::UpdateStates, this));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// glue a link to the world by creating a fixed joint
+/////////////////////////////////////////////////
 void JointTrajectoryPlugin::FixLink(physics::LinkPtr link)
 {
   this->joint_ = this->world_->GetPhysicsEngine()->CreateJoint("revolute");
@@ -76,17 +72,13 @@ void JointTrajectoryPlugin::FixLink(physics::LinkPtr link)
   this->joint_->Init();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// unglue a link to the world by destroying the fixed joint
+/////////////////////////////////////////////////
 void JointTrajectoryPlugin::UnfixLink()
 {
   this->joint_.reset();
 }
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Play the trajectory, update states
+/////////////////////////////////////////////////
 void JointTrajectoryPlugin::UpdateStates()
 {
   common::Time cur_time = this->world_->GetSimTime();
@@ -103,7 +95,8 @@ void JointTrajectoryPlugin::UpdateStates()
 
   this->model_->SetJointPositions(joint_position_map);
 
-  this->world_->SetPaused(is_paused);  // resume original pause-state
+  // resume original pause-state
+  this->world_->SetPaused(is_paused);
 }
 
 GZ_REGISTER_MODEL_PLUGIN(JointTrajectoryPlugin)
