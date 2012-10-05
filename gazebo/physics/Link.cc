@@ -399,6 +399,32 @@ void Link::Update()
    }*/
 }
 
+/////////////////////////////////////////////////
+std::vector<LinkPtr> Link::GetChildLinks()
+{
+  std::vector<LinkPtr> links;
+  for (std::vector<JointPtr>::iterator iter = this->childJoints.begin();
+                                       iter != this->childJoints.end(); ++iter)
+  {
+    if ((*iter)->GetChild())
+      links.push_back((*iter)->GetChild());
+  }
+  return links;
+}
+
+/////////////////////////////////////////////////
+std::vector<LinkPtr> Link::GetParentLinks()
+{
+  std::vector<LinkPtr> links;
+  for (std::vector<JointPtr>::iterator iter = this->parentJoints.begin();
+                                       iter != this->parentJoints.end(); ++iter)
+  {
+    if ((*iter)->GetParent())
+      links.push_back((*iter)->GetParent());
+  }
+  return links;
+}
+
 //////////////////////////////////////////////////
 void Link::LoadCollision(sdf::ElementPtr _sdf)
 {

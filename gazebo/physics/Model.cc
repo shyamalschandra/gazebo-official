@@ -546,6 +546,19 @@ LinkPtr Model::GetLinkById(unsigned int _id) const
 }
 
 //////////////////////////////////////////////////
+Link_V Model::GetAllLinks() const
+{
+  Link_V links;
+  for (unsigned int i = 0; i < this->GetChildCount(); ++i)
+  {
+    LinkPtr link = boost::shared_static_cast<Link>(this->GetChild(i));
+    if (link)
+      links.push_back(link);
+  }
+  return links;
+}
+
+//////////////////////////////////////////////////
 LinkPtr Model::GetLink(const std::string &_name) const
 {
   Base_V::const_iterator biter;
