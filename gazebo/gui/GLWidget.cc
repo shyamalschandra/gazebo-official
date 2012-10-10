@@ -238,6 +238,9 @@ void GLWidget::keyPressEvent(QKeyEvent *_event)
     this->keyModifiers & Qt::ControlModifier ? true : false;
   this->mouseEvent.shift =
     this->keyModifiers & Qt::ShiftModifier ? true : false;
+  this->mouseEvent.alt =
+    this->keyModifiers & Qt::AltModifier ? true : false;
+
 
   this->userCamera->HandleKeyPressEvent(keyText);
 }
@@ -266,6 +269,10 @@ void GLWidget::keyReleaseEvent(QKeyEvent *_event)
     this->keyModifiers & Qt::ControlModifier ? true : false;
   this->mouseEvent.shift =
     this->keyModifiers & Qt::ShiftModifier ? true : false;
+  this->mouseEvent.alt =
+    this->keyModifiers & Qt::AltModifier ? true : false;
+
+
   this->userCamera->HandleKeyReleaseEvent(_event->text().toStdString());
 }
 
@@ -532,18 +539,21 @@ void GLWidget::OnMouseMoveRing()
 
     if (newHoverVis && !newHoverVis->IsPlane())
     {
-      if (this->hoverVis)
+      /*if (this->hoverVis)
         this->hoverVis->SetEmissive(common::Color(0, 0, 0));
+        */
 
       this->hoverVis = this->scene->GetVisual(newHoverVis->GetName().substr(0,
             newHoverVis->GetName().find("::")));
 
       this->setCursor(Qt::PointingHandCursor);
-      this->hoverVis->SetEmissive(common::Color(0.8, 0.8, 0.8));
+      //this->hoverVis->SetEmissive(common::Color(0.8, 0.8, 0.8));
     }
     else if (this->hoverVis)
     {
-      this->hoverVis->SetEmissive(common::Color(0, 0, 0));
+      this->setCursor(Qt::ArrowCursor);
+      this->setCursor(Qt::PointingHandCursor);
+      //this->hoverVis->SetEmissive(common::Color(0, 0, 0));
       this->hoverVis.reset();
     }
   }
@@ -560,8 +570,8 @@ void GLWidget::OnMouseMoveRing()
   }
   else
   {
-    if (this->hoverVis)
-      this->hoverVis->SetEmissive(common::Color(0, 0, 0));
+    //if (this->hoverVis)
+    //  this->hoverVis->SetEmissive(common::Color(0, 0, 0));
     this->hoverVis.reset();
   }
 }
