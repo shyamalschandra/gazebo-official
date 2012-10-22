@@ -408,6 +408,7 @@ namespace gazebo
       private: transport::PublisherPtr selectionPub;
       private: transport::PublisherPtr statPub, responsePub, modelPub;
       private: transport::PublisherPtr guiPub;
+      private: transport::PublisherPtr lightPub;
 
       private: transport::SubscriberPtr controlSub;
       private: transport::SubscriberPtr factorySub, jointSub;
@@ -434,7 +435,7 @@ namespace gazebo
       private: boost::mutex *setWorldPoseMutex;
 
       public: boost::mutex *GetSetWorldPoseMutex() const
-        { return this->setWorldPoseMutex; };
+        { return this->setWorldPoseMutex; }
 
       /// Used by World classs in following calls:
       ///   World::Step for then entire function
