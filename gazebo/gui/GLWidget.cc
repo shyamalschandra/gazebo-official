@@ -427,7 +427,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *_event)
     this->OnMouseMoveMakeEntity();
   else if (this->state == "select")
     this->OnMouseMoveNormal();
-  else if (this->state == "translate" || this->state=="rotate")
+  else if (this->state == "translate" || this->state == "rotate")
     this->OnMouseMoveTranslate();
 
   this->mouseEvent.prevPos = this->mouseEvent.pos;
@@ -1021,7 +1021,6 @@ void GLWidget::OnSetSelectedEntity(const std::string &_name)
   {
     this->SetSelectedVisual(rendering::VisualPtr());
     this->scene->SelectVisual("");
-    gui::Events::manipMode("select");
   }
 
   this->hoverVis.reset();
