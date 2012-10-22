@@ -421,6 +421,8 @@ namespace gazebo
 
       private: common::Time statPeriod;
       private: common::Time prevStatTime;
+      private: common::Time processMsgsPeriod;
+      private: common::Time prevProcessMsgsTime;
       private: common::Time pauseStartTime;
       private: common::Time realTimeOffset;
 
@@ -435,7 +437,7 @@ namespace gazebo
       private: boost::mutex *setWorldPoseMutex;
 
       public: boost::mutex *GetSetWorldPoseMutex() const
-        { return this->setWorldPoseMutex; };
+        { return this->setWorldPoseMutex; }
 
       /// Used by World classs in following calls:
       ///   World::Step for then entire function
