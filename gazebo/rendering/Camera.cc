@@ -32,6 +32,7 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/math/Pose.hh"
 
+#include "gazebo/rendering/Sky.hh"
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/RTShaderSystem.hh"
 #include "gazebo/rendering/RenderEngine.hh"
@@ -1141,8 +1142,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *target)
       // this->ssaoInstance->setEnabled(false);
     }
 
-    if (this->GetScene()->skyx != NULL)
-      this->renderTarget->addListener(this->GetScene()->skyx);
+    this->GetScene()->GetSky()->AddCamera(shared_from_this());
   }
 }
 
@@ -1240,6 +1240,13 @@ bool Camera::TrackVisualImpl(VisualPtr _visual)
   return true;
 }
 
+/////////////////////////////////////////////////
+Ogre::RenderTarget *Camera::GetRenderTarget() const
+{
+  return this->renderTarget;
+}
+
+/////////////////////////////////////////////////
 Ogre::Texture *Camera::GetRenderTexture() const
 {
   return this->renderTexture;

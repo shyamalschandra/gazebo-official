@@ -601,6 +601,45 @@ void ModelListWidget::ScenePropertyChanged(QtProperty * /*_item*/)
       this->FillColorMsg((*iter), msg.mutable_background());
     else if ((*iter)->propertyName().toStdString() == "shadows")
       msg.set_shadows(this->variantManager->value((*iter)).toBool());
+    else if ((*iter)->propertyName().toStdString() == "sky")
+    {
+      msgs::Sky *sky = msg.mutable_sky();
+      msgs::Sky::Clouds *clouds = sky->mutable_clouds();
+      //msgs::Sky::Lightning *lightning = sky->mutable_lightning();
+
+      sky->set_time(this->variantManager->value(
+            this->GetChildItem((*iter), "time")).toDouble());
+      sky->set_sunrise(this->variantManager->value(
+            this->GetChildItem((*iter), "sunrise")).toDouble());
+      sky->set_sunset(this->variantManager->value(
+            this->GetChildItem((*iter), "sunset")).toDouble());
+
+
+      QtProperty *cloudItem = this->GetChildItem((*iter), "clouds");
+      clouds->set_enabled(this->variantManager->value(
+            this->GetChildItem(cloudItem, "enabled")).toBool());
+
+      clouds->set_speed(this->variantManager->value(
+            this->GetChildItem(cloudItem, "speed")).toDouble());
+      clouds->set_direction(this->variantManager->value(
+            this->GetChildItem(cloudItem, "direction")).toDouble());
+      this->FillColorMsg(this->GetChildItem(cloudItem, "ambient"),
+                         clouds->mutable_ambient());
+      clouds->set_humidity(this->variantManager->value(
+            this->GetChildItem(cloudItem, "humidity")).toDouble());
+      clouds->set_mean_size(this->variantManager->value(
+            this->GetChildItem(cloudItem, "size")).toDouble());
+
+      /*
+      QtProperty *lightningItem = this->GetChildItem((*iter), "lightning");
+      lightning->set_mean_time(this->variantManager->value(
+            this->GetChildItem(lightningItem, "mean time")).toDouble());
+      lightning->set_time_multiplier(this->variantManager->value(
+            this->GetChildItem(lightningItem, "time multiplier")).toDouble());
+      this->FillColorMsg(this->GetChildItem(lightningItem, "color"),
+                         lightning->mutable_color());
+                         */
+    }
   }
 
   msg.set_name(gui::get_world());
@@ -1000,66 +1039,6 @@ void ModelListWidget::FillMsg(QtProperty *_item,
 }
 
 /////////////////////////////////////////////////
-QtProperty *ModelListWidget::PopChildItem(QList<QtProperty*> &_list,
-    const std::string &_name)
-{
-  for (QList<QtProperty*>::iterator iter = _list.begin();
-      iter != _list.end(); ++iter)
-  {
-    if ((*iter)->propertyName().toStdString() == _name)
-    {
-      iter = _list.erase(iter);
-      return (*iter);
-    }
-  }
-
-  return NULL;
-}
-
-/////////////////////////////////////////////////
-QtProperty *ModelListWidget::GetParentItemValue(const std::string &_name)
-{
-  QtProperty *result = NULL;
-
-  QList<QtProperty*> properties = this->propTreeBrowser->properties();
-  for (QList<QtProperty*>::iterator iter = properties.begin();
-      iter != properties.end(); ++iter)
-  {
-    if ((*iter)->valueText().toStdString() == _name)
-      return NULL;
-    else if ((result = this->GetParentItemValue(*iter, _name)) != NULL)
-      break;
-  }
-
-  return result;
-}
-
-/////////////////////////////////////////////////
-QtProperty *ModelListWidget::GetParentItemValue(QtProperty *_item,
-                                           const std::string &_name)
-{
-  if (!_item)
-    return NULL;
-
-  QtProperty *result = NULL;
-
-  QList<QtProperty*> subProperties = _item->subProperties();
-  for (QList<QtProperty*>::iterator iter = subProperties.begin();
-      iter != subProperties.end(); ++iter)
-  {
-    if ((*iter)->valueText().toStdString() == _name)
-    {
-      result = _item;
-      break;
-    }
-    else if ((result = this->GetParentItemValue(*iter, _name)) != NULL)
-      break;
-  }
-
-  return result;
-}
-
-/////////////////////////////////////////////////
 QtProperty *ModelListWidget::GetParentItem(const std::string &_name)
 {
   QtProperty *result = NULL;
@@ -1116,43 +1095,6 @@ bool ModelListWidget::HasChildItem(QtProperty *_parent, QtProperty *_child)
       iter != subProperties.end(); ++iter)
   {
     if ((result = this->HasChildItem(*iter, _child)))
-      break;
-  }
-
-  return result;
-}
-
-/////////////////////////////////////////////////
-QtProperty *ModelListWidget::GetChildItemValue(const std::string &_name)
-{
-  QtProperty *result = NULL;
-
-  QList<QtProperty*> properties = this->propTreeBrowser->properties();
-  for (QList<QtProperty*>::iterator iter = properties.begin();
-      iter != properties.end(); ++iter)
-  {
-    if ((result = this->GetChildItemValue(*iter, _name)) != NULL)
-      break;
-  }
-
-  return result;
-}
-
-/////////////////////////////////////////////////
-QtProperty *ModelListWidget::GetChildItemValue(QtProperty *_item,
-                                          const std::string &_name)
-{
-  if (!_item)
-    return NULL;
-  if (_item->valueText().toStdString() == _name)
-    return _item;
-
-  QtProperty *result = NULL;
-  QList<QtProperty*> subProperties = _item->subProperties();
-  for (QList<QtProperty*>::iterator iter = subProperties.begin();
-      iter != subProperties.end(); ++iter)
-  {
-    if ((result = this->GetChildItem(*iter, _name)) != NULL)
       break;
   }
 
@@ -2128,8 +2070,9 @@ void ModelListWidget::ResetScene()
 void ModelListWidget::FillPropertyTree(const msgs::Scene &_msg,
                                        QtProperty * /*_parent*/)
 {
-  // QtProperty *topItem = NULL;
+  QtProperty *topItem = NULL;
   QtVariantProperty *item = NULL;
+
 
   // Create and set the ambient color property
   item = this->variantManager->addProperty(QVariant::Color, tr("ambient"));
@@ -2176,13 +2119,91 @@ void ModelListWidget::FillPropertyTree(const msgs::Scene &_msg,
   topItem->addSubProperty(item);
   */
 
-  /// \TODO: Put sky modification back in GUI
-  /*
+
+  const msgs::Sky skyMsg = _msg.sky();
+
   topItem = this->variantManager->addProperty(
       QtVariantPropertyManager::groupTypeId(), tr("sky"));
-  bItem = this->propTreeBrowser->addProperty(topItem);
+  QtBrowserItem *bItem = this->propTreeBrowser->addProperty(topItem);
   this->propTreeBrowser->setExpanded(bItem, false);
-  */
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("time"));
+  topItem->addSubProperty(item);
+  if (skyMsg.has_time())
+    item->setValue(skyMsg.time());
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("sunrise"));
+  topItem->addSubProperty(item);
+  if (skyMsg.has_sunrise())
+    item->setValue(skyMsg.sunrise());
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("sunset"));
+  topItem->addSubProperty(item);
+  if (skyMsg.has_sunset())
+    item->setValue(skyMsg.sunset());
+
+
+  // Add Cloud group item
+  QtProperty *cloudItem = this->variantManager->addProperty(
+             QtVariantPropertyManager::groupTypeId(), tr("clouds"));
+  topItem->addSubProperty(cloudItem);
+
+  msgs::Sky::Clouds cloudMsg;
+
+  item = this->variantManager->addProperty(QVariant::Bool, tr("enabled"));
+  cloudItem->addSubProperty(item);
+  if (skyMsg.has_clouds())
+  {
+    item->setValue(true);
+    cloudMsg = skyMsg.clouds();
+  }
+  else
+    item->setValue(false);
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("speed"));
+  cloudItem->addSubProperty(item);
+  if (cloudMsg.has_speed())
+    item->setValue(cloudMsg.speed());
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("direction"));
+  cloudItem->addSubProperty(item);
+  if (cloudMsg.has_direction())
+    item->setValue(cloudMsg.direction());
+
+  item = this->variantManager->addProperty(QVariant::Color, tr("ambient"));
+  if (cloudMsg.has_ambient())
+  {
+    QColor clr(cloudMsg.ambient().r()*255, cloudMsg.ambient().g()*255,
+               cloudMsg.ambient().b()*255, cloudMsg.ambient().a()*255);
+    item->setValue(clr);
+  }
+  cloudItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("humidity"));
+  cloudItem->addSubProperty(item);
+  if (cloudMsg.has_humidity())
+    item->setValue(cloudMsg.humidity());
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("size"));
+  cloudItem->addSubProperty(item);
+  if (cloudMsg.has_mean_size())
+    item->setValue(cloudMsg.mean_size());
+
+
+  // Add lightning group item
+  QtProperty *lightningItem = this->variantManager->addProperty(
+             QtVariantPropertyManager::groupTypeId(), tr("lightning"));
+  topItem->addSubProperty(lightningItem);
+
+  item = this->variantManager->addProperty(QVariant::Double, tr("mean time"));
+  lightningItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Double,
+                                           tr("time multiplier"));
+  lightningItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Color, tr("color"));
+  lightningItem->addSubProperty(item);
 }
 
 /////////////////////////////////////////////////
