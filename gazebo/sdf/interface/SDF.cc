@@ -340,7 +340,7 @@ void Element::PrintDoc2(std::string &_divs, std::string &_html,
   std::ostringstream stream;
   ElementPtr_V::iterator eiter;
 
-  int start = _index++;
+  /*int start = */  _index++;
 
   std::string childHTML;
   for (eiter = this->elementDescriptions.begin();
@@ -348,7 +348,7 @@ void Element::PrintDoc2(std::string &_divs, std::string &_html,
   {
     (*eiter)->PrintDoc2(_divs, childHTML, _spacing + 4, _index);
   }
-  int end = _index;
+  // int end = _index;
 
   stream << "<a name=\"" << this->name << "\">&lt" << this->name << "&gt</a>";
 
