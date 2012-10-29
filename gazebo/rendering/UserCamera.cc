@@ -408,7 +408,6 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
   if (this->scene->GetManager()->hasAnimation("cameratrack"))
   {
     this->scene->GetManager()->destroyAnimation("cameratrack");
-    this->scene->GetManager()->destroyAnimationState("cameratrack");
   }
 
   math::Box box = _visual->GetBoundingBox();
@@ -446,7 +445,8 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
 
   dist = start.Distance(end);
   // double vel = 5.0;
-  double time = 0.5;  // dist / vel;
+  // time = dist / vel;
+  double time = 0.5;
 
   Ogre::Animation *anim =
     this->scene->GetManager()->createAnimation("cameratrack", time);

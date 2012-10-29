@@ -368,7 +368,7 @@ void Visual::Load()
     if (ent->hasSkeleton())
       this->skeleton = ent->getSkeleton();
 
-    for (unsigned int i = 0; i < ent->getNumSubEntities(); i++)
+    for (unsigned int i = 0; i < ent->getNumSubEntities(); ++i)
     {
       ent->getSubEntity(i)->setCustomParameter(1, Ogre::Vector4(
           this->sdf->GetValueDouble("laser_retro"), 0.0, 0.0, 0.0));
@@ -444,8 +444,6 @@ void Visual::Update()
     {
       this->animState = NULL;
       this->sceneNode->getCreator()->destroyAnimation(
-          this->GetName() + "_animation");
-      this->sceneNode->getCreator()->destroyAnimationState(
           this->GetName() + "_animation");
       if (this->onAnimationComplete)
         this->onAnimationComplete();
@@ -730,7 +728,7 @@ void Visual::SetMaterial(const std::string &_materialName, bool _unique)
 
   try
   {
-    for (int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+    for (int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
     {
       Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
 
@@ -744,7 +742,7 @@ void Visual::SetMaterial(const std::string &_materialName, bool _unique)
     for (unsigned int i = 0; i < this->sceneNode->numChildren(); ++i)
     {
       Ogre::SceneNode *sn = (Ogre::SceneNode*)(this->sceneNode->getChild(i));
-      for (int j = 0; j < sn->numAttachedObjects(); j++)
+      for (int j = 0; j < sn->numAttachedObjects(); ++j)
       {
         Ogre::MovableObject *obj = sn->getAttachedObject(j);
 
@@ -799,7 +797,7 @@ void Visual::SetAmbient(const common::Color &_color)
       continue;
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -810,12 +808,12 @@ void Visual::SetAmbient(const common::Color &_color)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-           techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
         technique->setLightingEnabled(true);
 
-        for (passCount = 0; passCount < technique->getNumPasses(); passCount++)
+        for (passCount = 0; passCount < technique->getNumPasses(); ++passCount)
         {
           pass = technique->getPass(passCount);
           pass->setAmbient(Conversions::Convert(_color));
@@ -840,7 +838,7 @@ void Visual::SetDiffuse(const common::Color &_color)
     this->SetMaterial(matName);
   }
 
-  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::Entity *entity = NULL;
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
@@ -853,7 +851,7 @@ void Visual::SetDiffuse(const common::Color &_color)
     }
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -864,12 +862,12 @@ void Visual::SetDiffuse(const common::Color &_color)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-           techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
         technique->setLightingEnabled(true);
 
-        for (passCount = 0; passCount < technique->getNumPasses(); passCount++)
+        for (passCount = 0; passCount < technique->getNumPasses(); ++passCount)
         {
           pass = technique->getPass(passCount);
           pass->setDiffuse(Conversions::Convert(_color));
@@ -894,7 +892,7 @@ void Visual::SetSpecular(const common::Color &_color)
     this->SetMaterial(matName);
   }
 
-  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::Entity *entity = NULL;
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
@@ -905,7 +903,7 @@ void Visual::SetSpecular(const common::Color &_color)
       continue;
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -916,12 +914,12 @@ void Visual::SetSpecular(const common::Color &_color)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-           techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
         technique->setLightingEnabled(true);
 
-        for (passCount = 0; passCount < technique->getNumPasses(); passCount++)
+        for (passCount = 0; passCount < technique->getNumPasses(); ++passCount)
         {
           pass = technique->getPass(passCount);
           pass->setSpecular(Conversions::Convert(_color));
@@ -1000,7 +998,7 @@ void Visual::SetTransparency(float _trans)
     (*iter)->SetTransparency(_trans);
   }
 
-  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::Entity *entity = NULL;
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
@@ -1011,7 +1009,7 @@ void Visual::SetTransparency(float _trans)
       continue;
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -1022,11 +1020,11 @@ void Visual::SetTransparency(float _trans)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-           techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
 
-        for (passCount = 0; passCount < technique->getNumPasses(); passCount++)
+        for (passCount = 0; passCount < technique->getNumPasses(); ++passCount)
         {
           pass = technique->getPass(passCount);
           // Need to fix transparency
@@ -1063,7 +1061,16 @@ void Visual::SetTransparency(float _trans)
 //////////////////////////////////////////////////
 void Visual::SetHighlighted(bool _highlighted)
 {
-  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  /*
+  if (this->GetAttachedObjectCount() > 0)
+    this->sceneNode->showBoundingBox(_highlighted);
+    */
+
+/* TODO: This code will cause objects that use the same mesh to be
+ * highlighted. Using the same mesh is good for performance. We need to come
+ * up with a better way to highlight objects, possibly by attaching
+ * a special visual to selected objects.
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::Entity *entity = NULL;
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
@@ -1074,7 +1081,7 @@ void Visual::SetHighlighted(bool _highlighted)
       continue;
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -1085,7 +1092,7 @@ void Visual::SetHighlighted(bool _highlighted)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-          techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
         if (_highlighted)
@@ -1115,17 +1122,18 @@ void Visual::SetHighlighted(bool _highlighted)
       }
     }
   }
+  */
 
-  for (unsigned int i = 0; i < this->children.size(); ++i)
+  /*for (unsigned int i = 0; i < this->children.size(); ++i)
   {
     this->children[i]->SetHighlighted(_highlighted);
-  }
+  }*/
 }
 
 //////////////////////////////////////////////////
 void Visual::SetEmissive(const common::Color &_color)
 {
-  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::Entity *entity = NULL;
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
@@ -1136,7 +1144,7 @@ void Visual::SetEmissive(const common::Color &_color)
       continue;
 
     // For each ogre::entity
-    for (unsigned int j = 0; j < entity->getNumSubEntities(); j++)
+    for (unsigned int j = 0; j < entity->getNumSubEntities(); ++j)
     {
       Ogre::SubEntity *subEntity = entity->getSubEntity(j);
       Ogre::MaterialPtr material = subEntity->getMaterial();
@@ -1147,14 +1155,13 @@ void Visual::SetEmissive(const common::Color &_color)
       Ogre::ColourValue dc;
 
       for (techniqueCount = 0; techniqueCount < material->getNumTechniques();
-          techniqueCount++)
+           ++techniqueCount)
       {
         technique = material->getTechnique(techniqueCount);
 
         for (passCount = 0; passCount < technique->getNumPasses();
-            passCount++)
+             ++passCount)
         {
-          std::cout << "Set emmissive\n";
           pass = technique->getPass(passCount);
           pass->setSelfIllumination(Conversions::Convert(_color));
         }
@@ -1177,7 +1184,7 @@ float Visual::GetTransparency()
 //////////////////////////////////////////////////
 void Visual::SetCastShadows(bool shadows)
 {
-  for (int i = 0; i < this->sceneNode->numAttachedObjects(); i++)
+  for (unsigned int i = 0; i < this->sceneNode->numAttachedObjects(); ++i)
   {
     Ogre::MovableObject *obj = this->sceneNode->getAttachedObject(i);
     obj->setCastShadows(shadows);
@@ -1463,7 +1470,7 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
 
   Ogre::SceneNode::ChildNodeIterator it = node->getChildIterator();
 
-  for (int i = 0; i < node->numAttachedObjects(); i++)
+  for (int i = 0; i < node->numAttachedObjects(); ++i)
   {
     Ogre::MovableObject *obj = node->getAttachedObject(i);
 
@@ -1521,7 +1528,6 @@ void Visual::InsertMesh(const std::string &_meshName)
 
   this->InsertMesh(mesh);
 
-
   // Add the mesh into OGRE
   /*if (!this->sceneNode->getCreator()->hasEntity(_meshName) &&
       common::MeshManager::Instance()->HasMesh(_meshName))
@@ -1533,37 +1539,39 @@ void Visual::InsertMesh(const std::string &_meshName)
 }
 
 //////////////////////////////////////////////////
-void Visual::InsertMesh(const common::Mesh *mesh)
+void Visual::InsertMesh(const common::Mesh *_mesh)
 {
   Ogre::MeshPtr ogreMesh;
 
-  if (mesh->GetSubMeshCount() == 0)
+  if (_mesh->GetSubMeshCount() == 0)
   {
     gzerr << "Visual::InsertMesh no submeshes, this is an invalid mesh\n";
     return;
   }
 
   // Don't re-add existing meshes
-  if (Ogre::MeshManager::getSingleton().resourceExists(mesh->GetName()))
+  if (Ogre::MeshManager::getSingleton().resourceExists(_mesh->GetName()))
+  {
     return;
+  }
 
   try
   {
     // Create a new mesh specifically for manual definition.
-    ogreMesh = Ogre::MeshManager::getSingleton().createManual(mesh->GetName(),
+    ogreMesh = Ogre::MeshManager::getSingleton().createManual(_mesh->GetName(),
         Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
     Ogre::SkeletonPtr ogreSkeleton;
 
-    if (mesh->HasSkeleton())
+    if (_mesh->HasSkeleton())
     {
-      common::Skeleton *skel = mesh->GetSkeleton();
+      common::Skeleton *skel = _mesh->GetSkeleton();
       ogreSkeleton = Ogre::SkeletonManager::getSingleton().create(
-        mesh->GetName() + "_skeleton",
+        _mesh->GetName() + "_skeleton",
         Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
         true);
 
-      for (unsigned int i = 0; i < skel->GetNumNodes(); i++)
+      for (unsigned int i = 0; i < skel->GetNumNodes(); ++i)
       {
         common::SkeletonNode *node = skel->GetNodeByHandle(i);
         Ogre::Bone *bone = ogreSkeleton->createBone(node->GetName());
@@ -1580,9 +1588,9 @@ void Visual::InsertMesh(const common::Mesh *mesh)
         bone->setManuallyControlled(true);
         bone->setInitialState();
       }
-      ogreMesh->setSkeletonName(mesh->GetName() + "_skeleton");
+      ogreMesh->setSkeletonName(_mesh->GetName() + "_skeleton");
     }
-    for (unsigned int i = 0; i < mesh->GetSubMeshCount(); i++)
+    for (unsigned int i = 0; i < _mesh->GetSubMeshCount(); ++i)
     {
       Ogre::SubMesh *ogreSubMesh;
       Ogre::VertexData *vertexData;
@@ -1594,7 +1602,7 @@ void Visual::InsertMesh(const common::Mesh *mesh)
 
       size_t currOffset = 0;
 
-      const common::SubMesh *subMesh = mesh->GetSubMesh(i);
+      const common::SubMesh *subMesh = _mesh->GetSubMesh(i);
 
       ogreSubMesh = ogreMesh->createSubMesh();
       ogreSubMesh->useSharedVertices = false;
@@ -1659,10 +1667,10 @@ void Visual::InsertMesh(const common::Mesh *mesh)
       vertices = static_cast<float*>(vBuf->lock(
                       Ogre::HardwareBuffer::HBL_DISCARD));
 
-      if (mesh->HasSkeleton())
+      if (_mesh->HasSkeleton())
       {
-        common::Skeleton *skel = mesh->GetSkeleton();
-        for (unsigned int j = 0; j < subMesh->GetNodeAssignmentsCount(); j++)
+        common::Skeleton *skel = _mesh->GetSkeleton();
+        for (unsigned int j = 0; j < subMesh->GetNodeAssignmentsCount(); ++j)
         {
           common::NodeAssignment na = subMesh->GetNodeAssignment(j);
           Ogre::VertexBoneAssignment vba;
@@ -1688,10 +1696,8 @@ void Visual::InsertMesh(const common::Mesh *mesh)
       indices = static_cast<uint32_t*>(
           iBuf->lock(Ogre::HardwareBuffer::HBL_DISCARD));
 
-      unsigned int j;
-
       // Add all the vertices
-      for (j = 0; j < subMesh->GetVertexCount(); j++)
+      for (unsigned int j = 0; j < subMesh->GetVertexCount(); ++j)
       {
         *vertices++ = subMesh->GetVertex(j).x;
         *vertices++ = subMesh->GetVertex(j).y;
@@ -1712,11 +1718,11 @@ void Visual::InsertMesh(const common::Mesh *mesh)
       }
 
       // Add all the indices
-      for (j = 0; j < subMesh->GetIndexCount(); j++)
+      for (unsigned int j = 0; j < subMesh->GetIndexCount(); ++j)
         *indices++ = subMesh->GetIndex(j);
 
       const common::Material *material;
-      material = mesh->GetMaterial(subMesh->GetMaterialIndex());
+      material = _mesh->GetMaterial(subMesh->GetMaterialIndex());
       if (material)
       {
         rendering::Material::Update(material);
@@ -1728,10 +1734,10 @@ void Visual::InsertMesh(const common::Mesh *mesh)
       iBuf->unlock();
     }
 
-    math::Vector3 max = mesh->GetMax();
-    math::Vector3 min = mesh->GetMin();
+    math::Vector3 max = _mesh->GetMax();
+    math::Vector3 min = _mesh->GetMin();
 
-    if (mesh->HasSkeleton())
+    if (_mesh->HasSkeleton())
     {
       min = math::Vector3(-1, -1, -1);
       max = math::Vector3(1, 1, 1);
@@ -1868,7 +1874,7 @@ void Visual::UpdateFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
   /*if (msg->points.size() > 0)
   {
     DynamicLines *lines = this->AddDynamicLine(RENDERING_LINE_LIST);
-    for (unsigned int i = 0; i < msg->points.size(); i++)
+    for (unsigned int i = 0; i < msg->points.size(); ++i)
       lines->AddPoint(msg->points[i]);
   }
   */
@@ -1884,7 +1890,7 @@ VisualPtr Visual::GetParent() const
 VisualPtr Visual::GetRootVisual()
 {
   VisualPtr p = shared_from_this();
-  while (p->GetParent()->GetName() != "__world_node__")
+  while (p->GetParent() && p->GetParent()->GetName() != "__world_node__")
     p = p->GetParent();
 
   return p;
@@ -1893,7 +1899,7 @@ VisualPtr Visual::GetRootVisual()
 //////////////////////////////////////////////////
 bool Visual::IsPlane() const
 {
-   if (this->sdf->HasElement("geometry"))
+  if (this->sdf->HasElement("geometry"))
   {
     sdf::ElementPtr geomElem = this->sdf->GetElement("geometry");
     if (geomElem->HasElement("plane"))
@@ -1975,7 +1981,7 @@ void Visual::MoveToPositions(const std::vector<math::Pose> &_pts,
 
   double dt = _time / (_pts.size()-1);
   double tt = 0;
-  for (unsigned int i = 0; i < _pts.size(); i++)
+  for (unsigned int i = 0; i < _pts.size(); ++i)
   {
     key = strack->createNodeKeyFrame(tt);
     key->setTranslate(Ogre::Vector3(
@@ -2144,7 +2150,7 @@ void Visual::SetSkeletonPose(const msgs::PoseAnimation &_pose)
     return;
   }
 
-  for (int i = 0; i < _pose.pose_size(); i++)
+  for (unsigned int i = 0; i < _pose.pose_size(); ++i)
   {
     const msgs::Pose& bonePose = _pose.pose(i);
     if (!this->skeleton->hasBone(bonePose.name()))
