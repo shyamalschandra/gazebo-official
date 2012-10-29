@@ -15,7 +15,6 @@
  *
 */
 #include <boost/lexical_cast.hpp>
-#include "gazebo/rendering/skyx/include/SkyX.h"
 
 #include "rendering/ogre_gazebo.h"
 #include "msgs/msgs.hh"
@@ -24,6 +23,7 @@
 #include "common/Exception.hh"
 #include "common/Console.hh"
 
+#include "gazebo/rendering/Sky.hh"
 #include "gazebo/rendering/Road2d.hh"
 #include "gazebo/rendering/Projector.hh"
 #include "gazebo/rendering/Heightmap.hh"
@@ -89,7 +89,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations)
   this->name = _name;
   this->manager = NULL;
   this->raySceneQuery = NULL;
-  this->skyx = NULL;
+
 
   this->receiveMutex = new boost::mutex();
 
@@ -110,7 +110,6 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations)
           &Scene::OnSkeletonPoseMsg, this);
   this->selectionSub = this->node->Subscribe("~/selection",
       &Scene::OnSelectionMsg, this);
-  this->skySub = this->node->Subscribe("~/sky", &Scene::OnSkyMsg, this);
   this->modelInfoSub = this->node->Subscribe("~/model/info",
                                              &Scene::OnModelMsg, this);
 
@@ -228,6 +227,9 @@ void Scene::Load()
 
   this->manager = root->createSceneManager(Ogre::ST_GENERIC);
   this->manager->setAmbientLight(Ogre::ColourValue(0.1, 0.1, 0.1, 0.1));
+
+  this->sky.reset(new Sky(shared_from_this()));
+  this->sky->Load(this->sdf->GetElement("sky"));
 }
 
 //////////////////////////////////////////////////
@@ -251,8 +253,6 @@ void Scene::Init()
   for (uint32_t i = 0; i < this->grids.size(); i++)
     this->grids[i]->Init();
 
-  this->SetSky();
-
   // Create Fog
   if (this->sdf->HasElement("fog"))
   {
@@ -271,6 +271,9 @@ void Scene::Init()
 
   // Force shadows on.
   this->SetShadowsEnabled(true);
+
+  // Initialize the sky
+  this->sky->Init();
 
   this->requestMsg = msgs::CreateRequest("scene_info");
   this->requestPub->Publish(*this->requestMsg);
@@ -1131,6 +1134,9 @@ void Scene::ProcessSceneMsg(ConstScenePtr &_msg)
   if (_msg->has_grid())
     this->SetGrid(_msg->grid());
 
+  if (_msg->has_sky())
+    this->sky->ProcessSkyMsg(_msg->sky());
+
   if (_msg->has_fog())
   {
     sdf::ElementPtr elem = this->sdf->GetElement("fog");
@@ -1861,147 +1867,6 @@ void Scene::OnModelMsg(ConstModelPtr &_msg)
   this->modelMsgs.push_back(_msg);
 }
 
-/////////////////////////////////////////////////
-void Scene::OnSkyMsg(ConstSkyPtr &_msg)
-{
-  SkyX::VClouds::VClouds *vclouds =
-    this->skyx->getVCloudsManager()->getVClouds();
-
-  if (_msg->has_time())
-  {
-    Ogre::Vector3 t = this->skyxController->getTime();
-    t.x = math::clamp(_msg->time(), 0.0, 24.0);
-    this->skyxController->setTime(t);
-  }
-
-  if (_msg->has_sunrise())
-  {
-    Ogre::Vector3 t = this->skyxController->getTime();
-    t.y = math::clamp(_msg->sunrise(), 0.0, 24.0);
-    this->skyxController->setTime(t);
-  }
-
-  if (_msg->has_sunset())
-  {
-    Ogre::Vector3 t = this->skyxController->getTime();
-    t.z = math::clamp(_msg->sunset(), 0.0, 24.0);
-    this->skyxController->setTime(t);
-  }
-
-  if (_msg->has_wind_speed())
-    vclouds->setWindSpeed(_msg->wind_speed());
-
-  if (_msg->has_wind_direction())
-    vclouds->setWindDirection(Ogre::Radian(_msg->wind_direction()));
-
-  if (_msg->has_cloud_ambient())
-  {
-    vclouds->setAmbientFactors(Ogre::Vector4(
-          _msg->cloud_ambient().r(),
-          _msg->cloud_ambient().g(),
-          _msg->cloud_ambient().b(),
-          _msg->cloud_ambient().a()));
-  }
-
-  if (_msg->has_humidity())
-  {
-    Ogre::Vector2 wheater = vclouds->getWheater();
-    vclouds->setWheater(math::clamp(_msg->humidity(), 0.0, 1.0),
-                        wheater.y, true);
-  }
-
-  if (_msg->has_mean_cloud_size())
-  {
-    Ogre::Vector2 wheater = vclouds->getWheater();
-    vclouds->setWheater(wheater.x,
-                        math::clamp(_msg->mean_cloud_size(), 0.0, 1.0), true);
-  }
-
-  this->skyx->update(0);
-}
-
-/////////////////////////////////////////////////
-void Scene::SetSky()
-{
-  // Create SkyX
-  this->skyxController = new SkyX::BasicController();
-  this->skyx = new SkyX::SkyX(this->manager, this->skyxController);
-  this->skyx->create();
-
-  this->skyx->setTimeMultiplier(0);
-
-  // Set the time: x = current time[0-24], y = sunrise time[0-24],
-  // z = sunset time[0-24]
-  this->skyxController->setTime(Ogre::Vector3(10.0, 6.0, 20.0f));
-
-  // Moon phase in [-1,1] range, where -1 means fully covered Moon,
-  // 0 clear Moon and 1 fully covered Moon
-  this->skyxController->setMoonPhase(0);
-
-  this->skyx->getAtmosphereManager()->setOptions(
-      SkyX::AtmosphereManager::Options(
-        9.77501f,   // Inner radius
-        10.2963f,   // Outer radius
-        0.01f,      // Height position
-        0.0017f,    // RayleighMultiplier
-        0.000675f,  // MieMultiplier
-        30,         // Sun Intensity
-        Ogre::Vector3(0.57f, 0.54f, 0.44f),  // Wavelength
-        -0.991f, 2.5f, 4));
-
-  this->skyx->getVCloudsManager()->setWindSpeed(0.6);
-
-  // Use true to update volumetric clouds based on the time multiplier
-  this->skyx->getVCloudsManager()->setAutoupdate(false);
-
-  SkyX::VClouds::VClouds *vclouds =
-    this->skyx->getVCloudsManager()->getVClouds();
-
-  // Set wind direction in radians
-  vclouds->setWindDirection(Ogre::Radian(0.0));
-  vclouds->setAmbientColor(Ogre::Vector3(0.9, 0.9, 1.0));
-
-  // x = sun light power
-  // y = sun beta multiplier
-  // z = ambient color multiplier
-  // w = distance attenuation
-  vclouds->setLightResponse(Ogre::Vector4(0.9, 0.6, 0.5, 0.3));
-  vclouds->setAmbientFactors(Ogre::Vector4(0.45, 0.3, 0.6, 0.1));
-  vclouds->setWheater(.6, .6, false);
-
-  if (true)
-  {
-    // Create VClouds
-    if (!this->skyx->getVCloudsManager()->isCreated())
-    {
-      // SkyX::MeshManager::getSkydomeRadius(...) works for both finite and
-      // infinite(=0) camera far clip distances
-      this->skyx->getVCloudsManager()->create(2000.0);
-      // this->skyx->getMeshManager()->getSkydomeRadius(mRenderingCamera));
-    }
-  }
-  else
-  {
-    // Remove VClouds
-    if (this->skyx->getVCloudsManager()->isCreated())
-    {
-      this->skyx->getVCloudsManager()->remove();
-    }
-  }
-
-  /*vclouds->getLightningManager()->setEnabled(preset.vcLightnings);
-  vclouds->getLightningManager()->setAverageLightningApparitionTime(
-      preset.vcLightningsAT);
-  vclouds->getLightningManager()->setLightningColor(
-      preset.vcLightningsColor);
-  vclouds->getLightningManager()->setLightningTimeMultiplier(
-      preset.vcLightningsTM);
-      */
-
-  Ogre::Root::getSingletonPtr()->addFrameListener(this->skyx);
-
-  this->skyx->update(0);
-}
 
 /////////////////////////////////////////////////
 void Scene::SetShadowsEnabled(bool _value)
@@ -2167,4 +2032,10 @@ VisualPtr Scene::CloneVisual(const std::string &_visualName,
     this->visuals[_newName] = result;
   }
   return result;
+}
+
+/////////////////////////////////////////////////
+SkyPtr Scene::GetSky()
+{
+  return this->sky;
 }
