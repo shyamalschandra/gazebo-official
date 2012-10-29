@@ -43,6 +43,8 @@
 #include "physics/Model.hh"
 #include "physics/Contact.hh"
 
+#include "sensors/SensorManager.hh"
+
 #include "transport/Node.hh"
 
 using namespace gazebo;
@@ -93,28 +95,28 @@ void Model::Load(sdf::ElementPtr _sdf)
 
   this->SetAutoDisable(this->sdf->GetValueBool("allow_auto_disable"));
 
-  // TODO: check for duplicate model, and raise an error
+  /// \TODO: check for duplicate model, and raise an error
   // BasePtr dup = Base::GetByName(this->GetScopedName());
 
   // Load the bodies
   if (_sdf->HasElement("link"))
   {
     sdf::ElementPtr linkElem = _sdf->GetElement("link");
-    bool canonical_link_initialized = false;
+    bool canonicalLinkInitialized = false;
     while (linkElem)
     {
       // Create a new link
       LinkPtr link = this->GetWorld()->GetPhysicsEngine()->CreateLink(
           boost::shared_static_cast<Model>(shared_from_this()));
 
-      // FIXME: canonical link is hardcoded to the first link.
-      //        warn users for now, need  to add parsing of
-      //        the canonical tag in sdf
-      if (!canonical_link_initialized)
+      /// \TODO: canonical link is hardcoded to the first link.
+      ///        warn users for now, need  to add parsing of
+      ///        the canonical tag in sdf
+      if (!canonicalLinkInitialized)
       {
         link->SetCanonicalLink(true);
         this->canonicalLink = link;
-        canonical_link_initialized = true;
+        canonicalLinkInitialized = true;
       }
 
       // Load the link using the config node. This also loads all of the
@@ -130,7 +132,14 @@ void Model::Load(sdf::ElementPtr _sdf)
     sdf::ElementPtr jointElem = _sdf->GetElement("joint");
     while (jointElem)
     {
-      this->LoadJoint(jointElem);
+      try
+      {
+        this->LoadJoint(jointElem);
+      }
+      catch (...)
+      {
+        gzerr << "LoadJoint Failed\n";
+      }
       jointElem = jointElem->GetNextElement("joint");
     }
   }
@@ -187,7 +196,8 @@ void Model::Update()
   /// Load plugins for this model once
   /// @todo: john: this works fine, but we should add a regression test
   /// to make sure there is no race condition.
-  if (!this->pluginsLoaded)
+  if (!this->pluginsLoaded &&
+      sensors::SensorManager::Instance()->SensorsInitialized())
   {
     this->LoadPlugins();
     this->pluginsLoaded = true;
