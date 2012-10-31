@@ -398,9 +398,6 @@ void World::Update()
   // Update all the models
   (*this.*modelUpdateFunc)();
 
-  // TODO: put back in
-  // Logger::Instance()->Update();
-
   // Update the physics engine
   if (this->enablePhysicsEngine && this->physicsEngine)
   {
