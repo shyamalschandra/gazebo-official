@@ -257,3 +257,12 @@ math::Angle MultiRayShape::GetVerticalMaxAngle() const
     return math::Angle(0);
 }
 
+//////////////////////////////////////////////////
+void MultiRayShape::FillMsg(msgs::Geometry &/*_msg*/)
+{
+}
+
+//////////////////////////////////////////////////
+void MultRayShape::ProcessMsg(const msgs::Geometry &_msg)
+{
+}

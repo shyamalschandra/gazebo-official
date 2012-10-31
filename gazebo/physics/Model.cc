@@ -652,7 +652,7 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
     gzthrow("can't have two joint with the same name");
 
   msgs::Joint msg;
-  joint->FillJointMsg(msg);
+  joint->FillMsg(msg);
   this->jointPub->Publish(msg);
 
   this->joints.push_back(joint);
@@ -724,7 +724,6 @@ void Model::SetGravityMode(const bool &_v)
   }
 }
 
-
 //////////////////////////////////////////////////
 void Model::SetCollideMode(const std::string &_m)
 {
@@ -738,7 +737,6 @@ void Model::SetCollideMode(const std::string &_m)
     }
   }
 }
-
 
 //////////////////////////////////////////////////
 void Model::SetLaserRetro(const float &_retro)
@@ -757,6 +755,12 @@ void Model::SetLaserRetro(const float &_retro)
 //////////////////////////////////////////////////
 void Model::FillModelMsg(msgs::Model &_msg)
 {
+  this->FillMsg(_msg);
+}
+
+//////////////////////////////////////////////////
+void Model::FillMsg(msgs::Model &_msg)
+{
   _msg.set_name(this->GetScopedName());
   _msg.set_is_static(this->IsStatic());
   _msg.mutable_pose()->CopyFrom(msgs::Convert(this->GetWorldPose()));
@@ -770,12 +774,12 @@ void Model::FillModelMsg(msgs::Model &_msg)
     if (this->GetChild(j)->HasType(Base::LINK))
     {
       LinkPtr link = boost::shared_dynamic_cast<Link>(this->GetChild(j));
-      link->FillLinkMsg(*_msg.add_link());
+      link->FillMsg(*_msg.add_link());
     }
   }
 
   for (unsigned int j = 0; j < this->joints.size(); ++j)
-    this->joints[j]->FillJointMsg(*_msg.add_joint());
+    this->joints[j]->FillMsg(*_msg.add_joint());
 }
 
 //////////////////////////////////////////////////
