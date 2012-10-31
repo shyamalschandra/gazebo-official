@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-#ifndef JOINT_CONTROL_WIDGET_HH
-#define JOINT_CONTROL_WIDGET_HH
+#ifndef _JOINT_CONTROL_WIDGET_HH_
+#define _JOINT_CONTROL_WIDGET_HH_
 
 #include <string>
 #include <map>
@@ -34,40 +34,41 @@ namespace gazebo
     class JointControlWidget : public QWidget
     {
       Q_OBJECT
-      public: JointControlWidget(const std::string &_model,
-                                 QWidget *_parent = 0);
+      public: JointControlWidget(QWidget *_parent = 0);
       public: virtual ~JointControlWidget();
 
-      public: void Load(const std::string &_modelName);
+      public: void SetModelName(const std::string &_modelName);
 
       private slots: void OnReset();
       private slots: void OnForceChanged(double _value,
                                          const std::string &_name);
       private slots: void OnPIDPosChanged(double _value,
-          const std::string &_name);
+                                          const std::string &_name);
 
       private slots: void OnPPosGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
       private slots: void OnDPosGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
       private slots: void OnIPosGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
 
       private slots: void OnPIDVelChanged(double _value,
           const std::string &_name);
 
       private slots: void OnPVelGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
       private slots: void OnDVelGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
       private slots: void OnIVelGainChanged(double _value,
-                                         const std::string &_name);
+                                            const std::string &_name);
 
       private slots: void OnPIDPosUnitsChanged(int _index);
 
-      private: void AddScrollableTab(QTabWidget *_tabPane,
-                                     QGridLayout *_tabLayout,
-                                     const QString &_name);
+      private: void AddScrollTab(QTabWidget *_tabPane,
+                                 QGridLayout *_tabLayout,
+                                 QScrollArea *_scrollArea,
+                                 QFrame *_frame,
+                                 const QString &_name);
 
       private: void LayoutForceTab(QGridLayout *_tabLayout,
                                     msgs::Model &_modelMsg);
@@ -83,13 +84,33 @@ namespace gazebo
       private: std::map<std::string, JointForceControl*> sliders;
       private: std::map<std::string, JointPIDPosControl*> pidPosSliders;
       private: std::map<std::string, JointPIDVelControl*> pidVelSliders;
+
+      /// \brief Label for the name of the current model being controlled.
+      private: QLabel *modelLabel;
+
+      private: QTabWidget *tabWidget;
+      private: QGridLayout *forceGridLayout;
+      private: QGridLayout *positionGridLayout;
+      private: QGridLayout *velocityGridLayout;
+
+      private: QFrame *forceFrame;
+      private: QScrollArea *forceScrollArea;
+
+      private: QFrame *positionFrame;
+      private: QScrollArea *positionScrollArea;
+
+      private: QFrame *velocityFrame;
+      private: QScrollArea *velocityScrollArea;
     };
 
     class JointForceControl : public QWidget
     {
       Q_OBJECT
       public: JointForceControl(const std::string &_name,
-                  QGridLayout *_layout, QWidget *_parent);
+                  QGridLayout *_layout, QWidget *_parent, int _index);
+
+      public: virtual ~JointForceControl();
+
       public: void Reset();
       public slots: void OnChanged(double _value);
       Q_SIGNALS: void changed(double /*_value*/, const std::string & /*_name*/);
@@ -101,7 +122,7 @@ namespace gazebo
     {
       Q_OBJECT
       public: JointPIDPosControl(const std::string &_name,
-                  QGridLayout *_layout, QWidget *_parent);
+                  QGridLayout *_layout, QWidget *_parent, int _index);
 
       public: void Reset();
       public: void SetToRadians();
@@ -126,7 +147,7 @@ namespace gazebo
     {
       Q_OBJECT
       public: JointPIDVelControl(const std::string &_name,
-                  QGridLayout *_layout, QWidget *_parent);
+                  QGridLayout *_layout, QWidget *_parent, int _index);
 
       public: void Reset();
       public slots: void OnChanged(double _value);
