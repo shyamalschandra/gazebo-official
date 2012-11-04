@@ -216,6 +216,11 @@ namespace gazebo
       /// \brief Set a parameter for the joint
       public: virtual void SetAttribute(Attribute, int index, double value) = 0;
 
+      /// \brief Set a parameter for the joint
+      public: virtual void SetThreadPitch(int /*_index*/,
+                                          const double /*_pitch*/)
+                {gzerr << "not implemented\n";}
+
       /// \brief Get the child link
       public: LinkPtr GetChild() const;
 
