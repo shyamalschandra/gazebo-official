@@ -51,3 +51,32 @@ math::Pose CollisionState::GetPose() const
 {
   return this->pose;
 }
+
+/////////////////////////////////////////////////
+void CollisionState::FillStateSDF(sdf::ElementPtr _elem) const
+{
+  sdf::ElementPtr poseElem = _elem->AddElement("pose");
+  poseElem->Set(this->pose);
+}
+
+/////////////////////////////////////////////////
+bool CollisionState::IsZero() const
+{
+  return this->pose == math::Pose::Zero;
+}
+
+/////////////////////////////////////////////////
+CollisionState &CollisionState::operator=(const CollisionState &_state)
+{
+  State::operator=(_state);
+  this->pose = _state.pose;
+  return *this;
+}
+
+/////////////////////////////////////////////////
+CollisionState CollisionState::operator-(const CollisionState &_state) const
+{
+  CollisionState result = *this;
+  result.pose -= _state.pose;
+  return result;
+}

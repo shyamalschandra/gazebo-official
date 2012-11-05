@@ -159,7 +159,7 @@ namespace gazebo
       public: void PrintEntityTree();
 
       /// \brief Get the world simulation time, note if you want the PC
-      /// wall clock call World::GetRealTime.
+      /// wall clock call common::Time::GetWallTime.
       /// \return The current simulation time
       public: common::Time GetSimTime() const;
 
@@ -233,10 +233,6 @@ namespace gazebo
       /// \param[in] _pt The 3D point to search below
       /// \return A pointer to nearest Entity, NULL if none is found.
       public: EntityPtr GetEntityBelowPoint(const math::Vector3 &_pt);
-
-      /// \brief Get the current world state
-      /// \return A object that contains the entire state of the World
-      public: WorldState GetState();
 
       /// \brief Set the current world state
       /// \param _state The state to set the World to.
@@ -420,6 +416,9 @@ namespace gazebo
       /// \brief Update the state SDF values from the current state.
       private: void UpdateStateSDF();
 
+      /// \brief Log callback. This is where we write out state info.
+      private: bool OnLog(std::ostringstream &_stream);
+
       /// \brief Update the state SDF from a given state.
       /// \param[in] _state State to update from.
       private: void UpdateSDFFromState(const WorldState &_state);
@@ -599,6 +598,9 @@ namespace gazebo
 
       /// \brief sleep timing error offset due to clock wake up latency
       private: common::Time sleepOffset;
+
+      /// \brief Buffer of states.
+      private: std::list<WorldState> states;
     };
     /// \}
   }

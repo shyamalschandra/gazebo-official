@@ -728,7 +728,8 @@ ElementPtr Element::AddElement(const std::string &_name)
       for (iter2 = elem->elementDescriptions.begin();
            iter2 != elem->elementDescriptions.end(); ++iter2)
       {
-        elem->AddElement((*iter2)->name);
+        if ((*iter2)->GetRequired() == "1")
+          elem->AddElement((*iter2)->name);
       }
 
       return this->elements.back();
@@ -1330,10 +1331,10 @@ void SDF::PrintDoc()
   std::cout << "<ul><li><b>Left Panel:</b> List of all the SDF elements.</li>";
   std::cout << "<li><b>Right Panel:</b> Descriptions of all the SDF "
             << "elements.</li>";
-  std::cout << "<li><b>Selection:</b> Click an element in the Left Panel "
+  std::cout << "<li><b>Selection:</b> Clicking an element in the Left Panel "
             << "moves the corresponding description to the top of the Right "
             << "Panel.</li>";
-  std::cout << "<li><b>Search:</b> Use your web-browser's built in 'find' "
+  std::cout << "<li><b>Search:</b> Use your web-browser's built in 'Find' "
             << "function to locate a specific element."
             << "</li></ul>";
   std::cout << "</blockquote>";

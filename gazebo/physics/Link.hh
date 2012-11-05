@@ -348,10 +348,6 @@ namespace gazebo
       /// \brief Called when the pose is changed. Do not call this directly.
       public: virtual void OnPoseChange();
 
-      /// \brief Get the link state.
-      /// \return The state of this link.
-      public: LinkState GetState();
-
       /// \brief Set the current link state.
       /// \param[in] _state The state to set the link to.
       public: void SetState(const LinkState &_state);

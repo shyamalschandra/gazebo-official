@@ -46,10 +46,10 @@ namespace gazebo
     /// Joints.
     class ModelState : public State
     {
-      /// \brief Default constructor
+      /// \brief Default constructor.
       public: ModelState();
 
-      /// \brief Constructor
+      /// \brief Constructor.
       ///
       /// Build a ModelState from an existing Model.
       /// \param[in] _model Pointer to the model from which to gather state
@@ -72,7 +72,7 @@ namespace gazebo
       /// \brief Get the number of link states.
       ///
       /// This returns the number of Links recorded.
-      /// \return Number of LinkState recorded
+      /// \return Number of LinkState recorded.
       public: unsigned int GetLinkStateCount() const;
 
       /// \brief Get a link state.
@@ -83,7 +83,7 @@ namespace gazebo
       /// \return State of the Link
       public: LinkState GetLinkState(unsigned int _index) const;
 
-      /// \brief Get a link state by Link name.
+      /// \brief Get a link state by Link name
       ///
       /// Searches through all LinkStates. Returns the LinkState with the
       /// matching name, if any.
@@ -117,22 +117,68 @@ namespace gazebo
       ///
       /// Stored state information into an SDF::Element pointer.
       /// \param[in] _elem Pointer to the SDF::Element which recieves the data.
-      public: void FillStateSDF(sdf::ElementPtr _elem);
+      public: void FillStateSDF(sdf::ElementPtr _elem) const;
+
+      /// \brief Update the state information using the specified model.
+      public: void Update(ModelPtr _model);
 
       /// \brief Update a Model SDF element with this state info.
       ///
-      /// Set the values in a Model's SDF::Element with the information.
+      /// Set the values in a Model's SDF::Element with the information
       /// stored in this instance.
       /// \param[in] _elem Pointer to a Models's SDF::Element.
       public: void UpdateModelSDF(sdf::ElementPtr _elem);
 
-      /// \brief Pose of the model.
+      /// \brief Return true if the values in the state are zero.
+      /// \return True if the values in the state are zero.
+      public: bool IsZero() const;
+
+      /// \brief Assignment operator
+      /// \param[in] _state State value
+      /// \return this
+      public: ModelState &operator=(const ModelState &_state);
+
+      /// \brief Subtraction operator.
+      /// \param[in] _pt A state to substract.
+      /// \return The resulting state.
+      public: ModelState operator-(const ModelState &_state) const;
+
+      /// \brief Stream insertion operator.
+      /// \param[in] _out output stream.
+      /// \param[in] _state Model state to output.
+      /// \return The stream.
+      public: friend std::ostream &operator<<(std::ostream &_out,
+                                     const gazebo::physics::ModelState &_state)
+      {
+        _out << "<model name='" << _state.GetName() << "'>\n";
+        _out << "<pose>" << _state.pose << "</pose>\n";
+
+        for (std::vector<LinkState>::const_iterator iter =
+            _state.linkStates.begin(); iter != _state.linkStates.end();
+            ++iter)
+        {
+          _out << *iter;
+        }
+
+        for (std::vector<JointState>::const_iterator iter =
+            _state.jointStates.begin(); iter != _state.jointStates.end();
+            ++iter)
+        {
+          _out << *iter;
+        }
+
+        _out << "</model>\n";
+
+        return _out;
+      }
+
+      /// Pose of the model
       private: math::Pose pose;
 
-      /// \brief All the link states.
+      /// All the link states
       private: std::vector<LinkState> linkStates;
 
-      /// \brief All the joint states.
+      /// All the joint states
       private: std::vector<JointState> jointStates;
     };
     /// \}

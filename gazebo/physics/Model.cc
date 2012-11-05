@@ -520,6 +520,12 @@ unsigned int Model::GetJointCount() const
 }
 
 //////////////////////////////////////////////////
+const Joint_V &Model::GetJoints() const
+{
+  return this->joints;
+}
+
+//////////////////////////////////////////////////
 JointPtr Model::GetJoint(unsigned int _index) const
 {
   if (_index >= this->joints.size())
@@ -563,6 +569,12 @@ LinkPtr Model::GetLinkById(unsigned int _id) const
 
 //////////////////////////////////////////////////
 Link_V Model::GetAllLinks() const
+{
+  return this->GetLinks();
+}
+
+//////////////////////////////////////////////////
+Link_V Model::GetLinks() const
 {
   Link_V links;
   for (unsigned int i = 0; i < this->GetChildCount(); ++i)
@@ -865,14 +877,9 @@ void Model::OnPoseChange()
 }
 
 //////////////////////////////////////////////////
-ModelState Model::GetState()
+void Model::SetState(const ModelState & /*_state*/)
 {
-  return ModelState(boost::shared_static_cast<Model>(shared_from_this()));
-}
-
-//////////////////////////////////////////////////
-void Model::SetState(const ModelState &_state)
-{
+  /*
   this->SetWorldPose(_state.GetPose(), true);
 
   for (unsigned int i = 0; i < _state.GetLinkStateCount(); ++i)
@@ -894,6 +901,7 @@ void Model::SetState(const ModelState &_state)
     else
       gzerr << "Unable to find joint[" << jointState.GetName() << "]\n";
   }
+  */
 }
 
 /////////////////////////////////////////////////

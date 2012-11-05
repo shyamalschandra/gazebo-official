@@ -112,10 +112,6 @@ namespace gazebo
       /// \brief Reset the joint.
       public: virtual void Reset();
 
-      /// \brief Get the joint state.
-      /// \return The current joint state.
-      public: JointState GetState();
-
       /// \brief Set the joint state.
       /// \param[in] _state Joint state
       public: void SetState(const JointState &_state);

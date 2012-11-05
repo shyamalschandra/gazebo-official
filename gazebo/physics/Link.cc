@@ -505,8 +505,8 @@ math::Vector3 Link::GetRelativeLinearVel() const
 //////////////////////////////////////////////////
 math::Vector3 Link::GetRelativeAngularVel() const
 {
-  return this->GetWorldPose().rot.RotateVectorReverse(
-      this->GetWorldAngularVel());
+   return this->GetWorldPose().rot.RotateVectorReverse(
+          this->GetWorldAngularVel());
 }
 
 //////////////////////////////////////////////////
@@ -812,12 +812,6 @@ void Link::OnPoseChange()
 
     this->attachedModels[i]->SetWorldPose(p, true);
   }
-}
-
-//////////////////////////////////////////////////
-LinkState Link::GetState()
-{
-  return LinkState(boost::shared_static_cast<Link>(shared_from_this()));
 }
 
 //////////////////////////////////////////////////

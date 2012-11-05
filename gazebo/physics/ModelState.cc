@@ -34,17 +34,20 @@ ModelState::ModelState(ModelPtr _model)
 : State(_model->GetName(), _model->GetWorld()->GetRealTime(),
         _model->GetWorld()->GetSimTime())
 {
-  for (unsigned int i = 0; i < _model->GetChildCount(); ++i)
+  this->pose = _model->GetWorldPose();
+
+  const Link_V links = _model->GetLinks();
+  for (Link_V::const_iterator iter = links.begin(); iter != links.end(); ++iter)
   {
-    this->linkStates.push_back(_model->GetLink(i)->GetState());
+    this->linkStates.push_back(LinkState((*iter)));
   }
 
-  /*for (unsigned int i = 0; i < _model->GetJointCount(); ++i)
+  const Joint_V joints = _model->GetJoints();
+  for (Joint_V::const_iterator iter = joints.begin();
+       iter != joints.end(); ++iter)
   {
-    this->jointStates.push_back(_model->GetJoint(i)->GetState());
-  }*/
-
-  this->pose = _model->GetWorldPose();
+    this->jointStates.push_back(JointState(*iter));
+  }
 }
 
 /////////////////////////////////////////////////
@@ -74,12 +77,12 @@ void ModelState::Load(sdf::ElementPtr _elem)
 }
 
 /////////////////////////////////////////////////
-void ModelState::FillStateSDF(sdf::ElementPtr _elem)
+void ModelState::FillStateSDF(sdf::ElementPtr _elem) const
 {
   _elem->GetAttribute("name")->Set(this->GetName());
   _elem->GetElement("pose")->GetValue()->Set(this->pose);
 
-  for (std::vector<LinkState>::iterator iter = this->linkStates.begin();
+  for (std::vector<LinkState>::const_iterator iter = this->linkStates.begin();
        iter != this->linkStates.end(); ++iter)
   {
     sdf::ElementPtr elem = _elem->AddElement("link");
@@ -179,4 +182,87 @@ JointState ModelState::GetJointState(const std::string &_jointName) const
   }
 
   return JointState();
+}
+
+/////////////////////////////////////////////////
+bool ModelState::IsZero() const
+{
+  bool result = true;
+
+  for (std::vector<LinkState>::const_iterator iter =
+       this->linkStates.begin();
+       iter != this->linkStates.end() && result; ++iter)
+  {
+    result = result && (*iter).IsZero();
+  }
+
+  for (std::vector<JointState>::const_iterator iter = this->jointStates.begin();
+       iter != this->jointStates.end() && result; ++iter)
+  {
+    result = result && (*iter).IsZero();
+  }
+
+  return result && this->pose == math::Pose::Zero;
+}
+
+/////////////////////////////////////////////////
+ModelState &ModelState::operator=(const ModelState &_state)
+{
+  State::operator=(_state);
+
+  // Copy the pose
+  this->pose = _state.pose;
+
+  // Clear the link and joint states.
+  this->linkStates.clear();
+  this->jointStates.clear();
+
+  // Copy the link states.
+  for (std::vector<LinkState>::const_iterator iter =
+       _state.linkStates.begin(); iter != _state.linkStates.end(); ++iter)
+  {
+    this->linkStates.push_back(LinkState(*iter));
+  }
+
+  // Copy the joint states.
+  for (std::vector<JointState>::const_iterator iter =
+       _state.jointStates.begin(); iter != _state.jointStates.end(); ++iter)
+  {
+    this->jointStates.push_back(JointState(*iter));
+  }
+
+  return *this;
+}
+
+/////////////////////////////////////////////////
+ModelState ModelState::operator-(const ModelState &_state) const
+{
+  ModelState result;
+
+  result = *this;
+
+  result.pose = this->pose - _state.pose;
+
+  result.linkStates.clear();
+  result.jointStates.clear();
+
+  // Insert the link state diffs.
+  for (std::vector<LinkState>::const_iterator iter =
+       _state.linkStates.begin(); iter != _state.linkStates.end(); ++iter)
+  {
+    LinkState state = this->GetLinkState((*iter).GetName()) - *iter;
+    if (!state.IsZero())
+      result.linkStates.push_back(state);
+  }
+
+  // Insert the joint state diffs.
+  for (std::vector<JointState>::const_iterator iter =
+       _state.jointStates.begin(); iter != _state.jointStates.end(); ++iter)
+  {
+    JointState state = this->GetJointState((*iter).GetName()) - *iter;
+    if (!state.IsZero())
+      result.jointStates.push_back(state);
+  }
+
+  return result;
 }

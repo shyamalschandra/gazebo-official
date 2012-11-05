@@ -65,3 +65,52 @@ math::Angle JointState::GetAngle(unsigned int _axis) const
 
   return angle;
 }
+
+/////////////////////////////////////////////////
+bool JointState::IsZero() const
+{
+  bool result = true;
+  for (std::vector<math::Angle>::const_iterator iter = this->angles.begin();
+       iter != this->angles.end() && result; ++iter)
+  {
+    result = result && (*iter) == math::Angle(0.0);
+  }
+
+  return result;
+}
+
+/////////////////////////////////////////////////
+JointState &JointState::operator=(const JointState &_state)
+{
+  State::operator=(_state);
+
+  // Clear the angles.
+  this->angles.clear();
+
+  // Copy the angles.
+  for (std::vector<math::Angle>::const_iterator iter = _state.angles.begin();
+       iter != _state.angles.end(); ++iter)
+  {
+    this->angles.push_back(*iter);
+  }
+
+  return *this;
+}
+
+/////////////////////////////////////////////////
+JointState JointState::operator-(const JointState &_state) const
+{
+  JointState result = *this;
+
+  result.angles.clear();
+
+  // Copy the angles.
+  for (std::vector<math::Angle>::const_iterator iterA = this->angles.begin(),
+       iterB = _state.angles.begin(); iterA != this->angles.end() &&
+       iterB != _state.angles.end(); ++iterA, ++iterB)
+  {
+    result.angles.push_back((*iterA) - (*iterB));
+  }
+
+  return result;
+}

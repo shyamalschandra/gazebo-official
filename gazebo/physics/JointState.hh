@@ -61,7 +61,41 @@ namespace gazebo
       /// \return Angle of the axis.
       public: math::Angle GetAngle(unsigned int _axis) const;
 
-      /// \brief Vector of all the axis angles.
+      /// \brief Return true if the values in the state are zero.
+      /// \return True if the values in the state are zero.
+      public: bool IsZero() const;
+
+      /// \brief Assignment operator
+      /// \param[in] _state State value
+      /// \return this
+      public: JointState &operator=(const JointState &_state);
+
+      /// \brief Subtraction operator.
+      /// \param[in] _pt A state to substract.
+      /// \return The resulting state.
+      public: JointState operator-(const JointState &_state) const;
+
+      /// \brief Stream insertion operator.
+      /// \param[in] _out output stream.
+      /// \param[in] _state Joint state to output.
+      /// \return The stream.
+      public: friend std::ostream &operator<<(std::ostream &_out,
+                                     const gazebo::physics::JointState &_state)
+      {
+        _out << "<joint name='" << _state.GetName() << "'>\n";
+
+        for (std::vector<math::Angle>::const_iterator iter =
+            _state.angles.begin(); iter != _state.angles.end();
+            ++iter)
+        {
+          _out << *iter;
+        }
+
+        _out << "</joint>\n";
+
+        return _out;
+      }
+
       private: std::vector<math::Angle> angles;
     };
     /// \}

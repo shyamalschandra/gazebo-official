@@ -35,6 +35,7 @@
 #include "gazebo/transport/Publisher.hh"
 #include "gazebo/transport/Subscriber.hh"
 
+#include "gazebo/common/Logger.hh"
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/Common.hh"
 #include "gazebo/common/Diagnostics.hh"
@@ -108,6 +109,9 @@ World::World(const std::string &_name)
   this->connections.push_back(
      event::Events::ConnectSetSelectedEntity(
        boost::bind(&World::SetSelectedEntityCB, this, _1)));
+
+  common::Logger::Instance()->Add(this->GetName(), "state.log",
+      boost::bind(&World::OnLog, this, _1));
 }
 
 //////////////////////////////////////////////////
@@ -196,11 +200,11 @@ void World::Load(sdf::ElementPtr _sdf)
 
     while (childElem)
     {
-      WorldState state;
-      state.Load(childElem);
+      WorldState myState;
+      myState.Load(childElem);
       this->sdf->InsertElement(childElem);
-      this->UpdateSDFFromState(state);
-      // this->SetState(state);
+      this->UpdateSDFFromState(myState);
+      // this->SetState(myState);
 
       childElem = childElem->GetNextElement("state");
 
@@ -260,6 +264,8 @@ void World::Init()
       this->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
 
   this->initialized = true;
+
+  this->states.push_back(WorldState());
 }
 
 //////////////////////////////////////////////////
@@ -401,13 +407,11 @@ void World::Update()
     this->needsReset = false;
   }
 
+
   event::Events::worldUpdateStart();
 
   // Update all the models
   (*this.*modelUpdateFunc)();
-
-  // TODO: put back in
-  // Logger::Instance()->Update();
 
   // Update the physics engine
   if (this->enablePhysicsEngine && this->physicsEngine)
@@ -437,6 +441,17 @@ void World::Update()
     }
 
     this->dirtyPoses.clear();
+
+  }
+
+  // Get the difference from the previous state.
+  // This needs to be placed after one iteration of the physics update.
+  WorldState stateDiff = WorldState(shared_from_this()) - this->states.back();
+  if (!stateDiff.IsZero())
+  {
+    this->states.push_back(stateDiff);
+    if (this->states.size() > 1000)
+      this->states.pop_front();
   }
 
   event::Events::worldUpdateEnd();
@@ -1367,32 +1382,10 @@ EntityPtr World::GetEntityBelowPoint(const math::Vector3 &_pt)
 }
 
 //////////////////////////////////////////////////
-WorldState World::GetState()
+void World::SetState(const WorldState &/*_state*/)
 {
-  return WorldState(shared_from_this());
-}
-
-//////////////////////////////////////////////////
-void World::UpdateStateSDF()
-{
-  this->sdf->Update();
-  sdf::ElementPtr stateElem = this->sdf->GetElement("state");
-  stateElem->ClearElements();
-
-  stateElem->GetAttribute("world_name")->Set(this->GetName());
-  stateElem->GetElement("time")->Set(this->GetSimTime());
-
-  for (unsigned int i = 0; i < this->GetModelCount(); ++i)
-  {
-    sdf::ElementPtr elem = stateElem->AddElement("model");
-    this->GetModel(i)->GetState().FillStateSDF(elem);
-  }
-}
-
-//////////////////////////////////////////////////
-void World::SetState(const WorldState &_state)
-{
-  sdf::ElementPtr stateElem = this->sdf->GetElement("state");
+  /// \TODO: Implement setting the state of all the models
+/*  sdf::ElementPtr stateElem = this->sdf->GetElement("state");
 
   stateElem->GetAttribute("world_name")->Set(_state.GetName());
   stateElem->GetElement("time")->Set(_state.GetSimTime());
@@ -1408,7 +1401,28 @@ void World::SetState(const WorldState &_state)
     else
       gzerr << "Unable to find model[" << modelState.GetName() << "]\n";
   }
+  */
 }
+
+//////////////////////////////////////////////////
+void World::UpdateStateSDF()
+{
+  /*this->sdf->Update();
+  sdf::ElementPtr stateElem = this->sdf->GetElement("state");
+  stateElem->ClearElements();
+
+  stateElem->GetAttribute("world_name")->Set(this->GetName());
+  stateElem->GetElement("time")->Set(this->GetSimTime());
+
+  for (unsigned int i = 0; i < this->GetModelCount(); ++i)
+  {
+    sdf::ElementPtr elem = stateElem->AddElement("model");
+    this->GetModel(i)->GetState().FillStateSDF(elem);
+  }
+  */
+}
+
+
 
 //////////////////////////////////////////////////
 void World::InsertModelFile(const std::string &_sdfFilename)
@@ -1481,4 +1495,20 @@ void World::DisableAllModels()
 {
   for (unsigned int i = 0; i < this->GetModelCount(); ++i)
     this->GetModel(i)->SetEnabled(false);
+}
+
+//////////////////////////////////////////////////
+bool World::OnLog(std::ostringstream &_stream)
+{
+  // Output the first 100 states
+  if (this->states.size() > 100)
+  {
+    for (unsigned int i = 0; i < 100; ++i)
+    {
+      _stream << this->states.front();
+      this->states.pop_front();
+    }
+  }
+
+  return true;
 }
