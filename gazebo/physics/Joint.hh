@@ -307,7 +307,11 @@ namespace gazebo
       public: virtual void SetAttribute(Attribute _attr, int _index,
                                         double _value) = 0;
 
-      /// \brief Get the child link.
+      /// \brief Set a parameter for the joint
+      public: virtual void SetThreadPitch(int /*_index*/, double /*_pitch*/)
+                {gzerr << "not implemented\n";}
+
+      /// \brief Get the child link
       /// \return Pointer to the child link.
       public: LinkPtr GetChild() const;
 
