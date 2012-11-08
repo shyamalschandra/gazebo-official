@@ -13,6 +13,8 @@ set (sources
   Exception.cc
   Image.cc
   KeyFrame.cc
+  Logger.cc
+  LogPlay.cc
   Material.cc
   Mesh.cc
   MeshLoader.cc
@@ -42,6 +44,8 @@ set (headers
   Exception.hh
   Image.hh 
   KeyFrame.hh
+  Logger.hh
+  LogPlay.hh
   Material.hh
   Mesh.hh
   MeshLoader.hh
