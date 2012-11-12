@@ -129,6 +129,12 @@ void BulletScrewJoint::SetDamping(int /*index*/, double /*_damping*/)
 }
 
 //////////////////////////////////////////////////
+void BulletScrewJoint::SetThreadPitch(int /*_index*/, double /*_threadPitch*/)
+{
+  gzerr << "Not implemented\n";
+}
+
+//////////////////////////////////////////////////
 void BulletScrewJoint::SetForce(int /*_index*/, double /*_force*/)
 {
   gzerr << "Not implemented\n";
