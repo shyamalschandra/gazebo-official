@@ -45,6 +45,10 @@ namespace gazebo
       public: virtual ~UniversalJoint()
               {}
 
+      /// \interal
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
+
       /// \brief Load a UniversalJoint.
       /// \param[in] _sdf SDF values to load from.
       protected: virtual void Load(sdf::ElementPtr _sdf)

@@ -47,7 +47,11 @@ namespace gazebo
 
       /// \brief Destructor.
       public: virtual ~ScrewJoint()
-              {}
+              { }
+
+      /// \interal
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
 
       /// \brief Load a ScrewJoint.
       /// \param[in] _sdf SDF value to load from
