@@ -111,8 +111,6 @@ bool Server::ParseArgs(int argc, char **argv)
   {
     po::store(
         po::parse_command_line(argc, argv, v_desc), this->vm);
-        //po::command_line_parser(argc, argv).options(desc).positional(
-          //p_desc).allow_unregistered().run(), this->vm);
     po::notify(this->vm);
   }
   catch(boost::exception &_e)

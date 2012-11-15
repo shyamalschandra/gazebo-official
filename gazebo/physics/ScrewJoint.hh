@@ -48,7 +48,11 @@ namespace gazebo
 
       /// \brief Destructor.
       public: virtual ~ScrewJoint()
-              {}
+              { }
+
+      /// \interal
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
 
       /// \interal
       public: virtual unsigned int GetAngleCount() const

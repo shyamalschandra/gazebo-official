@@ -45,7 +45,11 @@ namespace gazebo
 
       /// \brief Destructor.
       public: virtual ~Hinge2Joint()
-              {}
+              { }
+
+      /// \interal
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
 
       /// \interal
       public: virtual unsigned int GetAngleCount() const
