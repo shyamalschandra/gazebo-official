@@ -93,7 +93,7 @@ void Model::Load(sdf::ElementPtr _sdf)
   this->SetAutoDisable(this->sdf->GetValueBool("allow_auto_disable"));
 
   /// \TODO: check for duplicate model, and raise an error
-  /// BasePtr dup = Base::GetByName(this->GetScopedName());
+  // BasePtr dup = Base::GetByName(this->GetScopedName());
 
   // Load the bodies
   if (_sdf->HasElement("link"))
