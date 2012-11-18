@@ -29,11 +29,11 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "physics/physics.h"
-#include "transport/TransportTypes.hh"
-#include "common/Time.hh"
-#include "common/Plugin.hh"
-#include "common/Events.hh"
+#include "gazebo/physics/physics.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/common/Plugin.hh"
+#include "gazebo/common/Events.hh"
 
 namespace gazebo
 {
@@ -51,12 +51,11 @@ namespace gazebo
     /// \brief Update the controller
     private: void UpdateStates();
 
-    private: void FixLink(physics::LinkPtr link);
-    private: void UnfixLink();
-
     private: physics::WorldPtr world;
     private: physics::ModelPtr model;
-    private: physics::JointPtr joint;
+
+    // The possible list of joint elements
+    private: physics::Joint_V joints;
 
     private: boost::mutex update_mutex;
 

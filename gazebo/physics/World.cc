@@ -18,12 +18,16 @@
  * Author: Andrew Howard and Nate Koenig
  */
 
+#include <time.h>
+
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
+
+#include "gazebo/sensors/SensorManager.hh"
 
 #include "gazebo/sdf/sdf.hh"
 #include "gazebo/transport/Node.hh"
@@ -91,9 +95,13 @@ World::World(const std::string &_name)
   this->resetTimeOnly = false;
   this->resetModelOnly = false;
   this->enablePhysicsEngine = true;
-
   this->setWorldPoseMutex = new boost::mutex();
   this->worldUpdateMutex = new boost::recursive_mutex();
+
+  this->sleepOffset = common::Time(0);
+
+  this->prevStatTime = common::Time::GetWallTime();
+  this->prevProcessMsgsTime = common::Time::GetWallTime();
 
   this->connections.push_back(
      event::Events::ConnectStep(boost::bind(&World::OnStep, this)));
@@ -140,6 +148,9 @@ void World::Load(sdf::ElementPtr _sdf)
 
   // The period at which statistics about the world are published
   this->statPeriod = common::Time(0, 200000000);
+
+  // The period at which messages are processed
+  this->processMsgsPeriod = common::Time(0, 200000000);
 
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->GetName());
@@ -296,24 +307,37 @@ void World::Step()
   // Send statistics about the world simulation
   if (common::Time::GetWallTime() - this->prevStatTime > this->statPeriod)
   {
+    this->prevStatTime = common::Time::GetWallTime();
     msgs::Set(this->worldStatsMsg.mutable_sim_time(), this->GetSimTime());
     msgs::Set(this->worldStatsMsg.mutable_real_time(), this->GetRealTime());
     msgs::Set(this->worldStatsMsg.mutable_pause_time(), this->GetPauseTime());
     this->worldStatsMsg.set_paused(this->IsPaused());
 
     this->statPub->Publish(this->worldStatsMsg);
-    this->prevStatTime = common::Time::GetWallTime();
   }
 
-  if (this->IsPaused() && !this->stepInc > 0)
-    this->pauseTime += this->physicsEngine->GetStepTime();
-  else
+  // sleep here to get the correct update rate
+  common::Time sleepTime = this->prevStepWallTime +
+    common::Time(this->physicsEngine->GetUpdatePeriod()) -
+    common::Time::GetWallTime() - this->sleepOffset;
+
+  common::Time actualSleep = common::Time::GetWallTime();
+  common::Time::NSleep(sleepTime);
+  common::Time tmpTime = common::Time::GetWallTime();
+  actualSleep = tmpTime - actualSleep;
+
+  // throttling update rate
+  if (tmpTime - this->prevStepWallTime
+         >= common::Time(this->physicsEngine->GetUpdatePeriod()))
   {
-    // throttling update rate
-    if (common::Time::GetWallTime() - this->prevStepWallTime
-           >= common::Time(this->physicsEngine->GetUpdatePeriod()))
+    this->sleepOffset = tmpTime - this->prevStepWallTime
+      - common::Time(this->physicsEngine->GetUpdatePeriod())
+      + actualSleep - sleepTime;
+
+    this->prevStepWallTime = tmpTime;
+
+    if (!this->IsPaused() || this->stepInc > 0)
     {
-      this->prevStepWallTime = common::Time::GetWallTime();
       // query timestep to allow dynamic time step size updates
       this->simTime += this->physicsEngine->GetStepTime();
       this->Update();
@@ -321,12 +345,20 @@ void World::Step()
       if (this->IsPaused() && this->stepInc > 0)
         this->stepInc--;
     }
+    else
+      this->pauseTime += this->physicsEngine->GetStepTime();
   }
 
-  this->ProcessEntityMsgs();
-  this->ProcessRequestMsgs();
-  this->ProcessFactoryMsgs();
-  this->ProcessModelMsgs();
+  if (common::Time::GetWallTime() - this->prevProcessMsgsTime >
+      this->processMsgsPeriod)
+  {
+    this->prevProcessMsgsTime = common::Time::GetWallTime();
+    this->ProcessEntityMsgs();
+    this->ProcessRequestMsgs();
+    this->ProcessFactoryMsgs();
+    this->ProcessModelMsgs();
+  }
+
   this->worldUpdateMutex->unlock();
 }
 
@@ -388,7 +420,8 @@ void World::Update()
     /// until dWorld.*Step
     /// Plugins that manipulate joints (and probably other properties) require
     /// one iteration of the physics engine. Do not remove this.
-    if (!this->pluginsLoaded)
+    if (!this->pluginsLoaded &&
+        sensors::SensorManager::Instance()->SensorsInitialized())
     {
       this->LoadPlugins();
       this->pluginsLoaded = true;
@@ -461,22 +494,10 @@ ModelPtr World::GetModelById(unsigned int _id)
 }
 
 //////////////////////////////////////////////////
-ModelPtr World::GetModelByName(const std::string &_name)
-{
-  return boost::shared_dynamic_cast<Model>(this->GetByName(_name));
-}
-
-//////////////////////////////////////////////////
 ModelPtr World::GetModel(const std::string &_name)
 {
   boost::mutex::scoped_lock lock(*this->loadModelMutex);
   return boost::shared_dynamic_cast<Model>(this->GetByName(_name));
-}
-
-//////////////////////////////////////////////////
-EntityPtr World::GetEntityByName(const std::string &_name)
-{
-  return boost::shared_dynamic_cast<Entity>(this->GetByName(_name));
 }
 
 //////////////////////////////////////////////////
@@ -500,7 +521,7 @@ ModelPtr World::LoadModel(sdf::ElementPtr _sdf , BasePtr _parent)
     event::Events::addEntity(model->GetScopedName());
 
     msgs::Model msg;
-    model->FillModelMsg(msg);
+    model->FillMsg(msg);
     this->modelPub->Publish(msg);
   }
   else
@@ -522,7 +543,7 @@ ActorPtr World::LoadActor(sdf::ElementPtr _sdf , BasePtr _parent)
   event::Events::addEntity(actor->GetScopedName());
 
   msgs::Model msg;
-  actor->FillModelMsg(msg);
+  actor->FillMsg(msg);
   this->modelPub->Publish(msg);
 
   return actor;
@@ -698,7 +719,6 @@ void World::SetSelectedEntityCB(const std::string &_name)
   }
   else
     this->selectedEntity.reset();
-  // event::Events::entitySelected(this->selectedEntity);
 }
 
 //////////////////////////////////////////////////
@@ -722,7 +742,7 @@ gazebo::common::Time World::GetSimTime() const
 }
 
 //////////////////////////////////////////////////
-void World::SetSimTime(common::Time _t)
+void World::SetSimTime(const common::Time &_t)
 {
   this->simTime = _t;
 }
@@ -853,7 +873,7 @@ void World::BuildSceneMsg(msgs::Scene &_scene, BasePtr _entity)
     if (_entity->HasType(Entity::MODEL))
     {
       msgs::Model *modelMsg = _scene.add_model();
-      boost::shared_static_cast<Model>(_entity)->FillModelMsg(*modelMsg);
+      boost::shared_static_cast<Model>(_entity)->FillMsg(*modelMsg);
     }
 
     for (unsigned int i = 0; i < _entity->GetChildCount(); ++i)
@@ -894,6 +914,16 @@ void World::LoadPlugins()
     }
   }
 
+  // Load the plugins for all the models
+  for (unsigned int i = 0; i < this->rootElement->GetChildCount(); i++)
+  {
+    if (this->rootElement->GetChild(i)->HasType(Base::MODEL))
+    {
+      ModelPtr model = boost::shared_static_cast<Model>(
+          this->rootElement->GetChild(i));
+      model->LoadPlugins();
+    }
+  }
 
   for (std::vector<WorldPluginPtr>::iterator iter = this->plugins.begin();
        iter != this->plugins.end(); ++iter)
@@ -1007,7 +1037,7 @@ void World::ProcessRequestMsgs()
         {
           msgs::Model *modelMsg = modelVMsg.add_models();
           ModelPtr model = boost::shared_dynamic_cast<Model>(entity);
-          model->FillModelMsg(*modelMsg);
+          model->FillMsg(*modelMsg);
         }
       }
 
@@ -1028,7 +1058,7 @@ void World::ProcessRequestMsgs()
         {
           msgs::Model modelMsg;
           ModelPtr model = boost::shared_dynamic_cast<Model>(entity);
-          model->FillModelMsg(modelMsg);
+          model->FillMsg(modelMsg);
 
           std::string *serializedData = response.mutable_serialized_data();
           modelMsg.SerializeToString(serializedData);
@@ -1038,7 +1068,7 @@ void World::ProcessRequestMsgs()
         {
           msgs::Link linkMsg;
           LinkPtr link = boost::shared_dynamic_cast<Link>(entity);
-          link->FillLinkMsg(linkMsg);
+          link->FillMsg(linkMsg);
 
           std::string *serializedData = response.mutable_serialized_data();
           linkMsg.SerializeToString(serializedData);
@@ -1049,7 +1079,7 @@ void World::ProcessRequestMsgs()
           msgs::Collision collisionMsg;
           CollisionPtr collision =
             boost::shared_dynamic_cast<Collision>(entity);
-          collision->FillCollisionMsg(collisionMsg);
+          collision->FillMsg(collisionMsg);
 
           std::string *serializedData = response.mutable_serialized_data();
           collisionMsg.SerializeToString(serializedData);
@@ -1059,7 +1089,7 @@ void World::ProcessRequestMsgs()
         {
           msgs::Joint jointMsg;
           JointPtr joint = boost::shared_dynamic_cast<Joint>(entity);
-          joint->FillJointMsg(jointMsg);
+          joint->FillMsg(jointMsg);
 
           std::string *serializedData = response.mutable_serialized_data();
           jointMsg.SerializeToString(serializedData);
@@ -1131,7 +1161,7 @@ void World::ProcessModelMsgs()
 
       // Let all other subscribers know about the change
       msgs::Model msg;
-      model->FillModelMsg(msg);
+      model->FillMsg(msg);
       this->modelPub->Publish(msg);
     }
   }
@@ -1165,7 +1195,7 @@ void World::ProcessFactoryMsgs()
     }
     else if ((*iter).has_sdf_filename() && !(*iter).sdf_filename().empty())
     {
-      std::string filename = common::ModelDatabase::GetModelFile(
+      std::string filename = common::ModelDatabase::Instance()->GetModelFile(
           (*iter).sdf_filename());
 
       if (!sdf::readFile(filename, factorySDF))
@@ -1272,6 +1302,26 @@ void World::ProcessFactoryMsgs()
       {
         ModelPtr model = this->LoadModel(elem, this->rootElement);
         model->Init();
+
+        int iterations = 0;
+
+        // Wait for the sensors to be initialized before loading
+        // plugins.
+        while (!sensors::SensorManager::Instance()->SensorsInitialized() &&
+               iterations < 50)
+        {
+          common::Time::MSleep(100);
+          iterations++;
+        }
+
+        if (iterations < 50)
+          model->LoadPlugins();
+        else
+        {
+          gzerr << "Sensors failed to initialize when loading model["
+                << model->GetName() << "] via the factory mechanism."
+                << "Plugins for the model will not be loaded.\n";
+        }
       }
       else if (isLight)
       {

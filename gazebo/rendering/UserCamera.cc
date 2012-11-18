@@ -235,6 +235,7 @@ void UserCamera::HandleKeyPressEvent(const std::string &_key)
 {
   if (this->gui)
     this->gui->HandleKeyPressEvent(_key);
+  this->viewController->HandleKeyPressEvent(_key);
 }
 
 /////////////////////////////////////////////////
@@ -242,6 +243,7 @@ void UserCamera::HandleKeyReleaseEvent(const std::string &_key)
 {
   if (this->gui)
     this->gui->HandleKeyReleaseEvent(_key);
+  this->viewController->HandleKeyReleaseEvent(_key);
 }
 
 /////////////////////////////////////////////////
@@ -445,7 +447,8 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
 
   dist = start.Distance(end);
   // double vel = 5.0;
-  double time = 0.5;  // dist / vel;
+  // time = dist / vel;
+  double time = 0.5;
 
   Ogre::Animation *anim =
     this->scene->GetManager()->createAnimation("cameratrack", time);
