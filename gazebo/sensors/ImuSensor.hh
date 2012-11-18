@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright 2012 Nate Koenig
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  *
 */
 
-#ifndef IMUSENSOR_HH
-#define IMUSENSOR_HH
+#ifndef _IMUSENSOR_HH_
+#define _IMUSENSOR_HH_
 
 #include <vector>
 #include <string>
 
-#include "Sensor.hh"
+#include "gazebo/sensors/Sensor.hh"
 
 namespace gazebo
 {
@@ -30,36 +30,32 @@ namespace gazebo
     /// \addtogroup gazebo_sensors
     /// \{
 
-    /// \brief An IMU sensor
+    /// \class ImuSensor ImuSensor.hh sensors/sensors.hh
+    /// \brief An IMU sensor.
     class ImuSensor: public Sensor
     {
-      /// \brief Constructor
-      /// \param body The IMU sensor must be attached to a body.
-      public: ImuSensor(Body *body);
+      /// \brief Constructor.
+      public: ImuSensor();
 
-      /// \brief Destructor
+      /// \brief Destructor.
       public: virtual ~ImuSensor();
 
-      /// \param node The XMLConfig node
-      protected: virtual void LoadChild(XMLConfigNode *node);
+      /// \brief Load the ImuSensor from SDF.
+      /// \param[in] _node The SDF data.
+      protected: virtual void Load(sdf::ElementPtr _node);
 
-      /// \brief Save the sensor info in XML format
-      protected: virtual void SaveChild(std::string &prefix,
-                                        std::ostream &stream);
+      /// \brief Initialize the IMU.
+      protected: virtual void Init();
 
-      /// Initialize the ray
-      protected: virtual void InitChild();
+      /// \brief Update sensed values.
+      protected: virtual void Update();
 
-      ///  Update sensed values
-      protected: virtual void UpdateChild();
+      /// \brief Finalize the IMU.
+      protected: virtual void Fini();
 
-      /// Finalize the ray
-      protected: virtual void FiniChild();
-
-      /// Returns velocity as a math::Pose
-      /// FIXME storing x,y,z components in a quaternion seems like a bad idea
-      /// @todo storing x,y,z components in a quaternion seems like a bad idea
-      public: Pose GetVelocity();
+      /// \brief Returns velocity as a math::Pose
+      /// \return velocity data stored in Pose
+      public: math::Pose GetVelocity();
 
       private: Pose prevPose;
       private: Pose imuVel;
@@ -68,4 +64,3 @@ namespace gazebo
   }
 }
 #endif
-

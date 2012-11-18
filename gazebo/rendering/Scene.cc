@@ -40,7 +40,7 @@
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Camera.hh"
 #include "gazebo/rendering/DepthCamera.hh"
-#include "gazebo/rendering/GpuLaser.hh"
+// #include "gazebo/rendering/GpuLaser.hh"
 #include "gazebo/rendering/Grid.hh"
 #include "gazebo/rendering/DynamicLines.hh"
 #include "gazebo/rendering/RFIDVisual.hh"
@@ -365,7 +365,8 @@ void Scene::SetAmbientColor(const common::Color &_color)
   this->sdf->GetElement("ambient")->Set(_color);
 
   // Ambient lighting
-  if (this->manager)
+  if (this->manager &&
+      Conversions::Convert(this->manager->getAmbientLight()) != _color)
   {
     this->manager->setAmbientLight(Conversions::Convert(_color));
   }
@@ -381,22 +382,24 @@ common::Color Scene::GetAmbientColor() const
 void Scene::SetBackgroundColor(const common::Color &_color)
 {
   this->sdf->GetElement("background")->Set(_color);
+  Ogre::ColourValue clr = Conversions::Convert(_color);
 
   std::vector<CameraPtr>::iterator iter;
   for (iter = this->cameras.begin(); iter != this->cameras.end(); ++iter)
   {
-    if ((*iter)->GetViewport())
-      (*iter)->GetViewport()->setBackgroundColour(Conversions::Convert(_color));
+    if ((*iter)->GetViewport() &&
+        (*iter)->GetViewport()->getBackgroundColour() != clr)
+      (*iter)->GetViewport()->setBackgroundColour(clr);
   }
 
   std::vector<UserCameraPtr>::iterator iter2;
   for (iter2 = this->userCameras.begin();
        iter2 != this->userCameras.end(); ++iter2)
   {
-    if ((*iter2)->GetViewport())
+    if ((*iter2)->GetViewport() &&
+        (*iter2)->GetViewport()->getBackgroundColour() != clr)
     {
-      (*iter2)->GetViewport()->setBackgroundColour(
-          Conversions::Convert(_color));
+      (*iter2)->GetViewport()->setBackgroundColour(clr);
     }
   }
 }
@@ -458,7 +461,7 @@ DepthCameraPtr Scene::CreateDepthCamera(const std::string &_name,
 }
 
 //////////////////////////////////////////////////
-GpuLaserPtr Scene::CreateGpuLaser(const std::string &_name,
+/*GpuLaserPtr Scene::CreateGpuLaser(const std::string &_name,
                                         bool _autoRender)
 {
   GpuLaserPtr camera(new GpuLaser(this->name + "::" + _name,
@@ -466,7 +469,7 @@ GpuLaserPtr Scene::CreateGpuLaser(const std::string &_name,
   this->cameras.push_back(camera);
 
   return camera;
-}
+}*/
 
 //////////////////////////////////////////////////
 uint32_t Scene::GetCameraCount() const
@@ -581,9 +584,10 @@ VisualPtr Scene::GetVisual(const std::string &_name) const
 }
 
 //////////////////////////////////////////////////
-void Scene::SelectVisual(const std::string &_name)
+void Scene::SelectVisual(const std::string &_name, const std::string &_mode)
 {
   this->selectedVis = this->GetVisual(_name);
+  this->selectionMode = _mode;
 }
 
 //////////////////////////////////////////////////
@@ -834,7 +838,7 @@ math::Vector3 Scene::GetFirstContact(CameraPtr _camera,
   Ogre::RaySceneQueryResult &result = this->raySceneQuery->execute();
   Ogre::RaySceneQueryResult::iterator iter = result.begin();
 
-  for (;iter != result.end() && math::equal(iter->distance, 0.0f); ++iter);
+  for (; iter != result.end() && math::equal(iter->distance, 0.0f); ++iter);
 
   Ogre::Vector3 pt = mouseRay.getPoint(iter->distance);
 
@@ -1361,7 +1365,7 @@ void Scene::PreRender()
     if (iter != this->visuals.end())
     {
       // If an object is selected, don't let the physics engine move it.
-      if (!this->selectedVis ||
+      if (!this->selectedVis || this->selectionMode != "move" ||
           iter->first.find(this->selectedVis->GetName()) == std::string::npos)
       {
         math::Pose pose = msgs::Convert(*(*pIter));
@@ -1386,7 +1390,7 @@ void Scene::PreRender()
       if (iter2 != this->visuals.end())
       {
         // If an object is selected, don't let the physics engine move it.
-        if (!this->selectedVis ||
+        if (!this->selectedVis || this->selectionMode != "move" ||
           iter->first.find(this->selectedVis->GetName()) == std::string::npos)
         {
           math::Pose pose = msgs::Convert(pose_msg);
@@ -1435,7 +1439,7 @@ void Scene::PreRender()
 
   if (this->selectionMsg)
   {
-    this->SelectVisual(this->selectionMsg->name());
+    this->SelectVisual(this->selectionMsg->name(), "normal");
     this->selectionMsg.reset();
   }
 }
@@ -2028,7 +2032,7 @@ void Scene::SetShadowsEnabled(bool _value)
 #endif
   }
   else if (RenderEngine::Instance()->GetRenderPathType() ==
-      RenderEngine::FORWARD)
+           RenderEngine::FORWARD)
   {
     // RT Shader shadows
     if (_value)
@@ -2042,7 +2046,8 @@ void Scene::SetShadowsEnabled(bool _value)
     this->manager->setShadowTextureSize(512);
 
     // The default shadows.
-    if (_value)
+    if (_value && this->manager->getShadowTechnique()
+        != Ogre::SHADOWTYPE_TEXTURE_ADDITIVE)
       this->manager->setShadowTechnique(Ogre::SHADOWTYPE_TEXTURE_ADDITIVE);
     else
       this->manager->setShadowTechnique(Ogre::SHADOWTYPE_NONE);
