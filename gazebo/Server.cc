@@ -87,8 +87,8 @@ bool Server::ParseArgs(int argc, char **argv)
   po::options_description v_desc("Allowed options");
   v_desc.add_options()
     ("help,h", "Produce this help message.")
-    ("log,l", "Log state data to disk.")
-    ("play,p", po::value<std::string>(), "Playback a log file.")
+    ("record,r", "Record state data to disk.")
+    ("play,p", po::value<std::string>(), "Play a log file.")
     ("pause,u", "Start the server in a paused state.")
     ("server-plugin,s", po::value<std::vector<std::string> >(),
      "Load a plugin.");
@@ -109,8 +109,9 @@ bool Server::ParseArgs(int argc, char **argv)
 
   try
   {
-    po::store(
-        po::parse_command_line(argc, argv, v_desc), this->vm);
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(
+          p_desc).allow_unregistered().run(), this->vm);
+
     po::notify(this->vm);
   }
   catch(boost::exception &_e)
@@ -142,8 +143,8 @@ bool Server::ParseArgs(int argc, char **argv)
   }
 
   // Set the parameter to record a log file
-  if (this->vm.count("log"))
-    this->params["log"] = "bz2";
+  if (this->vm.count("record"))
+    this->params["record"] = "bz2";
 
   if (this->vm.count("pause"))
     this->params["pause"] = "true";
@@ -398,7 +399,7 @@ void Server::ProcessParams()
 
       physics::pause_worlds(p);
     }
-    else if (iter->first == "log")
+    else if (iter->first == "record")
     {
       common::LogRecord::Instance()->Start(iter->second);
     }

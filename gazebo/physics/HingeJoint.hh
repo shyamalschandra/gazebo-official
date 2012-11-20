@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright 2012 Nate Koenig
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,11 +32,13 @@ namespace gazebo
     /// \addtogroup gazebo_physics
     /// \{
 
+    /// \class HingeJoint HingeJoint.hh physics/physics.hh
     /// \brief A single axis hinge joint
     template<class T>
     class HingeJoint : public T
     {
       /// \brief Constructor
+      /// \param[in] _parent Parent link
       public: HingeJoint(BasePtr _parent) : T(_parent)
               { this->AddType(Base::HINGE_JOINT); }
       ///  \brief Destructor
@@ -48,11 +50,13 @@ namespace gazebo
               {return 1;}
 
       /// \brief Load joint
+      /// \param[in] _sdf Pointer to SDF element
       public: virtual void Load(sdf::ElementPtr _sdf)
               {
                 T::Load(_sdf);
               }
 
+      /// \brief Initialize joint
       protected: virtual void Init()
                  {
                    T::Init();
