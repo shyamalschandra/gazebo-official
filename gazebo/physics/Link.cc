@@ -231,6 +231,13 @@ void Link::Init()
   // DO THIS LAST!
   this->SetRelativePose(this->sdf->GetValuePose("pose"));
   this->SetInitialRelativePose(this->sdf->GetValuePose("pose"));
+
+  // Reset collision elements to properly set pose
+  for (iter = this->children.begin(); iter != this->children.end(); ++iter)
+  {
+    if ((*iter)->HasType(Base::COLLISION))
+      boost::shared_static_cast<Collision>(*iter)->Reset();
+  }
 }
 
 //////////////////////////////////////////////////
