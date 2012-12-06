@@ -1,0 +1,44 @@
+include (${gazebo_cmake_dir}/GazeboUtils.cmake)
+include ( ${QT_USE_FILE} )
+
+set (sources
+  EditorWidget.cc
+  BuildingEditorWidget.cc
+  BuildingEditorPalette.cc
+  FinishModelDialog.cc
+  WindowDoorInspectorDialog.cc
+  WallInspectorDialog.cc
+  SelectableLineSegment.cc
+  GridLines.cc
+  CornerGrabber.cc
+  EditorView.cc
+  RectItem.cc
+  WindowItem.cc
+  DoorItem.cc
+  PolylineItem.cc
+)
+
+set (qt_headers
+  EditorWidget.hh
+  BuildingEditorWidget.hh
+  BuildingEditorPalette.hh
+  FinishModelDialog.hh
+  WindowDoorInspectorDialog.hh
+  WallInspectorDialog.hh
+  SelectableLineSegment.hh
+  GridLines.hh
+  CornerGrabber.hh
+  EditorView.hh
+  RectItem.hh
+  WindowItem.hh
+  DoorItem.hh
+  PolylineItem.hh
+)
+
+#set (resources qtpropertybrowser.qrc)
+QT4_WRAP_CPP(headers_MOC ${qt_headers})
+#QT4_ADD_RESOURCES(resources_RCC ${resources})
+
+add_library(gazebo_model_editor STATIC ${sources} ${headers_MOC} )
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
