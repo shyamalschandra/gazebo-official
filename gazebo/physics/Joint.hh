@@ -34,6 +34,7 @@
 
 #include "gazebo/physics/JointState.hh"
 #include "gazebo/physics/Base.hh"
+#include "physics/JointWrench.hh"
 
 namespace gazebo
 {
@@ -243,6 +244,9 @@ namespace gazebo
       /// \return The force applied to an axis.
       public: virtual double GetForce(int _index);
 
+      /// \brief get force torque values at a joint
+      public: virtual JointWrench GetForceTorque(int _index) = 0;
+
       /// \brief Set the max allowed force of an axis(index).
       /// Note that the unit of force should be consistent with the rest
       /// of the simulation scales.  E.g.  if you are using
@@ -373,6 +377,12 @@ namespace gazebo
 
       /// \brief apply damping for adding viscous damping forces on updates
       protected: gazebo::event::ConnectionPtr applyDamping;
+
+      /// \brief Save force applied by user
+      /// This plus the joint feedback (joint contstraint forces) is the
+      /// equivalent of simulated force torque sensor reading
+      /// Allocate a 2 vector in case hinge2 joint is used.
+      protected: double forceApplied[2];
     };
     /// \}
   }
