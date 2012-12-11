@@ -179,11 +179,11 @@ WorldState WorldState::operator-(const WorldState &_state) const
 
   // Subtract the model states.
   for (std::vector<ModelState>::const_iterator iter =
-       _state.modelStates.begin(); iter != _state.modelStates.end(); ++iter)
+       this->modelStates.begin(); iter != this->modelStates.end(); ++iter)
   {
-    if (this->HasModelState((*iter).GetName()))
+    if (_state.HasModelState((*iter).GetName()))
     {
-      ModelState state = this->GetModelState((*iter).GetName()) - *iter;
+      ModelState state = *iter - _state.GetModelState((*iter).GetName());
       if (!state.IsZero())
         result.modelStates.push_back(state);
     }
@@ -213,4 +213,21 @@ WorldState WorldState::operator+(const WorldState &_state) const
   }
 
   return result;
+}
+
+/////////////////////////////////////////////////
+void WorldState::FillMsg(msgs::WorldState &_msg) const
+{
+  _msg.set_name(this->name);
+  msgs::Set(_msg.mutable_sim_time(), this->simTime);
+  msgs::Set(_msg.mutable_real_time(), this->realTime);
+  msgs::Set(_msg.mutable_wall_time(), this->wallTime);
+
+  // Fill the state message with all the model states
+  for (std::vector<ModelState>::const_iterator iter =
+       this->modelStates.begin(); iter != this->modelStates.end(); ++iter)
+  {
+    msgs::ModelState *modelState = _msg.add_model_state();
+    (*iter).FillMsg(*modelState);
+  }
 }
