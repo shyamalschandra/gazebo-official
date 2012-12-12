@@ -150,6 +150,9 @@ namespace gazebo
       /// \brief Subscribe to joint command.
       private: transport::SubscriberPtr jointCmdSub;
 
+      /// \brief Publish current joint commands.
+      private: transport::PublisherPtr jointStatePub;
+
       /// \brief Last time the controller was updated.
       private: common::Time prevUpdateTime;
     };
