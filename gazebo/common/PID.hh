@@ -59,6 +59,26 @@ namespace gazebo
                         double _imax = 0.0, double _imin = 0.0,
                         double _cmdMax = 0.0, double _cmdMin = 0.0);
 
+      /// \brief Get the proportional Gain.
+      /// \return proportional gain value
+      public: double GetPGain();
+
+      /// \brief Get the integral Gain.
+      /// \return integral gain value
+      public: double GetIGain();
+
+      /// \brief Get the derivtive Gain.
+      /// \return dertivative gain value
+      public: double GetDGain();
+
+      /// \brief Get the integral upper limit.
+      /// \return integral upper limit value
+      public: double GetIMax();
+
+      /// \brief Get the integral lower limit.
+      /// \return integral lower limit value
+      public: double GetIMin();
+
       /// \brief Set the proportional Gain.
       /// \param[in] _p proportional gain value
       public: void SetPGain(double _p);

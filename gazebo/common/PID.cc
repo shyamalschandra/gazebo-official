@@ -54,6 +54,36 @@ void PID::Init(double _p, double _i, double _d, double _imax, double _imin,
 }
 
 /////////////////////////////////////////////////
+double PID::GetPGain()
+{
+  return this->pGain;
+}
+
+/////////////////////////////////////////////////
+double PID::GetIGain()
+{
+  return this->iGain;
+}
+
+/////////////////////////////////////////////////
+double PID::GetDGain()
+{
+  return this->dGain;
+}
+
+/////////////////////////////////////////////////
+double PID::GetIMax()
+{
+  return this->iMax;
+}
+
+/////////////////////////////////////////////////
+double PID::GetIMin()
+{
+  return this->iMin;
+}
+
+/////////////////////////////////////////////////
 void PID::SetPGain(double _p)
 {
   this->pGain = _p;

@@ -37,6 +37,7 @@ JointController::JointController(ModelPtr _model)
   this->jointCmdSub = this->node->Subscribe(std::string("~/") +
       this->model->GetName() + "/joint_cmd",
       &JointController::OnJointCmd, this);
+  this->jointStatePub.clear();
 }
 
 /////////////////////////////////////////////////
@@ -115,10 +116,18 @@ void JointController::Update()
 /////////////////////////////////////////////////
 void JointController::OnJointCmd(ConstJointCmdPtr &_msg)
 {
+  // TODO: this function currently ignores axis value in _msg
   std::map<std::string, JointPtr>::iterator iter;
   iter = this->joints.find(_msg->name());
   if (iter != this->joints.end())
   {
+    msgs::JointCmd msg;
+    if (!this->jointStatePub)
+      // Only advertise this topic after receiving a JointCmd message
+      // to prevent pollution of gztopic list.
+      this->jointStatePub = this->node->Advertise<msgs::JointCmd>(
+        std::string("~/") + this->model->GetName() + "/joint_state");
+
     if (_msg->has_reset() && _msg->reset())
     {
       if (this->forces.find(_msg->name()) != this->forces.end())
@@ -164,6 +173,38 @@ void JointController::OnJointCmd(ConstJointCmdPtr &_msg)
       if (_msg->velocity().has_i_min())
         this->velPids[_msg->name()].SetIMax(_msg->velocity().i_min());
     }
+
+    msg.set_name(_msg->name());
+    msg.set_force(this->forces[_msg->name()] = _msg->force();
+    if (_msg->has_position())
+    {
+      msg.mutable_position()->set_target(this->positions[_msg->name()]);
+      msg.mutable_position()->set_p_gain(
+        this->posPids[_msg->name()].GetPGain());
+      msg.mutable_position()->set_i_gain(
+        this->posPids[_msg->name()].GetIGain());
+      msg.mutable_position()->set_d_gain(
+        this->posPids[_msg->name()].GetDGain());
+      msg.mutable_position()->set_i_max(
+        this->posPids[_msg->name()].GetIMax());
+      msg.mutable_position()->set_i_min(
+        this->posPids[_msg->name()].GetIMin());
+    }
+    if (_msg->has_velocity())
+    {
+      msg.mutable_velocity()->set_target(this->velocities[_msg->name()]);
+      msg.mutable_velocity()->set_p_gain(
+        this->velPids[_msg->name()].GetPGain());
+      msg.mutable_velocity()->set_i_gain(
+        this->velPids[_msg->name()].GetIGain());
+      msg.mutable_velocity()->set_d_gain(
+        this->velPids[_msg->name()].GetDGain());
+      msg.mutable_velocity()->set_i_max(
+        this->velPids[_msg->name()].GetIMax());
+      msg.mutable_velocity()->set_i_min(
+        this->velPids[_msg->name()].GetIMin());
+    }
+    this->jointStatePub->Publish(msg);
   }
   else
     gzerr << "Unable to find joint[" << _msg->name() << "]\n";
