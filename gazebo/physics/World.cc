@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright 2012 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@
 #include <boost/thread/recursive_mutex.hpp>
 
 #include "gazebo/sensors/SensorManager.hh"
+#include "gazebo/math/Rand.hh"
 
 #include "gazebo/sdf/sdf.hh"
 #include "gazebo/transport/Node.hh"
@@ -55,6 +56,7 @@
 #include "gazebo/physics/World.hh"
 
 #include "physics/Collision.hh"
+#include "physics/ContactManager.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -451,12 +453,12 @@ void World::Update()
   // Update all the models
   (*this.*modelUpdateFunc)();
 
+  // This must be called before PhysicsEngine::UpdatePhysics.
+  this->physicsEngine->UpdateCollision();
+
   // Update the physics engine
   if (this->enablePhysicsEngine && this->physicsEngine)
   {
-    // This must be called before PhysicsEngine::UpdatePhysics.
-    this->physicsEngine->UpdateCollision();
-
     // This must be called directly after PhysicsEngine::UpdateCollision.
     this->physicsEngine->UpdatePhysics();
 
@@ -482,6 +484,9 @@ void World::Update()
 
     this->dirtyPoses.clear();
   }
+
+  // Output the contact information
+  this->physicsEngine->GetContactManager()->PublishContacts();
 
   int currState = (this->stateToggle + 1) % 2;
   this->prevStates[currState] = WorldState(shared_from_this());
@@ -865,6 +870,12 @@ void World::OnControl(ConstWorldControlPtr &_data)
 
   if (_data->has_step())
     this->OnStep();
+
+  if (_data->has_seed())
+  {
+    math::Rand::SetSeed(_data->seed());
+    this->physicsEngine->SetSeed(_data->seed());
+  }
 
   if (_data->has_reset())
   {
