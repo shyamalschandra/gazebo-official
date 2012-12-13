@@ -39,6 +39,27 @@ JointForceControl::JointForceControl(const std::string &_name,
 }
 
 /////////////////////////////////////////////////
+JointForceControl::JointForceControl(ConstJointCmdPtr &_msg,
+    QGridLayout *_layout, QWidget *_parent, int _index)
+  : QWidget(_parent)
+{
+  this->name = _msg->name();
+  this->forceSpin = new QDoubleSpinBox;
+  this->forceSpin->setRange(-1000.0, 1000.0);
+  this->forceSpin->setSingleStep(0.001);
+  this->forceSpin->setDecimals(3);
+  if (_msg->has_force())
+    this->forceSpin->setValue(_msg->force());
+  else
+    this->forceSpin->setValue(0.000);
+
+  _layout->addWidget(forceSpin, _index, 2);
+
+  connect(this->forceSpin, SIGNAL(valueChanged(double)),
+          this, SLOT(OnChanged(double)));
+}
+
+/////////////////////////////////////////////////
 JointForceControl::~JointForceControl()
 {
   this->hide();
@@ -550,6 +571,8 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
   for (; i < _modelMsg.joint_size(); ++i)
   {
     std::string jointName = _modelMsg.joint(i).name();
+    // Do a request / response right here, make a request handler for
+    // JointController
 
     // Get the joint name minus the model name
     int modelNameIndex = jointName.find("::") + 2;
