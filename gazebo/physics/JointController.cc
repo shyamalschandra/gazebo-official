@@ -37,7 +37,6 @@ JointController::JointController(ModelPtr _model)
   this->jointCmdSub = this->node->Subscribe(std::string("~/") +
       this->model->GetName() + "/joint_cmd",
       &JointController::OnJointCmd, this);
-  this->jointStatePub.clear();
 }
 
 /////////////////////////////////////////////////
@@ -175,7 +174,7 @@ void JointController::OnJointCmd(ConstJointCmdPtr &_msg)
     }
 
     msg.set_name(_msg->name());
-    msg.set_force(this->forces[_msg->name()] = _msg->force();
+    msg.set_force(this->forces[_msg->name()]);
     if (_msg->has_position())
     {
       msg.mutable_position()->set_target(this->positions[_msg->name()]);
