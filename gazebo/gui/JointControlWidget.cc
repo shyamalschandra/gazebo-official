@@ -263,6 +263,7 @@ void JointControlWidget::SetModelName(const std::string &_modelName)
     this->jointPub.reset();
 
   msgs::Model modelMsg;
+  std::map<std::string, msgs::JointCmd> jointCmds; 
 
   this->modelLabel->setText(QString::fromStdString(std::string("Model: ")));
 
@@ -282,12 +283,29 @@ void JointControlWidget::SetModelName(const std::string &_modelName)
     {
       modelMsg.ParseFromString(response.serialized_data());
     }
+
+    int i = 0;
+    for (; i < modelMsg.joint_size(); ++i)
+    {
+      std::string jointName = modelMsg.joint(i).name();
+
+      this->requestMsg = msgs::CreateRequest("joint_controller");
+      this->requestMsg->set_data(joint_name);
+
+      response = transport::request("default", *this->requestMsg);
+
+      if (response.response() != "error" &&
+          response.type() == jointCmds.begin()->second.GetTypeName())
+      {
+        jointCmd_M[jointName].ParseFromString(response.serialized_data());
+      }
+    }
   }
 
   this->modelLabel->setText(QString::fromStdString(
         std::string("Model: ") + modelMsg.name()));
 
-  this->LayoutForceTab(modelMsg);
+  this->LayoutForceTab(&jointCmds);
 
   this->LayoutPositionTab(modelMsg);
 
@@ -547,7 +565,8 @@ void JointControlWidget::AddScrollTab(QTabWidget *_tabPane,
 }
 
 /////////////////////////////////////////////////
-void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
+void JointControlWidget::LayoutForceTab(
+                    std::map<std::string, msgs::JointCmd> &_jointCmds);
 {
   // Remove the old widgets;
   QLayoutItem *wItem;
@@ -560,7 +579,7 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
   this->sliders.clear();
 
   // Don't add any widget if there are no joints
-  if (_modelMsg.joint_size() == 0)
+  if (_jointCmds->size() == 0)
     return;
 
   this->forceGridLayout->addItem(new QSpacerItem(10, 20, QSizePolicy::Expanding,
@@ -568,11 +587,11 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
   this->forceGridLayout->addWidget(new QLabel("Newton-meter", this), 0, 2);
 
   int i = 0;
-  for (; i < _modelMsg.joint_size(); ++i)
+  for (std::map<std::string, msgs::JointCmd>::iterator iter =
+       _jointCmds->begin(), iter != jointCmds->end(); ++iter)
   {
-    std::string jointName = _modelMsg.joint(i).name();
-    // Do a request / response right here, make a request handler for
-    // JointController
+    std::string jointName = iter->first;
+    msgs::JointCmd jointCmd = iter->second;
 
     // Get the joint name minus the model name
     int modelNameIndex = jointName.find("::") + 2;
@@ -583,12 +602,13 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
     this->forceGridLayout->addItem(new QSpacerItem(10, 20,
           QSizePolicy::Expanding, QSizePolicy::Minimum), i+1, 1);
 
-    JointForceControl *slider = new JointForceControl(jointName,
+    JointForceControl *slider = new JointForceControl(&jointCmd,
         this->forceGridLayout, this, i+1);
 
     this->sliders[jointName] = slider;
     connect(slider, SIGNAL(changed(double, const std::string &)),
             this, SLOT(OnForceChanged(double, const std::string &)));
+    ++i;
   }
 
   // Add a space at the bottom of the grid layout to consume extra space.
