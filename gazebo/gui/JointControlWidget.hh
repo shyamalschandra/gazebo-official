@@ -120,8 +120,10 @@ namespace gazebo
                                  const QString &_name);
 
       /// \brief Layout the force tab.
-      /// \param[in] _modelMsg Message used to create the joint controls
-      private: void LayoutForceTab(msgs::Model &_modelMsg);
+      /// \param[in] _jointCmds Map of joint messages used to set default
+      ///            values for controls.
+      private: void LayoutForceTab(std::map<std::string, msgs::JointCmd>
+                                    &_jointCmds);
 
       /// \brief Layout the position PID tab.
       /// \param[in] _modelMsg Message used to create the joint controls
