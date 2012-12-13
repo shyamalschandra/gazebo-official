@@ -178,6 +178,8 @@ namespace gazebo
       /// \param[in] _index Row index into the grid layout.
       public: JointForceControl(const std::string &_name,
                   QGridLayout *_layout, QWidget *_parent, int _index);
+      public: JointForceControl(ConstJointCmdPtr &_msg,
+                  QGridLayout *_layout, QWidget *_parent, int _index);
 
       /// \brief Destructor.
       public: virtual ~JointForceControl();
