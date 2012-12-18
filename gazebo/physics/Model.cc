@@ -69,14 +69,13 @@ Model::Model(BasePtr _parent)
 {
   this->AddType(MODEL);
   this->updateMutex = new boost::recursive_mutex();
-  this->jointController = NULL;
+  this->jointController = JointControllerPtr();
 }
 
 //////////////////////////////////////////////////
 Model::~Model()
 {
   delete this->updateMutex;
-  delete this->jointController;
 }
 
 //////////////////////////////////////////////////
@@ -661,8 +660,8 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   this->joints.push_back(joint);
 
   if (!this->jointController)
-    this->jointController = new JointController(
-        boost::shared_dynamic_cast<Model>(shared_from_this()));
+    this->jointController.reset(new JointController(
+        boost::shared_dynamic_cast<Model>(shared_from_this())));
   this->jointController->AddJoint(joint);
 }
 
