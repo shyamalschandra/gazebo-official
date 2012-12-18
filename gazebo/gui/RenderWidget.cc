@@ -26,6 +26,7 @@
 #include "gui/GuiEvents.hh"
 #include "gui/TimePanel.hh"
 #include "gui/RenderWidget.hh"
+#include "gui/model_editor/EditorWidget.hh"
 
 using namespace gazebo;
 using namespace gui;
@@ -80,6 +81,10 @@ RenderWidget::RenderWidget(QWidget *_parent)
   this->glWidget = new GLWidget(this->mainFrame);
   rendering::ScenePtr scene = rendering::create_scene(gui::get_world(), true);
 
+  this->editorWidget = new EditorWidget(this);
+  this->editorWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  this->editorWidget->hide();
+
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
   TimePanel *timePanel = new TimePanel(this);
@@ -113,8 +118,19 @@ RenderWidget::RenderWidget(QWidget *_parent)
   bottomPanelLayout->setContentsMargins(0, 0, 0, 0);
   bottomFrame->setLayout(bottomPanelLayout);
 
+  QSplitter *splitter = new QSplitter(this);
+  splitter->addWidget(this->editorWidget);
+  splitter->addWidget(this->glWidget);
+  QList<int> sizes;
+  sizes.push_back(300);
+  sizes.push_back(300);
+  splitter->setSizes(sizes);
+  splitter->setStretchFactor(0, 1);
+  splitter->setStretchFactor(1, 1);
+  splitter->setOrientation(Qt::Vertical);
+
   frameLayout->addWidget(toolFrame);
-  frameLayout->addWidget(this->glWidget);
+  frameLayout->addWidget(splitter);
   frameLayout->addWidget(bottomFrame);
   frameLayout->setContentsMargins(0, 0, 0, 0);
   frameLayout->setSpacing(0);
@@ -206,6 +222,18 @@ void RenderWidget::update()
   this->glWidget->update();
 }
 
+void RenderWidget::ShowEditor(int mode)
+{
+  if (mode > 0)
+  {
+    this->editorWidget->show();
+    this->editorWidget->SetMode(mode);
+  }
+  else
+    this->editorWidget->hide();
+
+}
+
 void RenderWidget::RemoveScene(const std::string &_name)
 {
   this->clear = true;
@@ -217,5 +245,3 @@ void RenderWidget::CreateScene(const std::string &_name)
   this->create = true;
   this->createName = _name;
 }
-
-
