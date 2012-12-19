@@ -50,6 +50,7 @@ set (msgs
   pose_animation.proto
   pose_stamped.proto
   pose_trajectory.proto
+  pose_v.proto
   projector.proto
   publishers.proto
   publish.proto
