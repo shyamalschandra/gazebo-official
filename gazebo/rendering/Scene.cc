@@ -461,15 +461,15 @@ DepthCameraPtr Scene::CreateDepthCamera(const std::string &_name,
 }
 
 //////////////////////////////////////////////////
-/*GpuLaserPtr Scene::CreateGpuLaser(const std::string &_name,
+GpuLaserPtr Scene::CreateGpuLaser(const std::string &_name,
                                         bool _autoRender)
 {
   GpuLaserPtr camera(new GpuLaser(this->name + "::" + _name,
-        this, _autoRender));
+        shared_from_this(), _autoRender));
   this->cameras.push_back(camera);
 
   return camera;
-}*/
+}
 
 //////////////////////////////////////////////////
 uint32_t Scene::GetCameraCount() const

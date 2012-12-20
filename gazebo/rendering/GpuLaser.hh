@@ -71,7 +71,7 @@ namespace gazebo
       /// \param[in] _scene Scene that will contain the camera
       /// \param[in] _autoRender Almost everyone should leave this as true.
       public: GpuLaser(const std::string &_namePrefix,
-                          Scene *_scene, bool _autoRender = true);
+                          ScenePtr _scene, bool _autoRender = true);
 
       /// \brief Destructor
       public: virtual ~GpuLaser();
