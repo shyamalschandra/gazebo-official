@@ -300,6 +300,11 @@ namespace gazebo
       /// \brief Update the state SDF value from the current state.
       public: void UpdateStateSDF();
 
+      /// \brief Enqueue a pose message for publication.
+      /// These messages will be transmitted at the end of every iteration.
+      /// \param[in] _msg The message to enqueue.
+      public: void EnqueueMsg(msgs::Pose *_msg);
+
       /// \brief Get a model by id.
       ///
       /// Each Entity has a unique ID, this function finds a Model with
@@ -401,15 +406,19 @@ namespace gazebo
       private: void FillModelMsg(msgs::Model &_msg, ModelPtr _model);
 
       /// \brief Process all recieved entity messages.
+      /// Must only be called from the World::ProcessMessages function.
       private: void ProcessEntityMsgs();
 
       /// \brief Process all recieved request messages.
+      /// Must only be called from the World::ProcessMessages function.
       private: void ProcessRequestMsgs();
 
       /// \brief Process all recieved factory messages.
+      /// Must only be called from the World::ProcessMessages function.
       private: void ProcessFactoryMsgs();
 
       /// \brief Process all recieved model messages.
+      /// Must only be called from the World::ProcessMessages function.
       private: void ProcessModelMsgs();
 
       /// \brief Log callback. This is where we write out state info.
@@ -484,6 +493,9 @@ namespace gazebo
       /// \brief Publisher for light messages.
       private: transport::PublisherPtr lightPub;
 
+      /// \brief Publisher for pose messages.
+      private: transport::PublisherPtr posePub;
+
       /// \brief Subscriber to world control messages.
       private: transport::SubscriberPtr controlSub;
 
@@ -521,7 +533,7 @@ namespace gazebo
       private: common::Time realTimeOffset;
 
       /// \brief Mutext to protect incoming message buffers.
-      private: boost::mutex *receiveMutex;
+      private: boost::recursive_mutex *receiveMutex;
 
       /// \brief Mutex to protext loading of models.
       private: boost::mutex *loadModelMutex;
@@ -607,6 +619,9 @@ namespace gazebo
       /// \brief Store a factory SDF object to improve speed at which
       /// objects are inserted via the factory.
       private: sdf::SDFPtr factorySDF;
+
+      /// \brief The list of pose messages to output.
+      private: msgs::Pose_V poseMsgs;
     };
     /// \}
   }
