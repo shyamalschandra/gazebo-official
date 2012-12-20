@@ -47,7 +47,7 @@ using namespace rendering;
 int GpuLaser::texCount = 0;
 
 //////////////////////////////////////////////////
-GpuLaser::GpuLaser(const std::string &_namePrefix, Scene *_scene,
+GpuLaser::GpuLaser(const std::string &_namePrefix, ScenePtr _scene,
                          bool _autoRender)
 : Camera(_namePrefix, _scene, _autoRender)
 {
