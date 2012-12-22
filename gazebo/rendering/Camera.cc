@@ -414,6 +414,7 @@ void Camera::SetWorldPosition(const math::Vector3 &_pos)
 {
   if (this->animState)
     return;
+
   this->sceneNode->setPosition(Ogre::Vector3(_pos.x, _pos.y, _pos.z));
 }
 
@@ -748,7 +749,7 @@ void Camera::SetSceneNode(Ogre::SceneNode *node)
 //////////////////////////////////////////////////
 Ogre::SceneNode *Camera::GetSceneNode() const
 {
-  return this->pitchNode;
+  return this->sceneNode;
 }
 
 //////////////////////////////////////////////////
@@ -1285,6 +1286,19 @@ bool Camera::IsVisible(const std::string &_visualName)
 bool Camera::GetInitialized() const
 {
   return this->initialized;
+}
+
+/////////////////////////////////////////////////
+bool Camera::RotateToOrientation(const math::Quaternion & /*_quat*/,
+                                 double /*_time*/)
+{
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool Camera::IsAnimating() const
+{
+  return this->animState != NULL;
 }
 
 /////////////////////////////////////////////////

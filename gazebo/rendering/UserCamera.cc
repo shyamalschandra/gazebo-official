@@ -168,7 +168,7 @@ void UserCamera::Init()
 void UserCamera::SetWorldPose(const math::Pose &_pose)
 {
   Camera::SetWorldPose(_pose);
-  this->viewController->Init();
+  // this->viewController->Init();
 }
 
 //////////////////////////////////////////////////
@@ -183,7 +183,7 @@ void UserCamera::Update()
 //////////////////////////////////////////////////
 void UserCamera::AnimationComplete()
 {
-  this->viewController->Init();
+  // this->viewController->Init();
 }
 
 //////////////////////////////////////////////////
@@ -395,7 +395,7 @@ void UserCamera::ShowVisual(bool /*_s*/)
 //////////////////////////////////////////////////
 bool UserCamera::MoveToPosition(const math::Pose &_pose, double _time)
 {
-  this->orbitViewController->SetFocalPoint(_pose.pos);
+  // this->orbitViewController->SetFocalPoint(_pose.pos);
   return Camera::MoveToPosition(_pose, _time);
 }
 
@@ -497,7 +497,7 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
   this->animState->setLoop(false);
   this->prevAnimTime = common::Time::GetWallTime();
 
-  this->orbitViewController->SetFocalPoint(_visual->GetWorldPose().pos);
+  // this->orbitViewController->SetFocalPoint(_visual->GetWorldPose().pos);
   this->onAnimationComplete =
     boost::bind(&UserCamera::OnMoveToVisualComplete, this);
 }
