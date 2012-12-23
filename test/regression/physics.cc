@@ -252,6 +252,7 @@ TEST_F(PhysicsTest, DropStuff)
       if (z < 0.5) post_contact_correction = true;
     }
   }
+  Unload();
 }
 
 
@@ -338,6 +339,7 @@ TEST_F(PhysicsTest, CollisionTest)
       x = x + dt * v;
     }
   }
+  Unload();
 }
 
 
@@ -482,6 +484,7 @@ TEST_F(PhysicsTest, SimplePendulumTest)
       }
     }
   }
+  Unload();
 }
 
 int main(int argc, char **argv)
