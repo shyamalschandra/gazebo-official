@@ -24,8 +24,8 @@
 #include <algorithm>
 #include <string>
 
-#include "common/common.hh"
-#include "common/SystemPaths.hh"
+#include "gazebo/common/common.hh"
+#include "gazebo/common/SystemPaths.hh"
 
 namespace urdf2gazebo
 {
@@ -686,7 +686,7 @@ void URDF2Gazebo::insertGazeboExtensionJoint(TiXmlElement *elem,
            ge != gazebo_it->second.end(); ++ge)
       {
         TiXmlElement *physics     = new TiXmlElement("physics");
-        TiXmlElement *physicsOde = new TiXmlElement("ode");
+        TiXmlElement *physicsOde  = new TiXmlElement("ode");
         TiXmlElement *limit       = new TiXmlElement("limit");
 
         // insert stop_cfm, stop_erp, fudge_factor
@@ -718,9 +718,9 @@ void URDF2Gazebo::insertGazeboExtensionJoint(TiXmlElement *elem,
 
         // insert provideFeedback
         if ((*ge)->provideFeedback)
-            addKeyValue(physicsOde, "provide_feedback", "true");
+            addKeyValue(physicsOde, "provideFeedback", "true");
         else
-            addKeyValue(physicsOde, "provide_feedback", "false");
+            addKeyValue(physicsOde, "provideFeedback", "false");
 
         // insert fudge_factor
         if ((*ge)->is_fudge_factor)
