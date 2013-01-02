@@ -36,21 +36,46 @@ namespace gazebo
     /// \brief Bullet sphere collision
     class BulletSphereShape : public SphereShape
     {
-      /// \brief Constructor
+      /// \brief Constructor, empty because the shape is created by SetSize.
       public: BulletSphereShape(CollisionPtr _parent) : SphereShape(_parent) {}
 
       /// \brief Destructor
-      public: virtual ~BulletSphereShape() {}
+      public: virtual ~BulletSphereShape()
+              {
+                BulletCollisionPtr bParent;
+                bParent = boost::shared_dynamic_cast<BulletCollision>(
+                    this->collisionParent);
+                if (bParent && bParent->GetCollisionShape())
+                {
+                  delete static_cast<btSphereShape*>(
+                    bParent->GetCollisionShape());
+                  bParent->SetCollisionShape(NULL);
+                }
+              }
 
-      /// \brief Set the radius
-      public: void SetRadius(const double &_radius)
+      /// \brief Set the radius of the sphere. This is also where the shape is
+      ///        created when SetRadius is called for the first time.
+      /// \param[in] _radius Radius of the sphere.
+      public: void SetRadius(double _radius)
               {
                 SphereShape::SetRadius(_radius);
                 BulletCollisionPtr bParent;
                 bParent = boost::shared_dynamic_cast<BulletCollision>(
                     this->collisionParent);
+                btCollisionShape *bShape = bParent->GetCollisionShape();
 
-                bParent->SetCollisionShape(new btSphereShape(_radius));
+                if (!bShape)
+                {
+                  // Create the shape if it doesn't yet exist
+                  bParent->SetCollisionShape(new btSphereShape(
+                    btScalar(_radius)));
+                }
+                else
+                {
+                  // Re-size the existing btSphereShape
+                  static_cast<btSphereShape*>(bShape)->setUnscaledRadius(
+                    btScalar(_radius));
+                }
               }
     };
     /// \}
