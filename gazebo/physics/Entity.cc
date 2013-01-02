@@ -77,7 +77,6 @@ Entity::~Entity()
   delete this->poseMsg;
   this->poseMsg = NULL;
 
-  this->posePub.reset();
   this->visPub.reset();
   this->requestPub.reset();
   this->poseSub.reset();
@@ -89,7 +88,6 @@ void Entity::Load(sdf::ElementPtr _sdf)
 {
   Base::Load(_sdf);
   this->node->Init(this->GetWorld()->GetName());
-  this->posePub = this->node->Advertise<msgs::Pose>("~/pose/info", 10);
 
   this->poseSub = this->node->Subscribe("~/pose/modify",
       &Entity::OnPoseMsg, this);
@@ -212,14 +210,11 @@ void Entity::StopAnimation()
 //////////////////////////////////////////////////
 void Entity::PublishPose()
 {
-  if (this->posePub && this->posePub->HasConnections())
+  math::Pose relativePose = this->GetRelativePose();
+  if (relativePose != msgs::Convert(*this->poseMsg))
   {
-    math::Pose relativePose = this->GetRelativePose();
-    if (relativePose != msgs::Convert(*this->poseMsg))
-    {
-      msgs::Set(this->poseMsg, relativePose);
-      this->posePub->Publish(*this->poseMsg);
-    }
+    msgs::Set(this->poseMsg, relativePose);
+    this->world->EnqueueMsg(this->poseMsg);
   }
 }
 
@@ -402,11 +397,10 @@ void Entity::SetWorldPoseDefault(const math::Pose &_pose, bool _notify,
 //
 void Entity::SetWorldPose(const math::Pose &_pose, bool _notify, bool _publish)
 {
-  boost::mutex::scoped_lock lock(*this->GetWorld()->GetSetWorldPoseMutex());
-
-  math::Pose oldPose = this->worldPose;
-  (*this.*setWorldPoseFunc)(_pose, _notify, _publish);
-
+  {
+    boost::mutex::scoped_lock lock(*this->GetWorld()->GetSetWorldPoseMutex());
+    (*this.*setWorldPoseFunc)(_pose, _notify, _publish);
+  }
   if (_publish)
     this->PublishPose();
 }
