@@ -32,8 +32,8 @@ namespace gazebo
   {
     class RenderWidget;
     class ToolsWidget;
-
     class ModelListWidget;
+    class BuildingEditorPalette;
 
     class MainWindow : public QMainWindow
     {
@@ -89,6 +89,7 @@ namespace gazebo
       private slots: void OnResetModelOnly();
       private slots: void OnResetWorld();
       private slots: void SetTransparent();
+      private slots: void OnEditBuilding();
 
       /// \brief Callback when topic selection action.
       private slots: void SelectTopic();
@@ -107,6 +108,7 @@ namespace gazebo
       private: void OnSetSelectedEntity(const std::string &_name,
                                         const std::string &_mode);
       private: void OnStats(ConstWorldStatisticsPtr &_msg);
+      private: void OnFinishModel();
 
       private: QToolBar *playToolbar;
 
@@ -135,7 +137,10 @@ namespace gazebo
       private: msgs::Request *requestMsg;
 
       // private: QTreeWidget *treeWidget;
+//      priavte: QWidget
+      private: BuildingEditorPalette *buildingEditorPalette;
       private: QTabWidget *tabWidget;
+      private: QTabWidget *buildingEditorTabWidget;
       private: QMenuBar *menuBar;
 
       /// \brief The filename set via "Save As". This filename is used by
