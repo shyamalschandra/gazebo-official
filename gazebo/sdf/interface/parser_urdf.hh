@@ -67,6 +67,8 @@ namespace urdf2gazebo
       isLaserRetro = false;
       isStopCfm = false;
       isStopErp = false;
+      isStopKp = false;
+      isStopKd = false;
       isInitialJointPosition = false;
       isFudgeFactor = false;
       provideFeedback = false;
@@ -82,6 +84,8 @@ namespace urdf2gazebo
       laserRetro = 101;
       stopCfm = 0;
       stopErp = 0.1;
+      stopKp = 100000000;
+      stopKd = 1;
       initialJointPosition = 0;
       fudgeFactor = 1;
     };
@@ -101,6 +105,8 @@ namespace urdf2gazebo
       isKd = ge.isKd;
       selfCollide = ge.selfCollide;
       isLaserRetro = ge.isLaserRetro;
+      is_stop_kp = ge.isStopKp;
+      is_stop_kd = ge.isStopKd;
       isStopCfm = ge.isStopCfm;
       isStopErp = ge.isStopErp;
       isInitialJointPosition = ge.isInitialJointPosition;
@@ -118,6 +124,8 @@ namespace urdf2gazebo
       kp = ge.kp;
       kd = ge.kd;
       laserRetro = ge.laserRetro;
+      stopKp = ge.stopKp;
+      stopKd = ge.stopKd;
       stopCfm = ge.stopCfm;
       stopErp = ge.stopErp;
       initialJointPosition = ge.initialJointPosition;
@@ -150,8 +158,8 @@ namespace urdf2gazebo
     private: double laserRetro;
 
     // joint, joint limit dynamics
-    private: bool isStopCfm, isStopErp, isInitialJointPosition, isFudgeFactor;
-    private: double stopCfm, stopErp, initialJointPosition, fudgeFactor;
+    private: bool isStopCfm, isStopErp, isStopKp, isStopKd, isInitialJointPosition, isFudgeFactor;
+    private: double stopCfm, stopErp, stopKp, stopKd, initialJointPosition, fudgeFactor;
     private: bool provideFeedback;
 
     // blobs into body or robot
@@ -186,11 +194,24 @@ namespace urdf2gazebo
     public: TiXmlDocument InitModelString(const std::string &_urdfStr,
                                           bool _enforceLimits = true);
 
+    /// \brief convert urdf string to sdf xml document, with option to enforce
+    /// limits.
+    /// \param[in] _urdfStr a string containing model urdf
+    /// \param[in] _enforceLimits option to enforce joint limits
+    /// \return a tinyxml document containing sdf of the model
+    public: TiXmlDocument InitModelString(const std::string &_urdfStr);
+
     /// \brief parser xml string into urdf::Vector3
     /// \param[in] _key XML key where vector3 value might be
     /// \param[in] _scale scalar scale for the vector3
     /// \return a urdf::Vector3
     private: urdf::Vector3 ParseVector3(TiXmlNode* _key, double _scale = 1.0);
+
+    /// \brief parser xml string into urdf::Vector3
+    /// \param[in] _str string where vector3 value might be
+    /// \param[in] _scale scalar scale for the vector3
+    /// \return a urdf::Vector3
+    private: urdf::Vector3 ParseVector3(const std::string &_str, double _scale = 1.0);
 
     /// \brief convert values to string
     /// \param[in] _count number of values in _values array
@@ -226,6 +247,12 @@ namespace urdf2gazebo
     /// things that do not belong in urdf but should be mapped into sdf
     /// @todo: do this using sdf definitions, not hard coded stuff
     private: void ParseGazeboExtension(TiXmlDocument &_urdfXml);
+
+    /// parse if <robot> contains an <origin> tag
+    private: void parseRobotOrigin(TiXmlDocument &_urdfXml);
+
+    /// insert <robot>'s <origin> tag
+    private: void insertRobotOrigin(TiXmlElement *_elem);
 
     /// insert extensions into collision geoms
     private: void InsertGazeboExtensionCollision(TiXmlElement *_elem,
@@ -416,6 +443,10 @@ namespace urdf2gazebo
       boost::shared_ptr<urdf::Geometry> _geometry);
 
     private: std::map<std::string, std::vector<GazeboExtension*> > extensions;
+
+    private: urdf::Pose initialRobotPose;
+    private: std::string collisionExt;
+    private: std::string visualExt;
 
     private: bool enforceLimits;
     private: bool reduceFixedJoints;
