@@ -105,6 +105,18 @@ if (PKG_CONFIG_FOUND)
   endif()
   
   #################################################
+  # Find Simbody
+  message ("\n\nCMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}\n\n\n")
+  set(SimTK_INSTALL_DIR ${SimTK_INSTALL_PREFIX})
+  find_package(Simbody REQUIRED)
+  if (SIMBODY_FOUND)
+    set (HAVE_Simbody TRUE)
+  else()
+    set (HAVE_Simbody FALSE)
+  endif()
+  message ("\n\n\nfound simbody: ${HAVE_Simbody}\n\n\n")
+  
+  #################################################
   # Find tinyxml. Only debian distributions package tinyxml with a pkg-config
   find_path (tinyxml_include_dir tinyxml.h ${tinyxml_include_dirs} ENV CPATH)
   if (NOT tinyxml_include_dir)
@@ -243,7 +255,7 @@ if (PKG_CONFIG_FOUND)
 
   ########################################
   # Find urdfdom and urdfdom_headers
-  pkg_check_modules(urdfdom_headers urdfdom_headers)
+  find_package(urdfdom_headers)
   if (NOT urdfdom_headers_FOUND)
     BUILD_WARNING ("urdfdom_headers not found, urdf parser will not be built.")
   endif ()
@@ -251,7 +263,7 @@ if (PKG_CONFIG_FOUND)
     set (HAVE_URDFDOM_HEADERS TRUE)
   endif ()
 
-  pkg_check_modules(urdfdom urdfdom)
+  find_package(urdfdom)
   if (NOT urdfdom_FOUND)
     BUILD_WARNING ("urdfdom not found, urdf parser will not be built.")
   endif ()
@@ -259,7 +271,7 @@ if (PKG_CONFIG_FOUND)
     set (HAVE_URDFDOM TRUE)
   endif ()
 
-  pkg_check_modules(console_bridge console_bridge)
+  find_package(console_bridge)
   if (NOT console_bridge_FOUND)
     BUILD_WARNING ("console_bridge not found, urdf parser will not be built.")
   endif ()
