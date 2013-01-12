@@ -37,6 +37,7 @@ namespace gazebo
     extern QAction *g_newModelAct;
     extern QAction *g_resetModelsAct;
     extern QAction *g_resetWorldAct;
+    extern QAction *g_editBuildingAct;
 
     extern QAction *g_playAct;
     extern QAction *g_pauseAct;
@@ -67,6 +68,11 @@ namespace gazebo
     extern QAction *g_rotateAct;
 
     extern QAction *g_topicVisAct;
+
+    extern QAction *g_editorSaveAct;
+    extern QAction *g_editorDiscardAct;
+    extern QAction *g_editorDoneAct;
+    extern QAction *g_editorExitAct;
 
     /// \class DeleteAction Actions.hh gui/gui.hh
     /// \brief Custom delete action.

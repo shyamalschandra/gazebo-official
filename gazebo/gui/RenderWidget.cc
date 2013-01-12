@@ -26,6 +26,7 @@
 #include "gui/GuiEvents.hh"
 #include "gui/TimePanel.hh"
 #include "gui/RenderWidget.hh"
+#include "gui/model_editor/EditorWidget.hh"
 
 using namespace gazebo;
 using namespace gui;
@@ -80,6 +81,19 @@ RenderWidget::RenderWidget(QWidget *_parent)
   this->glWidget = new GLWidget(this->mainFrame);
   rendering::ScenePtr scene = rendering::create_scene(gui::get_world(), true);
 
+  this->editorWidget = new EditorWidget(this);
+  this->editorWidget->setSizePolicy(QSizePolicy::Expanding,
+      QSizePolicy::Expanding);
+  this->editorWidget->hide();
+
+  this->viewOnlyLabel = new QLabel("Building is View Only", this->glWidget);
+  this->viewOnlyLabel->resize(
+      viewOnlyLabel->fontMetrics().width(this->viewOnlyLabel->text()),
+      viewOnlyLabel->fontMetrics().height());
+  this->viewOnlyLabel->setStyleSheet(
+      "QLabel { background-color : white; color : gray; }");
+  this->viewOnlyLabel->setVisible(false);
+
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
   TimePanel *timePanel = new TimePanel(this);
@@ -87,9 +101,10 @@ RenderWidget::RenderWidget(QWidget *_parent)
   QHBoxLayout *playControlLayout = new QHBoxLayout;
   playControlLayout->setContentsMargins(0, 0, 0, 0);
 
-  QFrame *bottomFrame = new QFrame;
-  bottomFrame->setObjectName("renderBottomFrame");
-  bottomFrame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+  this->bottomFrame = new QFrame;
+  this->bottomFrame->setObjectName("renderBottomFrame");
+  this->bottomFrame->setSizePolicy(QSizePolicy::Expanding,
+      QSizePolicy::Minimum);
 
   QFrame *playFrame = new QFrame;
   QToolBar *playToolbar = new QToolBar;
@@ -111,11 +126,29 @@ RenderWidget::RenderWidget(QWidget *_parent)
                              QSizePolicy::Minimum));
   bottomPanelLayout->setSpacing(0);
   bottomPanelLayout->setContentsMargins(0, 0, 0, 0);
-  bottomFrame->setLayout(bottomPanelLayout);
+  this->bottomFrame->setLayout(bottomPanelLayout);
 
-  frameLayout->addWidget(toolFrame);
-  frameLayout->addWidget(this->glWidget);
-  frameLayout->addWidget(bottomFrame);
+
+  QWidget *render3DWidget = new QWidget(this);
+  QVBoxLayout *render3DLayout = new QVBoxLayout;
+  render3DLayout->addWidget(toolFrame);
+  render3DLayout->addWidget(this->glWidget);
+  render3DLayout->setContentsMargins(0, 0, 0, 0);
+  render3DWidget->setLayout(render3DLayout);
+
+  QSplitter *splitter = new QSplitter(this);
+  splitter->addWidget(this->editorWidget);
+  splitter->addWidget(render3DWidget);
+  QList<int> sizes;
+  sizes.push_back(300);
+  sizes.push_back(300);
+  splitter->setSizes(sizes);
+  splitter->setStretchFactor(0, 1);
+  splitter->setStretchFactor(1, 1);
+  splitter->setOrientation(Qt::Vertical);
+
+  frameLayout->addWidget(splitter);
+  frameLayout->addWidget(this->bottomFrame);
   frameLayout->setContentsMargins(0, 0, 0, 0);
   frameLayout->setSpacing(0);
 
@@ -206,16 +239,33 @@ void RenderWidget::update()
   this->glWidget->update();
 }
 
+/////////////////////////////////////////////////
+void RenderWidget::ShowEditor(bool _show)
+{
+  if (_show)
+  {
+    this->editorWidget->show();
+    this->viewOnlyLabel->setVisible(true);
+    this->bottomFrame->hide();
+  }
+  else
+  {
+    this->editorWidget->hide();
+    this->viewOnlyLabel->setVisible(false);
+    this->bottomFrame->show();
+  }
+}
+
+/////////////////////////////////////////////////
 void RenderWidget::RemoveScene(const std::string &_name)
 {
   this->clear = true;
   this->clearName = _name;
 }
 
+/////////////////////////////////////////////////
 void RenderWidget::CreateScene(const std::string &_name)
 {
   this->create = true;
   this->createName = _name;
 }
-
-

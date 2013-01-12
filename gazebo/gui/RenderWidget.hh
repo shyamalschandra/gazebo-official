@@ -34,6 +34,8 @@ namespace gazebo
 
   namespace gui
   {
+    class EditorWidget;
+
     class RenderWidget : public QWidget
     {
       Q_OBJECT
@@ -43,13 +45,17 @@ namespace gazebo
       public: void RemoveScene(const std::string &_name);
       public: void CreateScene(const std::string &_name);
 
+      public: void ShowEditor(bool _mode);
+
       private slots: virtual void update();
 
       private: void OnFullScreen(bool &_value);
 
       private: QHBoxLayout *bottomBarLayout;
       private: GLWidget *glWidget;
+      private: EditorWidget *editorWidget;
       private: QFrame *mainFrame;
+      private: QFrame *bottomFrame;
       private: QLabel *xyzLabel;
       private: QLineEdit *xPosEdit;
       private: QLineEdit *yPosEdit;
@@ -65,6 +71,8 @@ namespace gazebo
       private: QToolBar *mouseToolbar;
       private: QToolBar *editToolbar;
 
+      private: QLabel *viewOnlyLabel;
+
       private: std::vector<event::ConnectionPtr> connections;
 
       private: bool clear;
@@ -77,5 +85,3 @@ namespace gazebo
   }
 }
 #endif
-
-
