@@ -19,26 +19,37 @@
 #include "physics/physics.hh"
 #include "SimplePendulumIntegrator.hh"
 
+#define PHYSICS_TOL 1e-2
 using namespace gazebo;
 class PhysicsTest : public ServerFixture
 {
   public: void EmptyWorld(std::string _worldFile);
+  public: void SpawnDrop(std::string _worldFile);
+  public: void SpawnDropCoGOffset(std::string _worldFile);
+  public: void SimplePendulum(std::string _worldFile);
 };
+
 
 void PhysicsTest::EmptyWorld(std::string _worldFile)
 {
   // Load an empty world
   Load(_worldFile, true);
   physics::WorldPtr world = physics::get_world("default");
-  EXPECT_TRUE(world != NULL);
+  ASSERT_TRUE(world != NULL);
 
-  // simulate a couple seconds
-  world->StepWorld(2000);
+  // simulate 1 step
+  world->StepWorld(1);
   double t = world->GetSimTime().Double();
   // verify that time moves forward
   EXPECT_GT(t, 0);
 
-  Unload();
+  // simulate a few steps
+  int steps = 20;
+  world->StepWorld(steps);
+  double dt = world->GetPhysicsEngine()->GetStepTime();
+  EXPECT_GT(dt, 0);
+  t = world->GetSimTime().Double();
+  EXPECT_GT(t, 0.99*dt*static_cast<double>(steps+1));
 }
 
 TEST_F(PhysicsTest, EmptyWorldODE)
@@ -50,6 +61,332 @@ TEST_F(PhysicsTest, EmptyWorldODE)
 TEST_F(PhysicsTest, EmptyWorldBullet)
 {
   EmptyWorld("worlds/empty_bullet.world");
+}
+#endif  // HAVE_BULLET
+
+void PhysicsTest::SpawnDrop(std::string _worldFile)
+{
+  // load an empty world
+  Load(_worldFile, true);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // check the gravity vector
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  math::Vector3 g = physics->GetGravity();
+  // Assume gravity vector points down z axis only.
+  EXPECT_EQ(g.x, 0);
+  EXPECT_EQ(g.y, 0);
+  EXPECT_LT(g.z, 0);
+
+  // get physics time step
+  double dt = physics->GetStepTime();
+  EXPECT_GT(dt, 0);
+
+  // spawn some simple shapes and check to see that they start falling
+  double z0 = 3;
+  SpawnBox("test_box", math::Vector3(1, 1, 1), math::Vector3(0, 0, z0),
+    math::Vector3::Zero);
+  SpawnSphere("test_sphere", math::Vector3(4, 0, z0), math::Vector3::Zero);
+  SpawnCylinder("test_cylinder", math::Vector3(8, 0, z0), math::Vector3::Zero);
+
+  std::list<std::string> model_names;
+  model_names.push_back("test_box");
+  model_names.push_back("test_sphere");
+  model_names.push_back("test_cylinder");
+
+  int steps = 2;
+  physics::ModelPtr model;
+  math::Pose pose1, pose2;
+  math::Vector3 vel1, vel2;
+
+  double t, x0 = 0;
+  for (std::list<std::string>::iterator iter = model_names.begin();
+    iter != model_names.end(); ++iter)
+  {
+    // Make sure the model is loaded
+    model = world->GetModel(*iter);
+    if (model != NULL)
+    {
+      gzdbg << "Check freefall of model " << *iter << '\n';
+      // Step once and check downward z velocity
+      world->StepWorld(1);
+      vel1 = model->GetWorldLinearVel();
+      t = world->GetSimTime().Double();
+      EXPECT_EQ(vel1.x, 0);
+      EXPECT_EQ(vel1.y, 0);
+      EXPECT_NEAR(vel1.z, g.z*t, -g.z*t*PHYSICS_TOL);
+      // Need to step at least twice to check decreasing z position
+      world->StepWorld(steps - 1);
+      pose1 = model->GetWorldPose();
+      if (*iter == "test_box")
+        x0 = 0;
+      else if (*iter == "test_sphere")
+        x0 = 4;
+      else if (*iter == "test_cylinder")
+        x0 = 8;
+      EXPECT_EQ(pose1.pos.x, x0);
+      EXPECT_EQ(pose1.pos.y, 0);
+      EXPECT_NEAR(pose1.pos.z, z0 - g.z/2*t*t, (z0-g.z/2*t*t)*PHYSICS_TOL);
+
+      // Check once more and just make sure they keep falling
+      world->StepWorld(steps);
+      vel2 = model->GetWorldLinearVel();
+      pose2 = model->GetWorldPose();
+      EXPECT_LT(vel2.z, vel1.z);
+      EXPECT_LT(pose2.pos.z, pose1.pos.z);
+    }
+    else
+    {
+      gzerr << "Error loading model " << *iter << '\n';
+      EXPECT_TRUE(model != NULL);
+    }
+  }
+
+  // Wait until they've all hit the ground plane
+  double tHit = sqrt(2*(z0-0.5) / (-g.z));
+  // Time to advance, allow 0.5 s settling time.
+  double dtHit = tHit+0.5 - world->GetSimTime().Double();
+  steps = ceil(dtHit / dt);
+  EXPECT_GT(steps, 0);
+  world->StepWorld(steps);
+
+  for (std::list<std::string>::iterator iter = model_names.begin();
+    iter != model_names.end(); ++iter)
+  {
+    // Make sure the model is loaded
+    model = world->GetModel(*iter);
+    if (model != NULL)
+    {
+      gzdbg << "Check ground contact of model " << *iter << '\n';
+      // Check that velocity is small
+      vel1 = model->GetWorldLinearVel();
+      EXPECT_NEAR(vel1.x, 0, PHYSICS_TOL);
+      EXPECT_NEAR(vel1.y, 0, PHYSICS_TOL);
+      EXPECT_NEAR(vel1.z, 0, PHYSICS_TOL);
+
+      // Check that model is resting on ground
+      pose1 = model->GetWorldPose();
+      if (*iter == "test_box")
+        x0 = 0;
+      else if (*iter == "test_sphere")
+        x0 = 4;
+      else if (*iter == "test_cylinder")
+        x0 = 8;
+      EXPECT_NEAR(pose1.pos.x, x0, PHYSICS_TOL);
+      EXPECT_NEAR(pose1.pos.y, 0, PHYSICS_TOL);
+      EXPECT_NEAR(pose1.pos.z, 0.5, PHYSICS_TOL);
+    }
+    else
+    {
+      gzerr << "Error loading model " << *iter << '\n';
+      EXPECT_TRUE(model != NULL);
+    }
+  }
+}
+
+TEST_F(PhysicsTest, SpawnDropODE)
+{
+  SpawnDrop("worlds/empty.world");
+}
+
+#ifdef HAVE_BULLET
+TEST_F(PhysicsTest, SpawnDropBullet)
+{
+  SpawnDrop("worlds/empty_bullet.world");
+}
+#endif  // HAVE_BULLET
+
+void PhysicsTest::SpawnDropCoGOffset(std::string _worldFile)
+{
+  // load an empty world
+  Load(_worldFile, true);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // check the gravity vector
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  math::Vector3 g = physics->GetGravity();
+  // Assume gravity vector points down z axis only.
+  EXPECT_EQ(g.x, 0);
+  EXPECT_EQ(g.y, 0);
+  EXPECT_LT(g.z, 0);
+
+  // get physics time step
+  double dt = physics->GetStepTime();
+  EXPECT_GT(dt, 0);
+
+  // spawn some spheres and check to see that they start falling
+  double z0 = 3;
+  double r1 = 0.5, r2 = 1.5;
+  math::Vector3 v30 = math::Vector3::Zero;
+  math::Vector3 cog;
+
+  // sphere1 and sphere2 have c.g. at center of sphere, different sizes
+  SpawnSphere("sphere1", math::Vector3(0, 0, z0+r1), v30, v30, r1);
+  SpawnSphere("sphere2", math::Vector3(4, 0, z0+r2), v30, v30, r2);
+
+  // sphere3 has c.g. below the center
+  cog.Set(0, 0, -r1);
+  SpawnSphere("sphere3", math::Vector3(8, 0, z0+r2), v30, cog, r2);
+
+  // sphere4 has c.g. above the center
+  cog.Set(0, 0, r1);
+  SpawnSphere("sphere4", math::Vector3(-4, 0, z0+r2), v30, cog, r2);
+
+  // sphere5 has c.g. to the side; it will roll
+  cog.Set(0, r1, 0);
+  SpawnSphere("sphere5", math::Vector3(-8, 0, z0+r2), v30, cog, r2);
+
+  std::list<std::string> model_names;
+  model_names.push_back("sphere1");
+  model_names.push_back("sphere2");
+  model_names.push_back("sphere3");
+  model_names.push_back("sphere4");
+  model_names.push_back("sphere5");
+
+  int steps = 2;
+  physics::ModelPtr model;
+  math::Pose pose1, pose2;
+  math::Vector3 vel1, vel2;
+
+  double t, x0 = 0, radius;
+  for (std::list<std::string>::iterator iter = model_names.begin();
+    iter != model_names.end(); ++iter)
+  {
+    // Make sure the model is loaded
+    model = world->GetModel(*iter);
+    if (model != NULL)
+    {
+      gzdbg << "Check freefall of model " << *iter << '\n';
+      // Step once and check downward z velocity
+      world->StepWorld(1);
+      vel1 = model->GetWorldLinearVel();
+      t = world->GetSimTime().Double();
+      radius = r2;
+      EXPECT_EQ(vel1.x, 0);
+      EXPECT_EQ(vel1.y, 0);
+      EXPECT_NEAR(vel1.z, g.z*t, -g.z*t*PHYSICS_TOL);
+      // Need to step at least twice to check decreasing z position
+      world->StepWorld(steps - 1);
+      pose1 = model->GetWorldPose();
+      if (*iter == "sphere1")
+      {
+        x0 = 0;
+        radius = r1;
+      }
+      else if (*iter == "sphere2")
+        x0 = 4;
+      else if (*iter == "sphere3")
+        x0 = 8;
+      else if (*iter == "sphere4")
+        x0 = -4;
+      else if (*iter == "sphere5")
+        x0 = -8;
+      EXPECT_EQ(pose1.pos.x, x0);
+      EXPECT_EQ(pose1.pos.y, 0);
+      EXPECT_NEAR(pose1.pos.z, z0+radius - g.z/2*t*t,
+                  (z0+radius-g.z/2*t*t)*PHYSICS_TOL);
+
+      // Check once more and just make sure they keep falling
+      world->StepWorld(steps);
+      vel2 = model->GetWorldLinearVel();
+      pose2 = model->GetWorldPose();
+      EXPECT_LT(vel2.z, vel1.z);
+      EXPECT_LT(pose2.pos.z, pose1.pos.z);
+    }
+    else
+    {
+      gzerr << "Error loading model " << *iter << '\n';
+      EXPECT_TRUE(model != NULL);
+    }
+  }
+
+  // Wait until they've all hit the ground plane
+  double tHit = sqrt(2*z0 / (-g.z));
+  // Time to advance, allow 0.5 s settling time.
+  double dtHit = tHit+0.5 - world->GetSimTime().Double();
+  steps = ceil(dtHit / dt);
+  EXPECT_GT(steps, 0);
+  world->StepWorld(steps);
+
+  for (std::list<std::string>::iterator iter = model_names.begin();
+    iter != model_names.end(); ++iter)
+  {
+    // Make sure the model is loaded
+    model = world->GetModel(*iter);
+    if (model != NULL)
+    {
+      gzdbg << "Check ground contact of model " << *iter << '\n';
+      // Check that velocity is small
+      vel1 = model->GetWorldLinearVel();
+      vel2 = model->GetWorldAngularVel();
+      if (*iter != "sphere5")
+      {
+        EXPECT_NEAR(vel1.x, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel1.y, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel1.z, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel2.x, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel2.y, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel2.z, 0, PHYSICS_TOL);
+      }
+      else
+      {
+        // Should roll in Y direction
+        EXPECT_GT(vel1.y,  0.1);
+        EXPECT_LT(vel2.x, -0.1);
+        // following should still be near zero
+        EXPECT_NEAR(vel1.x, 0, PHYSICS_TOL);
+        gzwarn << "The following test currently fails because I'm expecting "
+               << "velocity measurement in the link frame.\n"
+               << "See Issue #376\n";
+        EXPECT_NEAR(vel1.z, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel2.y, 0, PHYSICS_TOL);
+        EXPECT_NEAR(vel2.z, 0, PHYSICS_TOL);
+      }
+
+      // Check that model is resting on ground
+      pose1 = model->GetWorldPose();
+      radius = r2;
+      if (*iter == "sphere1")
+      {
+        x0 = 0;
+        radius = r1;
+      }
+      else if (*iter == "sphere2")
+        x0 = 4;
+      else if (*iter == "sphere3")
+        x0 = 8;
+      else if (*iter == "sphere4")
+        x0 = -4;
+      else if (*iter == "sphere5")
+        x0 = -8;
+      EXPECT_NEAR(pose1.pos.x, x0, PHYSICS_TOL);
+      EXPECT_NEAR(pose1.pos.z, radius, PHYSICS_TOL);
+      if (*iter != "sphere5")
+        EXPECT_NEAR(pose1.pos.y, 0, PHYSICS_TOL);
+      else
+        EXPECT_GT(pose1.pos.y,  0.5);
+    }
+    else
+    {
+      gzerr << "Error loading model " << *iter << '\n';
+      EXPECT_TRUE(model != NULL);
+    }
+  }
+}
+
+TEST_F(PhysicsTest, SpawnDropCoGOffsetODE)
+{
+  SpawnDropCoGOffset("worlds/empty.world");
+}
+
+#ifdef HAVE_BULLET
+TEST_F(PhysicsTest, SpawnDropCoGOffsetBullet)
+{
+  SpawnDropCoGOffset("worlds/empty_bullet.world");
 }
 #endif  // HAVE_BULLET
 
@@ -369,9 +706,21 @@ TEST_F(PhysicsTest, CollisionTest)
 }
 
 
-TEST_F(PhysicsTest, SimplePendulumTest)
+TEST_F(PhysicsTest, SimplePendulumODE)
 {
-  Load("worlds/simple_pendulums.world", true);
+  SimplePendulum("worlds/simple_pendulums.world");
+}
+
+#ifdef HAVE_BULLET
+TEST_F(PhysicsTest, SimplePendulumBullet)
+{
+  SimplePendulum("worlds/simple_pendulums_bullet.world");
+}
+#endif  // HAVE_BULLET
+
+void PhysicsTest::SimplePendulum(std::string _worldFile)
+{
+  Load(_worldFile, true);
   physics::WorldPtr world = physics::get_world("default");
   EXPECT_TRUE(world != NULL);
 

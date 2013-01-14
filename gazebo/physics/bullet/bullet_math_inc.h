@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright 2012 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,12 @@
  *
 */
 
-#ifndef BULLET_INC_H_
-#define BULLET_INC_H_
+#ifndef BULLET_MATH_INC_H_
+#define BULLET_MATH_INC_H_
 
 // This disables warning messages for ODE
 #pragma GCC system_header
-#include <btBulletDynamicsCommon.h>
-#include <btBulletCollisionCommon.h>
-#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
+#include <LinearMath/btVector3.h>
+#include <LinearMath/btTransform.h>
 
 #endif

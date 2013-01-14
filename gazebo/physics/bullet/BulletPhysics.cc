@@ -280,11 +280,11 @@ void BulletPhysics::UpdatePhysics()
   // need to lock, otherwise might conflict with world resetting
   this->physicsUpdateMutex->lock();
 
-  common::Time currTime =  this->world->GetRealTime();
+  // common::Time currTime =  this->world->GetRealTime();
 
   this->dynamicsWorld->stepSimulation(
-      (currTime - this->lastUpdateTime).Float(), 7, this->stepTimeDouble);
-  this->lastUpdateTime = currTime;
+      this->stepTimeDouble, 1, this->stepTimeDouble);
+  // this->lastUpdateTime = currTime;
 
   this->physicsUpdateMutex->unlock();
 }
@@ -307,8 +307,11 @@ void BulletPhysics::Reset()
 //////////////////////////////////////////////////
 void BulletPhysics::SetStepTime(double _value)
 {
-  this->sdf->GetElement("ode")->GetElement(
-      "solver")->GetAttribute("dt")->Set(_value);
+  if (this->sdf->HasElement("bullet") &&
+      this->sdf->GetElement("bullet")->HasElement("dt"))
+    this->sdf->GetElement("bullet")->GetElement("dt")->Set(_value);
+  else
+    gzerr << "Unable to set bullet step time\n";
 
   this->stepTimeDouble = _value;
 }
@@ -412,33 +415,6 @@ void BulletPhysics::ConvertMass(InertialPtr /*_inertial*/,
 void BulletPhysics::ConvertMass(void * /*_engineMass*/,
                                 const InertialPtr /*_inertial*/)
 {
-}
-
-//////////////////////////////////////////////////
-math::Pose BulletPhysics::ConvertPose(const btTransform &_bt)
-{
-  math::Pose pose;
-  pose.pos.x = _bt.getOrigin().getX();
-  pose.pos.y = _bt.getOrigin().getY();
-  pose.pos.z = _bt.getOrigin().getZ();
-
-  pose.rot.w = _bt.getRotation().getW();
-  pose.rot.x = _bt.getRotation().getX();
-  pose.rot.y = _bt.getRotation().getY();
-  pose.rot.z = _bt.getRotation().getZ();
-
-  return pose;
-}
-
-//////////////////////////////////////////////////
-btTransform BulletPhysics::ConvertPose(const math::Pose &_pose)
-{
-  btTransform trans;
-
-  trans.setOrigin(btVector3(_pose.pos.x, _pose.pos.y, _pose.pos.z));
-  trans.setRotation(btQuaternion(_pose.rot.x, _pose.rot.y,
-                                 _pose.rot.z, _pose.rot.w));
-  return trans;
 }
 
 //////////////////////////////////////////////////
