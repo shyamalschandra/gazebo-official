@@ -146,7 +146,7 @@ void LaserView::OnScan(ConstLaserScanStampedPtr &_msg)
   for (unsigned int i = 0;
        i < static_cast<unsigned int>(_msg->scan().ranges_size()); i++)
   {
-    r = _msg->scan().ranges(i) + _msg->scan().range_min();
+    r = _msg->scan().ranges(i);
 
     if (i+1 >= this->laserItem->GetRangeCount())
       this->laserItem->AddRange(r);
@@ -236,6 +236,8 @@ void LaserView::LaserItem::paint(QPainter *_painter,
 
     double rangeScaled = this->ranges[index] * this->scale;
     double rangeMaxScaled = this->rangeMax * this->scale;
+
+    this->indexAngle = this->angleMin + index * this->angleStep;
 
     // Draw the ray
     x1 = rangeScaled * cos(this->indexAngle);
@@ -439,7 +441,7 @@ void LaserView::LaserItem::Update(double _angleMin, double _angleMax,
   if (this->rangeMin > 0.0)
   {
     // Create the inner circle that denotes the min range
-    for (int i = this->ranges.size()-1; i >=0 ; --i)
+    for (unsigned int i = 0; i < this->ranges.size(); ++i)
     {
       QPointF pt(this->rangeMin * this->scale * cos(angle),
           -this->rangeMin * this->scale * sin(angle));
@@ -469,6 +471,12 @@ void LaserView::LaserItem::hoverEnterEvent(QGraphicsSceneHoverEvent *_event)
 {
   this->indexAngle = atan2(-_event->pos().y(), _event->pos().x());
 
+  if (this->indexAngle < this->angleMin)
+    this->indexAngle = this->angleMin;
+
+  if (this->indexAngle > this->angleMax)
+    this->indexAngle = this->angleMax;
+
   QApplication::setOverrideCursor(Qt::CrossCursor);
 }
 
@@ -484,4 +492,10 @@ void LaserView::LaserItem::hoverLeaveEvent(
 void LaserView::LaserItem::hoverMoveEvent(QGraphicsSceneHoverEvent *_event)
 {
   this->indexAngle = atan2(-_event->pos().y(), _event->pos().x());
+
+  if (this->indexAngle < this->angleMin)
+    this->indexAngle = this->angleMin;
+
+  if (this->indexAngle > this->angleMax)
+    this->indexAngle = this->angleMax;
 }
