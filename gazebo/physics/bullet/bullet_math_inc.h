@@ -14,35 +14,13 @@
  * limitations under the License.
  *
 */
-#include "gazebo/common/Exception.hh"
-#include "gazebo/common/LogRecord.hh"
-#include "gazebo/Server.hh"
 
-//////////////////////////////////////////////////
-int main(int argc, char **argv)
-{
-  gazebo::Server *server = NULL;
+#ifndef BULLET_MATH_INC_H_
+#define BULLET_MATH_INC_H_
 
-  try
-  {
-    gazebo::common::LogRecord::Instance()->Init("server");
+// This disables warning messages for ODE
+#pragma GCC system_header
+#include <LinearMath/btVector3.h>
+#include <LinearMath/btTransform.h>
 
-    server = new gazebo::Server();
-    if (!server->ParseArgs(argc, argv))
-      return -1;
-
-    server->Run();
-    server->Fini();
-
-    delete server;
-  }
-  catch(gazebo::common::Exception &_e)
-  {
-    _e.Print();
-
-    server->Fini();
-    delete server;
-  }
-
-  return 0;
-}
+#endif
