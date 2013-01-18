@@ -24,8 +24,8 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <string>
 
+#include "gazebo/sdf/sdf.hh"
 #include "gazebo/transport/TransportTypes.hh"
-
 #include "gazebo/physics/PhysicsTypes.hh"
 
 namespace gazebo
@@ -93,6 +93,10 @@ namespace gazebo
 
       /// \brief Update the physics engine.
       public: virtual void UpdatePhysics() {}
+
+      /// \brief Create a new model.
+      /// \param[in] _parent Parent object.
+      public: virtual ModelPtr CreateModel(BasePtr _parent);
 
       /// \brief Create a new body.
       /// \param[in] _parent Parent model for the link.
