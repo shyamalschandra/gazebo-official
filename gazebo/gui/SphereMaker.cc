@@ -175,7 +175,7 @@ std::string SphereMaker::GetSDFString()
     << "      <material>"
     << "        <script>"
     << "          <uri>file://media/materials/scripts/gazebo.material</uri>"
-    << "          <name>Gazebo/Grey</name>"
+    << "          <name>Gazebo/Blue</name>"
     << "        </script>"
     << "      </material>"
     << "    </visual>"
