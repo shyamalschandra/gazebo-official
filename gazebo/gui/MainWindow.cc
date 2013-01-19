@@ -45,6 +45,8 @@
 
 #include "sdf/sdf.hh"
 
+#include "gazebo_config.h"
+
 using namespace gazebo;
 using namespace gui;
 
@@ -373,17 +375,57 @@ void MainWindow::Save()
 /////////////////////////////////////////////////
 void MainWindow::About()
 {
-  std::string helpTxt = "Gazebo is a 3D multi-robot simulator with dynamics. ";
-  helpTxt += "It is capable of simulating articulated robots in complex and ";
-  helpTxt += "realistic environments.\n\n";
+  std::string helpTxt;
 
-  helpTxt += "Web site:\t\thttp://gazebosim.org\n";
-  helpTxt += "Tutorials:\t\thttp://gazebosim.org/wiki/tutorials\n";
-  helpTxt += "User Guide:\t\thttp://gazebosim.org/user_guide\n";
-  helpTxt += "API:\t\thttp://gazebosim.org/api\n";
-  helpTxt += "SDF:\t\thttp://gazebosim.org/sdf\n";
-  helpTxt += "Messages:\t\thttp://gazebosim.org/msgs\n";
-  QMessageBox::about(this, tr("About Gazebo"), tr(helpTxt.c_str()));
+  helpTxt = "<table>"
+    "<tr><td style='padding-right:20px'>"
+    "<img src=':images/gazebo_neg_60x71.png'/></td>"
+    "<td>";
+  helpTxt += GAZEBO_VERSION_HEADER;
+  helpTxt += "</td></tr></table>";
+
+  helpTxt += "<div style='margin-left: 10px'>"
+  "<div>"
+    "<table>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>Tutorials:</td>"
+        "<td><a href='http://gazebosim.org/wiki/tutorials' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/wiki/tutorials</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>User Guide:</td>"
+        "<td><a href='http://gazebosim.org/user_guide' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/user_guide</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>API:</td>"
+        "<td><a href='http://gazebosim.org/api' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/api</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>SDF:</td>"
+        "<td><a href='http://gazebosim.org/sdf' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/sdf</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>Messages:</td>"
+        "<td><a href='http://gazebosim.org/msgs' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/msgs</a></td>"
+      "</tr>"
+    "</table>"
+  "</div>";
+
+  QPixmap icon(":images/gazebo_neg_60x71.png");
+  QMessageBox aboutBox(this);
+  aboutBox.setWindowTitle("About Gazebo");
+  aboutBox.setTextFormat(Qt::RichText);
+  aboutBox.setText(QString::fromStdString(helpTxt));
+  aboutBox.exec();
 }
 
 /////////////////////////////////////////////////
