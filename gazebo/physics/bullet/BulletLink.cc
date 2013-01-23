@@ -39,7 +39,6 @@ BulletLink::BulletLink(EntityPtr _parent)
 {
   this->rigidLink = NULL;
   this->compoundShape = new btCompoundShape();
-  this->motionState = new BulletMotionState(this);
 }
 
 //////////////////////////////////////////////////
@@ -73,8 +72,10 @@ void BulletLink::Init()
   math::Vector3 cogVec = this->inertial->GetCoG();
 
   // Set the initial pose of the body
-  this->motionState->SetWorldPose(this->GetWorldPose());
-  this->motionState->SetCoG(cogVec);
+  this->motionState.reset(new BulletMotionState(
+    boost::shared_dynamic_cast<Link>(shared_from_this())));
+  // this->motionState->SetWorldPose(this->GetWorldPose());
+  // this->motionState->SetCoG(cogVec);
 
   for (Base_V::iterator iter = this->children.begin();
        iter != this->children.end(); ++iter)
@@ -89,15 +90,21 @@ void BulletLink::Init()
       relativePose.pos -= cogVec;
 
       this->compoundShape->addChildShape(
-          BulletPhysics::ConvertPose(relativePose), shape);
+          BulletTypes::ConvertPose(relativePose), shape);
     }
   }
 
-  this->compoundShape->calculateLocalInertia(mass, fallInertia);
+  // this->compoundShape->calculateLocalInertia(mass, fallInertia);
+  fallInertia = BulletTypes::ConvertVector3(
+    this->inertial->GetPrincipalMoments());
+  // TODO: inertia products not currently used
+  this->inertial->SetInertiaMatrix(fallInertia.x(), fallInertia.y(),
+                                   fallInertia.z(), 0, 0, 0);
 
   // Create a construction info object
   btRigidBody::btRigidBodyConstructionInfo
-    rigidLinkCI(mass, this->motionState, this->compoundShape, fallInertia);
+    rigidLinkCI(mass, this->motionState.get(), this->compoundShape,
+    fallInertia);
 
   rigidLinkCI.m_linearDamping = this->GetLinearDamping();
   rigidLinkCI.m_angularDamping = this->GetAngularDamping();
@@ -187,7 +194,7 @@ void BulletLink::SetSelfCollide(bool /*_collide*/)
 
   btTransform trans;
   math::Pose relativePose = _collision->GetRelativePose();
-  trans = BulletPhysics::ConvertPose(relativePose);
+  trans = BulletTypes::ConvertPose(relativePose);
 
   bcollision->SetCompoundShapeIndex(this->compoundShape->getNumChildShapes());
   this->compoundShape->addChildShape(trans, bcollision->GetCollisionShape());
@@ -376,7 +383,7 @@ void BulletLink::SetAngularDamping(double _damping)
   {
     // Set the pose of the _collision in Bullet
     this->compoundShape->updateChildTransform(i,
-        BulletPhysics::ConvertPose(_newPose));
+        BulletTypes::ConvertPose(_newPose));
   }
 }*/
 
