@@ -43,7 +43,8 @@ typedef boost::archive::iterators::base64_from_binary<
 //////////////////////////////////////////////////
 LogRecord::LogRecord()
 {
-  this->stop = true;
+  this->running = false;
+  this->paused = false;
   this->initialized = false;
 
   // Get the user's home directory
@@ -52,15 +53,11 @@ LogRecord::LogRecord()
   char *homePath = getenv("HOME");
 
   if (!homePath)
-    this->logPath = boost::filesystem::path("/tmp/gazebo");
+    this->logBasePath = boost::filesystem::path("/tmp/gazebo");
   else
-    this->logPath = boost::filesystem::path(homePath);
+    this->logBasePath = boost::filesystem::path(homePath);
 
-  this->logPath /= "/.gazebo/log/";
-
-  // Add the current time
-  boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-  this->logPath /= boost::posix_time::to_iso_extended_string(now);
+  this->logBasePath /= "/.gazebo/log/";
 
   this->logsEnd = this->logs.end();
 }
@@ -70,41 +67,56 @@ LogRecord::~LogRecord()
 {
   // Stop the write thread.
   this->Stop();
-
-  // Delete all the log objects
-  for (Log_M::iterator iter = this->logs.begin();
-       iter != this->logs.end(); ++iter)
-  {
-    delete iter->second;
-  }
-
-  this->logs.clear();
 }
 
 //////////////////////////////////////////////////
 bool LogRecord::Init(const std::string &_subdir)
 {
-  if (this->initialized)
+  if (_subdir.empty())
+  {
+    gzerr << "LogRecord initialization directory is empty." << std::endl;
     return false;
+  }
 
-  if (!_subdir.empty())
-    this->logPath /=  _subdir;
+  this->logSubDir = _subdir;
 
-  this->logsEnd = this->logs.end();
+  this->ClearLogs();
+
   this->initialized = true;
+  this->running = false;
+  this->paused = false;
 
   return true;
 }
 
-
 //////////////////////////////////////////////////
-void LogRecord::Start(const std::string &_encoding)
+bool LogRecord::Start(const std::string &_encoding)
 {
   boost::mutex::scoped_lock lock(this->controlMutex);
 
+  // Make sure ::Init has been called.
+  if (!this->initialized)
+  {
+    gzerr << "LogRecord has not been initialized." << std::endl;
+    return false;
+  }
+
   // Check to see if the logger is already started.
-  if (!this->stop)
-    return;
+  if (this->running)
+  {
+    /// \TODO replace this with gzlog
+    gzerr << "LogRecord has already been started" << std::endl;
+    return false;
+  }
+
+  // Get the current time as an ISO string.
+  std::string logTimeDir = common::Time::GetWallTimeAsISOString();
+
+  this->logCompletePath = this->logBasePath / logTimeDir / this->logSubDir;
+
+  // Create the log directory if necessary
+  if (!boost::filesystem::exists(logCompletePath))
+    boost::filesystem::create_directories(logCompletePath);
 
   if (_encoding != "bz2" && _encoding != "txt")
     gzthrow("Invalid log encoding[" + _encoding +
@@ -112,25 +124,23 @@ void LogRecord::Start(const std::string &_encoding)
 
   this->encoding = _encoding;
 
-  // Create the log directory if necessary
-  if (!boost::filesystem::exists(this->logPath))
-    boost::filesystem::create_directories(this->logPath);
-
   this->logsEnd = this->logs.end();
 
-  this->stop = false;
+  // Start all the logs
+  for (Log_M::iterator iter = this->logs.begin(); iter != this->logsEnd; ++iter)
+    iter->second->Start(logCompletePath);
 
   // Listen to the world update event
   if (!this->updateConnection)
   {
     this->updateConnection =
-      event::Events::ConnectWorldUpdateStart(
-          boost::bind(&LogRecord::Update, this));
+      event::Events::ConnectWorldUpdateBegin(
+          boost::bind(&LogRecord::Update, this, _1));
   }
   else
   {
     gzerr << "LogRecord has already been initialized\n";
-    return;
+    return false;
   }
 
   // Start the logging thread
@@ -139,8 +149,14 @@ void LogRecord::Start(const std::string &_encoding)
   else
   {
     gzerr << "LogRecord has already been initialized\n";
-    return;
+    return false;
   }
+
+  this->running = true;
+  this->paused = false;
+  this->firstUpdate = true;
+
+  return true;
 }
 
 //////////////////////////////////////////////////
@@ -154,7 +170,6 @@ void LogRecord::Stop()
 {
   boost::mutex::scoped_lock lock(this->controlMutex);
 
-  this->stop = true;
 
   // Kick the write thread
   this->dataAvailableCondition.notify_one();
@@ -167,41 +182,85 @@ void LogRecord::Stop()
 
   // Disconnect from the world update signale
   if (this->updateConnection)
-    event::Events::DisconnectWorldUpdateStart(this->updateConnection);
+    event::Events::DisconnectWorldUpdateBegin(this->updateConnection);
   this->updateConnection.reset();
+
+  this->ClearLogs();
+
+  this->initialized = false;
+  this->running = false;
+  this->paused = false;
+}
+
+//////////////////////////////////////////////////
+void LogRecord::ClearLogs()
+{
+  // Delete all the log objects
+  for (Log_M::iterator iter = this->logs.begin();
+      iter != this->logs.end(); ++iter)
+  {
+    delete iter->second;
+  }
+
+  this->logs.clear();
+  this->logsEnd = this->logs.end();
+}
+
+//////////////////////////////////////////////////
+void LogRecord::SetPaused(bool _paused)
+{
+  this->paused = _paused;
+}
+
+//////////////////////////////////////////////////
+bool LogRecord::GetPaused() const
+{
+  return this->paused;
+}
+
+//////////////////////////////////////////////////
+bool LogRecord::GetRunning() const
+{
+  return this->running;
 }
 
 //////////////////////////////////////////////////
 void LogRecord::Add(const std::string &_name, const std::string &_filename,
-                 boost::function<bool (std::ostringstream &)> _logCallback)
+                    boost::function<bool (std::ostringstream &)> _logCallback)
 {
   boost::mutex::scoped_lock lock(this->controlMutex);
 
-  // Check to see if the logger is already started.
-  if (this->stop)
-    return;
-
+  // Check to see if the log has already been added.
   if (this->logs.find(_name) != this->logs.end())
-    gzthrow("Log file with name[" + _name + "] already exists.\n");
+  {
+    /// \todo Good place to use GZ_ASSERT
+    /// GZ_ASSERT(this->logs.find(_name)->second != NULL);
 
-  // Make the full path
-  boost::filesystem::path path = this->logPath / _filename;
-
-  // Make sure the file does not exist
-  if (boost::filesystem::exists(path))
-    gzthrow("Filename[" + path.string() + "], already exists\n");
+    if (this->logs.find(_name)->second->GetRelativeFilename() != _filename)
+    {
+      gzthrow(std::string("Attempting to add a duplicate log object named[")
+          + _name + "] with a filename of [" + _filename + "]\n");
+    }
+    else
+    {
+      return;
+    }
+  }
 
   LogRecord::Log *newLog;
 
   // Create a new log object
   try
   {
-    newLog = new LogRecord::Log(this, path.string(), _logCallback);
+    newLog = new LogRecord::Log(this, _filename, _logCallback);
   }
   catch(...)
   {
     gzthrow("Unable to create log. File permissions are probably bad.");
   }
+
+  if (this->running)
+    newLog->Start(this->logCompletePath);
 
   // Add the log to our map
   this->logs[_name] = newLog;
@@ -231,28 +290,80 @@ bool LogRecord::Remove(const std::string &_name)
 }
 
 //////////////////////////////////////////////////
-void LogRecord::Update()
+std::string LogRecord::GetFilename(const std::string &_name) const
 {
-  {
-    boost::mutex::scoped_lock lock(this->writeMutex);
+  std::string result;
 
-    // Collect all the new log data. This will not write data to disk.
-    for (this->updateIter = this->logs.begin();
-         this->updateIter != this->logsEnd; ++this->updateIter)
-    {
-      this->updateIter->second->Update();
-    }
+  Log_M::const_iterator iter = this->logs.find(_name);
+  if (iter != this->logs.end())
+  {
+    /// \TODO GZ_ASSERT(iter->second);
+    result = iter->second->GetCompleteFilename();
   }
 
-  // Signal that new data is available.
-  this->dataAvailableCondition.notify_one();
+  return result;
+}
+
+//////////////////////////////////////////////////
+unsigned int LogRecord::GetFileSize(const std::string &_name) const
+{
+  unsigned int result = 0;
+
+  // Get the filename of the specified log object;
+  std::string filename = this->GetFilename(_name);
+
+  if (!filename.empty())
+  {
+    // Get the size of the file
+    if (!filename.empty() && boost::filesystem::exists(filename))
+      result = boost::filesystem::file_size(filename);
+  }
+
+  return result;
+}
+//////////////////////////////////////////////////
+std::string LogRecord::GetBasePath() const
+{
+  return this->logBasePath.string();
+}
+
+//////////////////////////////////////////////////
+void LogRecord::Update(const common::UpdateInfo &_info)
+{
+  if (!this->paused)
+  {
+    if (this->firstUpdate)
+    {
+      this->firstUpdate = false;
+      this->startTime = _info.simeTime;
+    }
+
+    {
+      boost::mutex::scoped_lock lock(this->writeMutex);
+
+      // Collect all the new log data. This will not write data to disk.
+      for (this->updateIter = this->logs.begin();
+          this->updateIter != this->logsEnd; ++this->updateIter)
+      {
+        this->updateIter->second->Update();
+      }
+    }
+
+    // Signal that new data is available.
+    this->dataAvailableCondition.notify_one();
+
+    this->currTime = _info.simTime;
+  }
 }
 
 //////////////////////////////////////////////////
 void LogRecord::Run()
 {
+  if (!this->running)
+    gzerr << "Running LogRecord before it has been started." << std::endl;
+
   // This loop will write data to disk.
-  while (!this->stop)
+  while (this->running)
   {
     {
       // Wait for new data.
@@ -273,13 +384,19 @@ void LogRecord::Run()
 }
 
 //////////////////////////////////////////////////
-LogRecord::Log::Log(LogRecord *_parent, const std::string &_filename,
+common::Time LogRecord::GetRunTime() const
+{
+  return common::Time();
+}
+
+//////////////////////////////////////////////////
+LogRecord::Log::Log(LogRecord *_parent, const std::string &_relativeFilename,
                  boost::function<bool (std::ostringstream &)> _logCB)
 {
   this->parent = _parent;
   this->logCB = _logCB;
 
-  this->filename = _filename;
+  this->relativeFilename = _relativeFilename;
   std::ostringstream stream;
   stream << "<?xml version='1.0'?>\n"
          << "<gazebo_log>\n"
@@ -353,18 +470,42 @@ void LogRecord::Log::ClearBuffer()
 }
 
 //////////////////////////////////////////////////
+std::string LogRecord::Log::GetRelativeFilename() const
+{
+  return this->relativeFilename;
+}
+
+//////////////////////////////////////////////////
+std::string LogRecord::Log::GetCompleteFilename() const
+{
+  return this->completePath.string();
+}
+
+//////////////////////////////////////////////////
+void LogRecord::Log::Start(const boost::filesystem::path &_path)
+{
+  // Make the full path for the log file
+  this->completePath = _path / this->relativeFilename;
+
+  // Make sure the file does not exist
+  if (boost::filesystem::exists(this->completePath))
+    gzthrow("Filename[" + this->completePath.string() + "], already exists\n");
+}
+
+//////////////////////////////////////////////////
 void LogRecord::Log::Write()
 {
   // Make sure the file is open for writing
   if (!this->logFile.is_open())
   {
     // Try to open it...
-    this->logFile.open(this->filename.c_str(),
+    this->logFile.open(this->completePath.string().c_str(),
                        std::fstream::out | std::ios::binary);
 
     // Throw an error if we couldn't open the file for writing.
     if (!this->logFile.is_open())
-      gzthrow("Unable to open file for logging:" + this->filename + "]");
+      gzthrow("Unable to open file for logging:" +
+              this->completePath.string() + "]");
   }
 
   // Write out the contents of the buffer.

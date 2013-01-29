@@ -13,6 +13,7 @@ set (sources
   main.cc 
   ../gazebo.cc
   Actions.cc
+  DataLogger.cc
   Gui.cc 
   MainWindow.cc 
   RenderWidget.cc 
@@ -33,6 +34,7 @@ set (sources
   JointControlWidget.cc
   ToolsWidget.cc
   TopicSelector.cc
+  VideoRecorder.cc
   viewers/ImageView.cc
   viewers/LaserView.cc
   viewers/TopicView.cc
@@ -42,6 +44,7 @@ set (sources
 
 set (qt_headers
   Actions.hh
+  DataLogger.hh
   MainWindow.hh 
   RenderWidget.hh 
   GLWidget.hh 
@@ -53,6 +56,7 @@ set (qt_headers
   JointControlWidget.hh
   ToolsWidget.hh
   TopicSelector.hh
+  VideoRecorder.hh
   viewers/ImageView.hh
   viewers/LaserView.hh
   viewers/TextView.hh

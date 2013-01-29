@@ -4,7 +4,8 @@ QLabel
 }
 
 QWidget#topicSelector,
-QWidget#cameraSensor
+QWidget#cameraSensor,
+QWidget#dataLogger
 {
   background-color: #303030;
 }
@@ -94,7 +95,6 @@ QToolButton
   border: 0px solid #808080;
 }
 
-
 QToolButton:hover
 {
   border: 1px outset #252525;
@@ -111,6 +111,50 @@ QToolButton:checked
 {
   border: 1px outset #252525;
   background-color: #454545;
+}
+
+/*
+QWidget#dataLogger > QToolButton
+{
+  padding: 0px;
+  margin: 0px;
+
+  border-radius: 0px;
+  border: 0px;
+  background-color: transparent;
+}
+
+QWidget#dataLogger > QToolButton:hover
+{
+  border: 0px;
+  background-color: transparent;
+}
+*/
+
+QToolButton#dataLoggerRecordButton
+{
+  padding: 0px;
+  margin-left: 10px;
+  margin-top: 10px;
+  margin-right: 0px;
+  margin-bottom: 0px;
+
+  width: 37px;
+  height: 37px;
+
+  background-color: #999999;
+  border-radius: 19px;
+  border: 0px;
+}
+
+QToolButton#dataLoggerRecordButton:hover
+{
+  background-color: #dddddd;
+}
+
+QToolButton#dataLoggerStopButton:hover
+{
+  background-color: #dddddd;
 }
 
 QListView
@@ -557,4 +601,21 @@ QFrame#blackBorderFrame
   border: 1px solid #000000;
   padding: 0px;
   margin: 0px;
+}
+
+QFrame#dataLoggerSettingFrame
+{
+  border-top: 1px solid #555555;
+  margin: 0px;
+  padding: 0px;
+}
+
+QLabel#dataLoggerStatusLabel
+{
+  border-top: 1px solid #202020;
+}
+
+QLabel#dataLoggerTimeLabel
+{
+  border: 1px solid #202020;
 }
