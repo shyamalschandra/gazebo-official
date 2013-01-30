@@ -6,8 +6,6 @@ include_directories (
   ${PROJECT_SOURCE_DIR}/test/gtest/include
 )
 
-link_directories(${PROJECT_BINARY_DIR}/test)
-
 set (gtest_sources 
   MsgFactory.cc 
 )
