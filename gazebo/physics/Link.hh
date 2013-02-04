@@ -184,6 +184,22 @@ namespace gazebo
       ///         frame.
       public: math::Pose GetWorldCoGPose() const;
 
+      /// \brief Get the linear velocity of the body in the world frame
+      /// \return Linear velocity of the body
+      public: virtual math::Vector3 GetWorldLinearVel() const = 0;
+
+      /// \brief Get the linear velocity of a point on the body in the world
+      /// frame
+      /// \param[in] _offset Offset of the point from the center of body
+      /// \return Linear velocity of the point on the body
+      public: virtual math::Vector3 GetWorldLinearVel(
+          const math::Vector3 &_offset) const = 0;
+
+      /// \brief Get the linear velocity at the body's center of gravity in the
+      /// world frame
+      /// \return Linear velocity at the body's center of gravity
+      public: virtual math::Vector3 GetWorldCoGLinearVel() const = 0;
+
       /// \brief Get the linear velocity of the body.
       /// \return Linear velocity of the body.
       public: math::Vector3 GetRelativeLinearVel() const;
