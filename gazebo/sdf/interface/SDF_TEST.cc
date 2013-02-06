@@ -257,7 +257,6 @@ TEST(SdfUpdate, ElementRemoveChild)
   EXPECT_FALSE(elem);
 }
 
-
 /////////////////////////////////////////////////
 /// Main
 int main(int argc, char **argv)

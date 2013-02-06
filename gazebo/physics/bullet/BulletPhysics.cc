@@ -143,8 +143,6 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
 
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
 
-  this->stepTimeDouble = bulletElem->GetElement("dt")->GetValueDouble();
-
   math::Vector3 g = this->sdf->GetValueVector3("gravity");
   // ODEPhysics checks this, so we will too.
   if (g == math::Vector3(0, 0, 0))
@@ -200,7 +198,7 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     // This function was copied from ODEPhysics with portions commented out.
     // TODO: determine which of these should be implemented.
     // physicsMsg.set_solver_type(this->stepType);
-    physicsMsg.set_dt(this->stepTimeDouble);
+    physicsMsg.set_dt(this->GetStepTime());
     // physicsMsg.set_iters(this->GetSORPGSIters());
     // physicsMsg.set_sor(this->GetSORPGSW());
     // physicsMsg.set_cfm(this->GetWorldCFM());
@@ -282,7 +280,7 @@ void BulletPhysics::UpdatePhysics()
   // common::Time currTime =  this->world->GetRealTime();
 
   this->dynamicsWorld->stepSimulation(
-      this->stepTimeDouble, 1, this->stepTimeDouble);
+      this->GetStepTime(), 1, this->GetStepTime());
   // this->lastUpdateTime = currTime;
 
   this->physicsUpdateMutex->unlock();
@@ -304,22 +302,6 @@ void BulletPhysics::Reset()
 }
 
 //////////////////////////////////////////////////
-void BulletPhysics::SetStepTime(double _value)
-{
-  if (this->sdf->HasElement("bullet") &&
-      this->sdf->GetElement("bullet")->HasElement("dt"))
-    this->sdf->GetElement("bullet")->GetElement("dt")->Set(_value);
-  else
-    gzerr << "Unable to set bullet step time\n";
-
-  this->stepTimeDouble = _value;
-}
-
-//////////////////////////////////////////////////
-double BulletPhysics::GetStepTime()
-{
-  return this->stepTimeDouble;
-}
 
 // //////////////////////////////////////////////////
 // void BulletPhysics::SetSORPGSIters(unsigned int _iters)
@@ -330,7 +312,6 @@ double BulletPhysics::GetStepTime()
 //   // info.m_numIterations = _iters;
 // }
 
-//////////////////////////////////////////////////
 LinkPtr BulletPhysics::CreateLink(ModelPtr _parent)
 {
   if (_parent == NULL)
@@ -456,5 +437,3 @@ void BulletPhysics::SetGravity(const gazebo::math::Vector3 &_gravity)
 void BulletPhysics::DebugPrint() const
 {
 }
-
-
