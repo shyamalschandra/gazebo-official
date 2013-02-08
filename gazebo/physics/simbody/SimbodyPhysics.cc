@@ -156,7 +156,7 @@ void SimbodyPhysics::UpdatePhysics()
                        this->world->GetSimTime().Double());
 
   const SimTK::State &s = integ->getState();
-  gzerr << "\n\ntime [" << s.getTime()
+  gzerr << "time [" << s.getTime()
         << "] q [" << s.getQ()
         << "] u [" << s.getU()
         << "] dt [" << this->stepTimeDouble
