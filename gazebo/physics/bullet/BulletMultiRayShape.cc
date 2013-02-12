@@ -14,6 +14,9 @@
  * limitations under the License.
  *
  */
+
+ #include "common/Exception.hh"
+
 #include "physics/World.hh"
 #include "physics/bullet/BulletTypes.hh"
 #include "physics/bullet/BulletLink.hh"
@@ -42,7 +45,7 @@ BulletMultiRayShape::~BulletMultiRayShape()
 //////////////////////////////////////////////////
 void BulletMultiRayShape::UpdateRays()
 {
-  std::vector< RayShapePtr >::iterator iter;
+  std::vector<RayShapePtr>::iterator iter;
   for (iter = this->rays.begin(); iter != this->rays.end(); ++iter)
   {
     (*iter)->Update();
@@ -54,7 +57,14 @@ void BulletMultiRayShape::AddRay(const math::Vector3 &_start,
     const math::Vector3 &_end)
 {
   MultiRayShape::AddRay(_start, _end);
-  BulletRayShapePtr ray(new BulletRayShape(this->physicsEngine));
+
+//  BulletCollisionPtr bulletCollision(new BulletCollision(
+//        this->collisionParent->GetLink()));
+//  bulletCollision->SetName("bullet_ray_collision");
+
+//  BulletRayShapePtr ray(new BulletRayShape(bulletCollision));
+  BulletRayShapePtr ray(new BulletRayShape(this->collisionParent));
+//  bulletCollision->SetShape(ray);
   ray->SetPoints(_start, _end);
 
   this->rays.push_back(ray);
