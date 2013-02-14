@@ -90,6 +90,10 @@ void PhysicsTest::SpawnDrop(const std::string &_physicsEngine)
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
   EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  // Don't throttle physics updates, so the tests run as fast as possible
+  physics->SetUpdateRate(0);
+
   math::Vector3 g = physics->GetGravity();
   // Assume gravity vector points down z axis only.
   EXPECT_EQ(g.x, 0);
@@ -251,6 +255,10 @@ void PhysicsTest::SpawnDropCoGOffset(const std::string &_physicsEngine)
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
   EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  // Don't throttle physics updates, so the tests run as fast as possible
+  physics->SetUpdateRate(0);
+
   math::Vector3 g = physics->GetGravity();
   // Assume gravity vector points down z axis only.
   EXPECT_EQ(g.x, 0);
@@ -846,9 +854,12 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
   physics::WorldPtr world = physics::get_world("default");
   ASSERT_TRUE(world != NULL);
 
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  physics::PhysicsEnginePtr physicsEngine = world->GetPhysicsEngine();
+  ASSERT_TRUE(physicsEngine != NULL);
+  EXPECT_EQ(physicsEngine->GetType(), _physicsEngine);
+
+  // Don't throttle physics updates, so the tests run as fast as possible
+  physicsEngine->SetUpdateRate(0);
 
   int i = 0;
   while (!this->HasEntity("model_1") && i < 20)
@@ -860,8 +871,6 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
   if (i > 20)
     gzthrow("Unable to get model_1");
 
-  physics::PhysicsEnginePtr physicsEngine = world->GetPhysicsEngine();
-  EXPECT_TRUE(physicsEngine);
   physics::ModelPtr model = world->GetModel("model_1");
   EXPECT_TRUE(model);
   physics::LinkPtr link = model->GetLink("link_2");  // sphere link at end
