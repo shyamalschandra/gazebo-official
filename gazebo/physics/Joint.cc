@@ -151,6 +151,10 @@ void Joint::Init()
       this->SetHighStop(0, limitElem->GetValueDouble("upper"));
       this->SetLowStop(0, limitElem->GetValueDouble("lower"));
       this->SetHighStop(0, limitElem->GetValueDouble("upper"));
+      if (limitElem->HasElement("effort"))
+        this->effortLimit[0] = limitElem->GetValueDouble("effort");
+      if (limitElem->HasElement("velocity"))
+        this->velocityLimit[0] = limitElem->GetValueDouble("velocity");
     }
   }
 
@@ -169,6 +173,10 @@ void Joint::Init()
       this->SetHighStop(1, limitElem->GetValueDouble("upper"));
       this->SetLowStop(1, limitElem->GetValueDouble("lower"));
       this->SetHighStop(1, limitElem->GetValueDouble("upper"));
+      if (limitElem->HasElement("effort"))
+        this->effortLimit[1] = limitElem->GetValueDouble("effort");
+      if (limitElem->HasElement("velocity"))
+        this->velocityLimit[1] = limitElem->GetValueDouble("velocity");
     }
   }
 
@@ -233,6 +241,26 @@ math::Vector3 Joint::GetLocalAxis(int _index) const
   // vec = this->childLink->GetWorldPose().rot.RotateVectorReverse(vec);
   // vec.Round();
   return vec;
+}
+
+//////////////////////////////////////////////////
+double Joint::GetEffortLimit(int _index)
+{
+  if (_index < this->GetAngleCount())
+    return this->effortLimit[_index];
+
+  gzerr << "GetEffortLimit index[" << _index << "] out of range\n";
+  return 0;
+}
+
+//////////////////////////////////////////////////
+double Joint::GetVelocityLimit(int _index)
+{
+  if (_index < this->GetAngleCount())
+    return this->velocityLimit[_index];
+
+  gzerr << "GetVelocityLimit index[" << _index << "] out of range\n";
+  return 0;
 }
 
 //////////////////////////////////////////////////

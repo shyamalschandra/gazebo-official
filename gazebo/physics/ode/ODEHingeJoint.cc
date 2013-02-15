@@ -147,6 +147,11 @@ void ODEHingeJoint::SetForce(int _index, double _torque)
     this->childLink->SetEnabled(true);
   if (this->parentLink)
     this->parentLink->SetEnabled(true);
+
+  if (_index < this->GetAngleCount() && this->effortLimit[_index] > 0)
+    _torque = math::clamp(_torque,
+      -this->effortLimit[_index], this->effortLimit[_index]);
+
   dJointAddHingeTorque(this->jointId, _torque);
 }
 
