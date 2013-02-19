@@ -45,6 +45,7 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Plugin.hh"
+#include "gazebo/common/Diagnostics.hh"
 
 #include "gazebo/physics/Road.hh"
 #include "gazebo/physics/RayShape.hh"
@@ -422,6 +423,7 @@ void World::LogStep()
 //////////////////////////////////////////////////
 void World::Step()
 {
+  DIAG_TIMER_CREATE("worldStepTimer");
   /// need this because ODE does not call dxReallocateWorldProcessContext()
   /// until dWorld.*Step
   /// Plugins that manipulate joints (and probably other properties) require
@@ -433,11 +435,15 @@ void World::Step()
     this->pluginsLoaded = true;
   }
 
+  DIAG_TIMER_LAP("worldStepTimer", "World::Step (World::LoadPlugins()) ");
+
   // Send statistics about the world simulation
   if (common::Time::GetWallTime() - this->prevStatTime > this->statPeriod)
   {
     this->PublishWorldStats();
   }
+
+  DIAG_TIMER_LAP("worldStepTimer", "World::Step (World::PublishWorldStats()) ");
 
   // sleep here to get the correct update rate
   common::Time tmpTime = common::Time::GetWallTime();
@@ -456,12 +462,16 @@ void World::Step()
   this->sleepOffset = (actualSleep - sleepTime) * 0.01 +
                       this->sleepOffset * 0.99;
 
+  DIAG_TIMER_LAP("worldStepTimer", "World::Step (update World::sleepOffset) ");
+
   // throttling update rate, with sleepOffset as tolerance
   // the tolerance is needed as the sleep time is not exact
   if (common::Time::GetWallTime() - this->prevStepWallTime + this->sleepOffset
          >= common::Time(this->physicsEngine->GetUpdatePeriod()))
   {
     boost::recursive_mutex::scoped_lock lock(*this->worldUpdateMutex);
+
+    DIAG_TIMER_LAP("worldStepTimer", "World::Step (get World::worldUpdateMutex) ");
 
     this->prevStepWallTime = common::Time::GetWallTime();
 
@@ -471,6 +481,7 @@ void World::Step()
       this->simTime += this->physicsEngine->GetStepTime();
       this->iterations++;
       this->Update();
+      DIAG_TIMER_LAP("worldStepTimer", "World::Step (World::Update) ");
 
       if (this->IsPaused() && this->stepInc > 0)
         this->stepInc--;
@@ -480,6 +491,8 @@ void World::Step()
   }
 
   this->ProcessMessages();
+
+  DIAG_TIMER_LAP("worldStepTimer", "World::Step (World::ProcessMessages) ");
 }
 
 //////////////////////////////////////////////////
@@ -510,6 +523,8 @@ void World::StepWorld(int _steps)
 //////////////////////////////////////////////////
 void World::Update()
 {
+  DIAG_TIMER_CREATE("worldUpdateTimer");
+
   if (this->needsReset)
   {
     if (this->resetAll)
@@ -520,23 +535,33 @@ void World::Update()
       this->ResetEntities(Base::MODEL);
     this->needsReset = false;
   }
+  
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (call resets) ");
 
   event::Events::worldUpdateStart();
   this->updateInfo.simTime = this->GetSimTime();
   this->updateInfo.realTime = this->GetRealTime();
   event::Events::worldUpdateBegin(this->updateInfo);
 
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (worldUpdateStart) ");
+
   // Update all the models
   (*this.*modelUpdateFunc)();
 
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (Models Update) ");
+
   // This must be called before PhysicsEngine::UpdatePhysics.
   this->physicsEngine->UpdateCollision();
+
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (PhysicsEngine::UpdateCollision) ");
 
   // Update the physics engine
   if (this->enablePhysicsEngine && this->physicsEngine)
   {
     // This must be called directly after PhysicsEngine::UpdateCollision.
     this->physicsEngine->UpdatePhysics();
+
+    DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (PhysicsEngine::UpdatePhysics) ");
 
     // do this after physics update as
     //   ode --> MoveCallback sets the dirtyPoses
@@ -548,10 +573,14 @@ void World::Update()
     }
 
     this->dirtyPoses.clear();
+
+    DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (Get World::dirtyPoses) ");
   }
 
   // Output the contact information
   this->physicsEngine->GetContactManager()->PublishContacts();
+
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (PublishContacts) ");
 
   // Only update state informatin if logging data.
   if (common::LogRecord::Instance()->GetRunning())
@@ -574,7 +603,11 @@ void World::Update()
     }
   }
 
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (StateDiff) ");
+
   event::Events::worldUpdateEnd();
+
+  DIAG_TIMER_LAP("worldUpdateTimer", "World::Update (worldUpdateend) ");
 }
 
 //////////////////////////////////////////////////
@@ -1728,6 +1761,7 @@ bool World::IsLoaded() const
 {
   return this->loaded;
 }
+
 
 //////////////////////////////////////////////////
 void World::PublishModelPose(const std::string &_modelName)
