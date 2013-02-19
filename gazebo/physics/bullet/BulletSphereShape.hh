@@ -43,14 +43,35 @@ namespace gazebo
       public: virtual ~BulletSphereShape() {}
 
       /// \brief Set the radius
+      /// \param[in] _radius Sphere radius
       public: void SetRadius(double _radius)
               {
+                if (_radius < 0)
+                {
+                    gzerr << "Sphere shape does not support negative"
+                          << " radius\n";
+                    return;
+                }
+
                 SphereShape::SetRadius(_radius);
                 BulletCollisionPtr bParent;
                 bParent = boost::shared_dynamic_cast<BulletCollision>(
                     this->collisionParent);
 
-                bParent->SetCollisionShape(new btSphereShape(_radius));
+                btCollisionShape *shape = bParent->GetCollisionShape();
+                if (!shape)
+                {
+                  bParent->SetCollisionShape(new btSphereShape(_radius));
+                }
+                else
+                {
+                  double sphereRadius = this->GetRadius();
+                  if (sphereRadius > 0)
+                  {
+                    double scale = _radius / sphereRadius;
+                    shape->setLocalScaling(btVector3(scale, scale, scale));
+                  }
+                }
               }
     };
     /// \}
