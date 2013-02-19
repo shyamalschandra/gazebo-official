@@ -739,6 +739,7 @@ TEST_F(PhysicsTest, DropStuff)
       if (z < 0.5) post_contact_correction = true;
     }
   }
+  Unload();
 }
 
 
@@ -985,6 +986,7 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
       }
     }
   }
+  Unload();
 }
 
 int main(int argc, char **argv)
