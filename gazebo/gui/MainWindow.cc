@@ -32,6 +32,7 @@
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 
+#include "gazebo/gui/Diagnostics.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/InsertModelWidget.hh"
@@ -234,6 +235,13 @@ void MainWindow::New()
   msgs::ServerControl msg;
   msg.set_new_world(true);
   this->serverControlPub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::Diagnostics()
+{
+  gui::Diagnostics *diag = new gui::Diagnostics(this);
+  diag->show();
 }
 
 /////////////////////////////////////////////////
@@ -728,6 +736,7 @@ void MainWindow::BuildingEditorExit()
 {
   gui::editor::Events::exitBuildingEditor();
 }
+
 /////////////////////////////////////////////////
 void MainWindow::CreateActions()
 {
@@ -741,6 +750,11 @@ void MainWindow::CreateActions()
   g_topicVisAct->setShortcut(tr("Ctrl+T"));
   g_topicVisAct->setStatusTip(tr("Select a topic to visualize"));
   connect(g_topicVisAct, SIGNAL(triggered()), this, SLOT(SelectTopic()));
+
+  g_diagnosticsAct = new QAction(tr("Diagnostic Plot"), this);
+  g_diagnosticsAct->setShortcut(tr("Ctrl+U"));
+  g_diagnosticsAct->setStatusTip(tr("Plot diagnostic information"));
+  connect(g_diagnosticsAct, SIGNAL(triggered()), this, SLOT(Diagnostics()));
 
   g_openAct = new QAction(tr("&Open World"), this);
   g_openAct->setShortcut(tr("Ctrl+O"));
@@ -1043,6 +1057,7 @@ void MainWindow::AttachMainMenuBar()
   windowMenu->addAction(g_topicVisAct);
   windowMenu->addSeparator();
   windowMenu->addAction(g_dataLoggerAct);
+  windowMenu->addAction(g_diagnosticsAct);
 
   this->menuBar->addSeparator();
 
