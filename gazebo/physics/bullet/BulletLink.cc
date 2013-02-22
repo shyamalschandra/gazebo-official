@@ -135,7 +135,25 @@ void BulletLink::Init()
 
   btDynamicsWorld *bulletWorld = this->bulletPhysics->GetDynamicsWorld();
   GZ_ASSERT(bulletWorld != NULL, "Bullet dynamics world is NULL");
-  bulletWorld->addRigidBody(this->rigidLink);
+ 
+  // bullet supports setting bits to a rigid body but not individual
+  // shapes/collisions so find the first child collision and set rigid body to
+  // use its category and collision bits.
+  unsigned int categortyBits = GZ_ALL_COLLIDE;
+  unsigned int collideBits = GZ_ALL_COLLIDE;
+  for (Base_V::iterator iter = this->children.begin();
+         iter != this->children.end(); ++iter)
+  {
+    if ((*iter)->HasType(Base::COLLISION))
+    {
+      BulletCollisionPtr collision;
+      collision = boost::shared_static_cast<BulletCollision>(*iter);
+      categortyBits = collision->GetCategoryBits();
+      collideBits = collision->GetCollideBits();
+      break;
+    }
+  }
+  bulletWorld->addRigidBody(this->rigidLink, categortyBits, collideBits);
   // this->rigidLink->setSleepingThresholds(0,0);
 }
 
@@ -198,8 +216,9 @@ bool BulletLink::GetGravityMode() const
 }
 
 //////////////////////////////////////////////////
-void BulletLink::SetSelfCollide(bool /*_collide*/)
+void BulletLink::SetSelfCollide(bool _collide)
 {
+  this->sdf->GetElement("self_collide")->Set(_collide);
 }
 
 //////////////////////////////////////////////////
