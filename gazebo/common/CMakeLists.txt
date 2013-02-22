@@ -6,8 +6,9 @@ if (HAVE_GTS)
   add_definitions(${gts_CFLAGS})
 endif()
 
-set (sources
+set (sources 
   Animation.cc
+  Assert.cc
   BVHLoader.cc
   ColladaLoader.cc
   Color.cc
@@ -36,8 +37,9 @@ set (sources
   Video.cc
 )
 
-set (headers
+set (headers 
   Animation.hh
+  Assert.hh
   BVHLoader.hh
   ColladaLoader.hh
   Common.hh
@@ -66,8 +68,9 @@ set (headers
   SystemPaths.hh
   Time.hh
   Timer.hh
+  UpdateInfo.hh
   Video.hh
-  )
+ )
 
 if (HAVE_GTS)
 set (sources
@@ -79,6 +82,21 @@ set (headers
   MeshCSG.hh
 )
 endif()
+
+set (gtest_sources
+  Animation_TEST.cc
+  Color_TEST.cc
+  Console_TEST.cc
+  Diagnostics_TEST.cc
+  Exception_TEST.cc
+  LogRecord_TEST.cc
+  Material_TEST.cc
+  Mesh_TEST.cc
+  Image_TEST.cc
+  SystemPaths_TEST.cc
+  Time_TEST.cc
+)
+gz_build_tests(${gtest_sources})
 
 set (common_headers "" CACHE INTERNAL "common headers" FORCE)
 foreach (hdr ${headers})

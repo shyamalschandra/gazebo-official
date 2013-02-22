@@ -11,6 +11,21 @@ execute_process(COMMAND pkg-config --modversion protobuf
   RESULT_VARIABLE protobuf_modversion_failed)
 
 ########################################
+# 1. can not use BUILD_TYPE_PROFILE is defined after include this module
+# 2. TODO: TOUPPER is a hack until we fix the build system to support standard build names
+if (CMAKE_BUILD_TYPE)
+  string(TOUPPER ${CMAKE_BUILD_TYPE} TMP_CMAKE_BUILD_TYPE)
+  if ("${TMP_CMAKE_BUILD_TYPE}" STREQUAL "PROFILE")
+    include (${gazebo_cmake_dir}/FindGooglePerfTools.cmake)
+    if (GOOGLE_PERFTOOLS_FOUND)
+      message(STATUS "Include google-perftools")
+    else()
+      BUILD_ERROR("Need google/heap-profiler.h (libgoogle-perftools-dev) tools to compile in Profile mode")
+    endif()
+  endif()
+endif()
+
+########################################
 if (PROTOBUF_VERSION LESS 2.3.0)
   BUILD_ERROR("Incorrect version: Gazebo requires protobuf version 2.3.0 or greater")
 endif()
@@ -97,7 +112,7 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find bullet
-  pkg_check_modules(BULLET bullet)
+  pkg_check_modules(BULLET bullet>=2.81)
   if (BULLET_FOUND)
     set (HAVE_BULLET TRUE)
   else()
@@ -243,9 +258,13 @@ if (PKG_CONFIG_FOUND)
 
   ########################################
   # Find urdfdom and urdfdom_headers
+  # look for the cmake modules first, and .pc pkg_config second
   find_package(urdfdom_headers QUIET)
   if (NOT urdfdom_headers_FOUND)
-    BUILD_WARNING ("urdfdom_headers not found, urdf parser will not be built.")
+    pkg_check_modules(urdfdom_headers urdfdom_headers)
+    if (NOT urdfdom_headers_FOUND)
+      BUILD_WARNING ("urdfdom_headers not found, urdf parser will not be built.")
+    endif ()
   endif ()
   if (urdfdom_headers_FOUND)
     set (HAVE_URDFDOM_HEADERS TRUE)
@@ -253,7 +272,10 @@ if (PKG_CONFIG_FOUND)
 
   find_package(urdfdom QUIET)
   if (NOT urdfdom_FOUND)
-    BUILD_WARNING ("urdfdom not found, urdf parser will not be built.")
+    pkg_check_modules(urdfdom urdfdom)
+    if (NOT urdfdom_FOUND)
+      BUILD_WARNING ("urdfdom not found, urdf parser will not be built.")
+    endif ()
   endif ()
   if (urdfdom_FOUND)
     set (HAVE_URDFDOM TRUE)
@@ -261,7 +283,10 @@ if (PKG_CONFIG_FOUND)
 
   find_package(console_bridge QUIET)
   if (NOT console_bridge_FOUND)
-    BUILD_WARNING ("console_bridge not found, urdf parser will not be built.")
+    pkg_check_modules(console_bridge console_bridge)
+    if (NOT console_bridge_FOUND)
+      BUILD_WARNING ("console_bridge not found, urdf parser will not be built.")
+    endif ()
   endif ()
   if (console_bridge_FOUND)
     set (HAVE_CONSOLE_BRIDGE TRUE)

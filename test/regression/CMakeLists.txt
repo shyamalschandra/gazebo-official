@@ -1,5 +1,5 @@
 include_directories (
-  ${PROJECT_SOURCE_DIR}/gazebo 
+  ${PROJECT_SOURCE_DIR}/gazebo
   ${PROJECT_BINARY_DIR}/gazebo
   ${ODE_INCLUDE_DIRS}
   ${OPENGL_INCLUDE_DIR}
@@ -8,9 +8,9 @@ include_directories (
   ${PROTOBUF_INCLUDE_DIR}
 )
 
-link_directories(  
+link_directories(
   ${ogre_library_dirs}
-  ${Boost_LIBRARY_DIRS} 
+  ${Boost_LIBRARY_DIRS}
   ${ODE_LIBRARY_DIRS}
 )
 
@@ -27,12 +27,12 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/test/gtest/include)
 
 set (gtest_sources
+  bandwidth.cc
   camera_sensor.cc
   factory.cc
   file_handling.cc
   heightmap.cc
   laser.cc
-  math.cc
   msgs.cc
   physics.cc
   pioneer2dx.cc
@@ -40,6 +40,7 @@ set (gtest_sources
   projector.cc
   server_fixture.cc
   speed.cc
+  speed_pr2.cc
   transport.cc)
 
 set (plugins)
@@ -56,8 +57,8 @@ foreach(GTEST_SOURCE_file ${gtest_sources})
   add_executable(${BINARY_NAME} ${GTEST_SOURCE_file} ${PROJECT_SOURCE_DIR}/gazebo/Server.cc ${PROJECT_SOURCE_DIR}/gazebo/Master.cc ${PROJECT_SOURCE_DIR}/gazebo/gazebo.cc)
 
 target_link_libraries(${BINARY_NAME}
-  ${GTEST_LIBRARY} 
-  ${GTEST_MAIN_LIBRARY} 
+  ${GTEST_LIBRARY}
+  ${GTEST_MAIN_LIBRARY}
     gazebo_common
     gazebo_sdf_interface
     gazebo_transport
