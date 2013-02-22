@@ -34,7 +34,7 @@ using namespace physics;
 BulletHinge2Joint::BulletHinge2Joint(btDynamicsWorld *_world, BasePtr _parent)
     : Hinge2Joint<BulletJoint>(_parent)
 {
-  this->world = _world;
+  this->bulletWorld = _world;
   this->bulletHinge2 = NULL;
 }
 
@@ -52,6 +52,9 @@ void BulletHinge2Joint::Load(sdf::ElementPtr _sdf)
 //////////////////////////////////////////////////
 void BulletHinge2Joint::Attach(LinkPtr _one, LinkPtr _two)
 {
+  if (this->constraint)
+    this->Detach();
+
   Hinge2Joint<BulletJoint>::Attach(_one, _two);
 
   BulletLinkPtr bulletChildLink =
@@ -80,7 +83,7 @@ void BulletHinge2Joint::Attach(LinkPtr _one, LinkPtr _two)
   this->constraint = this->bulletHinge2;
 
   // Add the joint to the world
-  this->world->addConstraint(this->constraint, true);
+  this->bulletWorld->addConstraint(this->constraint, true);
 
   // Allows access to impulse
   this->constraint->enableFeedback(true);
