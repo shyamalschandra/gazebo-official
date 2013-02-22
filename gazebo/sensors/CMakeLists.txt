@@ -4,6 +4,7 @@ set (sources
   CameraSensor.cc
   ContactSensor.cc
   DepthCameraSensor.cc
+  GpuRaySensor.cc
   ImuSensor.cc
   MultiCameraSensor.cc
   RaySensor.cc
@@ -19,6 +20,7 @@ set (headers
   CameraSensor.hh
   ContactSensor.hh
   DepthCameraSensor.hh
+  GpuRaySensor.hh
   ImuSensor.hh
   MultiCameraSensor.hh
   RaySensor.hh
@@ -39,6 +41,7 @@ set (gtest_sources
 if (${VALID_DRI_DISPLAY})
   set (gtest_sources ${gtest_sources}
     SensorManager_TEST.cc
+    GpuRaySensor_TEST.cc
     )
 endif()
 
