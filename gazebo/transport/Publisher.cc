@@ -31,14 +31,21 @@ Publisher::Publisher(const std::string &_topic, const std::string &_msgType,
   : topic(_topic), msgType(_msgType), queueLimit(_limit)
 {
   this->prevMsg = NULL;
+  this->queueLimitWarned = false;
+  this->updatePeriod = 0;
 }
 
 //////////////////////////////////////////////////
 Publisher::Publisher(const std::string &_topic, const std::string &_msgType,
-                     unsigned int _limit)
-  : topic(_topic), msgType(_msgType), queueLimit(_limit)
+                     unsigned int _limit, double _hzRate)
+  : topic(_topic), msgType(_msgType), queueLimit(_limit),
+    updatePeriod(0)
 {
+  if (!math::equal(_hzRate, 0.0))
+    this->updatePeriod = 1.0 / _hzRate;
+
   this->prevMsg = NULL;
+  this->queueLimitWarned = false;
 }
 
 //////////////////////////////////////////////////
@@ -86,6 +93,24 @@ void Publisher::PublishImpl(const google::protobuf::Message &_message,
   // if (!this->HasConnections())
   // return;
 
+  // Check if a throttling rate has been set
+  if (this->updatePeriod > 0)
+  {
+    // Get the current time
+    this->currentTime = common::Time::GetWallTime();
+
+    // Skip publication if the time difference is less than the update period.
+    if (this->prevPublishTime != common::Time(0, 0) &&
+        (this->currentTime - this->prevPublishTime).Double() <
+         this->updatePeriod)
+    {
+      return;
+    }
+
+    // Set the previous time a message was published
+    this->prevPublishTime = this->currentTime;
+  }
+
   // Save the latest message
   google::protobuf::Message *msg = _message.New();
   msg->CopyFrom(_message);
@@ -100,6 +125,19 @@ void Publisher::PublishImpl(const google::protobuf::Message &_message,
 
     if (this->messages.size() > this->queueLimit)
     {
+      if (!queueLimitWarned)
+      {
+        gzwarn << "Queue limit reached for topic "
+               << this->topic
+               << ", deleting message"
+               << " (only this warning is printed to the console, "
+               << "see the ~/.gazebo/gzserver.log and "
+               << "~/.gazebo/gzclient.log files for future warnings).\n";
+        queueLimitWarned = true;
+      }
+      gzlog << "Queue limit reached for topic "
+            << this->topic
+            << ", deleting message\n";
       delete this->messages.front();
       this->messages.pop_front();
     }
