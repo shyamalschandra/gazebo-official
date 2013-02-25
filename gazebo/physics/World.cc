@@ -40,11 +40,12 @@
 #include "gazebo/common/LogRecord.hh"
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/Common.hh"
-#include "gazebo/common/Diagnostics.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Plugin.hh"
+
+#include "gazebo/util/Diagnostics.hh"
 
 #include "gazebo/physics/Road.hh"
 #include "gazebo/physics/RayShape.hh"
@@ -305,6 +306,8 @@ void World::Init()
 
   // Mark the world initialization
   gzlog << "World::Init" << std::endl;
+
+  util::DiagnosticManager::Instance()->Init(this->GetName());
 }
 
 //////////////////////////////////////////////////
@@ -422,6 +425,8 @@ void World::LogStep()
 //////////////////////////////////////////////////
 void World::Step()
 {
+  DIAG_TIMER_START("World::Step");
+
   /// need this because ODE does not call dxReallocateWorldProcessContext()
   /// until dWorld.*Step
   /// Plugins that manipulate joints (and probably other properties) require
@@ -433,11 +438,15 @@ void World::Step()
     this->pluginsLoaded = true;
   }
 
+  DIAG_TIMER_LAP("World::Step", "loadPlugins");
+
   // Send statistics about the world simulation
   if (common::Time::GetWallTime() - this->prevStatTime > this->statPeriod)
   {
     this->PublishWorldStats();
   }
+
+  DIAG_TIMER_LAP("World::Step", "publishWorldStats");
 
   // sleep here to get the correct update rate
   common::Time tmpTime = common::Time::GetWallTime();
@@ -445,16 +454,21 @@ void World::Step()
     common::Time(this->physicsEngine->GetUpdatePeriod()) -
     tmpTime - this->sleepOffset;
 
+  common::Time actualSleep = 0;
   if (sleepTime > 0)
+  {
     common::Time::Sleep(sleepTime);
+    actualSleep = common::Time::GetWallTime() - tmpTime;
+  }
   else
     sleepTime = 0;
 
-  common::Time actualSleep = common::Time::GetWallTime() - tmpTime;
 
   // exponentially avg out
   this->sleepOffset = (actualSleep - sleepTime) * 0.01 +
                       this->sleepOffset * 0.99;
+
+  DIAG_TIMER_LAP("World::Step", "sleepOffset");
 
   // throttling update rate, with sleepOffset as tolerance
   // the tolerance is needed as the sleep time is not exact
@@ -462,6 +476,8 @@ void World::Step()
          >= common::Time(this->physicsEngine->GetUpdatePeriod()))
   {
     boost::recursive_mutex::scoped_lock lock(*this->worldUpdateMutex);
+
+    DIAG_TIMER_LAP("World::Step", "worldUpdateMutex");
 
     this->prevStepWallTime = common::Time::GetWallTime();
 
@@ -472,6 +488,8 @@ void World::Step()
       this->iterations++;
       this->Update();
 
+      DIAG_TIMER_LAP("World::Step", "update");
+
       if (this->IsPaused() && this->stepInc > 0)
         this->stepInc--;
     }
@@ -480,6 +498,8 @@ void World::Step()
   }
 
   this->ProcessMessages();
+
+  DIAG_TIMER_STOP("World::Step");
 }
 
 //////////////////////////////////////////////////
