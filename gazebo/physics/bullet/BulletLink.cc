@@ -137,6 +137,11 @@ void BulletLink::Init()
   GZ_ASSERT(bulletWorld != NULL, "Bullet dynamics world is NULL");
   bulletWorld->addRigidBody(this->rigidLink);
   // this->rigidLink->setSleepingThresholds(0,0);
+  this->SetKinematic(this->sdf->GetValueBool("kinematic"));
+  this->SetGravityMode(this->sdf->GetValueBool("gravity"));
+
+  this->SetLinearDamping(this->GetLinearDamping());
+  this->SetAngularDamping(this->GetAngularDamping());
 }
 
 //////////////////////////////////////////////////
