@@ -197,8 +197,6 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
 
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
 
-  this->stepTimeDouble = bulletElem->GetElement("dt")->GetValueDouble();
-
   math::Vector3 g = this->sdf->GetValueVector3("gravity");
   // ODEPhysics checks this, so we will too.
   if (g == math::Vector3(0, 0, 0))
@@ -233,7 +231,7 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
     info.m_erp = 0.2;
 
   info.m_numIterations =
-      boost::any_cast<unsigned int>(this->GetAttribute(SOR_PGS_ITERS));
+      boost::any_cast<int>(this->GetAttribute(SOR_PGS_ITERS));
   info.m_sor =
       boost::any_cast<double>(this->GetAttribute(SOR_PGS_W));
 }
@@ -265,18 +263,15 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     // This function was copied from ODEPhysics with portions commented out.
     // TODO: determine which of these should be implemented.
     // physicsMsg.set_solver_type(this->stepType);
-    physicsMsg.set_dt(this->stepTimeDouble);
+    physicsMsg.set_dt(this->GetStepTime());
     physicsMsg.set_iters(
-        boost::any_cast<unsigned int>(this->GetAttribute(SOR_PGS_ITERS)));
+        boost::any_cast<int>(this->GetAttribute(SOR_PGS_ITERS)));
     physicsMsg.set_sor(
         boost::any_cast<double>(this->GetAttribute(SOR_PGS_W)));
     physicsMsg.set_cfm(
         boost::any_cast<double>(this->GetAttribute(GLOBAL_CFM)));
     physicsMsg.set_erp(
         boost::any_cast<double>(this->GetAttribute(GLOBAL_ERP)));
-    physicsMsg.set_contact_max_correcting_vel(
-        boost::any_cast<double>(
-        this->GetAttribute(CONTACT_MAX_CORRECTING_VEL)));
     physicsMsg.set_contact_surface_layer(
         boost::any_cast<double>(this->GetAttribute(CONTACT_SURFACE_LAYER)));
     physicsMsg.mutable_gravity()->CopyFrom(msgs::Convert(this->GetGravity()));
@@ -327,10 +322,6 @@ void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
   if (_msg->has_erp())
     this->SetAttribute(GLOBAL_ERP, _msg->erp());
 
-  if (_msg->has_contact_max_correcting_vel())
-    this->SetAttribute(CONTACT_MAX_CORRECTING_VEL,
-        _msg->contact_max_correcting_vel());
-
   if (_msg->has_contact_surface_layer())
     this->SetAttribute(CONTACT_SURFACE_LAYER, _msg->contact_surface_layer());
 
@@ -355,7 +346,7 @@ void BulletPhysics::UpdatePhysics()
   // common::Time currTime =  this->world->GetRealTime();
 
   this->dynamicsWorld->stepSimulation(
-      this->stepTimeDouble, 1, this->stepTimeDouble);
+      this->GetStepTime(), 1, this->GetStepTime());
   // this->lastUpdateTime = currTime;
 }
 
@@ -375,22 +366,6 @@ void BulletPhysics::Reset()
 }
 
 //////////////////////////////////////////////////
-void BulletPhysics::SetStepTime(double _value)
-{
-  if (this->sdf->HasElement("bullet") &&
-      this->sdf->GetElement("bullet")->HasElement("dt"))
-    this->sdf->GetElement("bullet")->GetElement("dt")->Set(_value);
-  else
-    gzerr << "Unable to set bullet step time\n";
-
-  this->stepTimeDouble = _value;
-}
-
-//////////////////////////////////////////////////
-double BulletPhysics::GetStepTime()
-{
-  return this->stepTimeDouble;
-}
 
 // //////////////////////////////////////////////////
 // void BulletPhysics::SetSORPGSIters(unsigned int _iters)
@@ -432,24 +407,16 @@ void BulletPhysics::SetAttribute(PhysicsAttribute _attr,
     }
     case SOR_PGS_ITERS:
     {
-      unsigned int value = boost::any_cast<unsigned int>(_value);
+      int value = boost::any_cast<int>(_value);
       bulletElem->GetElement("solver")->GetElement("iters")->Set(value);
       info.m_numIterations = value;
       break;
     }
     case SOR_PGS_W:
     {
-      unsigned int value = boost::any_cast<unsigned int>(_value);
+      double value = boost::any_cast<double>(_value);
       bulletElem->GetElement("solver")->GetElement("sor")->Set(value);
       info.m_sor = value;
-      break;
-    }
-    case CONTACT_MAX_CORRECTING_VEL:
-    {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("constraints")->GetElement(
-          "contact_max_correcting_vel")->Set(value);
-      gzwarn << "Not yet implemented in bullet" << std::endl;
       break;
     }
     case CONTACT_SURFACE_LAYER:
@@ -462,7 +429,7 @@ void BulletPhysics::SetAttribute(PhysicsAttribute _attr,
     }
     case MAX_CONTACTS:
     {
-      unsigned int value = boost::any_cast<unsigned int>(_value);
+      int value = boost::any_cast<int>(_value);
       bulletElem->GetElement("max_contacts")->GetValue()->Set(value);
       gzwarn << "Not yet implemented in bullet" << std::endl;
       break;
@@ -493,8 +460,6 @@ void BulletPhysics::SetAttribute(const std::string &_key,
     attribute = SOR_PGS_ITERS;
   else if (_key == "sor")
     attribute = SOR_PGS_W;
-  else if (_key == "contact_max_correcting_vel")
-    attribute = CONTACT_MAX_CORRECTING_VEL;
   else if (_key == "contact_surface_layer")
     attribute = CONTACT_SURFACE_LAYER;
   else if (_key == "max_contacts")
@@ -519,39 +484,33 @@ boost::any BulletPhysics::GetAttribute(PhysicsAttribute _attr) const
   {
     case GLOBAL_CFM:
     {
-      value = bulletElem->GetElement("constraints")->GetElement("cfm");
+      value = bulletElem->GetElement("constraints")->GetValueDouble("cfm");
       break;
     }
     case GLOBAL_ERP:
     {
-      value = bulletElem->GetElement("constraints")->GetElement("erp");
+      value = bulletElem->GetElement("constraints")->GetValueDouble("erp");
       break;
     }
     case SOR_PGS_ITERS:
     {
-      value = bulletElem->GetElement("solver")->GetElement("iters");
+      value = bulletElem->GetElement("solver")->GetValueInt("iters");
       break;
     }
     case SOR_PGS_W:
     {
-      value = bulletElem->GetElement("solver")->GetElement("sor");
-      break;
-    }
-    case CONTACT_MAX_CORRECTING_VEL:
-    {
-      value = bulletElem->GetElement("constraints")->GetElement(
-          "contact_max_correcting_vel");
+      value = bulletElem->GetElement("solver")->GetValueDouble("sor");
       break;
     }
     case CONTACT_SURFACE_LAYER:
     {
-      value = bulletElem->GetElement("constraints")->GetElement(
+      value = bulletElem->GetElement("constraints")->GetValueDouble(
           "contact_surface_layer");
       break;
     }
     case MAX_CONTACTS:
     {
-      value = bulletElem->GetElement("max_contacts")->GetValue();
+      value = bulletElem->GetElement("max_contacts")->GetValueInt();
       break;
     }
     default:
@@ -575,8 +534,6 @@ boost::any BulletPhysics::GetAttribute(const std::string &_key) const
     attribute = SOR_PGS_ITERS;
   else if (_key == "sor")
     attribute = SOR_PGS_W;
-  else if (_key == "contact_max_correcting_vel")
-    attribute = CONTACT_MAX_CORRECTING_VEL;
   else if (_key == "contact_surface_layer")
     attribute = CONTACT_SURFACE_LAYER;
   else if (_key == "max_contacts")
@@ -589,7 +546,6 @@ boost::any BulletPhysics::GetAttribute(const std::string &_key) const
   return this->GetAttribute(attribute);
 }
 
-//////////////////////////////////////////////////
 LinkPtr BulletPhysics::CreateLink(ModelPtr _parent)
 {
   if (_parent == NULL)
@@ -727,7 +683,6 @@ void BulletPhysics::SetSeed(uint32_t /*_seed*/)
   // There's 2 other instances of random number generation in bullet classes:
   //  btSoftBody.cpp:1160
   //  btConvexHullComputer.cpp:2188
-
   // It's going to be blank for now.
   /// \todo Implement this function.
 }
