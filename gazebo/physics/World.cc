@@ -114,6 +114,9 @@ World::World(const std::string &_name)
 
   this->sleepOffset = common::Time(0);
 
+  this->realTimeUpdateRate = 0;
+  this->maxStepSize = 0;
+
   this->prevStatTime = common::Time::GetWallTime();
   this->prevProcessMsgsTime = common::Time::GetWallTime();
 
@@ -204,6 +207,10 @@ void World::Load(sdf::ElementPtr _sdf)
 
   if (this->physicsEngine == NULL)
     gzthrow("Unable to create physics engine\n");
+
+  // These should come before loading of physics engine
+  this->realTimeUpdateRate = this->sdf->GetValueDouble("real_time_update_rate");
+  this->maxStepSize = this->sdf->GetValueDouble("max_step_size");
 
   // This should come before loading of entities
   this->physicsEngine->Load(this->sdf->GetElement("physics"));
@@ -1781,4 +1788,31 @@ void World::PublishLogStatus()
   }
 
   this->logStatusPub->Publish(msg);
+}
+
+//////////////////////////////////////////////////
+double World::GetRealTimeUpdateRate() const
+{
+  return this->realTimeUpdateRate;
+}
+
+//////////////////////////////////////////////////
+double World::GetMaxStepSize() const
+{
+  return this->maxStepSize;
+}
+
+//////////////////////////////////////////////////
+void World::SetRealTimeUpdateRate(double _rate)
+{
+  /// TODO: may need to protect with mutex once other modules start using this
+  this->sdf->GetElement("real_time_update_rate")->Set(_rate);
+  this->realTimeUpdateRate = _rate;
+}
+
+//////////////////////////////////////////////////
+void World::SetMaxStepSize(double _stepSize)
+{
+  this->sdf->GetElement("max_step_size")->Set(_stepSize);
+  this->maxStepSize = _stepSize;
 }

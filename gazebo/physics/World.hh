@@ -312,6 +312,22 @@ namespace gazebo
       /// \param[in] _modelName Name of the model to publish.
       public: void PublishModelPose(const std::string &_modelName);
 
+      /// \brief Get real time update rate
+      /// \return Update rate
+      public: double GetRealTimeUpdateRate() const;
+
+      /// \brief Get max step size.
+      /// \return Max step size.
+      public: double GetMaxStepSize() const;
+
+      /// \brief Set real time update rate
+      /// \param[in] _rate Update rate
+      public: void SetRealTimeUpdateRate(double _rate);
+
+      /// \brief Set max step size.
+      /// \param[in] _stepSize Max step size.
+      public: void SetMaxStepSize(double _stepSize);
+
       /// \cond
       /// This is an internal function.
       /// \brief Get a model by id.
@@ -654,6 +670,11 @@ namespace gazebo
 
       /// \brief The number of simulation iterations.
       private: uint64_t iterations;
+
+      /// \brief Real time update rate.
+      private: double realTimeUpdateRate;
+
+      private: double maxStepSize;
     };
     /// \}
   }
