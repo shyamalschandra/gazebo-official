@@ -27,7 +27,7 @@
 
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/Camera.hh"
-#include "gazebo/sensors/SensorTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 #include "gazebo/common/Event.hh"
 #include "gazebo/common/Time.hh"
@@ -71,7 +71,7 @@ namespace gazebo
       /// \param[in] _scene Scene that will contain the camera
       /// \param[in] _autoRender Almost everyone should leave this as true.
       public: GpuLaser(const std::string &_namePrefix,
-                          Scene *_scene, bool _autoRender = true);
+                          ScenePtr _scene, bool _autoRender = true);
 
       /// \brief Destructor
       public: virtual ~GpuLaser();
@@ -117,15 +117,99 @@ namespace gazebo
       /// \param[in] _h Number of samples in the vertical sweep
       public: void SetRangeCount(unsigned int _w, unsigned int _h = 1);
 
-      /// \brief Set the parent sensor
-      /// \param[in] _parent Pointer to a sensors::GpuRaySensor
-      public: void SetParentSensor(sensors::GpuRaySensor *_parent);
-
       /// \internal
       /// \brief Implementation of Ogre::RenderObjectListener
       public: virtual void notifyRenderSingleObject(Ogre::Renderable *_rend,
               const Ogre::Pass *_p, const Ogre::AutoParamDataSource *_s,
               const Ogre::LightList *_ll, bool _supp);
+
+      /// \brief Get (horizontal_max_angle + horizontal_min_angle) * 0.5
+      /// \return (horizontal_max_angle + horizontal_min_angle) * 0.5
+      public: double GetHorzHalfAngle() const;
+
+      /// \brief Get (vertical_max_angle + vertical_min_angle) * 0.5
+      /// \return (vertical_max_angle + vertical_min_angle) * 0.5
+      public: double GetVertHalfAngle() const;
+
+      /// \brief Sets the horizontal half angle
+      /// \param[in] horizontal half angle
+      public: void SetHorzHalfAngle(double _angle);
+
+      /// \brief Sets the vertical half angle
+      /// \param[in] vertical half angle
+      public: void SetVertHalfAngle(double _angle);
+
+      /// \brief Sets sensor horizontal or vertical
+      /// \return True if horizontal, false if not
+      public: void SetIsHorizontal(bool _horizontal);
+
+      /// \brief Gets if sensor is horizontal
+      /// \return True if horizontal, false if not
+      public: bool IsHorizontal() const;
+
+      /// \brief Get the horizontal field of view of the laser sensor.
+      /// \return The horizontal field of view of the laser sensor.
+      public: double GetHorzFOV() const;
+
+      /// \brief Get Cos Horz field-of-view
+      /// \return 2 * atan(tan(this->hfov/2) / cos(this->vfov/2))
+      public: double GetCosHorzFOV() const;
+
+      /// \brief Sets the Cos Horz FOV
+      /// \param[in] Cos Horz FOV
+      public: void SetCosHorzFOV(double _chfov);
+
+      /// \brief Get the vertical field-of-view.
+      public: double GetVertFOV() const;
+
+      /// \brief Get Cos Vert field-of-view
+      /// \return 2 * atan(tan(this->vfov/2) / cos(this->hfov/2))
+      public: double GetCosVertFOV() const;
+
+      /// \brief Sets the Cos Horz FOV
+      /// \param[in] Cos Horz FOV
+      public: void SetCosVertFOV(double _cvfov);
+
+      /// \brief Get near clip
+      /// \return near clip distance
+      public: double GetNearClip() const;
+
+      /// \brief Get far clip
+      /// \return far clip distance
+      public: double GetFarClip() const;
+
+      /// \brief Sets the near clip distance
+      /// \param[in] near clip distance
+      public: void SetNearClip(double _near);
+
+      /// \brief Sets the far clip distance
+      /// \param[in] far clip distance
+      public: void SetFarClip(double _far);
+
+      /// \brief Sets the horizontal fov
+      /// \param[in] horizontal fov
+      public: void SetHorzFOV(double _hfov);
+
+      /// \brief Sets the vertical fov
+      /// \param[in] vertical fov
+      public: void SetVertFOV(double _vfov);
+
+      /// \brief Get the number of cameras required
+      /// \return Number of cameras needed to generate the rays 
+      public: double GetCameraCount() const;
+
+      /// \brief Set the number of cameras required
+      /// \param[in] _cameraCount The number of cameras required to generate
+      /// the rays
+      public: void SetCameraCount(double _cameraCount);
+
+      /// \brief Get the ray count ratio (equivalent to aspect ratio)
+      /// \return The ray count ratio (equivalent to aspect ratio)
+      public: double GetRayCountRatio() const;
+
+      /// \brief Sets the ray count ratio (equivalen to aspect ratio)
+      /// \param[in] _rayCountRatio ray count ratio (equivalent to aspect ratio)
+      public: void SetRayCountRatio(double _rayCountRatio);
 
       // Documentation inherited.
       private: virtual void RenderImpl();
@@ -170,33 +254,65 @@ namespace gazebo
       /// \param[in] _target Render target for the second pass.
       private: virtual void Set2ndPassTarget(Ogre::RenderTarget *_target);
 
+      /// \brief Horizontal half angle.
+      protected: double horzHalfAngle;
+
+      /// \brief Vertical half angle.
+      protected: double vertHalfAngle;
+
+      /// \brief Ray count ratio.
+      protected: double rayCountRatio;
+
+      /// \brief Horizontal field-of-view.
+      protected: double hfov;
+
+      /// \brief Vertical field-of-view.
+      protected: double vfov;
+
+      /// \brief Cos horizontal field-of-view.
+      protected: double chfov;
+
+      /// \brief Cos vertical field-of-view.
+      protected: double cvfov;
+
+      /// \brief Near clip plane.
+      protected: double near;
+
+      /// \brief Far clip plane.
+      protected: double far;
+
+      /// \brief True if the sensor is horizontal only.
+      protected: bool isHorizontal;
+
+      /// \brief Number of cameras.
+      protected: unsigned int cameraCount;
+
       private: event::EventT<void(const float *, unsigned int, unsigned int,
                    unsigned int, const std::string &)> newLaserFrame;
 
       private: float *laserBuffer;
       private: float *laserScan;
-      private: Ogre::Material *mat_1st_pass;
-      private: Ogre::Material *mat_2nd_pass;
+      private: Ogre::Material *matFirstPass;
+      private: Ogre::Material *matSecondPass;
 
-      private: Ogre::Texture *_1stPassTextures[3];
-      private: Ogre::Texture *_2ndPassTexture;
-      private: Ogre::RenderTarget *_1stPassTargets[3];
-      private: Ogre::RenderTarget *_2ndPassTarget;
-      private: Ogre::Viewport *_1stPassViewports[3];
-      private: Ogre::Viewport *_2ndPassViewport;
+      private: Ogre::Texture *firstPassTextures[3];
+      private: Ogre::Texture *secondPassTexture;
+      private: Ogre::RenderTarget *firstPassTargets[3];
+      private: Ogre::RenderTarget *secondPassTarget;
+      private: Ogre::Viewport *firstPassViewports[3];
+      private: Ogre::Viewport *secondPassViewport;
 
-      private: unsigned int _textureCount;
+      private: unsigned int textureCount;
       private: double cameraYaws[4];
 
-      private: Ogre::RenderTarget *current_target;
-      private: Ogre::Material *current_mat;
+      private: Ogre::RenderTarget *currentTarget;
+      private: Ogre::Material *currentMat;
 
       private: Ogre::Camera *orthoCam;
 
-      private: Ogre::SceneNode *origParentNode_ortho;
-      private: Ogre::SceneNode *pitchNode_ortho;
+      private: Ogre::SceneNode *pitchNodeOrtho;
 
-      private: common::Mesh *undist_mesh;
+      private: common::Mesh *undistMesh;
 
       private: Ogre::MovableObject *object;
 
@@ -205,7 +321,6 @@ namespace gazebo
       private: unsigned int w2nd;
       private: unsigned int h2nd;
 
-      private: sensors::GpuRaySensor *parent_sensor;
       private: double lastRenderDuration;
 
       private: std::vector<int> texIdx;
