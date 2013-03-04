@@ -82,11 +82,11 @@ namespace gazebo
 
       /// \brief Get the simulation update rate.
       /// \return Update rate.
-      public: double GetUpdateRate();
+      public: double GetUpdateRate() const;
 
       /// \brief Get the simulation update period.
       /// \return Simulation update period.
-      public: double GetUpdatePeriod();
+      public: double GetUpdatePeriod() const;
 
       /// \brief Set the simulation step time.
       /// \param[in] _value Value of the step time.
@@ -94,7 +94,7 @@ namespace gazebo
 
       /// \brief Get the simulation step time.
       /// \return Simulation step time.
-      public: virtual double GetStepTime() = 0;
+      public: virtual double GetStepTime() const = 0;
 
       /// \brief Update the physics engine.
       public: virtual void UpdatePhysics() {}
