@@ -49,6 +49,10 @@ DiagnosticManager::DiagnosticManager()
 
   this->logPath = this->logPath / "diagnostics" /
     common::Time::GetWallTimeAsISOString();
+
+  // Make sure the path exists.
+  if (!boost::filesystem::exists(this->logPath))
+    boost::filesystem::create_directories(this->logPath);
 }
 
 //////////////////////////////////////////////////
@@ -60,6 +64,8 @@ DiagnosticManager::~DiagnosticManager()
 //////////////////////////////////////////////////
 void DiagnosticManager::Init(const std::string &_worldName)
 {
+  this->node.reset(new transport::Node());
+
   this->node->Init(_worldName);
   this->pub = this->node->Advertise<msgs::Diagnostics>("~/diagnostics");
 
@@ -173,6 +179,13 @@ int DiagnosticManager::GetTimerCount() const
 //////////////////////////////////////////////////
 common::Time DiagnosticManager::GetTime(int _index) const
 {
+  if (_index < 0 || static_cast<size_t>(_index) > this->timers.size())
+  {
+    gzerr << "Invalid index of[" << _index << "]. Must be between 0 and "
+      << this->timers.size()-1 << ", inclusive.\n";
+    return common::Time();
+  }
+
   TimerMap::const_iterator iter;
 
   iter = this->timers.begin();
@@ -192,6 +205,12 @@ common::Time DiagnosticManager::GetTime(int _index) const
 //////////////////////////////////////////////////
 std::string DiagnosticManager::GetLabel(int _index) const
 {
+  if (_index < 0 || static_cast<size_t>(_index) > this->timers.size())
+  {
+    gzerr << "Invalid index of[" << _index << "]. Must be between 0 and "
+      << this->timers.size()-1 << ", inclusive.\n";
+    return std::string();
+  }
   TimerMap::const_iterator iter;
 
   iter = this->timers.begin();

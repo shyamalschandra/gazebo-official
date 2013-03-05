@@ -19,18 +19,19 @@
  * Date: 21 May 2003
  */
 
-#include "transport/Transport.hh"
-#include "transport/Publisher.hh"
+#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/Publisher.hh"
 
-#include "common/Events.hh"
-#include "common/Exception.hh"
-#include "common/Console.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Exception.hh"
 
-#include "physics/PhysicsEngine.hh"
-#include "physics/Link.hh"
-#include "physics/Model.hh"
-#include "physics/World.hh"
-#include "physics/Joint.hh"
+#include "gazebo/physics/PhysicsEngine.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/World.hh"
+#include "gazebo/physics/Joint.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -42,6 +43,11 @@ Joint::Joint(BasePtr _parent)
   this->AddType(Base::JOINT);
   this->forceApplied[0] = 0;
   this->forceApplied[1] = 0;
+  this->effortLimit[0] = -1;
+  this->effortLimit[1] = -1;
+  this->velocityLimit[0] = -1;
+  this->velocityLimit[1] = -1;
+  this->useCFMDamping = false;
 }
 
 //////////////////////////////////////////////////
@@ -73,6 +79,11 @@ void Joint::Load(LinkPtr _parent, LinkPtr _child, const math::Pose &_pose)
 
   this->parentLink = _parent;
   this->childLink = _child;
+
+  // Joint is loaded without sdf from a model
+  // Initialize this->sdf so it can be used for data storage
+  sdf::initFile("joint.sdf", this->sdf);
+
   this->LoadImpl(_pose);
 }
 
@@ -104,7 +115,8 @@ void Joint::Load(sdf::ElementPtr _sdf)
   if (!this->childLink && childName != std::string("world"))
     gzthrow("Couldn't Find Child Link[" + childName  + "]");
 
-  this->LoadImpl(_sdf->GetValuePose("pose"));
+  this->anchorPose = _sdf->GetValuePose("pose");
+  this->LoadImpl(this->anchorPose);
 }
 
 /////////////////////////////////////////////////
@@ -120,13 +132,17 @@ void Joint::LoadImpl(const math::Pose &_pose)
 
   if (this->parentLink)
     this->parentLink->AddChildJoint(boost::shared_static_cast<Joint>(myBase));
-  this->childLink->AddParentJoint(boost::shared_static_cast<Joint>(myBase));
+  else if (this->childLink)
+    this->childLink->AddParentJoint(boost::shared_static_cast<Joint>(myBase));
+  else
+    gzthrow("both parent and child link do no exist");
 
-  // setting anchor relative to gazebo link frame pose
+  // setting anchor relative to gazebo child link frame position
   if (this->childLink)
     this->anchorPos = (_pose + this->childLink->GetWorldPose()).pos;
+  // otherwise set anchor relative to world frame
   else
-    this->anchorPos = math::Vector3(0, 0, 0);
+    this->anchorPos = _pose.pos;
 }
 
 //////////////////////////////////////////////////
@@ -145,12 +161,17 @@ void Joint::Init()
     {
       sdf::ElementPtr limitElem = axisElem->GetElement("limit");
 
+      // store upper and lower joint limits
+      this->upperLimit[0] = limitElem->GetValueDouble("upper");
+      this->lowerLimit[0] = limitElem->GetValueDouble("lower");
+
       // Perform this three step ordering to ensure the
       // parameters are set properly.
       // This is taken from the ODE wiki.
-      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
-      this->SetLowStop(0, limitElem->GetValueDouble("lower"));
-      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
+      this->SetHighStop(0, this->upperLimit[0].Radian());
+      this->SetLowStop(0, this->lowerLimit[0].Radian());
+      this->SetHighStop(0, this->upperLimit[0].Radian());
+
       this->effortLimit[0] = limitElem->GetValueDouble("effort");
       this->velocityLimit[0] = limitElem->GetValueDouble("velocity");
     }
@@ -164,13 +185,17 @@ void Joint::Init()
     {
       sdf::ElementPtr limitElem = axisElem->GetElement("limit");
 
+      // store upper and lower joint limits
+      this->upperLimit[1] = limitElem->GetValueDouble("upper");
+      this->lowerLimit[1] = limitElem->GetValueDouble("lower");
+
       // Perform this three step ordering to ensure the
       // parameters  are set properly.
       // This is taken from the ODE wiki.
-      limitElem = axisElem->GetElement("limit");
-      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
-      this->SetLowStop(1, limitElem->GetValueDouble("lower"));
-      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
+      this->SetHighStop(1, this->upperLimit[1].Radian());
+      this->SetLowStop(1, this->lowerLimit[1].Radian());
+      this->SetHighStop(1, this->upperLimit[1].Radian());
+
       this->effortLimit[1] = limitElem->GetValueDouble("effort");
       this->velocityLimit[1] = limitElem->GetValueDouble("velocity");
     }
@@ -321,13 +346,7 @@ void Joint::FillMsg(msgs::Joint &_msg)
 {
   _msg.set_name(this->GetScopedName());
 
-  if (this->sdf->HasElement("pose"))
-  {
-    msgs::Set(_msg.mutable_pose(),
-              this->sdf->GetValuePose("pose"));
-  }
-  else
-    msgs::Set(_msg.mutable_pose(), math::Pose(0, 0, 0, 0, 0, 0));
+  msgs::Set(_msg.mutable_pose(), this->anchorPose);
 
   if (this->HasType(Base::HINGE_JOINT))
   {
@@ -387,6 +406,48 @@ math::Angle Joint::GetAngle(int _index) const
     return this->staticAngle;
   else
     return this->GetAngleImpl(_index);
+}
+
+//////////////////////////////////////////////////
+void Joint::SetHighStop(int _index, const math::Angle &_angle)
+{
+  GZ_ASSERT(this->sdf != NULL, "Joint sdf member is NULL");
+  if (_index == 0)
+  {
+    this->sdf->GetElement("axis")->GetElement("limit")
+             ->GetElement("upper")->Set(_angle.Radian());
+  }
+  else if (_index == 1)
+  {
+    this->sdf->GetElement("axis2")->GetElement("limit")
+             ->GetElement("upper")->Set(_angle.Radian());
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to set high stop\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void Joint::SetLowStop(int _index, const math::Angle &_angle)
+{
+  GZ_ASSERT(this->sdf != NULL, "Joint sdf member is NULL");
+  if (_index == 0)
+  {
+    this->sdf->GetElement("axis")->GetElement("limit")
+             ->GetElement("lower")->Set(_angle.Radian());
+  }
+  else if (_index == 1)
+  {
+    this->sdf->GetElement("axis2")->GetElement("limit")
+             ->GetElement("lower")->Set(_angle.Radian());
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to set low stop\n";
+  }
 }
 
 //////////////////////////////////////////////////
