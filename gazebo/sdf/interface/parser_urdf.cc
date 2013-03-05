@@ -388,6 +388,16 @@ void URDF2Gazebo::ParseGazeboExtension(TiXmlDocument &_urdfXml)
           else
             gazebo->provideFeedback = false;
       }
+      else if (childElem->ValueStr() == "cfmDamping")
+      {
+          std::string valueStr = this->GetKeyValueAsString(childElem);
+
+          if (lowerStr(valueStr) == "true" || lowerStr(valueStr) == "yes" ||
+              valueStr == "1")
+            gazebo->cfmDamping = true;
+          else
+            gazebo->cfmDamping = false;
+      }
       else
       {
           std::ostringstream stream;
@@ -564,6 +574,12 @@ void URDF2Gazebo::InsertGazeboExtensionJoint(TiXmlElement *_elem,
             this->AddKeyValue(physicsOde, "provide_feedback", "true");
         else
             this->AddKeyValue(physicsOde, "provide_feedback", "false");
+
+        // insert cfmDamping
+        if ((*ge)->cfmDamping)
+            this->AddKeyValue(physicsOde, "cfm_damping", "true");
+        else
+            this->AddKeyValue(physicsOde, "cfm_damping", "false");
 
         // insert fudgeFactor
         if ((*ge)->isFudgeFactor)
@@ -1825,27 +1841,7 @@ void URDF2Gazebo::ReduceVisualsToParent(UrdfLinkPtr _link)
     visualsIt = _link->visual_groups.begin();
     visualsIt != _link->visual_groups.end(); ++visualsIt)
   {
-    /// @todo: extend to different groups,
-    /// only work with default meshes right now.
-    if (visualsIt->first == "default")
-    {
-      std::string lumpGroupName = std::string("lump::")+_link->name;
-      // gzdbg << "adding modified lump group name [" << lumpGroupName
-      //       << "] to link [" << _link->getParent()->name << "]\n.";
-      for (std::vector<UrdfVisualPtr>::iterator
-        visualIt = visualsIt->second->begin();
-        visualIt != visualsIt->second->end(); ++visualIt)
-      {
-        // transform visual origin from _link frame to
-        // parent link frame before adding to parent
-        (*visualIt)->origin = this->TransformToParentFrame((*visualIt)->origin,
-          _link->parent_joint->parent_to_joint_origin_transform);
-        // add the modified visual to parent
-        this->ReduceVisualToParent(_link->getParent(), lumpGroupName,
-          *visualIt);
-      }
-    }
-    else if (visualsIt->first.find(std::string("lump::")) == 0)
+    if (visualsIt->first.find(std::string("lump::")) == 0)
     {
       // it's a previously lumped mesh, re-lump under same _groupName
       std::string lumpGroupName = visualsIt->first;
@@ -1857,6 +1853,25 @@ void URDF2Gazebo::ReduceVisualsToParent(UrdfLinkPtr _link)
       {
         // transform visual origin from _link frame to parent link
         // frame before adding to parent
+        (*visualIt)->origin = this->TransformToParentFrame((*visualIt)->origin,
+          _link->parent_joint->parent_to_joint_origin_transform);
+        // add the modified visual to parent
+        this->ReduceVisualToParent(_link->getParent(), lumpGroupName,
+          *visualIt);
+      }
+    }
+    else
+    {
+      // default and any other groups meshes
+      std::string lumpGroupName = std::string("lump::")+_link->name;
+      // gzdbg << "adding modified lump group name [" << lumpGroupName
+      //       << "] to link [" << _link->getParent()->name << "]\n.";
+      for (std::vector<UrdfVisualPtr>::iterator
+        visualIt = visualsIt->second->begin();
+        visualIt != visualsIt->second->end(); ++visualIt)
+      {
+        // transform visual origin from _link frame to
+        // parent link frame before adding to parent
         (*visualIt)->origin = this->TransformToParentFrame((*visualIt)->origin,
           _link->parent_joint->parent_to_joint_origin_transform);
         // add the modified visual to parent
@@ -1880,30 +1895,7 @@ void URDF2Gazebo::ReduceCollisionsToParent(UrdfLinkPtr _link)
       collisionsIt = _link->collision_groups.begin();
       collisionsIt != _link->collision_groups.end(); ++collisionsIt)
     {
-      if (collisionsIt->first == "default")
-      {
-        // if it's a "default" mesh, it will be added under "lump::"+_link name
-        std::string lumpGroupName = std::string("lump::")+_link->name;
-        // gzdbg << "lumping collision [" << collisionsIt->first
-        //       << "] for link [" << _link->name
-        //       << "] to parent [" << _link->getParent()->name
-        //       << "] with group name [" << lumpGroupName << "]\n";
-        for (std::vector<UrdfCollisionPtr>::iterator
-          collisionIt = collisionsIt->second->begin();
-          collisionIt != collisionsIt->second->end(); ++collisionIt)
-        {
-          // transform collision origin from _link frame to
-          // parent link frame before adding to parent
-          (*collisionIt)->origin = this->TransformToParentFrame(
-            (*collisionIt)->origin,
-            _link->parent_joint->parent_to_joint_origin_transform);
-
-          // add the modified collision to parent
-          this->ReduceCollisionToParent(_link->getParent(), lumpGroupName,
-            *collisionIt);
-        }
-      }
-      else if (collisionsIt->first.find(std::string("lump::")) == 0)
+      if (collisionsIt->first.find(std::string("lump::")) == 0)
       {
         // if it's a previously lumped mesh, relump under same _groupName
         std::string lumpGroupName = collisionsIt->first;
@@ -1920,6 +1912,29 @@ void URDF2Gazebo::ReduceCollisionsToParent(UrdfLinkPtr _link)
           (*collisionIt)->origin = this->TransformToParentFrame(
             (*collisionIt)->origin,
             _link->parent_joint->parent_to_joint_origin_transform);
+          // add the modified collision to parent
+          this->ReduceCollisionToParent(_link->getParent(), lumpGroupName,
+            *collisionIt);
+        }
+      }
+      else
+      {
+        // default and any other group meshes
+        std::string lumpGroupName = std::string("lump::")+_link->name;
+        // gzdbg << "lumping collision [" << collisionsIt->first
+        //       << "] for link [" << _link->name
+        //       << "] to parent [" << _link->getParent()->name
+        //       << "] with group name [" << lumpGroupName << "]\n";
+        for (std::vector<UrdfCollisionPtr>::iterator
+          collisionIt = collisionsIt->second->begin();
+          collisionIt != collisionsIt->second->end(); ++collisionIt)
+        {
+          // transform collision origin from _link frame to
+          // parent link frame before adding to parent
+          (*collisionIt)->origin = this->TransformToParentFrame(
+            (*collisionIt)->origin,
+            _link->parent_joint->parent_to_joint_origin_transform);
+
           // add the modified collision to parent
           this->ReduceCollisionToParent(_link->getParent(), lumpGroupName,
             *collisionIt);

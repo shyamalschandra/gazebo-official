@@ -7,7 +7,6 @@ link_directories(
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/deps
-  ${QWT_INCLUDE_DIR}
 )
 
 add_definitions(${QT_DEFINITIONS})
@@ -85,25 +84,25 @@ set (headers
   viewers/ViewFactory.hh
 )
 
-if (HAVE_QWT)
-  set (sources ${sources}
-    Diagnostics.cc
-    IncrementalPlot.cc
-  )
-  set (qt_headers ${qt_headers}
-    Diagnostics.hh
-    IncrementalPlot.hh
-  )
-endif()
+#if (HAVE_QWT)
+#  set (sources ${sources}
+#    Diagnostics.cc
+#    IncrementalPlot.cc
+#  )
+#  set (qt_headers ${qt_headers}
+#    Diagnostics.hh
+#    IncrementalPlot.hh
+#  )
+#endif()
 
-set (display_tests
+set (qt_tests
   DataLogger_TEST.cc
   TimePanel_TEST.cc
   viewers/ImagesView_TEST.cc
 )
 
 # Generate executables for each of the QT unit tests
-gz_build_display_tests(${tests})
+gz_build_qt_tests(${qt_tests})
 
 set (resources resources.qrc)
 
@@ -111,7 +110,6 @@ QT4_WRAP_CPP(headers_MOC ${qt_headers})
 QT4_ADD_RESOURCES(resources_RCC ${resources})
 
 gz_add_executable(gzclient ${sources} main.cc ${headers_MOC} ${headers} ${resources_RCC})
-
 gz_add_library(gazebo_gui ${sources} ${headers_MOC} ${headers} ${resources_RCC})
 
 add_dependencies(gazebo_gui gazebo_msgs)
@@ -128,7 +126,6 @@ target_link_libraries(gazebo_gui gazebo_common
                                  ${QT_LIBRARIES}
                                  ${ogre_libraries}
                                  ${Boost_LIBRARIES}
-                                 ${QWT_LIBRARY}
                                  pthread)
 
 target_link_libraries(gzclient  gazebo_common
@@ -142,7 +139,6 @@ target_link_libraries(gzclient  gazebo_common
                                 ${QT_LIBRARIES}
                                 ${ogre_libraries}
                                 ${Boost_LIBRARIES}
-                                ${QWT_LIBRARY}
                                 pthread)
 
 add_definitions(${QT_DEFINITIONS})

@@ -46,7 +46,7 @@ namespace gazebo
       public: virtual ~BulletJoint();
 
       /// \brief Load a BulletJoint
-      public: void Load(sdf::ElementPtr _sdf);
+      public: virtual void Load(sdf::ElementPtr _sdf);
 
       /// \brief Reset the joint
       public: virtual void Reset();
@@ -99,8 +99,13 @@ namespace gazebo
                                         const boost::any &/*_value*/)
               {gzerr << "Not implement in Bullet\n";}
 
+      // Documentation inherited.
+      public: virtual double GetAttribute(const std::string &/*_key*/,
+                                        int /*_index*/)
+              {gzerr << "Not implement in Bullet\n"; return 0;}
+
       protected: btTypedConstraint *constraint;
-      protected: btDynamicsWorld *world;
+      protected: btDynamicsWorld *bulletWorld;
 
       // Documentation inherited.
       public: virtual JointWrench GetForceTorque(int _index);

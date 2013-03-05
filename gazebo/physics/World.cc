@@ -545,6 +545,8 @@ void World::Update()
     this->needsReset = false;
   }
 
+  DIAG_TIMER_LAP("World::Update", "needsReset");
+
   event::Events::worldUpdateStart();
   this->updateInfo.simTime = this->GetSimTime();
   this->updateInfo.realTime = this->GetRealTime();
@@ -857,6 +859,7 @@ void World::ResetTime()
   this->startTime = common::Time::GetWallTime();
   this->realTimeOffset = common::Time(0);
   this->iterations = 0;
+  sensors::SensorManager::Instance()->ResetLastUpdateTimes();
 }
 
 //////////////////////////////////////////////////
@@ -1059,7 +1062,7 @@ void World::OnControl(ConstWorldControlPtr &_data)
 
     if (_data->reset().has_all() && _data->reset().all())
     {
-        this->resetAll = true;
+      this->resetAll = true;
     }
     else
     {
