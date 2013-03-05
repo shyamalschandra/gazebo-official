@@ -47,6 +47,7 @@ Joint::Joint(BasePtr _parent)
   this->effortLimit[1] = -1;
   this->velocityLimit[0] = -1;
   this->velocityLimit[1] = -1;
+  this->useCFMDamping = false;
 }
 
 //////////////////////////////////////////////////
@@ -114,7 +115,8 @@ void Joint::Load(sdf::ElementPtr _sdf)
   if (!this->childLink && childName != std::string("world"))
     gzthrow("Couldn't Find Child Link[" + childName  + "]");
 
-  this->LoadImpl(_sdf->GetValuePose("pose"));
+  this->anchorPose = _sdf->GetValuePose("pose");
+  this->LoadImpl(this->anchorPose);
 }
 
 /////////////////////////////////////////////////
@@ -159,12 +161,17 @@ void Joint::Init()
     {
       sdf::ElementPtr limitElem = axisElem->GetElement("limit");
 
+      // store upper and lower joint limits
+      this->upperLimit[0] = limitElem->GetValueDouble("upper");
+      this->lowerLimit[0] = limitElem->GetValueDouble("lower");
+
       // Perform this three step ordering to ensure the
       // parameters are set properly.
       // This is taken from the ODE wiki.
-      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
-      this->SetLowStop(0, limitElem->GetValueDouble("lower"));
-      this->SetHighStop(0, limitElem->GetValueDouble("upper"));
+      this->SetHighStop(0, this->upperLimit[0].Radian());
+      this->SetLowStop(0, this->lowerLimit[0].Radian());
+      this->SetHighStop(0, this->upperLimit[0].Radian());
+
       this->effortLimit[0] = limitElem->GetValueDouble("effort");
       this->velocityLimit[0] = limitElem->GetValueDouble("velocity");
     }
@@ -178,13 +185,17 @@ void Joint::Init()
     {
       sdf::ElementPtr limitElem = axisElem->GetElement("limit");
 
+      // store upper and lower joint limits
+      this->upperLimit[1] = limitElem->GetValueDouble("upper");
+      this->lowerLimit[1] = limitElem->GetValueDouble("lower");
+
       // Perform this three step ordering to ensure the
       // parameters  are set properly.
       // This is taken from the ODE wiki.
-      limitElem = axisElem->GetElement("limit");
-      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
-      this->SetLowStop(1, limitElem->GetValueDouble("lower"));
-      this->SetHighStop(1, limitElem->GetValueDouble("upper"));
+      this->SetHighStop(1, this->upperLimit[1].Radian());
+      this->SetLowStop(1, this->lowerLimit[1].Radian());
+      this->SetHighStop(1, this->upperLimit[1].Radian());
+
       this->effortLimit[1] = limitElem->GetValueDouble("effort");
       this->velocityLimit[1] = limitElem->GetValueDouble("velocity");
     }
@@ -335,13 +346,7 @@ void Joint::FillMsg(msgs::Joint &_msg)
 {
   _msg.set_name(this->GetScopedName());
 
-  if (this->sdf->HasElement("pose"))
-  {
-    msgs::Set(_msg.mutable_pose(),
-              this->sdf->GetValuePose("pose"));
-  }
-  else
-    msgs::Set(_msg.mutable_pose(), math::Pose(0, 0, 0, 0, 0, 0));
+  msgs::Set(_msg.mutable_pose(), this->anchorPose);
 
   if (this->HasType(Base::HINGE_JOINT))
   {

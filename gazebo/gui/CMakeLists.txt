@@ -7,6 +7,7 @@ link_directories(
 
 include_directories(
   ${QWT_INCLUDE_DIR}
+  ${CMAKE_SOURCE_DIR}/deps
 )
 
 add_definitions(${QT_DEFINITIONS})
