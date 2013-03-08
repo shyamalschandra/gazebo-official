@@ -312,6 +312,22 @@ namespace gazebo
       /// \param[in] _modelName Name of the model to publish.
       public: void PublishModelPose(const std::string &_modelName);
 
+      /// \brief Get real time update rate
+      /// \return Update rate
+      public: double GetRealTimeUpdateRate() const;
+
+      /// \brief Get max step size.
+      /// \return Max step size.
+      public: double GetMaxStepSize() const;
+
+      /// \brief Set real time update rate
+      /// \param[in] _rate Update rate
+      public: void SetRealTimeUpdateRate(double _rate);
+
+      /// \brief Set max step size.
+      /// \param[in] _stepSize Max step size.
+      public: void SetMaxStepSize(double _stepSize);
+
       /// \cond
       /// This is an internal function.
       /// \brief Get a model by id.
@@ -396,6 +412,10 @@ namespace gazebo
       /// \param[in] _msg Incoming joint message.
       private: void JointLog(ConstJointPtr &_msg);
 
+      /// \brief Called when a world_modify message is received.
+      /// \param[in] _msg The world_modify message.
+      private: void OnWorldMsg(ConstWorldPtr &_msg);
+
       /// \brief Called when a factory message is received.
       /// \param[in] _data The factory message.
       private: void OnFactoryMsg(ConstFactoryPtr &_data);
@@ -419,21 +439,25 @@ namespace gazebo
       /// \param[in] _model Pointer to the model to get the data from.
       private: void FillModelMsg(msgs::Model &_msg, ModelPtr _model);
 
-      /// \brief Process all recieved entity messages.
+      /// \brief Process all received entity messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessEntityMsgs();
 
-      /// \brief Process all recieved request messages.
+      /// \brief Process all received request messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessRequestMsgs();
 
-      /// \brief Process all recieved factory messages.
+      /// \brief Process all received factory messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessFactoryMsgs();
 
-      /// \brief Process all recieved model messages.
+      /// \brief Process all received model messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessModelMsgs();
+
+      /// \brief Process all received world messages.
+      /// Must only be called from the World::ProcessMessages function.
+      private: void ProcessWorldMsgs();
 
       /// \brief Log callback. This is where we write out state info.
       private: bool OnLog(std::ostringstream &_stream);
@@ -491,6 +515,9 @@ namespace gazebo
 
       /// \brief Transportation node.
       private: transport::NodePtr node;
+
+      /// \brief Subscribe to the world modify topic.
+      private: transport::SubscriberPtr worldSub;
 
       /// \brief Publisher for selection messages.
       private: transport::PublisherPtr selectionPub;
@@ -558,7 +585,7 @@ namespace gazebo
       /// \brief Used to compute a more accurate real time value.
       private: common::Time realTimeOffset;
 
-      /// \brief Mutext to protect incoming message buffers.
+      /// \brief Mutex to protect incoming message buffers.
       private: boost::recursive_mutex *receiveMutex;
 
       /// \brief Mutex to protext loading of models.
