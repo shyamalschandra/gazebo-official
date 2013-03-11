@@ -310,7 +310,7 @@ namespace gazebo
       /// This list of models to publish is processed and cleared once every
       /// iteration.
       /// \param[in] _modelName Name of the model to publish.
-      public: void PublishModelPose(const std::string &_modelName);
+      public: void PublishModelPose(physics::ModelPtr _model);
 
       /// \cond
       /// This is an internal function.
@@ -537,6 +537,9 @@ namespace gazebo
       /// \brief Subscriber to request messages.
       private: transport::SubscriberPtr requestSub;
 
+      // \brief Publishes clock information
+      private: transport::PublisherPtr clockPub;
+
       /// \brief Outgoing world statistics message.
       private: msgs::WorldStatistics worldStatsMsg;
 
@@ -650,7 +653,7 @@ namespace gazebo
       private: sdf::SDFPtr factorySDF;
 
       /// \brief The list of pose messages to output.
-      private: std::set<std::string> publishModelPoses;
+      private: std::set<ModelPtr> publishModelPoses;
 
       /// \brief Info passed through the WorldUpdateBegin event.
       private: common::UpdateInfo updateInfo;
