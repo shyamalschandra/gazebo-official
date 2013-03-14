@@ -50,7 +50,7 @@ void RTQL8SliderJoint::Load(sdf::ElementPtr _sdf)
   SliderJoint<RTQL8Joint>::Load(_sdf);
 
   // Slider joint has only one degree of freedom.
-  // rtql8::kinematics::Dof* dofs = new rtql8::kinematics::Dof;
+  rtql8::kinematics::Dof* dofs = new rtql8::kinematics::Dof;
 
   // TODO: Could I know the sliding axis?; x, y, z
 
