@@ -104,6 +104,10 @@ endmacro ()
 macro (gz_add_executable _name)
   add_executable(${_name} ${ARGN})
   target_link_libraries (${_name} ${general_libraries})
+
+if (APPLE)
+  set_property(TARGET ${_name} PROPERTY MACOSX_BUNDLE TRUE)
+endif()
 endmacro ()
 
 
