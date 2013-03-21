@@ -85,6 +85,52 @@ Ogre::TerrainGroup *Heightmap::GetOgreTerrain() const
 }
 
 //////////////////////////////////////////////////
+common::Image Heightmap::GetImage() const
+{
+  double height = 0.0;
+  unsigned char *imageData = NULL;
+
+  /// \todo Support multiple terrain objects
+  Ogre::Terrain *terrain = this->terrainGroup->getTerrain(0, 0);
+
+  GZ_ASSERT(terrain != NULL, "Unable to get a valid terrain pointer");
+
+  double minHeight = terrain->getMinHeight();
+  double maxHeight = terrain->getMaxHeight() - minHeight;
+
+  std::cout << "MinHeight[" << minHeight << "] MaxHeight[" << maxHeight << "]\n";
+
+  // Get the number of vertices along one side of the terrain
+  uint16_t size = terrain->getSize();
+
+  // Create the image data buffer
+  imageData = new unsigned char[size * size];
+
+  // Get height data from all vertices
+  for (uint16_t y = 0; y < size; ++y)
+  {
+    for (uint16_t x = 0; x < size; ++x)
+    {
+      // Normalize height value
+      height = (terrain->getHeightAtPoint(x, y) - minHeight) / maxHeight;
+
+      GZ_ASSERT(height <= 1.0, "Normalized terrain height > 1.0");
+      GZ_ASSERT(height >= 0.0, "Normalized terrain height < 0.0");
+
+      // Scale height to a value between 0 and 255
+      imageData[(size - y - 1)*size+x] =
+        static_cast<unsigned char>(height * 255.0);
+    }
+  }
+
+  common::Image result;
+  result.SetFromData(imageData, size, size, common::Image::L_INT8);
+
+  delete [] imageData;
+  return result;
+}
+
+//////////////////////////////////////////////////
 void Heightmap::Load()
 {
   if (this->terrainGlobals != NULL)
@@ -143,6 +189,8 @@ void Heightmap::Load()
   }
 
   this->terrainGroup->freeTemporaryResources();
+  common::Image img = this->GetImage();
+  img.SavePNG("/tmp/heights_rendering.png");
 }
 
 ///////////////////////////////////////////////////
@@ -153,7 +201,7 @@ void Heightmap::ConfigureTerrainDefaults()
   // MaxPixelError: Decides how precise our terrain is going to be.
   // A lower number will mean a more accurate terrain, at the cost of
   // performance (because of more vertices)
-  this->terrainGlobals->setMaxPixelError(2);
+  this->terrainGlobals->setMaxPixelError(0);
 
   // CompositeMapDistance: decides how far the Ogre terrain will render
   // the lightmapped terrain.
@@ -241,6 +289,16 @@ void Heightmap::DefineTerrain(int x, int y)
     unsigned char *data = NULL;
     unsigned int count = 0;
     this->heightImage.GetData(&data, count);
+/*
+    for (int y = 0; y < 129; ++y)
+    {
+      for (int x = 0; x < 129; ++x)
+      {
+        double px1 = static_cast<int>(data[y * 387 + x * 3]) / 255.0;
+        std::cout << "XY[" << x << " " << y << "] H[" << px1 << "] \n";
+      }
+    }
+    */
 
     if (this->heightImage.GetPixelFormat() == common::Image::L_INT8)
     {
@@ -337,7 +395,207 @@ double Heightmap::GetHeight(double _x, double _y, double _z)
   if (result.hit)
     return result.position.z;
   else
+  {
+    printf("Didn't hit\n");
     return 0;
+  }
+}
+
+/////////////////////////////////////////////////
+Ogre::TerrainGroup::RayResult Heightmap::GetMouseHit(CameraPtr _camera,
+    math::Vector2i _mousePos)
+{
+  Ogre::Ray mouseRay = _camera->GetOgreCamera()->getCameraToViewportRay(
+      static_cast<float>(_mousePos.x) /
+      _camera->GetViewport()->getActualWidth(),
+      static_cast<float>(_mousePos.y) /
+      _camera->GetViewport()->getActualHeight());
+
+  // The terrain uses a special ray intersection test.
+  return this->terrainGroup->rayIntersects(mouseRay);
+}
+
+/////////////////////////////////////////////////
+bool Heightmap::Smooth(CameraPtr _camera, math::Vector2i _mousePos,
+                         double _outsideRadius, double _insideRadius,
+                         double _weight)
+{
+  Ogre::TerrainGroup::RayResult terrainResult =
+    this->GetMouseHit(_camera, _mousePos);
+
+  if (terrainResult.hit)
+    this->ModifyTerrain(terrainResult.position, _outsideRadius, _insideRadius,
+        _weight, "smooth");
+
+  return terrainResult.hit;
+}
+
+/////////////////////////////////////////////////
+bool Heightmap::Flatten(CameraPtr _camera, math::Vector2i _mousePos,
+                         double _outsideRadius, double _insideRadius,
+                         double _weight)
+{
+  Ogre::TerrainGroup::RayResult terrainResult =
+    this->GetMouseHit(_camera, _mousePos);
+
+  if (terrainResult.hit)
+    this->ModifyTerrain(terrainResult.position, _outsideRadius,
+        _insideRadius, _weight, "flatten");
+
+  return terrainResult.hit;
+}
+
+/////////////////////////////////////////////////
+bool Heightmap::Raise(CameraPtr _camera, math::Vector2i _mousePos,
+    double _outsideRadius, double _insideRadius, double _weight)
+{
+  // The terrain uses a special ray intersection test.
+  Ogre::TerrainGroup::RayResult terrainResult =
+    this->GetMouseHit(_camera, _mousePos);
+
+  if (terrainResult.hit)
+    this->ModifyTerrain(terrainResult.position, _outsideRadius,
+       _insideRadius, _weight, "raise");
+
+  return terrainResult.hit;
+}
+
+/////////////////////////////////////////////////
+bool Heightmap::Lower(CameraPtr _camera, math::Vector2i _mousePos,
+    double _outsideRadius, double _insideRadius, double _weight)
+{
+  // The terrain uses a special ray intersection test.
+  Ogre::TerrainGroup::RayResult terrainResult =
+    this->GetMouseHit(_camera, _mousePos);
+
+  if (terrainResult.hit)
+    this->ModifyTerrain(terrainResult.position, _outsideRadius,
+        _insideRadius, _weight, "lower");
+
+  return terrainResult.hit;
+}
+
+/////////////////////////////////////////////////
+double Heightmap::GetAvgHeight(Ogre::Vector3 _pos, double _radius)
+{
+  GZ_ASSERT(this->terrainGroup, "TerrainGroup pointer is NULL");
+  Ogre::Terrain *terrain = this->terrainGroup->getTerrain(0, 0);
+
+  if (!terrain)
+  {
+    gzerr << "Invalid heightmap position [" << _pos << "]\n";
+    return 0.0;
+  }
+
+  uint16_t size = terrain->getSize();
+
+  Ogre::Vector3 pos;
+  terrain->getTerrainPosition(_pos, &pos);
+
+  long startx = (pos.x - _radius) * size;
+  long starty = (pos.y - _radius) * size;
+  long endx = (pos.x + _radius) * size;
+  long endy= (pos.y + _radius) * size;
+
+  startx = std::max(startx, 0L);
+  starty = std::max(starty, 0L);
+
+  endx = std::min(endx, (long)size);
+  endy = std::min(endy, (long)size);
+
+  double sum = 0.0;
+  int count = 0;
+  for (long y = starty; y <= endy; ++y)
+  {
+    for (long x = startx; x <= endx; ++x)
+    {
+      sum += terrain->getHeightAtPoint(x, y);
+      count++;
+    }
+  }
+
+  return sum / count;
+}
+
+/////////////////////////////////////////////////
+void Heightmap::ModifyTerrain(Ogre::Vector3 _pos, double _outsideRadius,
+    double _insideRadius, double _weight, const std::string &_op)
+{
+  GZ_ASSERT(this->terrainGroup, "TerrainGroup pointer is NULL");
+  Ogre::Terrain *terrain = this->terrainGroup->getTerrain(0, 0);
+
+  if (!terrain)
+  {
+    gzerr << "Invalid heightmap position [" << _pos << "]\n";
+    return;
+  }
+
+  uint16_t size = terrain->getSize();
+
+  Ogre::Vector3 pos;
+  terrain->getTerrainPosition(_pos, &pos);
+
+  long startx = (pos.x - _outsideRadius) * size;
+  long starty = (pos.y - _outsideRadius) * size;
+  long endx = (pos.x + _outsideRadius) * size;
+  long endy= (pos.y + _outsideRadius) * size;
+
+  startx = std::max(startx, 0L);
+  starty = std::max(starty, 0L);
+
+  endx = std::min(endx, (long)size);
+  endy = std::min(endy, (long)size);
+
+  double avgHeight = 0;
+
+  if (_op == "flatten" || _op == "smooth")
+    avgHeight = this->GetAvgHeight(pos, _outsideRadius);
+
+  for (long y = starty; y <= endy; ++y)
+  {
+    for (long x = startx; x <= endx; ++x)
+    {
+      double tsXdist = (x / (double)size) - pos.x;
+      double tsYdist = (y / (double)size)  - pos.y;
+
+      double weight = 1.0;
+      double dist = sqrt(tsYdist * tsYdist + tsXdist * tsXdist);
+
+      if (dist > _insideRadius)
+      {
+        weight = math::clamp(dist / _outsideRadius, 0.0, 1.0);
+        weight = 1.0 - (weight * weight);
+      }
+
+      float addedHeight = weight * _weight;
+      float newHeight = terrain->getHeightAtPoint(x, y);
+
+      if (_op == "raise")
+        newHeight += addedHeight;
+      else if (_op == "lower")
+        newHeight -= addedHeight;
+      else if (_op == "flatten")
+      {
+        if (newHeight < avgHeight)
+          newHeight += addedHeight;
+        else
+          newHeight -= addedHeight;
+      }
+      else if (_op == "smooth")
+      {
+        if (newHeight < avgHeight)
+          newHeight += addedHeight;
+        else
+          newHeight -= addedHeight;
+      }
+      else
+        gzerr << "Unknown terrain operation[" << _op << "]\n";
+
+      terrain->setHeightAtPoint(x, y, newHeight);
+    }
+  }
+  terrain->dirty();
+  terrain->update();
 }
 
 /////////////////////////////////////////////////
