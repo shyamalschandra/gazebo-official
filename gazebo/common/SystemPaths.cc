@@ -23,13 +23,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sdf/sdf.hh>
 
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 
-#include "gazebo/sdf/sdf.hh"
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/common/Exception.hh"

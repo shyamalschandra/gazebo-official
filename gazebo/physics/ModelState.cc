@@ -69,11 +69,11 @@ ModelState::~ModelState()
 void ModelState::Load(const sdf::ElementPtr _elem)
 {
   // Set the name
-  this->name = _elem->GetValueString("name");
+  this->name = _elem->Get<std::string>("name");
 
   // Set the model pose
   if (_elem->HasElement("pose"))
-    this->pose = _elem->GetValuePose("pose");
+    this->pose = _elem->Get<math::Pose>("pose");
   else
     this->pose.Set(0, 0, 0, 0, 0, 0);
 
@@ -121,10 +121,21 @@ bool ModelState::IsZero() const
     result = result && (*iter).IsZero();
   }
 
-  for (std::vector<JointState>::const_iterator iter = this->jointStates.begin();
-       iter != this->jointStates.end() && result; ++iter)
-  {
-    result = result && (*iter).IsZero();
+    // Update all links
+    while (childElem)
+    {
+      // Find matching link state
+      for (std::vector<LinkState>::iterator iter = this->linkStates.begin();
+          iter != this->linkStates.end(); ++iter)
+      {
+        if ((*iter).GetName() == childElem->Get<std::string>("name"))
+        {
+          (*iter).UpdateLinkSDF(childElem);
+        }
+      }
+
+      childElem = childElem->GetNextElement("link");
+    }
   }
 
   return result && this->pose == math::Pose::Zero;

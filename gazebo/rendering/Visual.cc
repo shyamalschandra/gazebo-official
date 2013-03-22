@@ -430,13 +430,13 @@ void Visual::Load()
       // Add all the URI paths to the render engine
       while (uriElem)
       {
-        std::string matUri = uriElem->GetValueString();
+        std::string matUri = uriElem->Get<std::string>();
         if (!matUri.empty())
           RenderEngine::Instance()->AddResourcePath(matUri);
         uriElem = uriElem->GetNextElement("uri");
       }
 
-      std::string matName = scriptElem->GetValueString("name");
+      std::string matName = scriptElem->Get<std::string>("name");
 
       if (!matName.empty())
         this->SetMaterial(matName);
@@ -1998,7 +1998,7 @@ std::string Visual::GetMeshName() const
       sdf::ElementPtr tmpElem = geomElem->GetElement("mesh");
       std::string filename;
 
-      std::string uri = tmpElem->GetValueString("uri");
+      std::string uri = tmpElem->Get<std::string>("uri");
       if (uri.empty())
       {
         gzerr << "<uri> element missing for geometry element:\n";

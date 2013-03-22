@@ -71,12 +71,14 @@ Model::Model(BasePtr _parent)
 {
   this->AddType(MODEL);
   this->updateMutex = new boost::recursive_mutex();
+  this->jointController = NULL;
 }
 
 //////////////////////////////////////////////////
 Model::~Model()
 {
   delete this->updateMutex;
+  delete this->jointController;
 }
 
 //////////////////////////////////////////////////
@@ -86,11 +88,11 @@ void Model::Load(sdf::ElementPtr _sdf)
 
   this->jointPub = this->node->Advertise<msgs::Joint>("~/joint");
 
-  this->SetStatic(this->sdf->GetValueBool("static"));
+  this->SetStatic(this->sdf->Get<bool>("static"));
   this->sdf->GetElement("static")->GetValue()->SetUpdateFunc(
       boost::bind(&Entity::IsStatic, this));
 
-  this->SetAutoDisable(this->sdf->GetValueBool("allow_auto_disable"));
+  this->SetAutoDisable(this->sdf->Get<bool>("allow_auto_disable"));
   this->LoadLinks();
 
   // Load the joints if the world is already loaded. Otherwise, the World
@@ -335,7 +337,7 @@ void Model::UpdateParameters(sdf::ElementPtr _sdf)
     while (linkElem)
     {
       LinkPtr link = boost::shared_dynamic_cast<Link>(
-          this->GetChild(linkElem->GetValueString("name")));
+          this->GetChild(linkElem->Get<std::string>("name")));
       link->UpdateParameters(linkElem);
       linkElem = linkElem->GetNextElement("link");
     }
@@ -347,7 +349,7 @@ void Model::UpdateParameters(sdf::ElementPtr _sdf)
     sdf::ElementPtr jointElem = _sdf->GetElement("joint");
     while (jointElem)
     {
-      JointPtr joint = boost::shared_dynamic_cast<Joint>(this->GetChild(jointElem->GetValueString("name")));
+      JointPtr joint = boost::shared_dynamic_cast<Joint>(this->GetChild(jointElem->Get<std::string>("name")));
       joint->UpdateParameters(jointElem);
       jointElem = jointElem->GetNextElement("joint");
     }
@@ -641,7 +643,7 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
 {
   JointPtr joint;
 
-  std::string stype = _sdf->GetValueString("type");
+  std::string stype = _sdf->Get<std::string>("type");
 
   joint = this->GetWorld()->GetPhysicsEngine()->CreateJoint(stype,
      boost::shared_static_cast<Model>(shared_from_this()));
@@ -749,8 +751,8 @@ unsigned int Model::GetSensorCount() const
 //////////////////////////////////////////////////
 void Model::LoadPlugin(sdf::ElementPtr _sdf)
 {
-  std::string name = _sdf->GetValueString("name");
-  std::string filename = _sdf->GetValueString("filename");
+  std::string name = _sdf->Get<std::string>("name");
+  std::string filename = _sdf->Get<std::string>("filename");
   gazebo::ModelPluginPtr plugin = gazebo::ModelPlugin::Create(filename, name);
   if (plugin)
   {

@@ -5,6 +5,7 @@ include_directories (
   ${OPENGL_INCLUDE_DIR}
   ${OGRE_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
+  ${SDF_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/test/gtest/include
   ${PROJECT_SOURCE_DIR}/test/gtest
   ${PROJECT_SOURCE_DIR}/test
@@ -13,19 +14,9 @@ include_directories (
 link_directories(
   ${ogre_library_dirs}
   ${Boost_LIBRARY_DIRS}
+  ${SDF_LIBRARY_DIRS} 
   ${ODE_LIBRARY_DIRS}
 )
-
-if(HAVE_URDFDOM_HEADERS)
-  link_directories(
-    ${urdfdom_LIBRARY_DIRS}
-    ${urdfdom_headers_LIBRARY_DIRS})
-endif(HAVE_URDFDOM_HEADERS)
-
-if(HAVE_CONSOLE_BRIDGE)
-  link_directories(
-    ${console_bridge_LIBRARY_DIRS})
-endif(HAVE_CONSOLE_BRIDGE)
 
 configure_file (test_config.h.in ${PROJECT_BINARY_DIR}/test_config.h)
 

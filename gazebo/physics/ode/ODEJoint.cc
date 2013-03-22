@@ -68,28 +68,28 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
 
     if (elem->HasElement("provide_feedback"))
     {
-      this->provideFeedback = elem->GetValueBool("provide_feedback");
+      this->provideFeedback = elem->Get<bool>("provide_feedback");
     }
 
     if (elem->HasElement("cfm_damping"))
     {
-      this->useCFMDamping = elem->GetValueBool("cfm_damping");
+      this->useCFMDamping = elem->Get<bool>("cfm_damping");
     }
 
     // initializa both axis, \todo: make cfm, erp per axis
-    this->stopERP = elem->GetElement("limit")->GetValueDouble("erp");
+    this->stopERP = elem->GetElement("limit")->Get<double>("erp");
     for (unsigned int i = 0; i < this->GetAngleCount(); ++i)
       this->SetAttribute("stop_erp", i, this->stopERP);
 
     // initializa both axis, \todo: make cfm, erp per axis
-    this->stopCFM = elem->GetElement("limit")->GetValueDouble("cfm");
+    this->stopCFM = elem->GetElement("limit")->Get<double>("cfm");
     for (unsigned int i = 0; i < this->GetAngleCount(); ++i)
       this->SetAttribute("stop_cfm", i, this->stopCFM);
 
     if (elem->HasElement("suspension"))
     {
       this->SetParam(dParamSuspensionERP,
-          elem->GetElement("suspension")->GetValueDouble("erp"));
+          elem->GetElement("suspension")->Get<double>("erp"));
       this->SetParam(dParamSuspensionCFM,
           elem->GetElement("suspension")->GetValueDouble("cfm"));
     }
@@ -123,7 +123,7 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
 
       if (dynamicsElem->HasElement("damping"))
       {
-        this->SetDamping(0, dynamicsElem->GetValueDouble("damping"));
+        this->SetDamping(0, dynamicsElem->Get<double>("damping"));
       }
       if (dynamicsElem->HasElement("friction"))
       {
