@@ -246,8 +246,8 @@ std::string Sensor::GetTopic() const
 {
   std::string result;
   if (this->sdf->HasElement("topic") &&
-      this->sdf->GetValueString("topic") != "__default__")
-    result = this->sdf->GetValueString("topic");
+      this->sdf->Get<std::string>("topic") != "__default__")
+    result = this->sdf->Get<std::string>("topic");
   return result;
 }
 

@@ -63,7 +63,7 @@ void ContactSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
   {
     // This will create a topic based on the name specified in SDF.
     this->contactsPub = this->node->Advertise<msgs::Contacts>(
-      this->sdf->GetElement("contact")->GetValueString("topic"));
+      this->sdf->GetElement("contact")->Get<std::string>("topic"));
   }
   else
   {
@@ -98,7 +98,7 @@ void ContactSensor::Load(const std::string &_worldName)
   while (collisionElem)
   {
     // get collision name
-    collisionName = collisionElem->GetValueString();
+    collisionName = collisionElem->Get<std::string>();
     collisionScopedName =
       this->world->GetEntity(this->parentName)->GetScopedName();
     collisionScopedName += "::" + collisionName;

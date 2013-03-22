@@ -22,8 +22,12 @@
 #include <string.h>
 #include <math.h>
 
+#include "math/Vector2i.hh"
+#include "math/Vector3.hh"
+
 #include "common/Image.hh"
 #include "common/Common.hh"
+#include "common/Console.hh"
 #include "common/Exception.hh"
 
 #include "physics/HeightmapShape.hh"
@@ -49,11 +53,11 @@ void HeightmapShape::Load(sdf::ElementPtr _sdf)
 {
   Base::Load(_sdf);
 
-  std::string filename = common::find_file(this->sdf->GetValueString("uri"));
+  std::string filename = common::find_file(this->sdf->Get<std::string>("uri"));
   if (filename.empty())
   {
     gzthrow("Unable to find heightmap[" +
-            this->sdf->GetValueString("uri") + "]\n");
+            this->sdf->Get<std::string>("uri") + "]\n");
   }
 
   // Use the image to get the size of the heightmap
@@ -168,19 +172,19 @@ void HeightmapShape::FillHeightMap()
 //////////////////////////////////////////////////
 std::string HeightmapShape::GetURI() const
 {
-  return this->sdf->GetValueString("uri");
+  return this->sdf->Get<std::string>("uri");
 }
 
 //////////////////////////////////////////////////
 math::Vector3 HeightmapShape::GetSize() const
 {
-  return this->sdf->GetValueVector3("size");
+  return this->sdf->Get<math::Vector3>("size");
 }
 
 //////////////////////////////////////////////////
 math::Vector3 HeightmapShape::GetPos() const
 {
-  return this->sdf->GetValueVector3("pos");
+  return this->sdf->Get<math::Vector3>("pos");
 }
 
 //////////////////////////////////////////////////

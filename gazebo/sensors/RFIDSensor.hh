@@ -51,6 +51,7 @@ namespace gazebo
       /// \brief Constructor
       public: RFIDSensor();
 
+      /// \brief  Destructor
       /// \brief Destructor
       public: virtual ~RFIDSensor();
 

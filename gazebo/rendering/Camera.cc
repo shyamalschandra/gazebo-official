@@ -543,7 +543,7 @@ unsigned int Camera::GetImageWidth() const
   else
   {
     sdf::ElementPtr elem = this->sdf->GetElement("image");
-    width = elem->GetValueInt("width");
+    width = elem->Get<int>("width");
   }
   return width;
 }
@@ -559,7 +559,7 @@ unsigned int Camera::GetImageHeight() const
   else
   {
     sdf::ElementPtr elem = this->sdf->GetElement("image");
-    height = elem->GetValueInt("height");
+    height = elem->Get<int>("height");
   }
   return height;
 }
