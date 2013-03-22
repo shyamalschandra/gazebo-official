@@ -18,11 +18,11 @@
 #include "ServerFixture.hh"
 #include "physics/physics.hh"
 #include "SimplePendulumIntegrator.hh"
-#include "gazebo/msgs/msgs.hh"
+
+#define HAVE_SIMBODY 1
 
 #define PHYSICS_TOL 1e-2
 using namespace gazebo;
-
 class PhysicsTest : public ServerFixture
 {
   public: void EmptyWorld(const std::string &_physicsEngine);
@@ -32,6 +32,110 @@ class PhysicsTest : public ServerFixture
   public: void SimplePendulum(const std::string &_physicsEngine);
   public: void CollisionFiltering(const std::string &_physicsEngine);
 };
+
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, RevoluteJointSimbody)
+{
+  gzerr << "running RevoluteJointSimbody\n";
+  RevoluteJoint("simbody");
+}
+#endif  // HAVE_SIMBODY
+
+TEST_F(PhysicsTest, CollisionTest)
+{
+  // check conservation of mementum for linear inelastic collision
+  Load("worlds/collision_test.world", true, "simbody");
+  physics::WorldPtr world = physics::get_world("default");
+  EXPECT_TRUE(world != NULL);
+
+  int startupIterations = 0;
+  while (!this->HasEntity("sphere") && startupIterations < 20)
+  {
+    common::Time::MSleep(100);
+    ++startupIterations;
+  }
+
+  if (startupIterations > 20)
+    gzthrow("Unable to get sphere");
+
+  {
+    // todo: get parameters from drop_test.world
+    double test_duration = 1.1;
+    double dt = world->GetPhysicsEngine()->GetStepTime();
+
+    physics::ModelPtr box_model = world->GetModel("box");
+    physics::LinkPtr box_link = box_model->GetLink("link");
+    double f = 1000.0;
+    double v = 0;
+    double x = 0;
+    double m = box_link->GetInertial()->GetMass();
+
+    int steps = test_duration/dt;
+
+    for (int i = 0; i < steps; ++i)
+    {
+
+      double t = world->GetSimTime().Double();
+
+      world->StepWorld(1);  // theoretical contact, but
+      {
+        if (box_model)
+        {
+          math::Vector3 vel = box_model->GetWorldLinearVel();
+          math::Pose pose = box_model->GetWorldPose();
+          gzdbg << "box time [" << t
+               << "] sim x [" << pose.pos.x
+               << "] ideal x [" << x
+               << "] sim vx [" << vel.x
+               << "] ideal vx [" << v
+               << "]\n";
+
+          if (i == 0)
+            box_model->GetLink("link")->SetForce(math::Vector3(f, 0, 0));
+
+          EXPECT_LT(fabs(pose.pos.x - x), 0.00001);
+          EXPECT_LT(fabs(vel.x - v), 0.00001);
+        }
+
+        physics::ModelPtr sphere_model = world->GetModel("sphere");
+        if (sphere_model)
+        {
+          math::Vector3 vel = sphere_model->GetWorldLinearVel();
+          math::Pose pose = sphere_model->GetWorldPose();
+          // gzdbg << "sphere time [" << world->GetSimTime().Double()
+          //      << "] sim x [" << pose.pos.x
+          //      << "] ideal x [" << x
+          //      << "] sim vx [" << vel.x
+          //      << "] ideal vx [" << v
+          //      << "]\n";
+          if (t < 1.001)
+          {
+            EXPECT_EQ(pose.pos.x, 2);
+            EXPECT_EQ(vel.x, 0);
+          }
+          else
+          {
+            EXPECT_LT(fabs(pose.pos.x - x - 1.0), 0.00001);
+            EXPECT_LT(fabs(vel.x - v), 0.00001);
+          }
+        }
+      }
+
+      // for simbody
+      // to simulate fully elastic collision with compliant contact model,
+      // need high stiffness to decrease collision duration,
+      // high dissipation to reduce rebound velocity.
+
+      // integrate here to see when the collision should happen
+      double vold = v;
+      if (i == 0) v = vold + dt* (f / m);
+      else if (t >= 1.0) v = dt*f/ 2.0;  // inelastic col. w/ eqal mass.
+      x = x + dt * (v + vold) / 2.0;
+    }
+  }
+  
+  // getchar();
+}
 
 ////////////////////////////////////////////////////////////////////////
 // EmptyWorld:
@@ -59,12 +163,12 @@ void PhysicsTest::EmptyWorld(const std::string &_physicsEngine)
   // simulate a few steps
   int steps = 20;
   world->StepWorld(steps);
-  double dt = world->GetPhysicsEngine()->GetMaxStepSize();
+  double dt = world->GetPhysicsEngine()->GetStepTime();
   EXPECT_GT(dt, 0);
   t = world->GetSimTime().Double();
   EXPECT_GT(t, 0.99*dt*static_cast<double>(steps+1));
 }
-
+/*
 TEST_F(PhysicsTest, EmptyWorldODE)
 {
   EmptyWorld("ode");
@@ -76,6 +180,14 @@ TEST_F(PhysicsTest, EmptyWorldBullet)
   EmptyWorld("bullet");
 }
 #endif  // HAVE_BULLET
+
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, EmptyWorldSimbody)
+{
+  EmptyWorld("simbody");
+}
+#endif  // HAVE_SIMBODY
+*/
 
 ////////////////////////////////////////////////////////////////////////
 // SpawnDrop:
@@ -101,7 +213,7 @@ void PhysicsTest::SpawnDrop(const std::string &_physicsEngine)
   EXPECT_LE(g.z, -9.8);
 
   // get physics time step
-  double dt = physics->GetMaxStepSize();
+  double dt = physics->GetStepTime();
   EXPECT_GT(dt, 0);
 
   // spawn some simple shapes and check to see that they start falling
@@ -224,7 +336,7 @@ void PhysicsTest::SpawnDrop(const std::string &_physicsEngine)
     }
   }
 }
-
+/*
 TEST_F(PhysicsTest, SpawnDropODE)
 {
   SpawnDrop("ode");
@@ -236,6 +348,13 @@ TEST_F(PhysicsTest, SpawnDropBullet)
   SpawnDrop("bullet");
 }
 #endif  // HAVE_BULLET
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, SpawnDropSimbody)
+{
+  SpawnDrop("simbody");
+}
+#endif  // HAVE_SIMBODY
+*/
 
 ////////////////////////////////////////////////////////////////////////
 // SpawnDropCoGOffset:
@@ -271,7 +390,7 @@ void PhysicsTest::SpawnDropCoGOffset(const std::string &_physicsEngine)
   EXPECT_LT(g.z, 0);
 
   // get physics time step
-  double dt = physics->GetMaxStepSize();
+  double dt = physics->GetStepTime();
   EXPECT_GT(dt, 0);
 
   // spawn some spheres and check to see that they start falling
@@ -509,7 +628,7 @@ void PhysicsTest::SpawnDropCoGOffset(const std::string &_physicsEngine)
     }
   }
 }
-
+/*
 TEST_F(PhysicsTest, SpawnDropCoGOffsetODE)
 {
   SpawnDropCoGOffset("ode");
@@ -522,6 +641,13 @@ TEST_F(PhysicsTest, SpawnDropCoGOffsetBullet)
 }
 #endif  // HAVE_BULLET
 
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, SpawnDropCoGOffsetSimbody)
+{
+  SpawnDropCoGOffset("simbody");
+}
+#endif  // HAVE_SIMBODY
+*/
 ////////////////////////////////////////////////////////////////////////
 // RevoluteJoint:
 // Load 8 double pendulums arranged in a circle.
@@ -579,6 +705,9 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
   std::vector<std::string>::iterator modelIter;
   physics::JointPtr joint;
 
+  gzerr << "RevoluteJointSimbody 1 \n";
+  getchar();
+
   // Check global axes before simulation starts
   std::vector<math::Vector3>::iterator axisIter;
   axisIter = globalAxes.begin();
@@ -617,8 +746,11 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
     ++axisIter;
   }
 
+  gzerr << "RevoluteJointSimbody 2 \n";
+  getchar();
+
   // Step forward 0.75 seconds
-  double dt = physics->GetMaxStepSize();
+  double dt = physics->GetStepTime();
   EXPECT_GT(dt, 0);
   int steps = ceil(0.75 / dt);
   world->StepWorld(steps);
@@ -675,6 +807,9 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       EXPECT_TRUE(model != NULL);
     }
   }
+
+  gzerr << "RevoluteJointSimbody 3 \n";
+  getchar();
 
   // Keep stepping forward, verifying that joint angles move in the direction
   // implied by the joint velocity
@@ -734,6 +869,10 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
   }
 
 
+  gzerr << "RevoluteJointSimbody 4 (Resetting world and setting stops"
+        << ", no test here) \n";
+  getchar();
+
   // Reset the world, and impose joint limits
   world->Reset();
   for (modelIter  = modelNames.begin();
@@ -766,6 +905,10 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       EXPECT_TRUE(model != NULL);
     }
   }
+
+  gzerr << "RevoluteJointSimbody 5 \n";
+  getchar();
+
 
   // Step forward again for 0.75 seconds and check that joint angles
   // are within limits
@@ -801,6 +944,10 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       EXPECT_TRUE(model != NULL);
     }
   }
+
+  gzerr << "Reset world again, disable gravity, detach upper_joint"
+        << " Then apply torque at lower_joint and verify motion\n";
+  getchar();
 
   // Reset world again, disable gravity, detach upper_joint
   // Then apply torque at lower_joint and verify motion
@@ -846,6 +993,8 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       // Step forward and let things settle a bit.
       world->StepWorld(100);
 
+      unsigned jId = 0;  // get rid of deprecation warning
+
       joint = model->GetJoint("lower_joint");
       if (joint)
       {
@@ -867,13 +1016,7 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
           oldVel = newVel;
 
           // Check that GetForce returns what we set
-          // EXPECT_NEAR(joint->GetForce(0), force, PHYSICS_TOL);
-          {
-            // This block is added to avoid a compilation warning while
-            // GetForce(int) is being deprecated.
-            unsigned int index = 0;
-            EXPECT_NEAR(joint->GetForce(index), force, PHYSICS_TOL);
-          }
+          EXPECT_NEAR(joint->GetForce(jId), force, PHYSICS_TOL);
 
           // Expect joint velocity to be near angular velocity difference
           // of child and parent, along global axis
@@ -884,6 +1027,8 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
           angVel -= joint->GetParent()->GetWorldAngularVel();
           EXPECT_NEAR(jointVel, axis.Dot(angVel), PHYSICS_TOL);
         }
+        // gzerr << "setting force to -300\n";
+        // getchar();
         // Apply negative torque to lower_joint
         force = -3;
         for (int i = 0; i < 10; ++i)
@@ -894,18 +1039,12 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
           world->StepWorld(1);
           joint->SetForce(0, force);
           world->StepWorld(1);
-          newVel = joint->GetVelocity(0);
+          newVel = joint->GetVelocity(jId);
           // Expect decreasing velocities
           EXPECT_LT(newVel, oldVel);
 
           // Check that GetForce returns what we set
-          // EXPECT_NEAR(joint->GetForce(0), force, PHYSICS_TOL);
-          {
-            // This block is added to avoid a compilation warning while
-            // GetForce(int) is being deprecated.
-            unsigned int index = 0;
-            EXPECT_NEAR(joint->GetForce(index), force, PHYSICS_TOL);
-          }
+          EXPECT_NEAR(joint->GetForce(jId), force, PHYSICS_TOL);
 
           // Expect joint velocity to be near angular velocity difference
           // of child and parent, along global axis
@@ -930,6 +1069,8 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       EXPECT_TRUE(model != NULL);
     }
   }
+  gzerr << "done RevoluteJointSimbody\n";
+  getchar();
 }
 
 TEST_F(PhysicsTest, RevoluteJointODE)
@@ -1030,7 +1171,7 @@ TEST_F(PhysicsTest, JointDampingTest)
   {
     // compare against recorded data only
     double test_duration = 1.5;
-    double dt = world->GetPhysicsEngine()->GetMaxStepSize();
+    double dt = world->GetPhysicsEngine()->GetStepTime();
     int steps = test_duration/dt;
 
     for (int i = 0; i < steps; ++i)
@@ -1089,7 +1230,7 @@ TEST_F(PhysicsTest, DropStuff)
     double z = 10.5;
     double v = 0.0;
     double g = -10.0;
-    double dt = world->GetPhysicsEngine()->GetMaxStepSize();
+    double dt = world->GetPhysicsEngine()->GetStepTime();
 
     // world->StepWorld(1428);  // theoretical contact, but
     // world->StepWorld(100);  // integration error requires few more steps
@@ -1177,90 +1318,6 @@ TEST_F(PhysicsTest, DropStuff)
 }
 
 
-TEST_F(PhysicsTest, CollisionTest)
-{
-  // check conservation of mementum for linear inelastic collision
-  Load("worlds/collision_test.world", true);
-  physics::WorldPtr world = physics::get_world("default");
-  EXPECT_TRUE(world != NULL);
-
-  int i = 0;
-  while (!this->HasEntity("sphere") && i < 20)
-  {
-    common::Time::MSleep(100);
-    ++i;
-  }
-
-  if (i > 20)
-    gzthrow("Unable to get sphere");
-
-  {
-    // todo: get parameters from drop_test.world
-    double test_duration = 1.1;
-    double dt = world->GetPhysicsEngine()->GetMaxStepSize();
-
-    double f = 1000.0;
-    double v = 0;
-    double x = 0;
-
-    int steps = test_duration/dt;
-
-    for (int i = 0; i < steps; ++i)
-    {
-      double t = world->GetSimTime().Double();
-
-      world->StepWorld(1);  // theoretical contact, but
-      {
-        physics::ModelPtr box_model = world->GetModel("box");
-        if (box_model)
-        {
-          math::Vector3 vel = box_model->GetWorldLinearVel();
-          math::Pose pose = box_model->GetWorldPose();
-          // gzdbg << "box time [" << t
-          //      << "] sim x [" << pose.pos.x
-          //      << "] ideal x [" << x
-          //      << "] sim vx [" << vel.x
-          //      << "] ideal vx [" << v
-          //      << "]\n";
-
-          if (i == 0)
-            box_model->GetLink("link")->SetForce(math::Vector3(1000, 0, 0));
-          EXPECT_LT(fabs(pose.pos.x - x), 0.00001);
-          EXPECT_LT(fabs(vel.x - v), 0.00001);
-        }
-
-        physics::ModelPtr sphere_model = world->GetModel("sphere");
-        if (sphere_model)
-        {
-          math::Vector3 vel = sphere_model->GetWorldLinearVel();
-          math::Pose pose = sphere_model->GetWorldPose();
-          // gzdbg << "sphere time [" << world->GetSimTime().Double()
-          //      << "] sim x [" << pose.pos.x
-          //      << "] ideal x [" << x
-          //      << "] sim vx [" << vel.x
-          //      << "] ideal vx [" << v
-          //      << "]\n";
-          if (t < 1.001)
-          {
-            EXPECT_EQ(pose.pos.x, 2);
-            EXPECT_EQ(vel.x, 0);
-          }
-          else
-          {
-            EXPECT_LT(fabs(pose.pos.x - x - 1.0), 0.00001);
-            EXPECT_LT(fabs(vel.x - v), 0.00001);
-          }
-        }
-      }
-
-      // integrate here to see when the collision should happen
-      double impulse = dt*f;
-      if (i == 0) v = v + impulse;
-      else if (t >= 1.0) v = dt*f/ 2.0;  // inelastic col. w/ eqal mass.
-      x = x + dt * v;
-    }
-  }
-}
 
 
 TEST_F(PhysicsTest, SimplePendulumODE)
@@ -1274,6 +1331,13 @@ TEST_F(PhysicsTest, SimplePendulumBullet)
   SimplePendulum("bullet");
 }
 #endif  // HAVE_BULLET
+
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, SimplePendulumSimbody)
+{
+  SimplePendulum("simbody");
+}
+#endif  // HAVE_SIMBODY
 
 void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
 {
@@ -1322,7 +1386,7 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
     //       << "] v[" << vel
     //       << "]\n";
   }
-  physicsEngine->SetMaxStepSize(0.0001);
+  physicsEngine->SetStepTime(0.0001);
   physicsEngine->SetSORPGSIters(1000);
 
   {
@@ -1534,6 +1598,14 @@ TEST_F(PhysicsTest, CollisionFilteringBullet)
   CollisionFiltering("bullet");
 }
 #endif  // HAVE_BULLET
+
+#ifdef HAVE_SIMBODY
+TEST_F(PhysicsTest, CollisionFilteringSimbody)
+{
+  CollisionFiltering("simbody");
+}
+#endif  // HAVE_SIMBODY
+
 
 int main(int argc, char **argv)
 {
