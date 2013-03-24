@@ -77,6 +77,13 @@ TEST_F(PhysicsTest, EmptyWorldBullet)
 }
 #endif  // HAVE_BULLET
 
+#ifdef HAVE_RTQL8
+TEST_F(PhysicsTest, EmptyWorldRTQL8)
+{
+  EmptyWorld("rtql8");
+}
+#endif  // HAVE_RTQL8
+
 ////////////////////////////////////////////////////////////////////////
 // SpawnDrop:
 // Load a world, check that gravity points along z axis, spawn simple
