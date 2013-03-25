@@ -108,7 +108,7 @@ namespace gazebo
       public: virtual bool GetGravityMode() const;
 
       /// \brief store gravity mode given link might not be around
-      private: bool gravityMode;
+      public: bool gravityMode;
 
       /// \brief Set whether this body will collide with others in the model
       public: void SetSelfCollide(bool collide);

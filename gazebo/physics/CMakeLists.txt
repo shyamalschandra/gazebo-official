@@ -5,7 +5,7 @@ if (HAVE_BULLET)
   add_subdirectory(bullet)
 endif()
 
-if (HAVE_Simbody)
+if (HAVE_SIMBODY)
   add_subdirectory(simbody)
 endif()
 
@@ -89,12 +89,6 @@ set (headers
   World.hh
   WorldState.hh)
 
-set (gtest_sources
-  Joint_TEST.cc
-  PhysicsEngine_TEST.cc
-)
-gz_build_tests(${gtest_sources})
-
 set (physics_headers "" CACHE INTERNAL "physics headers" FORCE)
 foreach (hdr ${headers})
   APPEND_TO_CACHED_STRING(physics_headers
@@ -119,7 +113,7 @@ if (HAVE_BULLET)
   target_link_libraries(gazebo_physics gazebo_physics_bullet)
 endif()
 
-if (HAVE_Simbody)
+if (HAVE_SIMBODY)
   target_link_libraries(gazebo_physics gazebo_physics_simbody)
 endif()
 
@@ -138,3 +132,10 @@ target_link_libraries(gzphysics
 gz_install_executable( gzphysics )
 gz_install_library(gazebo_physics)
 gz_install_includes("physics" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/physics.hh)
+
+# unit tests
+set (gtest_sources
+  Joint_TEST.cc
+  PhysicsEngine_TEST.cc
+)
+gz_build_tests(${gtest_sources})
