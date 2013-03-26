@@ -70,8 +70,8 @@ RenderEngine::RenderEngine()
   this->initialized = false;
 
   this->renderPathType = NONE;
+  this->windowManager.reset(new WindowManager);
 }
-
 
 //////////////////////////////////////////////////
 RenderEngine::~RenderEngine()
@@ -134,7 +134,7 @@ void RenderEngine::Load()
   std::stringstream stream;
   stream << (int32_t)this->dummyWindowId;
 
-  WindowManager::Instance()->CreateWindow(stream.str(), 1, 1);
+  this->windowManager->CreateWindow(stream.str(), 1, 1);
   this->CheckSystemCapabilities();
 }
 
@@ -191,7 +191,7 @@ ScenePtr RenderEngine::GetScene(const std::string &_name)
   std::vector<ScenePtr>::iterator iter;
 
   for (iter = this->scenes.begin(); iter != this->scenes.end(); ++iter)
-    if ((*iter)->GetName() == _name)
+    if (_name.empty() || (*iter)->GetName() == _name)
       return (*iter);
 
   return ScenePtr();
@@ -280,7 +280,7 @@ void RenderEngine::Fini()
 
   // TODO: this was causing a segfault on shutdown
   // Close all the windows first;
-  WindowManager::Instance()->Fini();
+  this->windowManager->Fini();
 
   RTShaderSystem::Instance()->Fini();
 
@@ -703,4 +703,10 @@ void RenderEngine::CheckSystemCapabilities()
   // Disable deferred rendering for now. Needs more work.
   // if (hasRenderToVertexBuffer && multiRenderTargetCount >= 8)
   //  this->renderPathType = RenderEngine::DEFERRED;
+}
+
+/////////////////////////////////////////////////
+WindowManagerPtr RenderEngine::GetWindowManager() const
+{
+  return this->windowManager;
 }

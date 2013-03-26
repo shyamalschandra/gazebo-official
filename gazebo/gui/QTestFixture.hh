@@ -35,6 +35,8 @@ class QTestFixture : public QObject
 {
   Q_OBJECT
 
+  protected: void LoadServer(const std::string &_worldFilename, bool _paused = false);
+
   /// \brief Load a world.
   /// \param[in] _worldFilename Name of the world to load.
   /// \param[in] _paused True to start the world paused.
@@ -62,8 +64,10 @@ class QTestFixture : public QObject
   /// \brief QT slot that is called automatically when the whole test case ends
   private slots: void cleanupTestCase();
 
+  private: void RunServer2(const std::string &_worldFilename, bool _paused);
+
   /// \brief Run the Gazebo server in a thread.
-  private: void RunServer(const std::string &_worldFilename, bool _paused);
+  private: void RunServer();
 
   /// \brief The Gazebo server, which is run in a thread.
   protected: gazebo::Server *server;
@@ -71,8 +75,16 @@ class QTestFixture : public QObject
   /// \brief Thread to run the Gazebo server.
   protected: boost::thread *serverThread;
 
+  /// \brief Maximum allowed percent change in resident memory usage.
+  protected: double resMaxPercentChange;
+
+  /// \brief Maximum allowed percent change in shared memory usage.
+  protected: double shareMaxPercentChange;
+
+  /// \brief Amount of resident memory at start.
   private: double residentStart;
+
+  /// \brief Amount of shared memory at start.
   private: double shareStart;
 };
-
 #endif

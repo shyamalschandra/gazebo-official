@@ -19,7 +19,7 @@
 #include "gazebo/gui/viewers/ImagesView_TEST.hh"
 
 /////////////////////////////////////////////////
-void ImagesView_TEST::Construction()
+/*void ImagesView_TEST::Construction()
 {
   this->Load("worlds/empty.world");
 
@@ -37,16 +37,20 @@ void ImagesView_TEST::Construction()
 
   view->hide();
   delete view;
-}
+}*/
 
 /////////////////////////////////////////////////
 void ImagesView_TEST::Switch()
 {
-  this->Load("worlds/multicamera_test.world");
+  this->LoadServer("worlds/multicamera_test.world");
+
+  gazebo::common::Time::MSleep(1000);
 
   // Create a new data logger widget
   gazebo::gui::ImagesView *view = new gazebo::gui::ImagesView(NULL);
+  printf("C\n");
   view->show();
+  printf("D\n");
 
   // Get the frame that holds the images
   QFrame *frame = view->findChild<QFrame*>("blackBorderFrame");
