@@ -51,6 +51,7 @@ set (headers
 )
 
 set (gtest_sources
+  BulletJoint_TEST.cc
   BulletTypes_TEST.cc
   BulletPhysics_TEST.cc
 )
