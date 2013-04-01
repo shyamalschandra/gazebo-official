@@ -335,23 +335,9 @@ void SensorManager::RemoveSensor(const std::string &_name)
   else
   {
     bool removed = false;
+    // Push it on the list, to be removed by the main sensor thread,
+    // to ensure correct access to rendering resources.
     this->removeSensors.push_back(sensor);
-
-    /*std::string scopedName = sensor->GetScopedName();
-    for (SensorContainer_V::iterator iter = this->sensorContainers.begin();
-         iter != this->sensorContainers.end() && !removed; ++iter)
-    {
-      GZ_ASSERT((*iter) != NULL, "SensorContainer is NULL");
-
-      removed = (*iter)->RemoveSensor(scopedName);
-    }
-
-    if (!removed)
-    {
-      gzerr << "RemoveSensor failed. The SensorManager's list of sensors "
-            << "changed during sensor removal. This is bad, and should "
-            << "never happen.\n";
-    }*/
   }
 }
 
