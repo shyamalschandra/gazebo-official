@@ -55,18 +55,17 @@ namespace rendering
 {
 // We'll create an instance of this class for each camera, to be used to inject
 // random values on each render call.
-class GaussianNoiseCompositorListener :
-  public Ogre::CompositorInstance::Listener
+class GaussianNoiseCompositorListener
+  : public Ogre::CompositorInstance::Listener
 {
-  private:
-    // Mean and standard deviation that we'll pass down to the GLSL fragment
-    // shader.
-    double mean_, stddev_;
-  public:
-    GaussianNoiseCompositorListener(double mean, double stddev):
-      mean_(mean), stddev_(stddev) {}
-    void notifyMaterialRender(unsigned int pass_id, Ogre::MaterialPtr & mat)
-    {
+  /// \brief Constructor, setting mean and standard deviation.
+  public: GaussianNoiseCompositorListener(double _mean, double _stddev):
+      mean(_mean), stddev(_stddev) {}
+
+  /// \brief Callback that OGRE will invoke for us on each render call
+  public: virtual void notifyMaterialRender(unsigned int _pass_id,
+                                            Ogre::MaterialPtr & _mat)
+  {
       // modify material here (wont alter the base material!), called for
       // every drawn geometry instance (i.e. compositor render_quad)
 
@@ -80,19 +79,25 @@ class GaussianNoiseCompositorListener :
       // 1. media/materials/scripts/gazebo.material, in
       //    fragment_program Gazebo/GaussianCameraNoiseFS
       // 2. media/materials/scripts/camera_noise_gaussian_fs.glsl
-      mat->getTechnique(0)->getPass(pass_id)->
+      _mat->getTechnique(0)->getPass(_pass_id)->
         getFragmentProgramParameters()->
         setNamedConstant("offsets", offsets);
-      mat->getTechnique(0)->getPass(pass_id)->
+      _mat->getTechnique(0)->getPass(_pass_id)->
         getFragmentProgramParameters()->
-        setNamedConstant("mean", (Ogre::Real)this->mean_);
-      mat->getTechnique(0)->getPass(pass_id)->
+        setNamedConstant("mean", (Ogre::Real)this->mean);
+      _mat->getTechnique(0)->getPass(_pass_id)->
         getFragmentProgramParameters()->
-        setNamedConstant("stddev", (Ogre::Real)this->stddev_);
-    }
+        setNamedConstant("stddev", (Ogre::Real)this->stddev);
+  }
+
+  /// \brief Mean that we'll pass down to the GLSL fragment shader.
+  private: double mean;
+  /// \brief Standard deviation that we'll pass down to the GLSL fragment
+  /// shader.
+  private: double stddev;
 };
-} // namespace rendering
-} // namespace gazebo
+}  // namespace rendering
+}  // namespace gazebo
 
 //////////////////////////////////////////////////
 Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
@@ -275,7 +280,6 @@ void Camera::Fini()
   if (this->gaussianNoiseCompositorListener)
     this->gaussianNoiseInstance->removeListener(
       this->gaussianNoiseCompositorListener.get());
-
   RTShaderSystem::DetachViewport(this->viewport, this->scene);
   this->renderTarget->removeAllViewports();
   this->connections.clear();
@@ -1256,9 +1260,9 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *target)
     }
 
     // Noise
-    if(this->noiseActive)
+    if (this->noiseActive)
     {
-      switch(this->noiseType)
+      switch (this->noiseType)
       {
         case GAUSSIAN:
           this->gaussianNoiseInstance =

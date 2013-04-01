@@ -681,24 +681,24 @@ namespace gazebo
       private: common::Time renderPeriod;
 
       /// \brief Which noise type we support
-      enum NoiseModelType
+      private: enum NoiseModelType
       {
         NONE,
         GAUSSIAN
       };
 
-      /// \brief If true, apply the noise model specified by other 
+      /// \brief If true, apply the noise model specified by other
       /// noise parameters
       private: bool noiseActive;
 
       /// \brief Which type of noise we're applying
       private: enum NoiseModelType noiseType;
 
-      /// \brief If noiseType==GAUSSIAN, noiseMean is the mean of the 
+      /// \brief If noiseType==GAUSSIAN, noiseMean is the mean of the
       /// distibution from which we sample
       private: double noiseMean;
 
-      /// \brief If noiseType==GAUSSIAN, noiseStdDev is the standard 
+      /// \brief If noiseType==GAUSSIAN, noiseStdDev is the standard
       /// devation of the distibution from which we sample
       private: double noiseStdDev;
     };
