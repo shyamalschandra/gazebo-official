@@ -506,9 +506,12 @@ void BulletLink::SetAngularDamping(double _damping)
 }*/
 
 /////////////////////////////////////////////////
-void BulletLink::AddForce(const math::Vector3 &/*_force*/)
+void BulletLink::AddForce(const math::Vector3 &_force)
 {
-  gzlog << "BulletLink::AddForce not yet implemented." << std::endl;
+  // Apply force at origin of link frame
+  math::Vector3 cogVec = this->inertial->GetCoG();
+  this->rigidLink->applyForce(BulletTypes::ConvertVector3(_force),
+                              BulletTypes::ConvertVector3(-cogVec));
 }
 
 /////////////////////////////////////////////////
