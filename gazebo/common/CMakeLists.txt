@@ -41,7 +41,7 @@ set (headers
   Assert.hh
   BVHLoader.hh
   ColladaLoader.hh
-  Common.hh
+  CommonIface.hh
   CommonTypes.hh
   Color.hh
   Console.hh
@@ -115,7 +115,6 @@ target_link_libraries(gazebo_common gazebo_math
                                     ${CURL_LIBRARIES}
                                     ${libswscale_LIBRARIES}
                                     ${libtar_libraries}
-                                    rt
                                     )
 
 if (HAVE_GTS)
