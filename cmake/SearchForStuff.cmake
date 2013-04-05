@@ -129,8 +129,9 @@ if (PKG_CONFIG_FOUND)
     message (STATUS "Looking for RTQL8, not found")
     set (HAVE_RTQL8 FALSE)
   endif()
-  
+
   #################################################
+
   # Find tinyxml. Only debian distributions package tinyxml with a pkg-config
   find_path (tinyxml_include_dir tinyxml.h ${tinyxml_include_dirs} ENV CPATH)
   if (NOT tinyxml_include_dir)
@@ -516,34 +517,3 @@ if (libdl_library AND libdl_include_dir)
 else (libdl_library AND libdl_include_dir)
   SET (HAVE_DL FALSE)
 endif ()
-
-########################################
-# Find QWT (QT graphing library)
-#find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
-#  /usr/include
-#  /usr/local/include
-#  "$ENV{LIB_DIR}/include" 
-#  "$ENV{INCLUDE}" 
-#  PATH_SUFFIXES qwt-qt4 qwt qwt5
-#  )
-#
-#find_library(QWT_LIBRARY NAMES qwt qwt6 qwt5 PATHS 
-#  /usr/lib
-#  /usr/local/lib
-#  "$ENV{LIB_DIR}/lib" 
-#  "$ENV{LIB}/lib" 
-#  )
-#
-#if (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#  set(HAVE_QWT TRUE)
-#endif (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#
-#if (HAVE_QWT)
-#  if (NOT QWT_FIND_QUIETLY)
-#    message(STATUS "Found Qwt: ${QWT_LIBRARY}")
-#  endif (NOT QWT_FIND_QUIETLY)
-#else ()
-#  if (QWT_FIND_REQUIRED)
-#    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
-#  endif (QWT_FIND_REQUIRED)
-#endif ()

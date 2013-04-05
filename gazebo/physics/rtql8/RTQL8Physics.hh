@@ -65,14 +65,20 @@ namespace gazebo
       /// \brief Rest the RTQL8 engine.
       public: virtual void Reset();
  
-      /// \brief Init the RTQL8 for threads.
+      // Documentation inherited
       public: virtual void InitForThread();
 
-      /// \brief Update the RTQL8 collision
+      // Documentation inherited
       public: virtual void UpdateCollision();
 
-      /// \brief Update the Bullet engine
+      // Documentation inherited
       public: virtual void UpdatePhysics();
+
+      // Documentation inherited
+      public: virtual std::string GetType() const;
+
+      // Documentation inherited
+      public: virtual void SetSeed(uint32_t _seed);
 
       /// \brief Set the simulation step time
       public: virtual void SetStepTime(double _value);
@@ -111,7 +117,18 @@ namespace gazebo
 
       /// \brief Store the value of the stepTime parameter to improve efficiency
       //private: double stepTimeDouble;
-      
+
+      /// \brief virtual callback for gztopic "~/request".
+      /// \param[in] _msg Request message.
+      protected: virtual void OnRequest(ConstRequestPtr &_msg);
+
+      /// \brief virtual callback for gztopic "~/physics".
+      /// \param[in] _msg Physics message.
+      protected: virtual void OnPhysicsMsg(ConstPhysicsPtr &_msg);
+
+      /// \brief
+      public: rtql8::simulation::World* GetRTQL8World() {return rtql8World;}
+
       /// \brief 
       private: rtql8::simulation::World* rtql8World;
       
