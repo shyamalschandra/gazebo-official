@@ -32,6 +32,7 @@ set(tests
   imu.cc
   laser.cc
   physics.cc
+  physics_spawn_drop.cc
   pioneer2dx.cc
   transport.cc
   transport_stress.cc

@@ -279,12 +279,12 @@ void World::Save(const std::string &_filename)
 //////////////////////////////////////////////////
 void World::Init()
 {
+  // Initialize the physics engine
+  this->physicsEngine->Init();
+
   // Initialize all the entities
   for (unsigned int i = 0; i < this->rootElement->GetChildCount(); i++)
     this->rootElement->GetChild(i)->Init();
-
-  // Initialize the physics engine
-  this->physicsEngine->Init();
 
   this->testRay = boost::dynamic_pointer_cast<RayShape>(
       this->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
@@ -1732,7 +1732,6 @@ void World::ProcessMessages()
     this->posePub->Publish(msg);
   }
   this->publishModelPoses.clear();
-
 
   if (common::Time::GetWallTime() - this->prevProcessMsgsTime >
       this->processMsgsPeriod)
