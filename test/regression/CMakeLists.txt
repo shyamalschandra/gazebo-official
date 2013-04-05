@@ -31,6 +31,7 @@ set(tests
   file_handling.cc
   laser.cc
   physics.cc
+  physics_rtql8.cc
   pioneer2dx.cc
   transport.cc
   server_fixture.cc

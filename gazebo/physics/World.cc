@@ -40,12 +40,11 @@
 #include "gazebo/common/LogRecord.hh"
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/Common.hh"
+#include "gazebo/common/Diagnostics.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Plugin.hh"
-
-#include "gazebo/util/Diagnostics.hh"
 
 #include "gazebo/physics/Road.hh"
 #include "gazebo/physics/RayShape.hh"
@@ -306,8 +305,6 @@ void World::Init()
 
   // Mark the world initialization
   gzlog << "World::Init" << std::endl;
-
-  util::DiagnosticManager::Instance()->Init(this->GetName());
 }
 
 //////////////////////////////////////////////////
@@ -425,8 +422,6 @@ void World::LogStep()
 //////////////////////////////////////////////////
 void World::Step()
 {
-  DIAG_TIMER_START("World::Step");
-
   /// need this because ODE does not call dxReallocateWorldProcessContext()
   /// until dWorld.*Step
   /// Plugins that manipulate joints (and probably other properties) require
@@ -438,68 +433,53 @@ void World::Step()
     this->pluginsLoaded = true;
   }
 
-  DIAG_TIMER_LAP("World::Step", "loadPlugins");
-
   // Send statistics about the world simulation
   if (common::Time::GetWallTime() - this->prevStatTime > this->statPeriod)
   {
     this->PublishWorldStats();
   }
 
-  DIAG_TIMER_LAP("World::Step", "publishWorldStats");
-
-  double updatePeriod = this->physicsEngine->GetUpdatePeriod();
   // sleep here to get the correct update rate
   common::Time tmpTime = common::Time::GetWallTime();
   common::Time sleepTime = this->prevStepWallTime +
-    common::Time(updatePeriod) - tmpTime - this->sleepOffset;
+    common::Time(this->physicsEngine->GetUpdatePeriod()) -
+    tmpTime - this->sleepOffset;
 
-  common::Time actualSleep = 0;
   if (sleepTime > 0)
-  {
     common::Time::Sleep(sleepTime);
-    actualSleep = common::Time::GetWallTime() - tmpTime;
-  }
   else
     sleepTime = 0;
+
+  common::Time actualSleep = common::Time::GetWallTime() - tmpTime;
 
   // exponentially avg out
   this->sleepOffset = (actualSleep - sleepTime) * 0.01 +
                       this->sleepOffset * 0.99;
 
-  DIAG_TIMER_LAP("World::Step", "sleepOffset");
-
   // throttling update rate, with sleepOffset as tolerance
   // the tolerance is needed as the sleep time is not exact
   if (common::Time::GetWallTime() - this->prevStepWallTime + this->sleepOffset
-         >= common::Time(updatePeriod))
+         >= common::Time(this->physicsEngine->GetUpdatePeriod()))
   {
     boost::recursive_mutex::scoped_lock lock(*this->worldUpdateMutex);
 
-    DIAG_TIMER_LAP("World::Step", "worldUpdateMutex");
-
     this->prevStepWallTime = common::Time::GetWallTime();
 
-    double stepTime = this->physicsEngine->GetMaxStepSize();
     if (!this->IsPaused() || this->stepInc > 0)
     {
       // query timestep to allow dynamic time step size updates
-      this->simTime += stepTime;
+      this->simTime += this->physicsEngine->GetStepTime();
       this->iterations++;
       this->Update();
-
-      DIAG_TIMER_LAP("World::Step", "update");
 
       if (this->IsPaused() && this->stepInc > 0)
         this->stepInc--;
     }
     else
-      this->pauseTime += stepTime;
+      this->pauseTime += this->physicsEngine->GetStepTime();
   }
 
   this->ProcessMessages();
-
-  DIAG_TIMER_STOP("World::Step");
 }
 
 //////////////////////////////////////////////////
@@ -530,8 +510,6 @@ void World::StepWorld(int _steps)
 //////////////////////////////////////////////////
 void World::Update()
 {
-  DIAG_TIMER_START("World::Update");
-
   if (this->needsReset)
   {
     if (this->resetAll)
@@ -543,32 +521,22 @@ void World::Update()
     this->needsReset = false;
   }
 
-  DIAG_TIMER_LAP("World::Update", "needsReset");
-
   event::Events::worldUpdateStart();
   this->updateInfo.simTime = this->GetSimTime();
   this->updateInfo.realTime = this->GetRealTime();
   event::Events::worldUpdateBegin(this->updateInfo);
 
-  DIAG_TIMER_LAP("World::Update", "Events::worldUpdateBegin");
-
   // Update all the models
   (*this.*modelUpdateFunc)();
 
-  DIAG_TIMER_LAP("World::Update", "Model::Update");
-
   // This must be called before PhysicsEngine::UpdatePhysics.
   this->physicsEngine->UpdateCollision();
-
-  DIAG_TIMER_LAP("World::Update", "PhysicsEngine::UpdateCollision");
 
   // Update the physics engine
   if (this->enablePhysicsEngine && this->physicsEngine)
   {
     // This must be called directly after PhysicsEngine::UpdateCollision.
     this->physicsEngine->UpdatePhysics();
-
-    DIAG_TIMER_LAP("World::Update", "PhysicsEngine::UpdatePhysics");
 
     // do this after physics update as
     //   ode --> MoveCallback sets the dirtyPoses
@@ -580,14 +548,10 @@ void World::Update()
     }
 
     this->dirtyPoses.clear();
-
-    DIAG_TIMER_LAP("World::Update", "SetWorldPose(dirtyPoses)");
   }
 
   // Output the contact information
   this->physicsEngine->GetContactManager()->PublishContacts();
-
-  DIAG_TIMER_LAP("World::Update", "ContactManager::PublishContacts");
 
   // Only update state informatin if logging data.
   if (common::LogRecord::Instance()->GetRunning())
@@ -610,11 +574,7 @@ void World::Update()
     }
   }
 
-  DIAG_TIMER_LAP("World::Update", "LogRecord");
-
   event::Events::worldUpdateEnd();
-
-  DIAG_TIMER_STOP("World::Update");
 }
 
 //////////////////////////////////////////////////
@@ -693,7 +653,7 @@ ModelPtr World::LoadModel(sdf::ElementPtr _sdf , BasePtr _parent)
   if (_sdf->GetName() == "model")
   {
     //model.reset(new Model(_parent));
-    model = this->GetPhysicsEngine()->CreateModel(_parent);
+    model = this->physicsEngine->CreateModel(_parent);
     model->SetWorld(shared_from_this());
     model->Load(_sdf);
 
@@ -857,7 +817,6 @@ void World::ResetTime()
   this->startTime = common::Time::GetWallTime();
   this->realTimeOffset = common::Time(0);
   this->iterations = 0;
-  sensors::SensorManager::Instance()->ResetLastUpdateTimes();
 }
 
 //////////////////////////////////////////////////
@@ -1060,7 +1019,7 @@ void World::OnControl(ConstWorldControlPtr &_data)
 
     if (_data->reset().has_all() && _data->reset().all())
     {
-      this->resetAll = true;
+        this->resetAll = true;
     }
     else
     {
@@ -1394,7 +1353,8 @@ void World::ProcessRequestMsgs()
 void World::ProcessModelMsgs()
 {
   std::list<msgs::Model>::iterator iter;
-  for (iter = this->modelMsgs.begin(); iter != this->modelMsgs.end(); ++iter)
+  for (iter = this->modelMsgs.begin();
+       iter != this->modelMsgs.end(); ++iter)
   {
     ModelPtr model;
     if ((*iter).has_id())

@@ -48,7 +48,7 @@ math::Vector3 RTQL8UniversalJoint::GetAnchor(int /*index*/) const
 }
 
 //////////////////////////////////////////////////
-void RTQL8UniversalJoint::SetAnchor(int /*index*/, const math::Vector3 &/*_anchor*/)
+void RTQL8UniversalJoint::SetAnchor(int /*index*/, const math::Vector3& /*_anchor*/)
 {
 //   if (this->childLink) this->childLink->SetEnabled(true);
 //   if (this->parentLink) this->parentLink->SetEnabled(true);
@@ -71,7 +71,7 @@ math::Vector3 RTQL8UniversalJoint::GetGlobalAxis(int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-void RTQL8UniversalJoint::SetAxis(int /*_index*/, const math::Vector3 &/*_axis*/)
+void RTQL8UniversalJoint::SetAxis(int /*_index*/, const math::Vector3& /*_axis*/)
 {
 //   if (this->childLink) this->childLink->SetEnabled(true);
 //   if (this->parentLink) this->parentLink->SetEnabled(true);
@@ -107,14 +107,14 @@ math::Angle RTQL8UniversalJoint::GetAngleImpl(int /*_index*/) const
 //////////////////////////////////////////////////
 double RTQL8UniversalJoint::GetVelocity(int /*_index*/) const
 {
-  // double result;
+  double result = 0;
 
 //   if (_index == 0)
 //     result = dJointGetUniversalAngle1Rate(this->jointId);
 //   else
 //     result = dJointGetUniversalAngle2Rate(this->jointId);
 
-  return 0;
+  return result;
 }
 
 //////////////////////////////////////////////////

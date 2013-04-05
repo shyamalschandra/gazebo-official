@@ -84,7 +84,7 @@ void RTQL8ScrewJoint::SetVelocity(int /*index*/, double /*_angle*/)
 }
 
 //////////////////////////////////////////////////
-void RTQL8ScrewJoint::SetAxis(int /*index*/, const math::Vector3 &/*_axis*/)
+void RTQL8ScrewJoint::SetAxis(int /*index*/, const math::Vector3& /*_axis*/)
 {
 //   if (this->childLink) this->childLink->SetEnabled(true);
 //   if (this->parentLink) this->parentLink->SetEnabled(true);
@@ -103,13 +103,6 @@ void RTQL8ScrewJoint::SetDamping(int /*index*/, double /*_damping*/)
 void RTQL8ScrewJoint::SetThreadPitch(int /*_index*/, double /*_threadPitch*/)
 {
 //   dJointSetScrewThreadPitch(this->jointId, _threadPitch);
-}
-
-//////////////////////////////////////////////////
-double RTQL8ScrewJoint::GetThreadPitch(unsigned int /*_index*/)
-{
-  gzerr << "not yet implemented\n";
-  return 0;
 }
 
 //////////////////////////////////////////////////
