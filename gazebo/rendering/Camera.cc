@@ -1138,6 +1138,7 @@ void Camera::SetCaptureDataOnce()
 //////////////////////////////////////////////////
 void Camera::CreateRenderTexture(const std::string &textureName)
 {
+  printf("Create Render Texture\n");
   // Create the render texture
   this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
       textureName,
