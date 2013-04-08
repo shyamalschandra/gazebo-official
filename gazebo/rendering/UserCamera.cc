@@ -52,13 +52,15 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
 {
   std::stringstream stream;
 
-  this->gui = new GUIOverlay();
+  this->gui = NULL;
+  //this->gui = new GUIOverlay();
 
   this->orbitViewController = NULL;
   this->fpsViewController = NULL;
   this->viewController = NULL;
 
   this->selectionBuffer = NULL;
+
   // Set default UserCamera render rate to 30Hz
   this->SetRenderRate(30.0);
 }
@@ -204,6 +206,7 @@ void UserCamera::Fini()
 //////////////////////////////////////////////////
 void UserCamera::HandleMouseEvent(const common::MouseEvent &_evt)
 {
+  return;
   if (!this->gui || !this->gui->HandleMouseEvent(_evt))
   {
     if (this->selectionBuffer)
@@ -220,6 +223,7 @@ void UserCamera::HandleMouseEvent(const common::MouseEvent &_evt)
 /////////////////////////////////////////////////
 void UserCamera::HandleKeyPressEvent(const std::string &_key)
 {
+  return;
   if (this->gui)
     this->gui->HandleKeyPressEvent(_key);
   this->viewController->HandleKeyPressEvent(_key);
@@ -228,6 +232,7 @@ void UserCamera::HandleKeyPressEvent(const std::string &_key)
 /////////////////////////////////////////////////
 void UserCamera::HandleKeyReleaseEvent(const std::string &_key)
 {
+  return;
   if (this->gui)
     this->gui->HandleKeyReleaseEvent(_key);
   this->viewController->HandleKeyReleaseEvent(_key);
@@ -506,7 +511,11 @@ void UserCamera::SetRenderTarget(Ogre::RenderTarget *_target)
   Camera::SetRenderTarget(_target);
 
   this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL);
-  this->gui->Init(this->renderTarget);
+  this->viewport->setShadowsEnabled(true);
+
+  if (this->gui)
+    this->gui->Init(this->renderTarget);
+
   this->initialized = true;
 
   this->selectionBuffer = new SelectionBuffer(this->name,
@@ -527,7 +536,7 @@ void UserCamera::EnableViewController(bool _value) const
 
 //////////////////////////////////////////////////
 VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos,
-                                std::string &_mod)
+    std::string &_mod)
 {
   VisualPtr result;
   if (!this->selectionBuffer)
