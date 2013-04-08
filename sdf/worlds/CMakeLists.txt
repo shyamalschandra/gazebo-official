@@ -25,4 +25,8 @@ set (files
   weshare2012.world
   willowgarage.world)
 
+if (HAVE_RTQL8)
+  add_subdirectory(rtql8)
+endif()
+
 install(FILES ${files} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo-${GAZEBO_VERSION}/worlds/)
