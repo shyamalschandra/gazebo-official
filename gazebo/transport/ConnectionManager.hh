@@ -164,7 +164,7 @@ namespace gazebo
 
       /// \brief A namespace to protect the namespace list.
       private: boost::mutex namespaceMutex;
-      private: boost::recursive_mutex *masterMessagesMutex;
+      private: boost::recursive_mutex masterMessagesMutex;
       private: boost::recursive_mutex *connectionMutex;
 
       private: std::list<msgs::Publish> publishers;
