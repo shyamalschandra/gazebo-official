@@ -63,7 +63,7 @@ class QTestFixture : public QObject
   private slots: void cleanupTestCase();
 
   /// \brief Run the Gazebo server in a thread.
-  private: void RunServer(const std::string &_worldFilename, bool _paused);
+  private: void RunServer();
 
   /// \brief The Gazebo server, which is run in a thread.
   protected: gazebo::Server *server;
@@ -71,8 +71,16 @@ class QTestFixture : public QObject
   /// \brief Thread to run the Gazebo server.
   protected: boost::thread *serverThread;
 
+  /// \brief Maximum allowed percent change in resident memory usage.
+  protected: double resMaxPercentChange;
+
+  /// \brief Maximum allowed percent change in shared memory usage.
+  protected: double shareMaxPercentChange;
+
+  /// \brief Amount of resident memory at start.
   private: double residentStart;
+
+  /// \brief Amount of shared memory at start.
   private: double shareStart;
 };
-
 #endif

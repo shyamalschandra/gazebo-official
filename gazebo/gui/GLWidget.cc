@@ -180,6 +180,9 @@ void GLWidget::moveEvent(QMoveEvent *_e)
 /////////////////////////////////////////////////
 void GLWidget::paintEvent(QPaintEvent *_e)
 {
+  if (rendering::get_scene())
+    this->OnCreateScene(rendering::get_scene()->GetName());
+
   rendering::UserCameraPtr cam = gui::get_active_camera();
   if (cam && cam->GetInitialized())
   {

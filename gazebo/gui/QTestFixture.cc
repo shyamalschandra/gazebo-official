@@ -22,9 +22,12 @@
 
 #include "gazebo/physics/Physics.hh"
 
+#include "gazebo/rendering/Rendering.hh"
+
 #include "gazebo/common/Time.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/gazebo.hh"
+#include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/QTestFixture.hh"
 
 /////////////////////////////////////////////////
@@ -51,6 +54,9 @@ void QTestFixture::initTestCase()
 /////////////////////////////////////////////////
 void QTestFixture::init()
 {
+  this->resMaxPercentChange = 2.5;
+  this->shareMaxPercentChange = 1.0;
+
   this->serverThread = NULL;
   this->GetMemInfo(this->residentStart, this->shareStart);
 }
@@ -58,9 +64,18 @@ void QTestFixture::init()
 /////////////////////////////////////////////////
 void QTestFixture::Load(const std::string &_worldFilename, bool _paused)
 {
+  this->server = new gazebo::Server();
+  this->server->LoadFile(_worldFilename);
+  this->server->Init();
+
+  this->SetPause(_paused);
+
+  gazebo::rendering::create_scene(
+      gazebo::physics::get_world()->GetName(), false);
+
   // Create, load, and run the server in its own thread
   this->serverThread = new boost::thread(
-      boost::bind(&QTestFixture::RunServer, this, _worldFilename, _paused));
+      boost::bind(&QTestFixture::RunServer, this));
 
   // Wait for the server to come up
   // Use a 30 second timeout.
@@ -71,24 +86,9 @@ void QTestFixture::Load(const std::string &_worldFilename, bool _paused)
 }
 
 /////////////////////////////////////////////////
-void QTestFixture::RunServer(const std::string &_worldFilename, bool _paused)
+void QTestFixture::RunServer()
 {
-  this->server = new gazebo::Server();
-  this->server->LoadFile(_worldFilename);
-  this->server->Init();
-
-  gazebo::rendering::create_scene(
-      gazebo::physics::get_world()->GetName(), false);
-
-  this->SetPause(_paused);
-
   this->server->Run();
-
-  gazebo::rendering::remove_scene(gazebo::physics::get_world()->GetName());
-
-  this->server->Fini();
-  delete this->server;
-  this->server = NULL;
 }
 
 /////////////////////////////////////////////////
@@ -108,11 +108,10 @@ void QTestFixture::cleanup()
   double resPercentChange = (residentEnd - residentStart) / residentStart;
   double sharePercentChange = (shareEnd - shareStart) / shareStart;
 
-  std::cout << "REs[" << resPercentChange << "]\n";
-  std::cout << "Shared[" << sharePercentChange << "]\n";
+  std::cout << "ResPercentChange[" << resPercentChange << "]\n";
   // Make sure the percent change values are reasonable.
-  QVERIFY(resPercentChange < 2.5);
-  QVERIFY(sharePercentChange < 1.0);
+  QVERIFY(resPercentChange < this->resMaxPercentChange);
+  QVERIFY(sharePercentChange < this->shareMaxPercentChange);
 
   if (this->server)
   {
@@ -122,6 +121,13 @@ void QTestFixture::cleanup()
     {
       this->serverThread->join();
     }
+
+    gazebo::rendering::remove_scene(gazebo::physics::get_world()->GetName());
+
+    this->server->Fini();
+
+    delete this->server;
+    this->server = NULL;
   }
 
   delete this->serverThread;
@@ -131,6 +137,25 @@ void QTestFixture::cleanup()
 /////////////////////////////////////////////////
 void QTestFixture::cleanupTestCase()
 {
+  if (this->server)
+  {
+    this->server->Stop();
+
+    if (this->serverThread)
+    {
+      this->serverThread->join();
+    }
+
+    gazebo::rendering::remove_scene(gazebo::physics::get_world()->GetName());
+
+    this->server->Fini();
+
+    delete this->server;
+    this->server = NULL;
+  }
+
+  delete this->serverThread;
+  this->serverThread = NULL;
 }
 
 /////////////////////////////////////////////////
