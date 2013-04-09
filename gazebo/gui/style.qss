@@ -1,6 +1,6 @@
 QToolButton
 {
-  border: 0;
+  border: none;
   text-align: left;
   color: #d0d0d0;
 }
