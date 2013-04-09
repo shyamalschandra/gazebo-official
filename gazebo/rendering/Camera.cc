@@ -32,6 +32,7 @@
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
+#include "gazebo/common/Encoder.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Rand.hh"
 
@@ -125,9 +126,12 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 
   this->renderTarget = NULL;
   this->renderTexture = NULL;
+  this->encoder = NULL;
 
   this->captureData = false;
   this->captureDataOnce = false;
+  this->encodeVideo = false;
+  this->videoEncodeFormat = "";
 
   this->camera = NULL;
   this->viewport = NULL;
@@ -405,7 +409,8 @@ void Camera::PostRender()
 {
   this->renderTarget->swapBuffers();
 
-  if (this->newData && (this->captureData || this->captureDataOnce))
+  if (this->newData
+      && (this->captureData || this->captureDataOnce || this->encodeVideo))
   {
     size_t size;
     unsigned int width = this->GetImageWidth();
@@ -431,6 +436,10 @@ void Camera::PostRender()
     {
       this->SaveFrame(this->GetFrameFilename());
       this->captureDataOnce = false;
+    }
+    else if (this->encodeVideo)
+    {
+        this->encoder->AddFrame(this->saveFrameBuffer, width, height);
     }
 
     if (this->sdf->HasElement("save") &&
@@ -889,6 +898,20 @@ bool Camera::SaveFrame(const std::string &_filename)
 }
 
 //////////////////////////////////////////////////
+bool Camera::SaveVideo(const std::string &_filename)
+{
+  if (!this->encoder || !this->encoder->IsInitialized())
+  {
+    gzwarn << "Video encoder not initialized\n";
+    return false;
+  }
+
+  this->encoder->SaveToFile(_filename);
+  this->encoder->Reset();
+  return true;
+}
+
+//////////////////////////////////////////////////
 std::string Camera::GetFrameFilename()
 {
   sdf::ElementPtr saveElem = this->sdf->GetElement("save");
@@ -1133,6 +1156,32 @@ void Camera::SetCaptureData(bool _value)
 void Camera::SetCaptureDataOnce()
 {
   this->captureDataOnce = true;
+}
+
+//////////////////////////////////////////////////
+void Camera::SetEncodeVideo(bool _encode)
+{
+  if (this->encodeVideo == _encode)
+    return;
+
+  this->encodeVideo = _encode;
+
+  if (this->encodeVideo)
+  {
+    if (!this->encoder)
+    {
+      this->encoder = new common::Encoder();
+    }
+    if (!this->videoEncodeFormat.empty())
+      this->encoder->SetFormat(this->videoEncodeFormat);
+    this->encoder->Init();
+  }
+}
+
+//////////////////////////////////////////////////
+void Camera::SetEncodeVideoFormat(const std::string &_format)
+{
+  this->videoEncodeFormat = _format;
 }
 
 //////////////////////////////////////////////////
