@@ -16,25 +16,28 @@
 */
 #include <math.h>
 
-#include "common/Exception.hh"
-#include "math/gzmath.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/math/gzmath.hh"
 
-#include "transport/transport.hh"
+#include "gazebo/transport/transport.hh"
 
-#include "rendering/RenderEvents.hh"
-#include "rendering/Rendering.hh"
-#include "rendering/Visual.hh"
-#include "rendering/WindowManager.hh"
-#include "rendering/Scene.hh"
-#include "rendering/UserCamera.hh"
-#include "rendering/OrbitViewController.hh"
-#include "rendering/FPSViewController.hh"
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/Heightmap.hh"
+#include "gazebo/rendering/RenderEvents.hh"
+#include "gazebo/rendering/Rendering.hh"
+#include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/WindowManager.hh"
+#include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/UserCamera.hh"
+#include "gazebo/rendering/OrbitViewController.hh"
+#include "gazebo/rendering/FPSViewController.hh"
 
-#include "gui/Actions.hh"
-#include "gui/Gui.hh"
-#include "gui/ModelRightMenu.hh"
-#include "gui/GuiEvents.hh"
-#include "gui/GLWidget.hh"
+#include "gazebo/gui/MouseEventHandler.hh"
+#include "gazebo/gui/Actions.hh"
+#include "gazebo/gui/Gui.hh"
+#include "gazebo/gui/ModelRightMenu.hh"
+#include "gazebo/gui/GuiEvents.hh"
+#include "gazebo/gui/GLWidget.hh"
 
 using namespace gazebo;
 using namespace gui;
@@ -120,6 +123,15 @@ GLWidget::GLWidget(QWidget *_parent)
 
   this->selectedVis.reset();
   this->mouseMoveVis.reset();
+
+  MouseEventHandler::Instance()->AddPressFilter("glwidget",
+      boost::bind(&GLWidget::OnMousePress, this, _1));
+
+  MouseEventHandler::Instance()->AddReleaseFilter("glwidget",
+      boost::bind(&GLWidget::OnMouseRelease, this, _1));
+
+  MouseEventHandler::Instance()->AddMoveFilter("glwidget",
+      boost::bind(&GLWidget::OnMouseMove, this, _1));
 }
 
 /////////////////////////////////////////////////
@@ -341,14 +353,49 @@ void GLWidget::mousePressEvent(QMouseEvent *_event)
     common::MouseEvent::MIDDLE : 0x0;
 
   this->mouseEvent.dragging = false;
-  gui::Events::mousePress(this->mouseEvent);
 
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandlePress(this->mouseEvent);
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMousePress(const common::MouseEvent & /*_event*/)
+{
   if (this->state == "make_entity")
     this->OnMousePressMakeEntity();
   else if (this->state == "select")
     this->OnMousePressNormal();
   else if (this->state == "translate" || this->state == "rotate")
     this->OnMousePressTranslate();
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMouseRelease(const common::MouseEvent & /*_event*/)
+{
+  if (this->state == "make_entity")
+    this->OnMouseReleaseMakeEntity();
+  else if (this->state == "select")
+    this->OnMouseReleaseNormal();
+  else if (this->state == "translate" || this->state == "rotate")
+    this->OnMouseReleaseTranslate();
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMouseMove(const common::MouseEvent & /*_event*/)
+{
+  // Update the view depending on the current GUI state
+  if (this->state == "make_entity")
+    this->OnMouseMoveMakeEntity();
+  else if (this->state == "select")
+    this->OnMouseMoveNormal();
+  else if (this->state == "translate" || this->state == "rotate")
+    this->OnMouseMoveTranslate();
+
+  return true;
 }
 
 /////////////////////////////////////////////////
@@ -431,13 +478,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *_event)
   else
     this->mouseEvent.dragging = false;
 
-  // Update the view depending on the current GUI state
-  if (this->state == "make_entity")
-    this->OnMouseMoveMakeEntity();
-  else if (this->state == "select")
-    this->OnMouseMoveNormal();
-  else if (this->state == "translate" || this->state == "rotate")
-    this->OnMouseMoveTranslate();
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandleMove(this->mouseEvent);
 
   this->mouseEvent.prevPos = this->mouseEvent.pos;
 }
@@ -589,15 +631,10 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *_event)
   this->mouseEvent.buttons |= _event->buttons() & Qt::MidButton ?
     common::MouseEvent::MIDDLE : 0x0;
 
-  gui::Events::mouseRelease(this->mouseEvent);
-  emit clicked();
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandleRelease(this->mouseEvent);
 
-  if (this->state == "make_entity")
-    this->OnMouseReleaseMakeEntity();
-  else if (this->state == "select")
-    this->OnMouseReleaseNormal();
-  else if (this->state == "translate" || this->state == "rotate")
-    this->OnMouseReleaseTranslate();
+  emit clicked();
 }
 
 //////////////////////////////////////////////////
