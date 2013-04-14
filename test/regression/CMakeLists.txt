@@ -34,6 +34,7 @@ set(tests
   laser.cc
   nondefault_world.cc
   physics.cc
+  physics_rtql8.cc
   pioneer2dx.cc
   transport.cc
   transport_stress.cc
