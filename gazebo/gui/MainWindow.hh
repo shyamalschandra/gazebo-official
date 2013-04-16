@@ -34,6 +34,7 @@ namespace gazebo
     class ToolsWidget;
     class ModelListWidget;
     class BuildingEditorPalette;
+    class VideoRecorder;
 
     class MainWindow : public QMainWindow
     {
@@ -51,7 +52,6 @@ namespace gazebo
       protected: void closeEvent(QCloseEvent *_event);
 
       private: void OnGUI(ConstGUIPtr &_msg);
-
 
       private slots: void ItemSelected(QTreeWidgetItem *, int);
       private slots: void New();
@@ -196,6 +196,9 @@ namespace gazebo
       /// \brief The filename set via "Save As". This filename is used by
       /// the "Save" feature.
       private: std::string saveFilename;
+
+      /// \brief Video recording widget
+      private: VideoRecorder * videoRecorder;
 
       /// \brief User specified step size for manually stepping the world
       private: int inputStepSize;

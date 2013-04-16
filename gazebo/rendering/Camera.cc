@@ -32,6 +32,7 @@
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
+#include "gazebo/common/VideoEncoder.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Rand.hh"
 
@@ -125,9 +126,12 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 
   this->renderTarget = NULL;
   this->renderTexture = NULL;
+  this->videoEncoder = NULL;
 
   this->captureData = false;
   this->captureDataOnce = false;
+  this->encodeVideo = false;
+  this->videoEncodeFormat = "";
 
   this->camera = NULL;
   this->viewport = NULL;
@@ -407,7 +411,8 @@ void Camera::PostRender()
 {
   this->renderTarget->swapBuffers();
 
-  if (this->newData && (this->captureData || this->captureDataOnce))
+  if (this->newData
+      && (this->captureData || this->captureDataOnce || this->encodeVideo))
   {
     size_t size;
     unsigned int width = this->GetImageWidth();
@@ -427,12 +432,50 @@ void Camera::PostRender()
         static_cast<Ogre::PixelFormat>(this->imageFormat),
         this->saveFrameBuffer);
 
+#if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 8
     this->viewport->getTarget()->copyContentsToMemory(box);
+#else
+    // Case for UserCamera where there is no RenderTexture but
+    // a RenderTarget (RenderWindow) exists. We can not call SetRenderTarget
+    // because that overrides the this->renderTarget variable
+    if (this->renderTarget && !this->renderTexture)
+    {
+      // Create the render texture
+      this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
+        this->renderTarget->getName() + "_tex",
+        "General",
+        Ogre::TEX_TYPE_2D,
+        this->GetImageWidth(),
+        this->GetImageHeight(),
+        0,
+        (Ogre::PixelFormat)this->imageFormat,
+        Ogre::TU_RENDERTARGET)).getPointer();
+        Ogre::RenderTexture *rtt
+            = this->renderTexture->getBuffer()->getRenderTarget();
+
+      // Setup the viewport to use the texture
+      Ogre::Viewport *vp = rtt->addViewport(this->camera);
+      vp->setClearEveryFrame(true);
+      vp->setShadowsEnabled(true);
+    }
+    this->renderTexture->getBuffer()->getRenderTarget()->update();
+
+    // The code below is equivalent to
+    // this->viewport->getTarget()->copyContentsToMemory(box);
+    // which causes problems on some machines if running ogre-1.7.4
+    Ogre::HardwarePixelBufferSharedPtr pixelBuffer;
+    pixelBuffer = this->renderTexture->getBuffer();
+    pixelBuffer->blitToMemory(box);
+#endif
 
     if (this->captureDataOnce)
     {
       this->SaveFrame(this->GetFrameFilename());
       this->captureDataOnce = false;
+    }
+    else if (this->encodeVideo)
+    {
+        this->videoEncoder->AddFrame(this->saveFrameBuffer, width, height);
     }
 
     if (this->sdf->HasElement("save") &&
@@ -891,6 +934,20 @@ bool Camera::SaveFrame(const std::string &_filename)
 }
 
 //////////////////////////////////////////////////
+bool Camera::SaveVideo(const std::string &_filename)
+{
+  if (!this->videoEncoder || !this->videoEncoder->IsInitialized())
+  {
+    gzwarn << "Video encoder not initialized\n";
+    return false;
+  }
+
+  this->videoEncoder->SaveToFile(_filename);
+  this->videoEncoder->Reset();
+  return true;
+}
+
+//////////////////////////////////////////////////
 std::string Camera::GetFrameFilename()
 {
   sdf::ElementPtr saveElem = this->sdf->GetElement("save");
@@ -1135,6 +1192,32 @@ void Camera::SetCaptureData(bool _value)
 void Camera::SetCaptureDataOnce()
 {
   this->captureDataOnce = true;
+}
+
+//////////////////////////////////////////////////
+void Camera::SetEncodeVideo(bool _encode)
+{
+  if (this->encodeVideo == _encode)
+    return;
+
+  this->encodeVideo = _encode;
+
+  if (this->encodeVideo)
+  {
+    if (!this->videoEncoder)
+    {
+      this->videoEncoder = new common::VideoEncoder();
+    }
+    if (!this->videoEncodeFormat.empty())
+      this->videoEncoder->SetFormat(this->videoEncodeFormat);
+    this->videoEncoder->Init();
+  }
+}
+
+//////////////////////////////////////////////////
+void Camera::SetEncodeVideoFormat(const std::string &_format)
+{
+  this->videoEncodeFormat = _format;
 }
 
 //////////////////////////////////////////////////
