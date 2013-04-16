@@ -22,8 +22,8 @@
 #include "gazebo/gazebo.hh"
 #include "gazebo/transport/transport.hh"
 
-#include "gazebo/common/LogRecord.hh"
-#include "gazebo/common/LogPlay.hh"
+#include "gazebo/util/LogRecord.hh"
+#include "gazebo/util/LogPlay.hh"
 #include "gazebo/common/Timer.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Plugin.hh"
@@ -92,7 +92,9 @@ bool Server::ParseArgs(int argc, char **argv)
     ("physics,e", po::value<std::string>(),
      "Specify a physics engine (ode|bullet).")
     ("play,p", po::value<std::string>(), "Play a log file.")
-    ("record,r", "Record state data to disk.")
+    ("record,r", "Record state data.")
+    ("record_path", po::value<std::string>()->default_value(""),
+     "Aboslute path in which to store state data")
     ("seed",  po::value<double>(),
      "Start with a given random number seed.")
     ("server-plugin,s", po::value<std::vector<std::string> >(),
@@ -161,8 +163,11 @@ bool Server::ParseArgs(int argc, char **argv)
   }
 
   // Set the parameter to record a log file
-  if (this->vm.count("record"))
-    this->params["record"] = "bz2";
+  if (this->vm.count("record") ||
+      !this->vm["record_path"].as<std::string>().empty())
+  {
+    this->params["record"] = this->vm["record_path"].as<std::string>();
+  }
 
   if (this->vm.count("pause"))
     this->params["pause"] = "true";
@@ -178,19 +183,19 @@ bool Server::ParseArgs(int argc, char **argv)
   if (this->vm.count("play"))
   {
     // Load the log file
-    common::LogPlay::Instance()->Open(this->vm["play"].as<std::string>());
+    util::LogPlay::Instance()->Open(this->vm["play"].as<std::string>());
 
     gzmsg << "\nLog playback:\n"
       << "  Log Version: "
-      << common::LogPlay::Instance()->GetLogVersion() << "\n"
+      << util::LogPlay::Instance()->GetLogVersion() << "\n"
       << "  Gazebo Version: "
-      << common::LogPlay::Instance()->GetGazeboVersion() << "\n"
+      << util::LogPlay::Instance()->GetGazeboVersion() << "\n"
       << "  Random Seed: "
-      << common::LogPlay::Instance()->GetRandSeed() << "\n";
+      << util::LogPlay::Instance()->GetRandSeed() << "\n";
 
     // Get the SDF world description from the log file
     std::string sdfString;
-    common::LogPlay::Instance()->Step(sdfString);
+    util::LogPlay::Instance()->Step(sdfString);
 
     // Load the server
     if (!this->LoadString(sdfString))
@@ -461,7 +466,7 @@ void Server::ProcessParams()
     }
     else if (iter->first == "record")
     {
-      common::LogRecord::Instance()->Start(iter->second);
+      util::LogRecord::Instance()->Start("bz2", iter->second);
     }
   }
 }
