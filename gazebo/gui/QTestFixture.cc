@@ -24,6 +24,7 @@
 
 #include "gazebo/common/Time.hh"
 #include "gazebo/common/Console.hh"
+#include "gazebo/util/LogRecord.hh"
 #include "gazebo/gazebo.hh"
 #include "gazebo/gui/QTestFixture.hh"
 
@@ -41,7 +42,7 @@ void QTestFixture::initTestCase()
   gazebo::common::Console::Instance()->Init("test.log");
 
   // Initialize the data logger. This will log state information.
-  gazebo::common::LogRecord::Instance()->Init("test");
+  gazebo::util::LogRecord::Instance()->Init("test");
 
   // Add local search paths
   gazebo::common::SystemPaths::Instance()->AddGazeboPaths(PROJECT_SOURCE_PATH);
@@ -89,6 +90,7 @@ void QTestFixture::RunServer(const std::string &_worldFilename, bool _paused)
   this->SetPause(_paused);
 
   this->server->Run();
+  printf("Server not running\n");
 
   gazebo::rendering::remove_scene(gazebo::physics::get_world()->GetName());
 

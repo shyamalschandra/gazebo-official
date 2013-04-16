@@ -896,7 +896,7 @@ void Link::OnPoseChange()
 //////////////////////////////////////////////////
 void Link::SetState(const LinkState &_state)
 {
-  this->SetWorldPose(_state.GetPose(), true, true);
+  this->SetWorldPose(_state.GetPose());
 
   /*
   for (unsigned int i = 0; i < _state.GetCollisionStateCount(); ++i)

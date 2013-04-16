@@ -26,11 +26,11 @@
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 
 #include <gazebo/gazebo.hh>
-
 #include <gazebo/sdf/sdf.hh>
-
+#include <gazebo/msgs/msgs.hh>
 #include <gazebo/physics/WorldState.hh>
 #include <gazebo/common/Time.hh>
+#include <gazebo/util/util.hh>
 #include <gazebo/gazebo_config.h>
 
 namespace po = boost::program_options;
@@ -254,7 +254,7 @@ class JointFilter : public FilterBase
           {
             std::ostringstream result;
 
-            std::vector<gazebo::physics::JointState> states;
+            gazebo::physics::JointState_M states;
             std::list<std::string>::iterator partIter;
 
             /// Get an iterator to the list of the command line parts.
@@ -269,7 +269,7 @@ class JointFilter : public FilterBase
             ++partIter;
 
             // Filter all the link states that were found.
-            for (std::vector<gazebo::physics::JointState>::iterator iter =
+            for (gazebo::physics::JointState_M::iterator iter =
                 states.begin(); iter != states.end(); ++iter)
             {
               // Filter the elements of the joint (angle).
@@ -278,19 +278,19 @@ class JointFilter : public FilterBase
               if (partIter != this->parts.end())
               {
                 if (this->xmlOutput)
-                  result << "<joint name='" << (*iter).GetName() << "'>\n";
+                  result << "<joint name='" << iter->first << "'>\n";
 
-                result << this->FilterParts(*iter, partIter);
+                result << this->FilterParts(iter->second, partIter);
 
                 if (this->xmlOutput)
                   result << "</joint>\n";
               }
               else
               {
-                if (!this->xmlOutput && (*iter).GetAngleCount() == 1)
-                  result << std::fixed <<  (*iter).GetAngle(0);
+                if (!this->xmlOutput && iter->second.GetAngleCount() == 1)
+                  result << std::fixed << iter->second.GetAngle(0);
                 else
-                  result << std::fixed << *iter;
+                  result << std::fixed << iter->second;
               }
             }
 
@@ -365,7 +365,7 @@ class LinkFilter : public FilterBase
           {
             std::ostringstream result;
 
-            std::vector<gazebo::physics::LinkState> states;
+            gazebo::physics::LinkState_M states;
             std::list<std::string>::iterator partIter;
 
             /// Get an iterator to the list of the command line parts.
@@ -385,7 +385,7 @@ class LinkFilter : public FilterBase
             ++partIter;
 
             // Filter all the link states that were found.
-            for (std::vector<gazebo::physics::LinkState>::iterator iter =
+            for (gazebo::physics::LinkState_M::iterator iter =
                 states.begin(); iter != states.end(); ++iter)
             {
               // Filter the elements of the link (pose, velocity,
@@ -394,15 +394,15 @@ class LinkFilter : public FilterBase
               if (partIter != this->parts.end())
               {
                 if (this->xmlOutput)
-                  result << "<link name='" << (*iter).GetName() << "'>\n";
+                  result << "<link name='" << iter->second.GetName() << "'>\n";
 
-                result << this->FilterParts(*iter, partIter);
+                result << this->FilterParts(iter->second, partIter);
 
                 if (this->xmlOutput)
                   result << "</link>\n";
               }
               else
-                result << std::fixed << *iter << std::endl;
+                result << std::fixed << iter->second << std::endl;
             }
 
             return result.str();
@@ -518,12 +518,12 @@ class ModelFilter : public FilterBase
           {
             std::ostringstream result;
 
-            std::vector<gazebo::physics::ModelState> states;
+            gazebo::physics::ModelState_M states;
             std::list<std::string>::iterator partIter = this->parts.begin();
 
             // The first element in the filter must be a model name or a star.
-            if (partIter != this->parts.end() && !(*partIter).empty() &&
-                (*partIter) != "*")
+            if (partIter != this->parts.end() && !this->parts.empty() &&
+                !(*partIter).empty() && (*partIter) != "*")
             {
               std::string regexStr = *partIter;
               boost::replace_all(regexStr, "*", ".*");
@@ -536,30 +536,30 @@ class ModelFilter : public FilterBase
             ++partIter;
 
             // Filter all the model states that were found.
-            for (std::vector<gazebo::physics::ModelState>::iterator iter =
+            for (gazebo::physics::ModelState_M::iterator iter =
                 states.begin(); iter != states.end(); ++iter)
             {
               // If no link filter, and no model parts, then output the
               // whole model state.
               if (!this->linkFilter && !this->jointFilter &&
                   partIter == this->parts.end())
-                result << std::fixed << *iter;
+                result << std::fixed << iter->second;
               else
               {
                 if (this->xmlOutput)
-                  result << "<model name='" << (*iter).GetName() << "'>\n";
+                  result << "<model name='" << iter->second.GetName() << "'>\n";
 
                 // Filter the pose of the model.
                 if (partIter != this->parts.end())
-                  result << this->FilterParts(*iter, partIter);
+                  result << this->FilterParts(iter->second, partIter);
 
                 // Apply link filtering, if a link filter exists.
                 if (this->linkFilter)
-                  result << this->linkFilter->Filter(*iter);
+                  result << this->linkFilter->Filter(iter->second);
 
                 // Apply link filtering, if a link filter exists.
                 if (this->jointFilter)
-                  result << this->jointFilter->Filter(*iter);
+                  result << this->jointFilter->Filter(iter->second);
 
                 if (this->xmlOutput)
                   result << "</model>\n";
@@ -659,7 +659,11 @@ void help()
             << "  help\t Output this help message.\n"
             << "  info\t Display statistical information about a log file.\n"
             << "  echo\t Output the contents of a log file to screen.\n"
-            << "  step\t Step through the contents of a log file.\n";
+            << "  step\t Step through the contents of a log file.\n"
+            << "  start\t Start recording a log file on an active Gazebo "
+            << "server.\n"
+            << "  stop\t Stop recording a log file on an active Gazebo "
+            << "server.\n";
 
   std::cerr << "\n";
 }
@@ -694,7 +698,7 @@ bool load_log_from_file(const std::string &_filename)
 
   try
   {
-    gazebo::common::LogPlay::Instance()->Open(_filename);
+    gazebo::util::LogPlay::Instance()->Open(_filename);
   }
   catch(gazebo::common::Exception &_e)
   {
@@ -743,11 +747,11 @@ std::string get_file_size_str(const std::string &_filename)
 /// \bried Output information about a log file.
 void info(const std::string &_filename)
 {
-  gazebo::common::LogPlay *play = gazebo::common::LogPlay::Instance();
+  gazebo::util::LogPlay *play = gazebo::util::LogPlay::Instance();
 
   // Get the SDF world description from the log file
   std::string sdfString;
-  gazebo::common::LogPlay::Instance()->Step(sdfString);
+  gazebo::util::LogPlay::Instance()->Step(sdfString);
 
   // Parse the first SDF world description
   sdf::ElementPtr sdf(new sdf::Element);
@@ -851,12 +855,9 @@ void echo(const std::string &_filter, bool _raw, const std::string &_stamp,
   StateFilter filter(!_raw, _stamp, _hz);
   filter.Init(_filter);
 
-  for (unsigned int i = 0;
-       i < gazebo::common::LogPlay::Instance()->GetChunkCount(); ++i)
+  unsigned int i = 0;
+  while (gazebo::util::LogPlay::Instance()->Step(stateString))
   {
-    // Get and output the state string
-    gazebo::common::LogPlay::Instance()->Step(stateString);
-
     if (!_filter.empty() && i > 0)
       stateString = filter.Filter(stateString);
     else if (!_filter.empty())
@@ -864,6 +865,8 @@ void echo(const std::string &_filter, bool _raw, const std::string &_stamp,
 
     if (!stateString.empty())
       std::cout << stateString;
+
+    ++i;
   }
 }
 
@@ -874,21 +877,23 @@ void step(const std::string &_filter, bool _raw, const std::string &_stamp,
     double _hz)
 {
   std::string stateString;
-  gazebo::common::LogPlay *play = gazebo::common::LogPlay::Instance();
+  gazebo::util::LogPlay *play = gazebo::util::LogPlay::Instance();
 
   char c = '\0';
 
   StateFilter filter(!_raw, _stamp, _hz);
   filter.Init(_filter);
 
-  for (unsigned int i = 0; i < play->GetChunkCount() && c != 'q'; ++i)
+  unsigned int i = 0;
+  while (gazebo::util::LogPlay::Instance()->Step(stateString) && c != 'q')
   {
     stateString.clear();
 
     // Get and output the state string
-    gazebo::common::LogPlay::Instance()->Step(stateString);
+    play->Step(stateString);
 
-    stateString = i > 0 ? filter.Filter(stateString): std::string();
+    if (i > 0)
+      stateString = filter.Filter(stateString);
 
     // Only wait for user input if there is some state to output.
     if (!stateString.empty())
@@ -903,7 +908,30 @@ void step(const std::string &_filter, bool _raw, const std::string &_stamp,
       while (c != ' ' && c != 'q')
         c = get_ch();
     }
+    ++i;
   }
+}
+
+/////////////////////////////////////////////////
+/// \brief Start or stop logging
+/// \param[in] _start True to start logging
+void record(bool _start)
+{
+  gazebo::transport::init();
+  gazebo::transport::run();
+
+  gazebo::transport::NodePtr node(new gazebo::transport::Node());
+  node->Init();
+
+  gazebo::transport::PublisherPtr pub =
+    node->Advertise<gazebo::msgs::LogControl>("~/log/control");
+  pub->WaitForConnection();
+
+  gazebo::msgs::LogControl msg;
+  _start ? msg.set_start(true) : msg.set_stop(true);
+  pub->Publish<gazebo::msgs::LogControl>(msg, true);
+
+  gazebo::transport::fini();
 }
 
 /////////////////////////////////////////////////
@@ -972,18 +1000,21 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  // Load the log file
-  if (vm.count("file"))
-    filename = vm["file"].as<std::string>();
-  else
+  if (command != "start" && command != "stop")
   {
-    gzerr << "No log file specified\n";
-    return -1;
-  }
+    // Load the log file
+    if (vm.count("file"))
+      filename = vm["file"].as<std::string>();
+    else
+    {
+      gzerr << "No log file specified\n";
+      return -1;
+    }
 
-  // Load log file from string
-  if (!load_log_from_file(filename))
-    return -1;
+    // Load log file from string
+    if (!load_log_from_file(filename))
+      return -1;
+  }
 
   std::string stamp;
   if (vm.count("stamp"))
@@ -1000,6 +1031,10 @@ int main(int argc, char **argv)
     echo(filter, vm.count("raw"), stamp, hz);
   else if (command == "step")
     step(filter, vm.count("raw"), stamp, hz);
+  else if (command == "start")
+    record(true);
+  else if (command == "stop")
+    record(false);
 
   return 0;
 }
