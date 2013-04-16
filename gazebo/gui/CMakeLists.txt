@@ -36,9 +36,11 @@ set (sources
   ModelMaker.cc
   ModelRightMenu.cc
   SphereMaker.cc
+  SaveDialog.cc
   TimePanel.cc
   ToolsWidget.cc
   TopicSelector.cc
+  VideoRecorder.cc
 )
 
 set (qt_headers
@@ -52,9 +54,11 @@ set (qt_headers
   ModelEditWidget.hh
   ModelRightMenu.hh
   RenderWidget.hh
+  SaveDialog.hh
   TimePanel.hh
   ToolsWidget.hh
   TopicSelector.hh
+  VideoRecorder.hh
 )
 
 set (headers

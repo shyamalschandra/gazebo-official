@@ -33,6 +33,7 @@
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 
+#include "gazebo/gui/VideoRecorder.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/InsertModelWidget.hh"
@@ -70,6 +71,8 @@ MainWindow::MainWindow()
   this->node->Init();
   gui::set_world(this->node->GetTopicNamespace());
 
+  this->videoRecorder = new VideoRecorder(this);
+
   (void) new QShortcut(Qt::CTRL + Qt::Key_Q, this, SLOT(close()));
   this->CreateActions();
   this->CreateMenus();
@@ -106,6 +109,9 @@ MainWindow::MainWindow()
   this->toolsWidget = new ToolsWidget();
 
   this->renderWidget = new RenderWidget(mainWidget);
+  QObject::connect(this->videoRecorder,
+      SIGNAL(MessageChanged(std::string, int)),
+      this->renderWidget, SLOT(DisplayOverlayMsg(std::string, int)));
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
@@ -1053,6 +1059,8 @@ void MainWindow::CreateActions()
   g_screenshotAct->setStatusTip(tr("Take a screenshot"));
   connect(g_screenshotAct, SIGNAL(triggered()), this,
       SLOT(CaptureScreenshot()));
+
+  this->videoRecorder->CreateActions();
 }
 
 /////////////////////////////////////////////////

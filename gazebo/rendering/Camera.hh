@@ -55,6 +55,11 @@ namespace Ogre
 
 namespace gazebo
 {
+  namespace common
+  {
+    class VideoEncoder;
+  }
+
   /// \ingroup gazebo_rendering
   /// \brief Rendering namespace
   namespace rendering
@@ -277,6 +282,11 @@ namespace gazebo
       /// \return True if saving was successful
       public: bool SaveFrame(const std::string &_filename);
 
+      /// \brief Save the last encoded video to disk
+      /// \param[in] _filename File in which to save the encoded video
+      /// \return True if saving was successful
+      public: bool SaveVideo(const std::string &_filename);
+
       /// \brief Get a pointer to the ogre camera
       /// \return Pointer to the OGRE camera
       public: Ogre::Camera *GetOgreCamera() const;
@@ -368,6 +378,14 @@ namespace gazebo
 
       /// \brief Capture data once and save to disk
       public: void SetCaptureDataOnce();
+
+      /// \brief Set whether to encode frames to video buffer
+      /// \param[in] _value Set to true to encode to video buffer.
+      public: void SetEncodeVideo(bool _value);
+
+      /// \brief Set the video format to encode in
+      /// \param[in] _format Video format
+      public: void SetEncodeVideoFormat(const std::string &_format);
 
       /// \brief Set the render target
       /// \param[in] _textureName Name of the new render texture
@@ -605,11 +623,17 @@ namespace gazebo
       /// \brief Texture that receives results from rendering.
       protected: Ogre::Texture *renderTexture;
 
+      /// \brief Video frame video encoder
+      protected: common::VideoEncoder *videoEncoder;
+
       /// \brief True to capture frames into an image buffer.
       protected: bool captureData;
 
       /// \brief True to capture a frame once and save to disk.
       protected: bool captureDataOnce;
+
+      /// \brief True to encode frames to video buffer.
+      protected: bool encodeVideo;
 
       /// \brief True if new data is available.
       protected: bool newData;
@@ -679,6 +703,9 @@ namespace gazebo
 
       /// \brief Render period.
       private: common::Time renderPeriod;
+
+      /// \brief Video encoding format
+      private: std::string videoEncodeFormat;
 
       /// \brief Which noise type we support
       private: enum NoiseModelType
