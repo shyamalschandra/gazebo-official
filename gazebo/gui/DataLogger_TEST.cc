@@ -116,6 +116,9 @@ void DataLogger_TEST::StressTest()
 
     this->Load("worlds/empty.world");
 
+    // Cleanup test directory.
+    boost::filesystem::remove_all("/tmp/gazebo_test");
+
     gazebo::transport::NodePtr node;
     gazebo::transport::PublisherPtr pub;
 
@@ -150,14 +153,14 @@ void DataLogger_TEST::StressTest()
     // due to the record button being toggled.
     unsigned int dirCount = 0;
     for (boost::filesystem::directory_iterator iter("/tmp/gazebo_test");
-         iter != boost::filesystem::directory_iterator(); ++iter, ++dirCount)
+        iter != boost::filesystem::directory_iterator(); ++iter, ++dirCount)
     {
     }
 
-    QVERIFY(dirCount == count / 2);
-
     // Cleanup after ourselves.
     boost::filesystem::remove_all("/tmp/gazebo_test");
+
+    QVERIFY(dirCount == count / 2);
   }
 }
 
