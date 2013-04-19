@@ -144,7 +144,7 @@ TEST_F(CameraSensor, MultiSenseHigh)
   // This test is disabled because it does not work on machines with
   // limited rendering capabilities.
   return;
-/*
+  /*
   Load("worlds/empty_test.world");
 
   // Make sure the render engine is available.
