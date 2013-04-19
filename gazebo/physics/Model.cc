@@ -42,6 +42,8 @@
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/Contact.hh"
+#include "gazebo/physics/simbody/SimbodyPhysics.hh"
+#include "gazebo/physics/simbody/SimbodyTypes.hh"
 
 #include "gazebo/sensors/SensorManager.hh"
 
@@ -190,18 +192,31 @@ void Model::Init()
        iter != this->joints.end(); ++iter)
   {
     (*iter)->Init();
-    // The following message used to be filled and sent in Model::LoadJoint
-    // It is moved here, after Joint::Init, so that the joint properties
-    // can be included in the message.
-    msgs::Joint msg;
-    (*iter)->FillMsg(msg);
-    this->jointPub->Publish(msg);
   }
 
   for (std::vector<Gripper*>::iterator iter = this->grippers.begin();
        iter != this->grippers.end(); ++iter)
   {
     (*iter)->Init();
+  }
+
+  // rebuild simbody state
+  physics::SimbodyPhysicsPtr simbodyPhysics =
+    boost::shared_dynamic_cast<physics::SimbodyPhysics>(
+      this->GetWorld()->GetPhysicsEngine());
+  if (simbodyPhysics)
+    simbodyPhysics->InitModel(this);
+
+  // Initialize the joints messages for visualizer
+  for (Joint_V::iterator iter = this->joints.begin();
+       iter != this->joints.end(); ++iter)
+  {
+    // The following message used to be filled and sent in Model::LoadJoint
+    // It is moved here, after Joint::Init, so that the joint properties
+    // can be included in the message.
+    msgs::Joint msg;
+    (*iter)->FillMsg(msg);
+    this->jointPub->Publish(msg);
   }
 }
 
@@ -646,7 +661,10 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint = this->GetWorld()->GetPhysicsEngine()->CreateJoint(stype,
      boost::static_pointer_cast<Model>(shared_from_this()));
   if (!joint)
+  {
+    gzerr << "Unable to create joint of type[" << stype << "]\n";
     gzthrow("Unable to create joint of type[" + stype + "]\n");
+  }
 
   joint->SetModel(boost::static_pointer_cast<Model>(shared_from_this()));
 
@@ -654,7 +672,10 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint->Load(_sdf);
 
   if (this->GetJoint(joint->GetScopedName()) != NULL)
+  {
+    gzerr << "can't have two joint with the same name\n";
     gzthrow("can't have two joint with the same name");
+  }
 
   this->joints.push_back(joint);
 
