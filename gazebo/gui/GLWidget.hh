@@ -78,17 +78,21 @@ namespace gazebo
 
       private: std::string GetOgreHandle() const;
 
+      private: bool OnMouseMove(const common::MouseEvent &_event);
       private: void OnMouseMoveNormal();
       private: void OnMouseMoveTranslate();
       private: void OnMouseMoveMakeEntity();
 
+      private: bool OnMouseRelease(const common::MouseEvent &_event);
       private: void OnMouseReleaseNormal();
       private: void OnMouseReleaseTranslate();
       private: void OnMouseReleaseMakeEntity();
 
+      private: bool OnMousePress(const common::MouseEvent &_event);
       private: void OnMousePressNormal();
       private: void OnMousePressTranslate();
       private: void OnMousePressMakeEntity();
+      private: void OnMousePressRaiseTerrain();
 
       private: void OnRequest(ConstRequestPtr &_msg);
 

@@ -79,7 +79,7 @@ namespace gazebo
       /// \param[in] _x X position.
       /// \param[in] _y Y position.
       /// \return The height at a the specified location.
-      public: float GetHeight(int _x, int _y);
+      public: float GetHeight(int _x, int _y) const;
 
       /// \brief Fill a geometry message with this shape's data.
       /// \param[in] _msg Message to fill.
@@ -97,9 +97,13 @@ namespace gazebo
       /// \return The minimum height.
       public: float GetMinHeight() const;
 
-      /// \brief Get the amount of subsampling.
-      /// \return Amount of subsampling.
-      public: int GetSubSampling() const;
+      /// \brief Deprecated
+      public: int GetSubSampling() const GAZEBO_DEPRECATED(1.6);
+
+      /// \brief Return an image representation of the heightmap.
+      /// \return Image where white pixels represents the highest locations,
+      /// and black pixels the lowest.
+      public: common::Image GetImage() const;
 
       /// \brief Create a lookup table of the terrain's height.
       private: void FillHeightMap();
@@ -116,7 +120,10 @@ namespace gazebo
       /// \brief Scaling factor.
       protected: math::Vector3 scale;
 
-      /// \brief Level of subsampling.
+      /// \brief True to flip the heights along the y direction.
+      protected: bool flipY;
+
+      /// \brief The amount of subsampling. Default is 2.
       protected: int subSampling;
     };
     /// \}
