@@ -51,12 +51,12 @@ physics::WorldPtr physics::create_world(const std::string &_name)
 /////////////////////////////////////////////////
 physics::WorldPtr physics::get_world(const std::string &_name)
 {
+  physics::WorldPtr result;
+
   if (_name.empty())
   {
-    if (g_worlds.empty())
-      gzerr << "no worlds\n";
-    else
-      return *(g_worlds.begin());
+    if (!g_worlds.empty())
+      result = *(g_worlds.begin());
   }
   else
   {
@@ -64,13 +64,14 @@ physics::WorldPtr physics::get_world(const std::string &_name)
         iter != g_worlds.end(); ++iter)
     {
       if ((*iter)->GetName() == _name)
-        return (*iter);
+      {
+        result = (*iter);
+        break;
+      }
     }
   }
 
-  gzerr << "Unable to find world by name in physics::get_world["
-    << _name.c_str() << "]\n";
-  gzthrow("Unable to find world by name in physics::get_world(world_name)");
+  return result;
 }
 
 /////////////////////////////////////////////////
@@ -90,11 +91,11 @@ void physics::init_worlds()
 }
 
 /////////////////////////////////////////////////
-void physics::run_worlds(unsigned int _steps)
+void physics::run_worlds(unsigned int _steps, unsigned int _stepDelayMS)
 {
   std::vector<WorldPtr>::iterator iter;
   for (iter = g_worlds.begin(); iter != g_worlds.end(); ++iter)
-    (*iter)->Run(_steps);
+    (*iter)->Run(_steps, _stepDelayMS);
 }
 
 /////////////////////////////////////////////////

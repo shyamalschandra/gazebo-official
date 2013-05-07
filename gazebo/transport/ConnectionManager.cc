@@ -42,6 +42,7 @@ ConnectionManager::ConnectionManager()
   this->tmpIndex = 0;
   this->initialized = false;
   this->stop = false;
+  this->pause = false;
   this->stopped = true;
 
   this->serverConn = NULL;
@@ -90,9 +91,18 @@ bool ConnectionManager::Init(const std::string &_masterHost,
   }
 
   std::string initData, namespacesData, publishersData;
-  this->masterConn->Read(initData);
-  this->masterConn->Read(namespacesData);
-  this->masterConn->Read(publishersData);
+
+  try
+  {
+    this->masterConn->Read(initData);
+    this->masterConn->Read(namespacesData);
+    this->masterConn->Read(publishersData);
+  }
+  catch(...)
+  {
+    gzerr << "Unable to read from master\n";
+    return false;
+  }
 
   msgs::Packet packet;
   packet.ParseFromString(initData);
@@ -193,6 +203,19 @@ void ConnectionManager::Fini()
 }
 
 //////////////////////////////////////////////////
+void ConnectionManager::Pause(bool _pause)
+{
+  if (this->pause && !_pause)
+  {
+    this->pause = _pause;
+    boost::mutex::scoped_lock lock(this->updateMutex);
+    this->updateCondition.notify_all();
+  }
+  else
+    this->pause = _pause;
+}
+
+//////////////////////////////////////////////////
 void ConnectionManager::Stop()
 {
   this->stop = true;
@@ -263,11 +286,33 @@ void ConnectionManager::Run()
 
   this->stopped = false;
 
+  // Process all pending subscriptions.
+  for (std::list<PendingSubscription>::iterator iter =
+      this->pendingSubscriptions.begin();
+      iter != this->pendingSubscriptions.end(); ++iter)
+  {
+    std::cout << "Subscribe[" << (*iter).topic << "]\n";
+    this->Subscribe((*iter).topic, (*iter).msgType, (*iter).latching);
+  }
+
+  // Process all pending advertisements.
+  for (std::list<PendingAdvertisement>::iterator iter =
+      this->pendingAdvertisements.begin();
+      iter != this->pendingAdvertisements.end(); ++iter)
+  {
+    this->Advertise((*iter).topic, (*iter).msgType);
+  }
+
   while (!this->stop && this->masterConn && this->masterConn->IsOpen())
   {
-    this->RunUpdate();
-    this->updateCondition.timed_wait(lock,
-       boost::posix_time::milliseconds(100));
+    if (!this->pause)
+    {
+      this->RunUpdate();
+      this->updateCondition.timed_wait(lock,
+          boost::posix_time::milliseconds(100));
+    }
+    else
+      this->updateCondition.wait(lock);
   }
   this->RunUpdate();
 
@@ -380,14 +425,14 @@ void ConnectionManager::ProcessMessage(const std::string &_data)
 }
 
 //////////////////////////////////////////////////
-void ConnectionManager::OnAccept(const ConnectionPtr &newConnection)
+void ConnectionManager::OnAccept(const ConnectionPtr &_newConnection)
 {
-  newConnection->AsyncRead(
-      boost::bind(&ConnectionManager::OnRead, this, newConnection, _1));
+  _newConnection->AsyncRead(
+      boost::bind(&ConnectionManager::OnRead, this, _newConnection, _1));
 
   // Add the connection to the list of connections
   boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
-  this->connections.push_back(newConnection);
+  this->connections.push_back(_newConnection);
 }
 
 //////////////////////////////////////////////////
@@ -417,22 +462,27 @@ void ConnectionManager::OnRead(const ConnectionPtr &_connection,
     subLink->Init(_connection, sub.latching());
 
     // Connect the publisher to this transport mechanism
-    TopicManager::Instance()->ConnectPubToSub(sub.topic(), subLink);
+    TopicManager::Instance()->ConnectPubToSub(sub, subLink);
   }
   else
     gzerr << "Error est here\n";
 }
 
 //////////////////////////////////////////////////
-void ConnectionManager::Advertise(const std::string &topic,
-                                  const std::string &msgType)
+void ConnectionManager::Advertise(const std::string &_topic,
+                                  const std::string &_msgType)
 {
+  // We are not initialized, so add the advertisement to our pending list.
   if (!this->initialized)
+  {
+    this->pendingAdvertisements.push_back(
+        PendingAdvertisement(_topic, _msgType));
     return;
+  }
 
   msgs::Publish msg;
-  msg.set_topic(topic);
-  msg.set_msg_type(msgType);
+  msg.set_topic(_topic);
+  msg.set_msg_type(_msgType);
   msg.set_host(this->serverConn->GetLocalAddress());
   msg.set_port(this->serverConn->GetLocalPort());
 
@@ -483,11 +533,14 @@ void ConnectionManager::GetAllPublishers(std::list<msgs::Publish> &_publishers)
 //////////////////////////////////////////////////
 void ConnectionManager::GetTopicNamespaces(std::list<std::string> &_namespaces)
 {
+  if (!this->initialized)
+    return;
+
   _namespaces.clear();
 
   boost::mutex::scoped_lock lock(this->namespaceMutex);
 
-  if (!this->namespaces.size())
+  if (this->namespaces.empty())
   {
     if (!this->namespaceCondition.timed_wait(lock,
           boost::posix_time::milliseconds(60000)))
@@ -532,9 +585,11 @@ void ConnectionManager::Subscribe(const std::string &_topic,
                                   const std::string &_msgType,
                                   bool _latching)
 {
+  // We are not initialized, so add the subscription to our pending list.
   if (!this->initialized)
   {
-    gzerr << "ConnectionManager is not initialized\n";
+    this->pendingSubscriptions.push_back(
+        PendingSubscription(_topic, _msgType, _latching));
     return;
   }
 
@@ -636,4 +691,18 @@ ConnectionPtr ConnectionManager::FindConnection(const std::string &_host,
 void ConnectionManager::TriggerUpdate()
 {
   this->updateCondition.notify_all();
+}
+
+//////////////////////////////////////////////////
+void ConnectionManager::ClearBuffers()
+{
+  // this->namespaces.clear();
+  // this->masterMessages.clear();
+
+  this->publishers.clear();
+  for (std::list<ConnectionPtr>::iterator iter = this->connections.begin();
+       iter != this->connections.end(); ++iter)
+  {
+    (*iter)->ClearBuffers();
+  }
 }

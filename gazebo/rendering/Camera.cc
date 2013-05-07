@@ -160,6 +160,7 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 //////////////////////////////////////////////////
 Camera::~Camera()
 {
+  boost::mutex::scoped_lock lock(this->renderMutex);
   delete [] this->saveFrameBuffer;
   delete [] this->bayerFrameBuffer;
 
@@ -221,7 +222,7 @@ void Camera::Load()
     double angle = elem->GetValueDouble();
     if (angle < 0.01 || angle > M_PI)
     {
-      gzthrow("Camera horizontal field of veiw invalid.");
+      gzthrow("Camera horizontal field of view invalid.");
     }
     this->SetHFOV(angle);
   }
@@ -277,12 +278,15 @@ void Camera::Init()
 //////////////////////////////////////////////////
 void Camera::Fini()
 {
+  this->connections.clear();
+
+  boost::mutex::scoped_lock lock(this->renderMutex);
+
   if (this->gaussianNoiseCompositorListener)
     this->gaussianNoiseInstance->removeListener(
       this->gaussianNoiseCompositorListener.get());
   RTShaderSystem::DetachViewport(this->viewport, this->scene);
   this->renderTarget->removeAllViewports();
-  this->connections.clear();
 }
 
 //////////////////////////////////////////////////
@@ -387,6 +391,7 @@ void Camera::Render()
 //////////////////////////////////////////////////
 void Camera::RenderImpl()
 {
+  boost::mutex::scoped_lock lock(this->renderMutex);
   if (this->renderTarget)
   {
     // Render, but don't swap buffers.

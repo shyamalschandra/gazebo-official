@@ -86,6 +86,8 @@ void Sensor::Load(const std::string &_worldName)
 
   this->world = physics::get_world(_worldName);
 
+  GZ_ASSERT(this->world != NULL, "World pointer is NULL");
+
   // loaded, but not updated
   this->lastUpdateTime = common::Time(0.0);
 
@@ -111,7 +113,8 @@ void Sensor::Init()
 
   msgs::Sensor msg;
   this->FillMsg(msg);
-  this->sensorPub->Publish(msg);
+  if (this->sensorPub)
+    this->sensorPub->Publish(msg);
 }
 
 //////////////////////////////////////////////////
@@ -144,6 +147,14 @@ void Sensor::Update(bool _force)
 //////////////////////////////////////////////////
 void Sensor::Fini()
 {
+  this->node->Fini();
+  this->node.reset();
+
+  this->sdf->Reset();
+  this->sdf.reset();
+  this->connections.clear();
+
+  this->world.reset();
   this->plugins.clear();
 }
 
@@ -156,8 +167,11 @@ std::string Sensor::GetName() const
 //////////////////////////////////////////////////
 std::string Sensor::GetScopedName() const
 {
-  return this->world->GetName() + "::" + this->parentName + "::" +
-         this->GetName();
+  std::string worldName;
+  if (this->world)
+    worldName = this->world->GetName(); 
+
+  return worldName + "::" + this->parentName + "::" + this->GetName();
 }
 
 //////////////////////////////////////////////////

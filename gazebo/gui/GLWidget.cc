@@ -21,6 +21,8 @@
 
 #include "gazebo/transport/transport.hh"
 
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/Heightmap.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 #include "gazebo/rendering/Rendering.hh"
 #include "gazebo/rendering/Visual.hh"
@@ -31,6 +33,7 @@
 #include "gazebo/rendering/OrbitViewController.hh"
 #include "gazebo/rendering/FPSViewController.hh"
 
+#include "gazebo/gui/MouseEventHandler.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/ModelRightMenu.hh"
@@ -48,6 +51,7 @@ GLWidget::GLWidget(QWidget *_parent)
   : QWidget(_parent)
 {
   this->setObjectName("GLWidget");
+  this->pauseRendering = false;
   this->state = "select";
   this->sceneCreated = false;
 
@@ -68,6 +72,10 @@ GLWidget::GLWidget(QWidget *_parent)
   mainLayout->addWidget(this->renderFrame);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   this->setLayout(mainLayout);
+
+  this->connections.push_back(
+      event::Events::ConnectPauseRender(
+        boost::bind(&GLWidget::OnPauseRender, this, _1)));
 
   this->connections.push_back(
       rendering::Events::ConnectCreateScene(
@@ -122,6 +130,15 @@ GLWidget::GLWidget(QWidget *_parent)
 
   this->selectedVis.reset();
   this->mouseMoveVis.reset();
+
+  MouseEventHandler::Instance()->AddPressFilter("glwidget",
+      boost::bind(&GLWidget::OnMousePress, this, _1));
+
+  MouseEventHandler::Instance()->AddReleaseFilter("glwidget",
+      boost::bind(&GLWidget::OnMouseRelease, this, _1));
+
+  MouseEventHandler::Instance()->AddMoveFilter("glwidget",
+      boost::bind(&GLWidget::OnMouseMove, this, _1));
 }
 
 /////////////////////////////////////////////////
@@ -191,12 +208,17 @@ void GLWidget::paintEvent(QPaintEvent *_e)
   rendering::UserCameraPtr cam = gui::get_active_camera();
   if (cam && cam->GetInitialized())
   {
-    event::Events::preRender();
+    boost::mutex::scoped_try_lock lock(this->renderMutex);
 
-    // Tell all the cameras to render
-    event::Events::render();
+    if (lock && !this->pauseRendering)
+    {
+      event::Events::preRender();
 
-    event::Events::postRender();
+      // Tell all the cameras to render
+      event::Events::render();
+
+      event::Events::postRender();
+    }
   }
   _e->accept();
 }
@@ -226,6 +248,15 @@ void GLWidget::keyPressEvent(QKeyEvent *_event)
 
   this->keyText = _event->text().toStdString();
   this->keyModifiers = _event->modifiers();
+
+  // Toggle the play/pause state when the space bar is pressed.
+  if (_event->key() == Qt::Key_Space)
+  {
+    if (g_pauseAct->isVisible())
+      g_pauseAct->trigger();
+    else
+      g_playAct->trigger();
+  }
 
   // Toggle full screen
   if (_event->key() == Qt::Key_F11)
@@ -349,14 +380,49 @@ void GLWidget::mousePressEvent(QMouseEvent *_event)
     common::MouseEvent::MIDDLE : 0x0;
 
   this->mouseEvent.dragging = false;
-  gui::Events::mousePress(this->mouseEvent);
 
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandlePress(this->mouseEvent);
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMousePress(const common::MouseEvent & /*_event*/)
+{
   if (this->state == "make_entity")
     this->OnMousePressMakeEntity();
   else if (this->state == "select")
     this->OnMousePressNormal();
   else if (this->state == "translate" || this->state == "rotate")
     this->OnMousePressTranslate();
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMouseRelease(const common::MouseEvent & /*_event*/)
+{
+  if (this->state == "make_entity")
+    this->OnMouseReleaseMakeEntity();
+  else if (this->state == "select")
+    this->OnMouseReleaseNormal();
+  else if (this->state == "translate" || this->state == "rotate")
+    this->OnMouseReleaseTranslate();
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMouseMove(const common::MouseEvent & /*_event*/)
+{
+  // Update the view depending on the current GUI state
+  if (this->state == "make_entity")
+    this->OnMouseMoveMakeEntity();
+  else if (this->state == "select")
+    this->OnMouseMoveNormal();
+  else if (this->state == "translate" || this->state == "rotate")
+    this->OnMouseMoveTranslate();
+
+  return true;
 }
 
 /////////////////////////////////////////////////
@@ -439,13 +505,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *_event)
   else
     this->mouseEvent.dragging = false;
 
-  // Update the view depending on the current GUI state
-  if (this->state == "make_entity")
-    this->OnMouseMoveMakeEntity();
-  else if (this->state == "select")
-    this->OnMouseMoveNormal();
-  else if (this->state == "translate" || this->state == "rotate")
-    this->OnMouseMoveTranslate();
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandleMove(this->mouseEvent);
 
   this->mouseEvent.prevPos = this->mouseEvent.pos;
 }
@@ -597,15 +658,10 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *_event)
   this->mouseEvent.buttons |= _event->buttons() & Qt::MidButton ?
     common::MouseEvent::MIDDLE : 0x0;
 
-  gui::Events::mouseRelease(this->mouseEvent);
-  emit clicked();
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandleRelease(this->mouseEvent);
 
-  if (this->state == "make_entity")
-    this->OnMouseReleaseMakeEntity();
-  else if (this->state == "select")
-    this->OnMouseReleaseNormal();
-  else if (this->state == "translate" || this->state == "rotate")
-    this->OnMouseReleaseTranslate();
+  emit clicked();
 }
 
 //////////////////////////////////////////////////
@@ -749,6 +805,12 @@ void GLWidget::OnRemoveScene(const std::string &_name)
   {
     this->Clear();
   }
+}
+
+/////////////////////////////////////////////////
+void GLWidget::OnPauseRender(bool _pause)
+{
+  this->pauseRendering = _pause;
 }
 
 /////////////////////////////////////////////////
