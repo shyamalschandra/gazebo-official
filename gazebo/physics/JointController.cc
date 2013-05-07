@@ -40,6 +40,20 @@ JointController::JointController(ModelPtr _model)
 }
 
 /////////////////////////////////////////////////
+JointController::~JointController()
+{
+  this->jointCmdSub.reset();
+
+  if (this->node)
+    this->node->Fini();
+  this->node.reset();
+
+  this->joints.clear();
+  this->updatedLinks.clear();
+  this->model.reset();
+}
+
+/////////////////////////////////////////////////
 void JointController::AddJoint(JointPtr _joint)
 {
   this->joints[_joint->GetScopedName()] = _joint;
@@ -240,6 +254,8 @@ void JointController::SetJointPosition(JointPtr _joint, double _position)
       if (this->model->IsStatic())
       {
         math::Pose linkWorldPose = childLink->GetWorldPose();
+        /// \TODO: we want to get axis in global frame, but GetGlobalAxis
+        /// not implemented for static models yet.
         axis = linkWorldPose.rot.RotateVector(_joint->GetLocalAxis(0));
         anchor = linkWorldPose.pos;
       }
@@ -364,7 +380,7 @@ void JointController::ComputeAndSetLinkTwist(LinkPtr _link,
 
 //////////////////////////////////////////////////
 void JointController::AddConnectedLinks(Link_V &_linksOut,
-                                        const LinkPtr &_link,
+                                        const LinkPtr _link,
                                         bool _checkParentTree)
 {
   // strategy, for each child, recursively look for children

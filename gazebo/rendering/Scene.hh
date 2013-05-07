@@ -51,11 +51,6 @@ namespace Ogre
   class Quaternion;
 }
 
-namespace boost
-{
-  class mutex;
-}
-
 namespace gazebo
 {
   namespace rendering
@@ -96,11 +91,17 @@ namespace gazebo
       /// \brief Load the scene with default parameters.
       public: void Load();
 
-      /// \brief Init rendering::Scene.
+      /// \brief Init the scene.
       public: void Init();
+
+      /// \brief Finalize the scene.
+      public: void Fini();
 
       /// \brief Process all received messages.
       public: void PreRender();
+
+      /// \brief Handl the post render event.
+      public: void PostRender();
 
       /// \brief Get the OGRE scene manager.
       /// \return Pointer to the Ogre SceneManager.
@@ -151,12 +152,22 @@ namespace gazebo
       public: CameraPtr CreateCamera(const std::string &_name,
                                      bool _autoRender = true);
 
+      /// \brief Remove a camera with a given name.
+      /// \param[in] _name Name of the camera to remove.
+      public: void RemoveCamera(const std::string &_name);
+
+      /// \brief Remove all non-user cameras.
+      public: void RemoveCameras();
+
+      /// \brief Remove all user cameras.
+      public: void RemoveUserCameras();
+
       /// \brief Create depth camera
       /// \param[in] _name Name of the new camera.
       /// \param[in] _autoRender True to allow Gazebo to automatically
       /// render the camera. This should almost always be true.
       /// \return Pointer to the new camera.
-     public: DepthCameraPtr CreateDepthCamera(const std::string &_name,
+      public: DepthCameraPtr CreateDepthCamera(const std::string &_name,
                                                bool _autoRender = true);
 
       /// \brief Create laser that generates data from rendering.
@@ -164,8 +175,8 @@ namespace gazebo
       /// \param[in] _autoRender True to allow Gazebo to automatically
       /// render the camera. This should almost always be true.
       /// \return Pointer to the new laser.
-      // public: GpuLaserPtr CreateGpuLaser(const std::string &_name,
-      //                                   bool _autoRender = true);
+      public: GpuLaserPtr CreateGpuLaser(const std::string &_name,
+                                         bool _autoRender = true);
 
       /// \brief Get the number of cameras in this scene
       /// \return Number of lasers.
@@ -333,7 +344,7 @@ namespace gazebo
 
       /// \brief Remove a visual from the scene.
       /// \param[in] _vis Visual to remove.
-      public: void RemoveVisual(VisualPtr _vis);
+      public: bool RemoveVisual(VisualPtr _vis);
 
       /// \brief Set the grid on or off
       /// \param[in] _enabled Set to true to turn on the grid
@@ -466,7 +477,7 @@ namespace gazebo
 
       /// \brief Proces a scene message.
       /// \param[in] _msg The message data.
-      private: void ProcessSceneMsg(ConstScenePtr &_msg);
+      private: bool ProcessSceneMsg(ConstScenePtr &_msg);
 
       /// \brief Process a model message.
       /// \param[in] _msg The message data.
@@ -490,7 +501,7 @@ namespace gazebo
 
       /// \brief Process a light message.
       /// \param[in] _msg The message data.
-      private: void ProcessLightMsg(ConstLightPtr &_msg);
+      private: bool ProcessLightMsg(ConstLightPtr &_msg);
 
       /// \brief Process a request message.
       /// \param[in] _msg The message data.
@@ -526,6 +537,12 @@ namespace gazebo
       /// \param[in] _linkVisual Pointer to the link's visual.
       private: void CreateCOMVisual(sdf::ElementPtr _elem,
                                     VisualPtr _linkVisual);
+
+      /// \brief Init communications.
+      private: void InitComms();
+
+      /// \brief Clear implementation.
+      private: void ClearImpl();
 
       /// \brief Name of the scene.
       private: std::string name;
@@ -643,7 +660,9 @@ namespace gazebo
       private: boost::shared_ptr<msgs::Selection const> selectionMsg;
 
       /// \brief Mutex to lock the various message buffers.
-      private: boost::mutex *receiveMutex;
+      private: mutable boost::mutex receiveMutex;
+      private: boost::mutex preRenderMutex;
+      private: boost::mutex renderMutex;
 
       /// \brief Communication Node
       private: transport::NodePtr node;
@@ -744,6 +763,8 @@ namespace gazebo
 
       /// \brief Initialized.
       private: bool initialized;
+
+      private: bool setClear;
     };
     /// \}
   }

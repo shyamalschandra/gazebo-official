@@ -60,13 +60,18 @@ namespace gazebo
 
     public: bool LoadString(const std::string &_sdfString);
     public: void Init();
+
+    /// \brief Run the server.
     public: void Run();
-    public: void Stop();
+    public: void Stop(bool _stop = true);
     public: void Fini();
 
     public: void SetParams(const common::StrStr_M &params);
 
     public: bool GetInitialized() const;
+
+    /// \brief Helper to the Server::Run function.
+    private: void RunImpl();
 
     /// \brief Load implementation.
     /// \param[in] _elem Description of the world to load.
@@ -80,9 +85,19 @@ namespace gazebo
 
     private: void OnControl(ConstServerControlPtr &_msg);
 
+    /// \brief Open a log file.
+    /// \param[in] _filename Name of the file to open.
+    private: bool OpenLog(const std::string &_filename);
+
     private: bool OpenWorld(const std::string &_filename);
 
     private: void ProcessControlMsgs();
+
+    private: bool IsStopped() const;
+
+    // save argc and argv for access by system plugins
+    public: int systemPluginsArgc;
+    public: char** systemPluginsArgv;
 
     private: static bool stop;
 
@@ -91,16 +106,18 @@ namespace gazebo
     private: transport::NodePtr node;
     private: transport::SubscriberPtr serverSub;
     private: transport::PublisherPtr worldModPub;
+    private: transport::PublisherPtr serverPub;
 
     private: boost::mutex *receiveMutex;
+    private: boost::mutex openLogMutex;
+    private: mutable boost::mutex stopMutex;
     private: std::list<msgs::ServerControl> controlMsgs;
 
     private: gazebo::common::StrStr_M params;
     private: po::variables_map vm;
 
-    // save argc and argv for access by system plugins
-    public: int systemPluginsArgc;
-    public: char** systemPluginsArgv;
+    /// \brief Filename of a log to open.
+    private: std::string openLogFilename;
   };
 }
 

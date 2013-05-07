@@ -43,8 +43,16 @@ void Node::Fini()
 {
   if (!this->initialized)
     return;
-
   this->initialized = false;
+
+  // Unadvertise all the publishers.
+  for (std::vector<PublisherPtr>::iterator iter = this->publishers.begin();
+       iter != this->publishers.end(); ++iter)
+  {
+    TopicManager::Instance()->Unadvertise(*iter);
+  }
+
+  // Remove ourself
   TopicManager::Instance()->RemoveNode(this->id);
 
   {
@@ -81,9 +89,16 @@ void Node::Init(const std::string &_space)
     if (namespaces.empty())
       gzerr << "No namespace found\n";
 
+    /*while (namespaces.front() != "gazebo")
+      namespaces.pop_front();
+
+    if (namespaces.empty())
+      this->topicNamespace = "default";
+    else
+    */
     this->topicNamespace = namespaces.front();
   }
-  else
+  else if (_space[0] != '/')
     TopicManager::Instance()->RegisterTopicNamespace(_space);
 
   TopicManager::Instance()->AddNode(shared_from_this());
@@ -141,8 +156,10 @@ void Node::ProcessPublishers()
 /////////////////////////////////////////////////
 bool Node::HandleData(const std::string &_topic, const std::string &_msg)
 {
-  boost::recursive_mutex::scoped_lock lock(this->incomingMutex);
-  this->incomingMsgs[_topic].push_back(_msg);
+  {
+    boost::recursive_mutex::scoped_lock lock(this->incomingMutex);
+    this->incomingMsgs[_topic].push_back(_msg);
+  }
   ConnectionManager::Instance()->TriggerUpdate();
   return true;
 }
@@ -150,8 +167,10 @@ bool Node::HandleData(const std::string &_topic, const std::string &_msg)
 /////////////////////////////////////////////////
 bool Node::HandleMessage(const std::string &_topic, MessagePtr _msg)
 {
-  boost::recursive_mutex::scoped_lock lock(this->incomingMutex);
-  this->incomingMsgsLocal[_topic].push_back(_msg);
+  {
+    boost::recursive_mutex::scoped_lock lock(this->incomingMutex);
+    this->incomingMsgsLocal[_topic].push_back(_msg);
+  }
   ConnectionManager::Instance()->TriggerUpdate();
   return true;
 }
@@ -321,5 +340,20 @@ void Node::RemoveCallback(const std::string &_topic, unsigned int _id)
         break;
       }
     }
+  }
+}
+
+/////////////////////////////////////////////////
+void Node::ClearBuffers()
+{
+  boost::recursive_mutex::scoped_lock lock(this->incomingMutex);
+
+  this->incomingMsgs.clear();
+  this->incomingMsgsLocal.clear();
+
+  for (std::vector<PublisherPtr>::iterator iter = this->publishers.begin();
+       iter != this->publishers.end(); ++iter)
+  {
+    (*iter)->ClearBuffers();
   }
 }

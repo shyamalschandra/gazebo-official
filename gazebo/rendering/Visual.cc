@@ -77,6 +77,7 @@ Visual::Visual(const std::string &_name, VisualPtr _parent, bool _useRTShader)
 
   std::string uniqueName = this->GetName();
   int index = 0;
+
   while (pnode->getCreator()->hasSceneNode(uniqueName))
     uniqueName = this->GetName() + "_" +
                  boost::lexical_cast<std::string>(index++);
@@ -152,12 +153,14 @@ Visual::~Visual()
   this->sdf.reset();
   this->parent.reset();
   this->children.clear();
+  this->scene.reset();
 }
 
 /////////////////////////////////////////////////
 void Visual::Fini()
 {
   this->plugins.clear();
+
   // Detach from the parent
   if (this->parent)
     this->parent->DetachVisual(this->GetName());
@@ -168,6 +171,7 @@ void Visual::Fini()
   {
     this->sceneNode->removeChild((*iter)->GetSceneNode());
     (*iter)->parent.reset();
+    (*iter)->Fini();
   }
   this->children.clear();
 
@@ -182,6 +186,7 @@ void Visual::Fini()
   }
 
   RTShaderSystem::Instance()->DetachEntity(this);
+  this->scene.reset();
 }
 
 /////////////////////////////////////////////////
@@ -218,7 +223,7 @@ void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode* _sceneNode)
     if (ent->getMovableType() != DynamicLines::GetMovableType())
       this->scene->GetManager()->destroyEntity(ent);
     else
-      delete ent;
+      this->sceneNode->detachObject(ent);
   }
 
   // Recurse to child SceneNodes
@@ -406,7 +411,8 @@ void Visual::Load()
     catch(Ogre::Exception &e)
     {
       gzerr << "Ogre Error:" << e.getFullDescription() << "\n";
-      gzthrow("Unable to create a mesh from " + meshName);
+      gzerr << "Unable to create a mesh from " <<  meshName << "\n";
+      return;
     }
   }
 
@@ -1363,7 +1369,7 @@ math::Pose Visual::GetWorldPose() const
   pose.pos.y = vpos.y;
   pose.pos.z = vpos.z;
 
-  vquatern = this->sceneNode->getOrientation();
+  vquatern = this->sceneNode->_getDerivedOrientation();
   pose.rot.w = vquatern.w;
   pose.rot.x = vquatern.x;
   pose.rot.y = vquatern.y;
@@ -1401,8 +1407,14 @@ void Visual::DisableTrackVisual()
 //////////////////////////////////////////////////
 std::string Visual::GetNormalMap() const
 {
-  return this->sdf->GetElement("material")->GetElement(
+  std::string file = this->sdf->GetElement("material")->GetElement(
       "shader")->GetElement("normal_map")->GetValueString();
+
+  std::string uriFile = common::find_file(file);
+  if (!uriFile.empty())
+    file = uriFile;
+
+  return file;
 }
 
 //////////////////////////////////////////////////
@@ -1489,6 +1501,9 @@ DynamicLines *Visual::CreateDynamicLine(RenderOpType type)
 //////////////////////////////////////////////////
 void Visual::DeleteDynamicLine(DynamicLines *_line)
 {
+  if (this->sceneNode)
+    this->sceneNode->detachObject(_line);
+
   // delete instance from lines vector
   for (std::list<DynamicLines*>::iterator iter = this->lines.begin();
        iter!= this->lines.end(); ++iter)
@@ -1593,7 +1608,10 @@ void Visual::InsertMesh(const std::string &_meshName,
   {
     mesh = common::MeshManager::Instance()->Load(_meshName);
     if (!mesh)
-      gzthrow("Unable to create a mesh from " + _meshName);
+    {
+      gzerr << "Unable to create a mesh from " << _meshName << "\n";
+      return;
+    }
   }
   else
   {

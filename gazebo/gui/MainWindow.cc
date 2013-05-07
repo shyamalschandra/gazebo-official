@@ -32,7 +32,9 @@
 
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
+#include "gazebo/rendering/Scene.hh"
 
+#include "gazebo/gui/LogPlayWidget.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/InsertModelWidget.hh"
@@ -42,8 +44,8 @@
 #include "gazebo/gui/GLWidget.hh"
 #include "gazebo/gui/MainWindow.hh"
 #include "gazebo/gui/GuiEvents.hh"
-#include "gazebo/gui/building/BuildingEditorPalette.hh"
-#include "gazebo/gui/building/EditorEvents.hh"
+#include "gazebo/gui/building/BuildingEditor.hh"
+#include "gazebo/gui/terrain/TerrainEditor.hh"
 
 #include "sdf/sdf.hh"
 
@@ -55,24 +57,28 @@
 using namespace gazebo;
 using namespace gui;
 
+#define MINIMUM_TAB_WIDTH 250
+
 extern bool g_fullscreen;
 
 /////////////////////////////////////////////////
 MainWindow::MainWindow()
   : renderWidget(0)
 {
+  this->menuLayout = NULL;
   this->menuBar = NULL;
   this->setObjectName("mainWindow");
+
+  // Do these things first.
+  {
+    this->CreateActions();
+  }
 
   this->inputStepSize = 1;
   this->requestMsg = NULL;
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init();
   gui::set_world(this->node->GetTopicNamespace());
-
-  (void) new QShortcut(Qt::CTRL + Qt::Key_Q, this, SLOT(close()));
-  this->CreateActions();
-  this->CreateMenus();
 
   QWidget *mainWidget = new QWidget;
   QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -81,52 +87,43 @@ MainWindow::MainWindow()
 
   this->setDockOptions(QMainWindow::AnimatedDocks);
 
+  this->leftColumn = new QStackedWidget(this);
+
   this->modelListWidget = new ModelListWidget(this);
   InsertModelWidget *insertModel = new InsertModelWidget(this);
 
-  int minimumTabWidth = 250;
   this->tabWidget = new QTabWidget();
   this->tabWidget->setObjectName("mainTab");
   this->tabWidget->addTab(this->modelListWidget, "World");
   this->tabWidget->addTab(insertModel, "Insert");
   this->tabWidget->setSizePolicy(QSizePolicy::Expanding,
                                  QSizePolicy::Expanding);
-  this->tabWidget->setMinimumWidth(minimumTabWidth);
+  this->tabWidget->setMinimumWidth(MINIMUM_TAB_WIDTH);
+  this->AddToLeftColumn("default", this->tabWidget);
 
-  this->buildingEditorPalette = new BuildingEditorPalette(this);
-  this->buildingEditorTabWidget = new QTabWidget();
-  this->buildingEditorTabWidget->setObjectName("buildingEditorTab");
-  this->buildingEditorTabWidget->addTab(
-      this->buildingEditorPalette, "Building Editor");
-  this->buildingEditorTabWidget->setSizePolicy(QSizePolicy::Expanding,
-                                        QSizePolicy::Expanding);
-  this->buildingEditorTabWidget->setMinimumWidth(minimumTabWidth);
-  this->buildingEditorTabWidget->hide();
+  this->CreateEditors();
 
   this->toolsWidget = new ToolsWidget();
 
   this->renderWidget = new RenderWidget(mainWidget);
+  this->logPlay = new LogPlayWidget(mainWidget);
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
   QSplitter *splitter = new QSplitter(this);
-  splitter->addWidget(this->tabWidget);
-  splitter->addWidget(this->buildingEditorTabWidget);
+  splitter->addWidget(this->leftColumn);
   splitter->addWidget(this->renderWidget);
   splitter->addWidget(this->toolsWidget);
 
   QList<int> sizes;
-
-  sizes.push_back(250);
-  sizes.push_back(250);
-  sizes.push_back(this->width() - 250);
+  sizes.push_back(MINIMUM_TAB_WIDTH);
+  sizes.push_back(this->width() - MINIMUM_TAB_WIDTH);
   sizes.push_back(0);
   splitter->setSizes(sizes);
 
   splitter->setStretchFactor(0, 0);
-  splitter->setStretchFactor(1, 0);
-  splitter->setStretchFactor(2, 2);
-  splitter->setStretchFactor(3, 0);
+  splitter->setStretchFactor(1, 2);
+  splitter->setStretchFactor(2, 0);
   splitter->setCollapsible(2, false);
   splitter->setHandleWidth(10);
 
@@ -136,8 +133,11 @@ MainWindow::MainWindow()
 
   mainLayout->setSpacing(0);
   mainLayout->addLayout(centerLayout, 1);
+  mainLayout->addWidget(this->logPlay);
   mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
                         Qt::AlignBottom | Qt::AlignRight);
+
+  this->logPlay->hide();
 
   mainWidget->setLayout(mainLayout);
 
@@ -165,14 +165,16 @@ MainWindow::MainWindow()
        boost::bind(&MainWindow::OnSetSelectedEntity, this, _1, _2)));
 
   this->connections.push_back(
-      gui::editor::Events::ConnectFinishBuildingModel(
-      boost::bind(&MainWindow::OnFinishBuilding, this)));
-
-  this->connections.push_back(
       gui::Events::ConnectInputStepSize(
       boost::bind(&MainWindow::OnInputStepSizeChanged, this, _1)));
 
   gui::ViewFactory::RegisterAll();
+
+  // Do these things last
+  {
+    (void) new QShortcut(Qt::CTRL + Qt::Key_Q, this, SLOT(close()));
+    this->CreateMenus();
+  }
 }
 
 /////////////////////////////////////////////////
@@ -203,6 +205,8 @@ void MainWindow::Init()
     this->node->Advertise<msgs::WorldControl>("~/world_control");
   this->serverControlPub =
     this->node->Advertise<msgs::ServerControl>("/gazebo/server/control");
+  this->serverControlSub = this->node->Subscribe("/gazebo/server/status",
+        &MainWindow::OnServerStatus, this);
   this->selectionPub =
     this->node->Advertise<msgs::Selection>("~/selection");
   this->scenePub =
@@ -286,6 +290,23 @@ void MainWindow::Open()
     msgs::ServerControl msg;
     msg.set_open_filename(filename);
     this->serverControlPub->Publish(msg);
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OpenLog()
+{
+  std::string filename = QFileDialog::getOpenFileName(this,
+      tr("Open log file"), "",
+      tr("SDF Files (*.log)")).toStdString();
+
+  if (!filename.empty())
+  {
+    msgs::ServerControl msg;
+    msg.set_open_log_filename(filename);
+    this->serverControlPub->Publish(msg);
+
+    this->logPlay->show();
   }
 }
 
@@ -513,28 +534,6 @@ void MainWindow::OnResetWorld()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::OnEditBuilding()
-{
-  bool isChecked = g_editBuildingAct->isChecked();
-  if (isChecked)
-  {
-    this->Pause();
-    this->renderWidget->ShowEditor(true);
-    this->tabWidget->hide();
-    this->buildingEditorTabWidget->show();
-    this->AttachEditorMenuBar();
-  }
-  else
-  {
-    this->renderWidget->ShowEditor(false);
-    this->tabWidget->show();
-    this->buildingEditorTabWidget->hide();
-    this->AttachMainMenuBar();
-    this->Play();
-  }
-}
-
-/////////////////////////////////////////////////
 void MainWindow::Arrow()
 {
   gui::Events::manipMode("select");
@@ -622,7 +621,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showFullScreen();
     this->renderWidget->showFullScreen();
-    this->tabWidget->hide();
+    this->leftColumn->hide();
     this->toolsWidget->hide();
     this->menuBar->hide();
   }
@@ -630,8 +629,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showNormal();
     this->renderWidget->showNormal();
-    if (!g_editBuildingAct->isChecked())
-      this->tabWidget->show();
+    this->leftColumn->show();
     this->toolsWidget->show();
     this->menuBar->show();
   }
@@ -752,30 +750,6 @@ void MainWindow::DataLogger()
   dataLogger->show();
 }
 
-////////////////////////////////////////////////
-void MainWindow::BuildingEditorSave()
-{
-  gui::editor::Events::saveBuildingEditor();
-}
-
-/////////////////////////////////////////////////
-void MainWindow::BuildingEditorDiscard()
-{
-  gui::editor::Events::discardBuildingEditor();
-}
-
-/////////////////////////////////////////////////
-void MainWindow::BuildingEditorDone()
-{
-  gui::editor::Events::doneBuildingEditor();
-}
-
-/////////////////////////////////////////////////
-void MainWindow::BuildingEditorExit()
-{
-  gui::editor::Events::exitBuildingEditor();
-}
-
 /////////////////////////////////////////////////
 void MainWindow::CreateActions()
 {
@@ -802,6 +776,11 @@ void MainWindow::CreateActions()
   g_openAct->setShortcut(tr("Ctrl+O"));
   g_openAct->setStatusTip(tr("Open an world file"));
   connect(g_openAct, SIGNAL(triggered()), this, SLOT(Open()));
+
+  g_openLogAct = new QAction(tr("&Open Log"), this);
+  g_openLogAct->setShortcut(tr("Ctrl+L"));
+  g_openLogAct->setStatusTip(tr("Open an log file"));
+  connect(g_openLogAct, SIGNAL(triggered()), this, SLOT(OpenLog()));
 
   /*g_importAct = new QAction(tr("&Import Mesh"), this);
   g_importAct->setShortcut(tr("Ctrl+I"));
@@ -844,12 +823,19 @@ void MainWindow::CreateActions()
   g_resetWorldAct->setStatusTip(tr("Reset the world"));
   connect(g_resetWorldAct, SIGNAL(triggered()), this, SLOT(OnResetWorld()));
 
-  g_editBuildingAct = new QAction(tr("&Building Editor"), this);
+  QActionGroup *editorGroup = new QActionGroup(this);
+
+  g_editBuildingAct = new QAction(tr("&Building Editor"), editorGroup);
   g_editBuildingAct->setShortcut(tr("Ctrl+B"));
   g_editBuildingAct->setStatusTip(tr("Enter Building Editor Mode"));
   g_editBuildingAct->setCheckable(true);
   g_editBuildingAct->setChecked(false);
-  connect(g_editBuildingAct, SIGNAL(triggered()), this, SLOT(OnEditBuilding()));
+
+  g_editTerrainAct = new QAction(tr("&Terrain Editor"), editorGroup);
+  g_editTerrainAct->setShortcut(tr("Ctrl+E"));
+  g_editTerrainAct->setStatusTip(tr("Enter Terrain Editor Mode"));
+  g_editTerrainAct->setCheckable(true);
+  g_editTerrainAct->setChecked(false);
 
   g_stepAct = new QAction(QIcon(":/images/end.png"), tr("Step"), this);
   g_stepAct->setStatusTip(tr("Step the world"));
@@ -1020,34 +1006,6 @@ void MainWindow::CreateActions()
   g_dataLoggerAct->setStatusTip(tr("Data Logging Utility"));
   connect(g_dataLoggerAct, SIGNAL(triggered()), this, SLOT(DataLogger()));
 
-  g_buildingEditorSaveAct = new QAction(tr("&Save (As)"), this);
-  g_buildingEditorSaveAct->setStatusTip(tr("Save (As)"));
-  g_buildingEditorSaveAct->setShortcut(tr("Ctrl+S"));
-  g_buildingEditorSaveAct->setCheckable(false);
-  connect(g_buildingEditorSaveAct, SIGNAL(triggered()), this,
-          SLOT(BuildingEditorSave()));
-
-  g_buildingEditorDiscardAct = new QAction(tr("&Discard"), this);
-  g_buildingEditorDiscardAct->setStatusTip(tr("Discard"));
-  g_buildingEditorDiscardAct->setShortcut(tr("Ctrl+D"));
-  g_buildingEditorDiscardAct->setCheckable(false);
-  connect(g_buildingEditorDiscardAct, SIGNAL(triggered()), this,
-          SLOT(BuildingEditorDiscard()));
-
-  g_buildingEditorDoneAct = new QAction(tr("Don&e"), this);
-  g_buildingEditorDoneAct->setShortcut(tr("Ctrl+E"));
-  g_buildingEditorDoneAct->setStatusTip(tr("Done"));
-  g_buildingEditorDoneAct->setCheckable(false);
-  connect(g_buildingEditorDoneAct, SIGNAL(triggered()), this,
-          SLOT(BuildingEditorDone()));
-
-  g_buildingEditorExitAct = new QAction(tr("E&xit Building Editor"), this);
-  g_buildingEditorExitAct->setStatusTip(tr("Exit Building Editor"));
-  g_buildingEditorExitAct->setShortcut(tr("Ctrl+X"));
-  g_buildingEditorExitAct->setCheckable(false);
-  connect(g_buildingEditorExitAct, SIGNAL(triggered()), this,
-          SLOT(BuildingEditorExit()));
-
   g_screenshotAct = new QAction(QIcon(":/images/screenshot.png"),
       tr("Screenshot"), this);
   g_screenshotAct->setStatusTip(tr("Take a screenshot"));
@@ -1056,40 +1014,45 @@ void MainWindow::CreateActions()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::AttachEditorMenuBar()
+void MainWindow::ShowMenuBar(QMenuBar *_bar)
 {
-  if (this->menuBar)
+  if (!this->menuLayout)
+    this->menuLayout = new QHBoxLayout;
+
+  // Remove all widgets from the menubar
+  QLayoutItem *child = NULL;
+  while ((child = this->menuLayout->takeAt(0)) != 0)
   {
-    this->menuLayout->removeWidget(this->menuBar);
-    delete this->menuBar;
+    delete child;
   }
 
-  this->menuBar = new QMenuBar;
-  this->menuBar->setSizePolicy(QSizePolicy::Fixed,
-      QSizePolicy::Fixed);
-  QMenu *buildingEditorFileMenu = this->menuBar->addMenu(
-      tr("&File"));
-  buildingEditorFileMenu->addAction(g_buildingEditorSaveAct);
-  buildingEditorFileMenu->addAction(g_buildingEditorDiscardAct);
-  buildingEditorFileMenu->addAction(g_buildingEditorDoneAct);
-  buildingEditorFileMenu->addAction(g_buildingEditorExitAct);
+  if (!_bar)
+  {
+    this->CreateMenuBar();
+    this->menuLayout->addWidget(this->menuBar);
+  }
+  else
+  {
+    if (this->menuBar)
+      this->menuBar->hide();
+    this->menuLayout->addWidget(_bar);
+  }
 
-  this->menuLayout->setMenuBar(this->menuBar);
+  this->menuLayout->addStretch(5);
+  this->menuLayout->setContentsMargins(0, 0, 0, 0);
 }
 
 /////////////////////////////////////////////////
-void MainWindow::AttachMainMenuBar()
+void MainWindow::CreateMenuBar()
 {
   if (this->menuBar)
-  {
-    this->menuLayout->removeWidget(this->menuBar);
     delete this->menuBar;
-  }
 
-  this->menuBar =  new QMenuBar;
+  this->menuBar = new QMenuBar;
   this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   QMenu *fileMenu = this->menuBar->addMenu(tr("&File"));
+  fileMenu->addAction(g_openLogAct);
   // fileMenu->addAction(g_openAct);
   // fileMenu->addAction(g_importAct);
   // fileMenu->addAction(g_newAct);
@@ -1102,6 +1065,9 @@ void MainWindow::AttachMainMenuBar()
   editMenu->addAction(g_resetModelsAct);
   editMenu->addAction(g_resetWorldAct);
   editMenu->addAction(g_editBuildingAct);
+
+  // \TODO: Add this back in when implementing the full Terrain Editor spec.
+  // editMenu->addAction(g_editTerrainAct);
 
   QMenu *viewMenu = this->menuBar->addMenu(tr("&View"));
   viewMenu->addAction(g_showGridAct);
@@ -1135,22 +1101,14 @@ void MainWindow::AttachMainMenuBar()
 
   QMenu *helpMenu = this->menuBar->addMenu(tr("&Help"));
   helpMenu->addAction(g_aboutAct);
-
-  this->menuLayout->setMenuBar(this->menuBar);
 }
 
 /////////////////////////////////////////////////
 void MainWindow::CreateMenus()
 {
-  this->menuLayout = new QHBoxLayout;
+  this->ShowMenuBar();
 
   QFrame *frame = new QFrame;
-
-  this->AttachMainMenuBar();
-
-  this->menuLayout->addStretch(5);
-  this->menuLayout->setContentsMargins(0, 0, 0, 0);
-
   frame->setLayout(this->menuLayout);
   frame->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
 
@@ -1382,14 +1340,54 @@ void MainWindow::OnPlayActionChanged()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::OnFinishBuilding()
-{
-  g_editBuildingAct->setChecked(!g_editBuildingAct->isChecked());
-  this->OnEditBuilding();
-}
-
-/////////////////////////////////////////////////
 void MainWindow::ItemSelected(QTreeWidgetItem *_item, int)
 {
   _item->setExpanded(!_item->isExpanded());
+}
+
+/////////////////////////////////////////////////
+void MainWindow::AddToLeftColumn(const std::string &_name, QWidget *_widget)
+{
+  this->leftColumn->addWidget(_widget);
+  this->leftColumnStack[_name] = this->leftColumn->count()-1;
+}
+
+/////////////////////////////////////////////////
+void MainWindow::ShowLeftColumnWidget(const std::string &_name)
+{
+  std::map<std::string, int>::iterator iter = this->leftColumnStack.find(_name);
+
+  if (iter != this->leftColumnStack.end())
+    this->leftColumn->setCurrentIndex(iter->second);
+  else
+    gzerr << "Widget with name[" << _name << "] has not been added to the left"
+      << " column stack.\n";
+}
+
+/////////////////////////////////////////////////
+RenderWidget *MainWindow::GetRenderWidget() const
+{
+  return this->renderWidget;
+}
+
+/////////////////////////////////////////////////
+void MainWindow::CreateEditors()
+{
+  // Create a Terrain Editor
+  this->editors.push_back(new TerrainEditor(this));
+
+  // Create a Building Editor
+  this->editors.push_back(new BuildingEditor(this));
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnServerStatus(ConstGzStringPtr &_msg)
+{
+  if (_msg->data() == "logfile_opened")
+  {
+    event::Events::pauseRender(true);
+    rendering::get_scene(gui::get_world())->Clear();
+    rendering::get_scene(gui::get_world())->Init();
+    event::Events::pauseRender(false);
+  }
 }
