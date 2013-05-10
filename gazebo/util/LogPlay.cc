@@ -27,7 +27,9 @@
 #include <boost/archive/iterators/transform_width.hpp>
 
 #include "gazebo/math/Rand.hh"
+#include "gazebo/transport/transport.hh"
 
+#include "gazebo/common/Events.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/util/LogRecord.hh"
@@ -66,12 +68,28 @@ void base64_decode(std::string &_dest, const std::string &_src)
 /////////////////////////////////////////////////
 LogPlay::LogPlay()
 {
+  this->needsStep = false;
+  this->pause = false;
+  this->chunkCount = 0;
+  this->segmentCount = 0;
+  this->chunkCount = 0;
   this->logStartXml = NULL;
+  this->xmlDoc = NULL;
+
+  this->node = transport::NodePtr(new transport::Node());
+  this->node->Init("/gazebo");
+
+  this->logControlSub = this->node->Subscribe("/gazebo/log/play/control",
+      &LogPlay::OnLogControl, this);
+  this->logStatusPub = this->node->Advertise<msgs::LogPlayStatus>(
+      "/gazebo/log/play/status", 10000);
 }
 
 /////////////////////////////////////////////////
 LogPlay::~LogPlay()
 {
+  delete this->xmlDoc;
+  this->xmlDoc = NULL;
 }
 
 /////////////////////////////////////////////////
@@ -81,12 +99,16 @@ void LogPlay::Open(const std::string &_logFile)
   if (!boost::filesystem::exists(path))
     gzthrow("Invalid logfile[" + _logFile + "]. Does not exist.");
 
+  if (this->xmlDoc)
+    delete this->xmlDoc;
+  this->xmlDoc = new TiXmlDocument();
+
   // Parse the log file
-  if (!this->xmlDoc.LoadFile(_logFile))
+  if (!this->xmlDoc->LoadFile(_logFile))
     gzthrow("Unable to parse log file[" << _logFile << "]");
 
   // Get the gazebo_log element
-  this->logStartXml = this->xmlDoc.FirstChildElement("gazebo_log");
+  this->logStartXml = this->xmlDoc->FirstChildElement("gazebo_log");
 
   if (!this->logStartXml)
     gzthrow("Log file is missing the <gazebo_log> element");
@@ -99,6 +121,12 @@ void LogPlay::Open(const std::string &_logFile)
 
   this->logCurrXml = this->logStartXml;
   this->encoding.clear();
+
+  this->currentChunk.clear();
+
+  this->CalculateStepCount();
+
+  // this->PublishStatus();
 }
 
 /////////////////////////////////////////////////
@@ -188,6 +216,29 @@ uint32_t LogPlay::GetRandSeed() const
 /////////////////////////////////////////////////
 bool LogPlay::Step(std::string &_data)
 {
+  this->needsStep = false;
+
+  if (this->currentStep < this->stepBuffer.size())
+    _data = this->stepBuffer[this->currentStep];
+
+  while (this->currentStep >= this->stepBuffer.size() &&
+         this->GetStep(_data))
+  {
+    this->stepBuffer.push_back(_data);
+  }
+
+  if (!this->pause && this->currentStep < this->segmentCount)
+  {
+    ++this->currentStep;
+    this->PublishStatus();
+  }
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool LogPlay::GetStep(std::string &_data)
+{
   std::string startMarker = "<sdf ";
   std::string endMarker = "</sdf>";
   size_t start = this->currentChunk.find(startMarker);
@@ -225,6 +276,12 @@ bool LogPlay::Step(std::string &_data)
   this->currentChunk.erase(0, end + endMarker.size());
 
   return true;
+}
+
+/////////////////////////////////////////////////
+uint64_t LogPlay::GetSegmentCount() const
+{
+  return this->segmentCount;
 }
 
 /////////////////////////////////////////////////
@@ -300,14 +357,95 @@ std::string LogPlay::GetEncoding() const
 /////////////////////////////////////////////////
 unsigned int LogPlay::GetChunkCount() const
 {
-  unsigned int count = 0;
+  return this->chunkCount;
+}
+
+/////////////////////////////////////////////////
+void LogPlay::CalculateStepCount()
+{
+  std::string data;
+
+  this->segmentCount = 0;
+  this->chunkCount = 0;
+
   TiXmlElement *xml = this->logStartXml->FirstChildElement("chunk");
+
+  fprintf(stderr, "Processing Log Chunk     ");
+  fflush(stdout);
 
   while (xml)
   {
-    count++;
+     fprintf(stderr, "\b\b\b\b%04lu", this->chunkCount);
+     fflush(stdout);
+
+    if (this->logVersion == "1.0")
+    {
+      this->GetChunkData(xml, data);
+      std::string tag = "<sdf ";
+      size_t pos = 0;
+      while ((pos = data.find(tag, pos)) != std::string::npos)
+      {
+        ++this->segmentCount;
+        pos += tag.size();
+      }
+    }
+    else
+    {
+      data = xml->Attribute("segments");
+      try
+      {
+        this->segmentCount += boost::lexical_cast<uint64_t>(data);
+      }
+      catch(...)
+      {
+        gzerr << "Invalid segment count in log file. Unable to evalute["
+          << data << "]\n";
+      }
+    }
+
     xml = xml->NextSiblingElement("chunk");
+    ++this->chunkCount;
   }
 
-  return count;
+  fprintf(stderr, "\n");
+}
+
+/////////////////////////////////////////////////
+bool LogPlay::NeedsStep()
+{
+  return this->needsStep;
+}
+
+/////////////////////////////////////////////////
+void LogPlay::OnLogControl(ConstLogPlayControlPtr &_data)
+{
+  if (_data->has_target_step())
+  {
+    this->currentStep = _data->target_step();
+    this->needsStep = true;
+  }
+
+  if (_data->has_pause())
+  {
+    this->pause = _data->pause();
+  }
+}
+
+/////////////////////////////////////////////////
+void LogPlay::PublishStatus()
+{
+  msgs::LogPlayStatus msg;
+  msg.set_chunks(this->chunkCount);
+  msg.set_segments(this->segmentCount);
+  msg.set_step(this->currentStep);
+
+  this->logStatusPub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void LogPlay::Fini()
+{
+  if (this->node)
+    this->node->Fini();
+  this->node.reset();
 }
