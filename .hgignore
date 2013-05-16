@@ -1,0 +1,12 @@
+syntax: glob
+
+build
+build_*
+Ogre.log
+.DS_Store
+*~
+*.orig
+*.user
+*.autosave
+*.kdev4
+nbproject/
