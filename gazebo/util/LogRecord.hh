@@ -38,7 +38,7 @@
 #include "gazebo/common/Event.hh"
 #include "gazebo/common/SingletonT.hh"
 
-#define GZ_LOG_VERSION "1.0"
+#define GZ_LOG_VERSION "1.1"
 
 namespace gazebo
 {
@@ -93,7 +93,8 @@ namespace gazebo
       /// the provided ofstream.
       /// \throws Exception
       public: void Add(const std::string &_name, const std::string &_filename,
-                    boost::function<bool (std::ostringstream &)> _logCallback);
+                    boost::function<bool (std::ostringstream &,
+                      uint64_t &)> _logCallback);
 
       /// \brief Remove an entity from a log
       ///
@@ -196,7 +197,7 @@ namespace gazebo
 
       /// \brief Called when a log control message is received.
       /// \param[in] _data The log control message.
-      private: void OnLogControl(ConstLogControlPtr &_data);
+      private: void OnLogControl(ConstLogRecordControlPtr &_data);
 
       /// \brief Cleanup log recording. A thread uses this function, you
       /// should never call this function directly. Use the Stop() function
@@ -216,7 +217,8 @@ namespace gazebo
         /// \param[in] _logCB Callback function, which is used to get log
         /// data.
         public: Log(LogRecord *_parent, const std::string &_relativeFilename,
-                    boost::function<bool (std::ostringstream &)> _logCB);
+                    boost::function<bool (std::ostringstream &,
+                      uint64_t &)> _logCB);
 
         /// \brief Destructor
         public: virtual ~Log();
@@ -255,7 +257,7 @@ namespace gazebo
         public: LogRecord *parent;
 
         /// \brief Callback from which to get data.
-        public: boost::function<bool (std::ostringstream &)> logCB;
+        public: boost::function<bool (std::ostringstream &, uint64_t &)> logCB;
 
         /// \brief Data buffer.
         public: std::string buffer;

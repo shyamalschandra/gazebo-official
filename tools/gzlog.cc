@@ -19,6 +19,9 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/regex.hpp>
@@ -37,6 +40,8 @@ namespace po = boost::program_options;
 
 sdf::ElementPtr g_stateSdf;
 
+
+
 /// \brief Base class for all filters.
 class FilterBase
 {
@@ -52,7 +57,7 @@ class FilterBase
   /// \param[in] _stream The output stream.
   /// \param[in] _state Current state.
   public: std::ostringstream &Out(std::ostringstream &_stream,
-              const gazebo::physics::State &_state)
+              const gazebo::physics::State &_state) const
           {
             if (!this->xmlOutput && !this->stamp.empty())
             {
@@ -75,7 +80,7 @@ class FilterBase
   public: std::string FilterPose(const gazebo::math::Pose &_pose,
               const std::string &_xmlName,
               std::string _filter,
-              const gazebo::physics::State &_state)
+              const gazebo::physics::State &_state) const
           {
             std::ostringstream result;
             std::string xmlPrefix, xmlSuffix;
@@ -195,7 +200,7 @@ class JointFilter : public FilterBase
   /// \param[in] _state Link state to filter.
   /// \param[in] _partIter Iterator to the filtered string parts.
   public: std::string FilterParts(gazebo::physics::JointState &_state,
-              std::list<std::string>::iterator _partIter)
+              std::list<std::string>::const_iterator _partIter) const
           {
             std::ostringstream result;
             std::string part = *_partIter;
@@ -250,12 +255,12 @@ class JointFilter : public FilterBase
   /// as a string.
   /// \param[in] _state The model state to filter.
   /// \return Filtered string.
-  public: std::string Filter(gazebo::physics::ModelState &_state)
+  public: std::string Filter(gazebo::physics::ModelState &_state) const
           {
             std::ostringstream result;
 
             gazebo::physics::JointState_M states;
-            std::list<std::string>::iterator partIter;
+            std::list<std::string>::const_iterator partIter;
 
             /// Get an iterator to the list of the command line parts.
             partIter = this->parts.begin();
@@ -330,7 +335,7 @@ class LinkFilter : public FilterBase
   /// \param[in] _state Link state to filter.
   /// \param[in] _partIter Iterator to the filtered string parts.
   public: std::string FilterParts(gazebo::physics::LinkState &_state,
-              std::list<std::string>::iterator _partIter)
+              std::list<std::string>::const_iterator _partIter) const
           {
             std::ostringstream result;
 
@@ -361,12 +366,12 @@ class LinkFilter : public FilterBase
   /// as a string.
   /// \param[in] _state The model state to filter.
   /// \return Filtered string.
-  public: std::string Filter(gazebo::physics::ModelState &_state)
+  public: std::string Filter(gazebo::physics::ModelState &_state) const
           {
             std::ostringstream result;
 
             gazebo::physics::LinkState_M states;
-            std::list<std::string>::iterator partIter;
+            std::list<std::string>::const_iterator partIter;
 
             /// Get an iterator to the list of the command line parts.
             partIter = this->parts.begin();
@@ -484,7 +489,7 @@ class ModelFilter : public FilterBase
   /// \param[in] _state Model state to filter.
   /// \param[in] _partIter Iterator to the filtered string parts.
   public: std::string FilterParts(gazebo::physics::ModelState &_state,
-              std::list<std::string>::iterator _partIter)
+              std::list<std::string>::const_iterator _partIter) const
           {
             std::ostringstream result;
 
@@ -514,12 +519,13 @@ class ModelFilter : public FilterBase
   /// as a string.
   /// \param[in] _state The World state to filter.
   /// \return Filtered string.
-  public: std::string Filter(gazebo::physics::WorldState &_state)
+  public: std::string Filter(gazebo::physics::WorldState &_state) const
           {
             std::ostringstream result;
 
             gazebo::physics::ModelState_M states;
-            std::list<std::string>::iterator partIter = this->parts.begin();
+            std::list<std::string>::const_iterator partIter =
+              this->parts.begin();
 
             // The first element in the filter must be a model name or a star.
             if (partIter != this->parts.end() && !this->parts.empty() &&
@@ -585,10 +591,13 @@ class StateFilter : public FilterBase
   /// \brief Constructor
   /// \param[in] _xmlOutput True to format output as XML
   public: StateFilter(bool _xmlOutput, const std::string &_stamp,
-              double _hz = 0)
+              double _hz = 0, double _start = -1)
           : FilterBase(_xmlOutput, _stamp), filter(_xmlOutput, _stamp),
-          hz(_hz)
-          {}
+          hz(_hz), start(_start)
+          {
+            this->stateSdf.reset(new sdf::Element);
+            sdf::initFile("state.sdf", this->stateSdf);
+          }
 
   /// \brief Initialize the filter with a set of parameters.
   /// \param[_in] _filter The filter parameters
@@ -599,25 +608,32 @@ class StateFilter : public FilterBase
 
   /// \brief Perform filtering
   /// \param[in] _stateString The string to filter.
-  public: std::string Filter(const std::string &_stateString)
+  public: std::string Filter(const std::string &_stateString) const
           {
             gazebo::physics::WorldState state;
 
             // Read and parse the state information
-            g_stateSdf->ClearElements();
-            sdf::readString(_stateString, g_stateSdf);
-            state.Load(g_stateSdf);
+            this->stateSdf->ClearElements();
+            sdf::readString(_stateString, this->stateSdf);
 
             std::ostringstream result;
 
+            if (this->start > 0 &&
+                this->stateSdf->GetValueTime("sim_time").Double() < this->start)
+            {
+              return std::string();
+            }
+
             if (this->hz > 0.0 && this->prevTime != gazebo::common::Time::Zero)
             {
-              if ((state.GetSimTime() - this->prevTime).Double() <
-                  1.0 / this->hz)
+              if ((this->stateSdf->GetValueTime("sim_time")
+                  - this->prevTime).Double() < 1.0 / this->hz)
               {
                 return result.str();
               }
             }
+
+            state.Load(this->stateSdf);
 
             if (this->xmlOutput)
             {
@@ -644,9 +660,75 @@ class StateFilter : public FilterBase
   private: double hz;
 
   /// \brief Previous time a state was output.
-  private: gazebo::common::Time prevTime;
+  private: mutable gazebo::common::Time prevTime;
+
+  /// \brief State sdf element
+  private: mutable sdf::ElementPtr stateSdf;
+
+  /// \brief Start time
+  private: double start;
 };
 
+/////////////////////////////////////////////////
+// \brief Class to process chunks in parallel
+class ProcessChunk_TBB
+{
+  public: ProcessChunk_TBB(gazebo::util::LogPlay *_play,
+              const std::string &_filter, bool _raw,
+              const std::string &_stamp, double _hz,
+              double _start,
+              std::vector<std::list<std::string> > *_result) : play(_play),
+  filterStr(_filter), raw(_raw), stamp(_stamp), hz(_hz), start(_start),
+  result(_result)
+  {
+  }
+
+  public: void operator() (const tbb::blocked_range<size_t> &_r) const
+  {
+    std::string chunkData, stepData;
+    std::string startMarker = "<sdf ";
+    std::string endMarker = "</sdf>";
+    size_t startPos = std::string::npos;
+    size_t endPos = std::string::npos;
+
+    StateFilter filter(!this->raw, this->stamp, this->hz, this->start);
+    filter.Init(this->filterStr);
+
+    for (size_t i = _r.begin(); i != _r.end(); i++)
+    {
+      chunkData.clear();
+      play->GetChunk(i, chunkData);
+
+      unsigned int startIndex = 0;
+      unsigned int chunkSize = chunkData.size();
+      do
+      {
+        startPos = chunkData.find(startMarker, startIndex);
+        endPos = chunkData.find(endMarker, start + startMarker.size());
+
+        if (startPos == std::string::npos || endPos == std::string::npos)
+          break;
+
+        stepData = chunkData.substr(startPos,
+            endPos + endMarker.size() - startPos);
+
+        startIndex = endPos + endMarker.size();
+
+        if (!stepData.empty())
+          (*this->result)[i].push_back(filter.Filter(stepData));
+      } while (startIndex < chunkSize);
+    }
+  }
+
+  /// \brief Pointer to the log recorder
+  private: gazebo::util::LogPlay *play;
+  private: std::string filterStr;
+  private: bool raw;
+  private: std::string stamp;
+  private: double hz;
+  private: double start;
+  private: std::vector<std::list<std::string> > *result;
+};
 
 /////////////////////////////////////////////////
 /// \brief Print general help
@@ -657,14 +739,13 @@ void help()
   std::cerr << "Usage: gzlog [command] <options> [log file]\n\n";
 
   std::cerr << "Commands:\n"
-            << "  help\t Output this help message.\n"
-            // << "  info\t Display statistical information about a log file.\n"
-            << "  echo\t Output the contents of a log file to screen.\n"
-            << "  step\t Step through the contents of a log file.\n"
-            << "  start\t Start recording a log file on an active Gazebo "
-            << "server.\n"
-            << "  stop\t Stop recording a log file on an active Gazebo "
-            << "server.\n";
+    << "  help\t Output this help message.\n"
+    << "  info\t Display statistical information about a log file.\n"
+    << "  echo\t Output the contents of a log file to screen.\n"
+    << "  step\t Step through the contents of a log file.\n"
+    << "  start\t Start recording a log file on an active Gazebo server.\n"
+    << "  stop\t Stop recording a log file on an active Gazebo server.\n"
+    << "  play\t Play a log file in an active Gazebo server";
 
   std::cerr << "\n";
 }
@@ -746,8 +827,14 @@ std::string get_file_size_str(const std::string &_filename)
 
 /////////////////////////////////////////////////
 /// \bried Output information about a log file.
-void info(const std::string &_filename)
+int info(const std::string &_filename)
 {
+  if (_filename.empty())
+  {
+    gzerr << "No log file specified\n";
+    return -1;
+  }
+
   gazebo::util::LogPlay *play = gazebo::util::LogPlay::Instance();
 
   // Get the SDF world description from the log file
@@ -846,14 +933,26 @@ void info(const std::string &_filename)
     << "Encoding:       " << play->GetEncoding() << "\n"
     // << "Model Count:    " << modelCount << "\n"
     << "\n";
+
+  return 0;
 }
 
 /////////////////////////////////////////////////
 /// \brief Dump the contents of a log file to screen
 /// \param[in] _filter Filter string
-void echo(const std::string &_filter, bool _raw, const std::string &_stamp,
-    double _hz)
+int echo(const std::string &_filename, const std::string &_filter, bool _raw,
+    const std::string &_stamp, double _hz, double _start)
 {
+  if (_filename.empty())
+  {
+    gzerr << "No log file specified\n";
+    return -1;
+  }
+
+  // Load log file from string
+  if (!load_log_from_file(_filename))
+    return -1;
+
   gazebo::util::LogPlay *play = gazebo::util::LogPlay::Instance();
   std::string stateString;
 
@@ -861,9 +960,42 @@ void echo(const std::string &_filter, bool _raw, const std::string &_stamp,
   if (!_raw)
     std::cout << play->GetHeader() << std::endl;
 
+  std::vector<std::list<std::string> > result;
+  uint64_t chunkCount = play->GetChunkCount();
+  int numThreads = 4;
+  result.resize(chunkCount);
+
+  // Run on multiple threads.
+  tbb::parallel_for(tbb::blocked_range<size_t>(
+        1, chunkCount, chunkCount/numThreads),
+      ProcessChunk_TBB(play, _filter, _raw, _stamp, _hz, _start, &result));
+
+  // Get the first step, which is the world definition
+  play->Step(stateString);
+  result[0].push_back(stateString);
+
+  // Output the result
+  for (std::vector<std::list<std::string> >::iterator iter = result.begin();
+      iter != result.end(); ++iter)
+  {
+    for (std::list<std::string>::iterator iter2 = (*iter).begin();
+        iter2 != (*iter).end(); ++iter2)
+    {
+      if (!(*iter2).empty())
+      {
+        if (!_raw)
+          std::cout << "<chunk encoding='txt'><![CDATA[\n";
+        std::cout << *iter2 << std::endl;
+
+        if (!_raw)
+          std::cout << "]]></chunk>\n";
+      }
+    }
+  }
+
+  /* // Old code. Here for comparison
   StateFilter filter(!_raw, _stamp, _hz);
   filter.Init(_filter);
-
   unsigned int i = 0;
   while (play->Step(stateString))
   {
@@ -885,17 +1017,30 @@ void echo(const std::string &_filter, bool _raw, const std::string &_stamp,
 
     ++i;
   }
+  */
 
   if (!_raw)
     std::cout << "</gazebo_log>\n";
+
+  return 0;
 }
 
 /////////////////////////////////////////////////
 /// \brief Step through a log file.
 /// \param[in] _filter Filter string
-void step(const std::string &_filter, bool _raw, const std::string &_stamp,
-    double _hz)
+int step(const std::string &_filename, const std::string &_filter,
+    bool _raw, const std::string &_stamp, double _hz)
 {
+  if (_filename.empty())
+  {
+    gzerr << "No log file specified\n";
+    return -1;
+  }
+
+  // Load log file from string
+  if (!load_log_from_file(_filename))
+    return -1;
+
   std::string stateString;
   gazebo::util::LogPlay *play = gazebo::util::LogPlay::Instance();
 
@@ -938,15 +1083,17 @@ void step(const std::string &_filter, bool _raw, const std::string &_stamp,
 
   if (!_raw)
     std::cout << "</gazebo_log>\n";
+
+  return 0;
 }
 
 /////////////////////////////////////////////////
 /// \brief Start or stop logging
 /// \param[in] _start True to start logging
-void record(bool _start)
+int record(bool _start)
 {
   if (!gazebo::transport::init())
-    return;
+    return 0;
 
   gazebo::transport::run();
 
@@ -954,14 +1101,44 @@ void record(bool _start)
   node->Init();
 
   gazebo::transport::PublisherPtr pub =
-    node->Advertise<gazebo::msgs::LogControl>("~/log/control");
+    node->Advertise<gazebo::msgs::LogRecordControl>("~/log/record/control");
   pub->WaitForConnection();
 
-  gazebo::msgs::LogControl msg;
+  gazebo::msgs::LogRecordControl msg;
   _start ? msg.set_start(true) : msg.set_stop(true);
-  pub->Publish<gazebo::msgs::LogControl>(msg, true);
+  pub->Publish(msg, true);
 
   gazebo::transport::fini();
+
+  return 0;
+}
+
+/////////////////////////////////////////////////
+int play(const std::string &_filename)
+{
+  if (_filename.empty())
+  {
+    gzerr << "No log file specified\n";
+    return -1;
+  }
+
+  gazebo::transport::init();
+  gazebo::transport::run();
+
+  gazebo::transport::NodePtr node(new gazebo::transport::Node());
+  node->Init();
+
+  gazebo::transport::PublisherPtr pub =
+    node->Advertise<gazebo::msgs::ServerControl>("/gazebo/server/control");
+  pub->WaitForConnection();
+
+  gazebo::msgs::ServerControl msg;
+  msg.set_open_log_filename(_filename);
+  pub->Publish(msg, true);
+
+  gazebo::transport::fini();
+
+  return 0;
 }
 
 /////////////////////////////////////////////////
@@ -977,6 +1154,7 @@ int main(int argc, char **argv)
   visibleOptions.add_options()
     ("help,h", "Output this help message.")
     ("raw,r", "Output the data from echo and step without XML formatting.")
+    ("start", po::value<double>(), "Start time.")
     ("stamp,s", po::value<std::string>(), "Add a timestamp to each line of "
      "output. Valid values are (sim,real,wall)")
     ("hz,z", po::value<double>(), "Filter output to the specified Hz rate.\
@@ -1030,21 +1208,9 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  if (command != "start" && command != "stop")
-  {
-    // Load the log file
-    if (vm.count("file"))
-      filename = vm["file"].as<std::string>();
-    else
-    {
-      gzerr << "No log file specified\n";
-      return -1;
-    }
-
-    // Load log file from string
-    if (!load_log_from_file(filename))
-      return -1;
-  }
+  // Load the log file
+  if (vm.count("file"))
+    filename = vm["file"].as<std::string>();
 
   std::string stamp;
   if (vm.count("stamp"))
@@ -1054,17 +1220,25 @@ int main(int argc, char **argv)
   if (vm.count("hz"))
     hz = vm["hz"].as<double>();
 
+  double start = -1;
+  if (vm.count("start"))
+    start = vm["start"].as<double>();
+
+  int result = 0;
+
   // Process the command
   if (command == "info")
-    info(filename);
+    result = info(filename);
   else if (command == "echo")
-    echo(filter, vm.count("raw"), stamp, hz);
+    result = echo(filename, filter, vm.count("raw"), stamp, hz, start);
   else if (command == "step")
-    step(filter, vm.count("raw"), stamp, hz);
+    result = step(filename, filter, vm.count("raw"), stamp, hz);
   else if (command == "start")
-    record(true);
+    result = record(true);
   else if (command == "stop")
-    record(false);
+    result = record(false);
+  else if (command == "play")
+    result = play(filename);
 
-  return 0;
+  return result;
 }

@@ -44,7 +44,7 @@ namespace gazebo
 
     /// \brief Returns a pointer to a world by name.
     /// \param[in] _name Name of the world to get.
-    /// \return Pointer to the world.
+    /// \return Pointer to the world, NULL if the world doesn't exist.
     WorldPtr get_world(const std::string &_name = "");
 
     /// \brief Load world from sdf::Element pointer.
@@ -81,9 +81,11 @@ namespace gazebo
 
     /// \brief Run multiple worlds stored in static variable
     /// gazebo::g_worlds
-    /// \param[in] _iterations Number of iterations for each world to take.
+    /// \param[in] _steps Number of iterations for each world to take.
     /// Zero indicates that each world should continue forever.
-    void run_worlds(unsigned int _iterations = 0);
+    /// \param[in] _stepDelayMS Delay in MS to wait between steps.
+    void run_worlds(unsigned int _steps = 0,
+                    unsigned int _stepDelayMS = 0);
 
     /// \brief stop multiple worlds stored in static variable
     /// gazebo::g_worlds
