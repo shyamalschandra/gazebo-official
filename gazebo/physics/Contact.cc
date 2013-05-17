@@ -19,6 +19,7 @@
  * Date: 10 Nov 2009
  */
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/Contact.hh"
@@ -42,6 +43,7 @@ Contact::Contact(const Contact &_c)
 //////////////////////////////////////////////////
 Contact::~Contact()
 {
+  this->world.reset();
 }
 
 //////////////////////////////////////////////////
@@ -73,10 +75,12 @@ Contact &Contact::operator =(const msgs::Contact &_contact)
   this->count = 0;
 
   this->world = physics::get_world(_contact.world());
+  GZ_ASSERT(this->world, "World pointer is NULL");
+
   this->collision1 = _contact.collision1();
   this->collision2 = _contact.collision2();
 
-  if (world)
+  if (this->world)
   {
     this->collisionPtr1 = boost::dynamic_pointer_cast<Collision>(
         this->world->GetEntity(this->collision1)).get();
@@ -120,6 +124,7 @@ Contact &Contact::operator =(const msgs::Contact &_contact)
 //////////////////////////////////////////////////
 void Contact::Reset()
 {
+  this->world.reset();
   this->count = 0;
 }
 
