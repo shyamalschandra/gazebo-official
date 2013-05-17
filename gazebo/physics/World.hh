@@ -90,9 +90,11 @@ namespace gazebo
       /// \brief Run the world in a thread.
       ///
       /// Run the update loop.
-      /// \param[in] _iterations Run for this many iterations, then stop.
+      /// \param[in] _steps Run for this many iterations, then stop.
       /// A value of zero disables run stop.
-      public: void Run(unsigned int _iterations = 0);
+      /// \param[in] _stepDelayMS Delay in MS to wait between steps.
+      public: void Run(unsigned int _steps = 0,
+                       unsigned int _stepDelayMS = 0);
 
       /// \brief Return the running state of the world.
       /// \return True if the world is running.
@@ -432,7 +434,10 @@ namespace gazebo
       private: void ProcessModelMsgs();
 
       /// \brief Log callback. This is where we write out state info.
-      private: bool OnLog(std::ostringstream &_stream);
+      /// \param[out] _stream OnLog will populated _stream with data to log.
+      /// \param[out] _segments OnLog will set this to the number of steps
+      /// that _stream contains.
+      private: bool OnLog(std::ostringstream &_stream, uint64_t &_segments);
 
       /// \brief Process all incoming messages.
       private: void ProcessMessages();
@@ -626,7 +631,7 @@ namespace gazebo
 
       /// \brief Buffer of states.
       private: std::deque<WorldState> states;
-      private: WorldState prevStates[2];
+      private: WorldState *prevStates[2];
       private: int stateToggle;
 
       private: sdf::ElementPtr logPlayStateSDF;
@@ -647,6 +652,9 @@ namespace gazebo
 
       /// \brief The number of simulation iterations to take before stopping.
       private: uint64_t stopIterations;
+
+      /// \brief Milliseconds to wait between steps. Default is zero.
+      private: uint64_t stepDelayMS;
 
       /// \brief Condition used for log worker.
       private: boost::condition_variable logCondition;

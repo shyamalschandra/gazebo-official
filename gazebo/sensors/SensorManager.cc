@@ -22,6 +22,9 @@
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Time.hh"
 
+#include "gazebo/rendering/Rendering.hh"
+#include "gazebo/rendering/Scene.hh"
+
 #include "gazebo/physics/Physics.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/World.hh"
@@ -40,6 +43,8 @@ boost::mutex g_sensorTimingMutex;
 SensorManager::SensorManager()
   : initialized(false)
 {
+  this->simTimeEventHandler = NULL;
+
   // sensors::IMAGE container
   this->sensorContainers.push_back(new ImageSensorContainer());
 
@@ -181,6 +186,12 @@ void SensorManager::Init()
 {
   boost::recursive_mutex::scoped_lock lock(this->mutex);
 
+  if (this->simTimeEventHandler)
+  {
+    delete this->simTimeEventHandler;
+    this->simTimeEventHandler = NULL;
+  }
+
   this->simTimeEventHandler = new SimTimeEventHandler();
 
   // Initialize all the sensor containers.
@@ -212,7 +223,10 @@ void SensorManager::Fini()
 
   delete this->simTimeEventHandler;
   this->simTimeEventHandler = NULL;
-
+  if (physics::get_world())
+    rendering::remove_scene(physics::get_world()->GetName());
+  else
+    rendering::remove_scenes();
   this->initialized = false;
 }
 
@@ -335,12 +349,7 @@ void SensorManager::RemoveSensor(const std::string &_name)
   boost::recursive_mutex::scoped_lock lock(this->mutex);
   SensorPtr sensor = this->GetSensor(_name);
 
-  if (!sensor)
-  {
-    gzerr << "Unable to remove sensor[" << _name << "] because it "
-          << "does not exist.\n";
-  }
-  else
+  if (sensor)
   {
     // Push it on the list, to be removed by the main sensor thread,
     // to ensure correct access to rendering resources.
@@ -415,6 +424,7 @@ void SensorManager::SensorContainer::Fini()
 //////////////////////////////////////////////////
 void SensorManager::SensorContainer::Run()
 {
+  this->stop = false;
   this->runThread = new boost::thread(
       boost::bind(&SensorManager::SensorContainer::RunLoop, this));
 
@@ -428,7 +438,6 @@ void SensorManager::SensorContainer::Stop()
   this->runCondition.notify_all();
   if (this->runThread)
   {
-    this->runThread->interrupt();
     this->runThread->join();
     delete this->runThread;
     this->runThread = NULL;
@@ -438,52 +447,59 @@ void SensorManager::SensorContainer::Stop()
 //////////////////////////////////////////////////
 void SensorManager::SensorContainer::RunLoop()
 {
-  this->stop = false;
-
-  physics::WorldPtr world = physics::get_world();
-  GZ_ASSERT(world != NULL, "Pointer to World is NULL");
-
-  physics::PhysicsEnginePtr engine = world->GetPhysicsEngine();
-  GZ_ASSERT(engine != NULL, "Pointer to PhysicsEngine is NULL");
-
-  engine->InitForThread();
-
   common::Time sleepTime, startTime, eventTime, diffTime;
   double maxUpdateRate = 0;
+  physics::WorldPtr world;
+  physics::PhysicsEnginePtr engine;
 
   boost::mutex tmpMutex;
   boost::mutex::scoped_lock lock2(tmpMutex);
 
   // Wait for a sensor to be added.
-  if (this->sensors.empty())
+  if (!this->stop && this->sensors.empty())
   {
     this->runCondition.wait(lock2);
     if (this->stop)
       return;
   }
 
+  if (!this->stop)
   {
-    boost::recursive_mutex::scoped_lock lock(this->mutex);
-
-    // Get the minimum update rate from the sensors.
-    for (Sensor_V::iterator iter = this->sensors.begin();
-        iter != this->sensors.end() && !this->stop; ++iter)
     {
-      GZ_ASSERT((*iter) != NULL, "Sensor is NULL");
-      maxUpdateRate = std::max((*iter)->GetUpdateRate(), maxUpdateRate);
-    }
-  }
+      boost::recursive_mutex::scoped_lock lock(this->mutex);
 
-  // Calculate an appropriate sleep time.
-  if (maxUpdateRate > 0)
-    sleepTime.Set(1.0 / (maxUpdateRate));
-  else
-    sleepTime.Set(0, 1e6);
+      // Get the minimum update rate from the sensors.
+      for (Sensor_V::iterator iter = this->sensors.begin();
+          iter != this->sensors.end() && !this->stop; ++iter)
+      {
+        GZ_ASSERT((*iter) != NULL, "Sensor is NULL");
+        maxUpdateRate = std::max((*iter)->GetUpdateRate(), maxUpdateRate);
+      }
+    }
+
+    // Calculate an appropriate sleep time.
+    if (maxUpdateRate > 0)
+      sleepTime.Set(1.0 / (maxUpdateRate));
+    else
+      sleepTime.Set(0, 1e6);
+
+    world = physics::get_world();
+    GZ_ASSERT(world != NULL, "Pointer to World is NULL");
+
+    engine = world->GetPhysicsEngine();
+    GZ_ASSERT(engine != NULL, "Pointer to PhysicsEngine is NULL");
+
+    engine->InitForThread();
+  }
 
   while (!this->stop)
   {
     if (this->sensors.empty())
+    {
       this->runCondition.wait(lock2);
+      if (this->stop)
+        break;
+    }
 
     // Get the start time of the update.
     startTime = world->GetSimTime();
@@ -509,10 +525,12 @@ void SensorManager::SensorContainer::RunLoop()
 
     // Add an event to trigger when the appropriate simulation time has been
     // reached.
-    SensorManager::Instance()->simTimeEventHandler->AddRelativeEvent(
-        eventTime, &this->runCondition);
+    if (SensorManager::Instance()->simTimeEventHandler)
+      SensorManager::Instance()->simTimeEventHandler->AddRelativeEvent(
+          eventTime, &this->runCondition);
 
-    this->runCondition.wait(timingLock);
+    if (!this->stop)
+      this->runCondition.wait(timingLock);
   }
 }
 

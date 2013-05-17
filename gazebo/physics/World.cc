@@ -80,6 +80,8 @@ class ModelUpdate_TBB
 //////////////////////////////////////////////////
 World::World(const std::string &_name)
 {
+  this->stepDelayMS = 0;
+
   this->sdf.reset(new sdf::Element);
   sdf::initFile("world.sdf", this->sdf);
 
@@ -118,6 +120,9 @@ World::World(const std::string &_name)
 
   this->prevStatTime = common::Time::GetWallTime();
   this->prevProcessMsgsTime = common::Time::GetWallTime();
+
+  this->prevStates[0] = new WorldState();
+  this->prevStates[1] = new WorldState();
 
   this->connections.push_back(
      event::Events::ConnectStep(boost::bind(&World::OnStep, this)));
@@ -288,13 +293,13 @@ void World::Init()
       this->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
 
   util::LogRecord::Instance()->Add(this->GetName(), "state.log",
-      boost::bind(&World::OnLog, this, _1));
+      boost::bind(&World::OnLog, this, _1, _2));
 
-  this->prevStates[0].SetWorld(shared_from_this());
-  this->prevStates[1].SetWorld(shared_from_this());
+  this->prevStates[0]->SetWorld(shared_from_this());
+  this->prevStates[1]->SetWorld(shared_from_this());
 
-  this->prevStates[0].SetName(this->GetName());
-  this->prevStates[1].SetName(this->GetName());
+  this->prevStates[0]->SetName(this->GetName());
+  this->prevStates[1]->SetName(this->GetName());
 
   this->initialized = true;
 
@@ -309,10 +314,11 @@ void World::Init()
 }
 
 //////////////////////////////////////////////////
-void World::Run(unsigned int _iterations)
+void World::Run(unsigned int _steps, unsigned int _stepDelay)
 {
   this->stop = false;
-  this->stopIterations = _iterations;
+  this->stopIterations = _steps;
+  this->stepDelayMS = _stepDelay;
 
   this->thread = new boost::thread(boost::bind(&World::RunLoop, this));
 }
@@ -349,11 +355,11 @@ void World::RunLoop()
 
   this->prevStepWallTime = common::Time::GetWallTime();
 
-  this->logThread = new boost::thread(boost::bind(&World::LogWorker, this));
-
   // Get the first state
-  this->prevStates[0] = WorldState(shared_from_this());
+  this->prevStates[0]->Load(shared_from_this());
   this->stateToggle = 0;
+
+  this->logThread = new boost::thread(boost::bind(&World::LogWorker, this));
 
   if (!util::LogPlay::Instance()->IsOpen())
   {
@@ -361,6 +367,8 @@ void World::RunLoop()
         (!this->stopIterations || (this->iterations < this->stopIterations));)
     {
       this->Step();
+      if (this->stepDelayMS > 0)
+        gazebo::common::Time::MSleep(this->stepDelayMS);
     }
   }
   else
@@ -370,6 +378,8 @@ void World::RunLoop()
         (!this->stopIterations || (this->iterations < this->stopIterations));)
     {
       this->LogStep();
+      if (this->stepDelayMS > 0)
+        gazebo::common::Time::MSleep(this->stepDelayMS);
     }
   }
 
@@ -377,6 +387,7 @@ void World::RunLoop()
 
   if (this->logThread)
   {
+    // Notify the condition to continue.
     this->logCondition.notify_all();
     this->logThread->join();
     delete this->logThread;
@@ -387,14 +398,15 @@ void World::RunLoop()
 //////////////////////////////////////////////////
 void World::LogStep()
 {
-  if (!this->IsPaused() || this->stepInc > 0)
+  if (!this->IsPaused() || this->stepInc > 0 ||
+      (this->IsPaused() && util::LogPlay::Instance()->NeedsStep()))
   {
     std::string data;
     if (!util::LogPlay::Instance()->Step(data))
     {
       this->SetPaused(true);
     }
-    else
+    else if (!data.empty())
     {
       this->logPlayStateSDF->ClearElements();
       sdf::readString(data, this->logPlayStateSDF);
@@ -593,7 +605,7 @@ void World::Update()
     // worker catchs up.
     if (this->iterations - this->logPrevIteration > 1)
     {
-      this->logCondition.notify_one();
+      this->logCondition.notify_all();
       this->logContinueCondition.wait(lock);
     }
   }
@@ -622,7 +634,7 @@ void World::Update()
 
   // Only update state information if logging data.
   if (util::LogRecord::Instance()->GetRunning())
-    this->logCondition.notify_one();
+    this->logCondition.notify_all();
   DIAG_TIMER_LAP("World::Update", "LogRecordNotify");
 
   // Output the contact information
@@ -643,7 +655,8 @@ void World::Fini()
 
   this->publishModelPoses.clear();
 
-  this->node->Fini();
+  if (this->node)
+    this->node->Fini();
 
   if (this->rootElement)
   {
@@ -657,8 +670,19 @@ void World::Fini()
     this->physicsEngine.reset();
   }
 
-  this->prevStates[0].SetWorld(WorldPtr());
-  this->prevStates[1].SetWorld(WorldPtr());
+  delete this->prevStates[0];
+  this->prevStates[0] = NULL;
+
+  delete this->prevStates[1];
+  this->prevStates[1] = NULL;
+
+  this->modelMsgs.clear();
+  this->factoryMsgs.clear();
+  this->requestMsgs.clear();
+  this->dirtyPoses.clear();
+  this->deleteEntity.clear();
+  this->connections.clear();
+  this->node.reset();
 }
 
 //////////////////////////////////////////////////
@@ -1701,12 +1725,14 @@ void World::UpdateStateSDF()
   sdf::ElementPtr stateElem = this->sdf->GetElement("state");
   stateElem->ClearElements();
 
-  this->prevStates[(this->stateToggle + 1) % 2].FillSDF(stateElem);
+  this->prevStates[(this->stateToggle + 1) % 2]->FillSDF(stateElem);
 }
 
 //////////////////////////////////////////////////
-bool World::OnLog(std::ostringstream &_stream)
+bool World::OnLog(std::ostringstream &_stream, uint64_t &_segments)
 {
+  _segments = 0;
+
   // Save the entire state when its the first call to OnLog.
   if (util::LogRecord::Instance()->GetFirstUpdate())
   {
@@ -1716,6 +1742,7 @@ bool World::OnLog(std::ostringstream &_stream)
     _stream << "'>\n";
     _stream << this->sdf->ToString("");
     _stream << "</sdf>\n";
+    _segments++;
   }
   else if (this->states.size() >= 1)
   {
@@ -1730,6 +1757,7 @@ bool World::OnLog(std::ostringstream &_stream)
           << this->states[0] << "</sdf>";
 
         this->states.pop_front();
+        _segments++;
       }
     } while (this->states.size() > 1000);
   }
@@ -1745,13 +1773,13 @@ bool World::OnLog(std::ostringstream &_stream)
     {
       _stream << "<sdf version='" << SDF_VERSION << "'>"
         << this->states[i] << "</sdf>";
+
+      _segments++;
     }
 
     // Clear everything.
     this->states.clear();
     this->stateToggle = 0;
-    this->prevStates[0] = WorldState();
-    this->prevStates[1] = WorldState();
   }
 
   return true;
@@ -1849,9 +1877,9 @@ void World::LogWorker()
   {
     int currState = (this->stateToggle + 1) % 2;
 
-    this->prevStates[currState].Load(self);
-    WorldState diffState = this->prevStates[currState] -
-      this->prevStates[this->stateToggle];
+    this->prevStates[currState]->Load(self);
+    WorldState diffState = (*this->prevStates[currState]) -
+      (*this->prevStates[this->stateToggle]);
     this->logPrevIteration = this->iterations;
 
     if (!diffState.IsZero())
@@ -1860,7 +1888,7 @@ void World::LogWorker()
 
       // Store the entire current state (instead of the diffState). A slow
       // moving link may never be captured if only diff state is recorded.
-      this->states.push_back(this->prevStates[currState]);
+      this->states.push_back(*this->prevStates[currState]);
 
       // Tell the logger to update, once the number of states exceeds 1000
       if (this->states.size() > 1000)
@@ -1869,8 +1897,9 @@ void World::LogWorker()
 
     this->logContinueCondition.notify_all();
 
-    // Wait until there is work to be done.
-    this->logCondition.wait(lock);
+    // Wait until there is work to be done, but only if we are not stopped.
+    if (!this->stop)
+      this->logCondition.wait(lock);
   }
 
   // Make sure nothing is blocked by this thread.

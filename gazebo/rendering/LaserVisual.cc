@@ -51,7 +51,7 @@ LaserVisual::LaserVisual(const std::string &_name, VisualPtr _vis,
 /////////////////////////////////////////////////
 LaserVisual::~LaserVisual()
 {
-  delete this->rayFan;
+  this->DeleteDynamicLine(this->rayFan);
   this->rayFan = NULL;
 }
 
