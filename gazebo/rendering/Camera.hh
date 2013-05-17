@@ -702,6 +702,9 @@ namespace gazebo
       /// devation of the distibution from which we sample
       private: double noiseStdDev;
 
+      /// \bried Protects the render call.
+      private: boost::mutex renderMutex;
+
       /// \brief store option to turn off cloud
       private: bool displayClouds;
     };

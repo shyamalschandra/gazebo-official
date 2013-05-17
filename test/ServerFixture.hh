@@ -203,6 +203,7 @@ class ServerFixture : public testing::Test
                             const std::string &_physics)
              {
                ASSERT_NO_THROW(this->server = new Server());
+
                if (_physics.length())
                  ASSERT_NO_THROW(this->server->LoadFile(_worldFilename,
                                                         _physics));
@@ -1079,6 +1080,23 @@ class ServerFixture : public testing::Test
                // Get the first world...we assume it the only one running
                physics::WorldPtr world = physics::get_world();
                world->LoadPlugin(_filename, _name, sdf::ElementPtr());
+             }
+
+  protected: sensors::SensorPtr GetSensor(const std::string &_name)
+             {
+               sensors::SensorManager *mgr = sensors::SensorManager::Instance();
+               sensors::SensorPtr sensor;
+
+               int i = 0;
+               while (!sensor && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 sensor = mgr->GetSensor(_name);
+                 ++i;
+               }
+
+               EXPECT_LT(i, 100);
+               return sensor;
              }
 
   protected: physics::ModelPtr GetModel(const std::string &_name)
