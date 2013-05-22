@@ -166,12 +166,16 @@ void World::Load(sdf::ElementPtr _sdf)
   this->sceneMsg.CopyFrom(msgs::SceneFromSDF(this->sdf->GetElement("scene")));
   this->sceneMsg.set_name(this->GetName());
 
+  // The period at which statistics about the world are published
+  this->statPeriod = common::Time(0, 200000000);
+
   // The period at which messages are processed
   this->processMsgsPeriod = common::Time(0, 200000000);
 
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->GetName());
 
+    this->clockPub = this->node->Advertise<msgs::Time>("~/clock", 10);
   this->posePub = this->node->Advertise<msgs::PosesStamped>(
     "~/pose/info", 10, 60.0);
 
@@ -183,6 +187,10 @@ void World::Load(sdf::ElementPtr _sdf)
                                            &World::OnFactoryMsg, this);
   this->controlSub = this->node->Subscribe("~/world_control",
                                            &World::OnControl, this);
+
+  this->logControlSub = this->node->Subscribe("~/log/control",
+                                              &World::OnLogControl, this);
+  this->logStatusPub = this->node->Advertise<msgs::LogStatus>("~/log/status");
 
   this->requestSub = this->node->Subscribe("~/request",
                                            &World::OnRequest, this, true);
@@ -516,9 +524,12 @@ void World::Step()
     }
     else
       this->pauseTime += stepTime;
+
+    DIAG_TIMER_LAP("World::Step", "update");
   }
 
   this->ProcessMessages();
+  DIAG_TIMER_LAP("World::Step", "processMessages");
 
   DIAG_TIMER_STOP("World::Step");
 }
@@ -572,6 +583,9 @@ void World::Update()
   event::Events::worldUpdateBegin(this->updateInfo);
 
   DIAG_TIMER_LAP("World::Update", "Events::worldUpdateBegin");
+
+  /// \brief Publish clock
+  this->clockPub->Publish(msgs::Convert(this->updateInfo.simTime));
 
   // Update all the models
   (*this.*modelUpdateFunc)();
@@ -630,7 +644,9 @@ void World::Update()
 
   DIAG_TIMER_LAP("World::Update", "ContactManager::PublishContacts");
 
+
   event::Events::worldUpdateEnd();
+  DIAG_TIMER_LAP("World::Update", "endEvent");
 
   DIAG_TIMER_STOP("World::Update");
 }
@@ -659,6 +675,8 @@ void World::Fini()
 
   this->prevStates[0].SetWorld(WorldPtr());
   this->prevStates[1].SetWorld(WorldPtr());
+
+  util::DiagnosticManager::Instance()->Fini();
 }
 
 //////////////////////////////////////////////////
@@ -1010,6 +1028,8 @@ void World::SetPaused(bool _p)
 {
   if (this->pause == _p)
     return;
+
+  DIAG_MARKER("paused");
 
   {
     boost::recursive_mutex::scoped_lock(*this->worldUpdateMutex);
@@ -1763,6 +1783,7 @@ void World::ProcessMessages()
   {
     boost::recursive_mutex::scoped_lock lock(*this->receiveMutex);
     msgs::Pose *poseMsg;
+    DIAG_TIMER_START("World::ProcessMessages");
 
     if (this->posePub && this->posePub->HasConnections() &&
         this->publishModelPoses.size() > 0)
@@ -1794,17 +1815,24 @@ void World::ProcessMessages()
       this->posePub->Publish(msg);
     }
     this->publishModelPoses.clear();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Pose");
   }
 
   if (common::Time::GetWallTime() - this->prevProcessMsgsTime >
       this->processMsgsPeriod)
   {
     this->ProcessEntityMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Entities");
     this->ProcessRequestMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Requests");
     this->ProcessFactoryMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Factory");
     this->ProcessModelMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Model");
     this->prevProcessMsgsTime = common::Time::GetWallTime();
   }
+
+  DIAG_TIMER_STOP("World::ProcessMessages");
 }
 
 //////////////////////////////////////////////////
@@ -1876,3 +1904,4 @@ void World::LogWorker()
   // Make sure nothing is blocked by this thread.
   this->logContinueCondition.notify_all();
 }
+
