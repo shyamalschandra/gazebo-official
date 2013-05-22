@@ -1316,14 +1316,14 @@ static void SOR_LCP (dxWorldProcessContext *context,
   dReal *last_lambda_erp = context->AllocateArray<dReal> (m);
 #endif
 
-  boost::recursive_mutex* mutex = new boost::recursive_mutex();
+  boost::recursive_mutex mutex;
 
   // number of chunks must be at least 1
   // (single iteration, through all the constraints)
   int num_chunks = qs->num_chunks > 0 ? qs->num_chunks : 1; // min is 1
 
   // prepare pointers for threads
-  dxSORLCPParameters *params = new dxSORLCPParameters [num_chunks];
+  dxSORLCPParameters *params = context->AllocateArray<dxSORLCPParameters>(num_chunks);
 
   // divide into chunks sequentially
   int chunk = m / num_chunks+1;
@@ -1389,11 +1389,11 @@ static void SOR_LCP (dxWorldProcessContext *context,
 #endif
 #ifdef USE_TPROW
     if (row_threadpool && row_threadpool->size() > 0)
-      row_threadpool->schedule(boost::bind(ComputeRows,thread_id,order, body, params[thread_id], mutex));
+      row_threadpool->schedule(boost::bind(ComputeRows,thread_id,order, body, params[thread_id], &mutex));
     else //automatically skip threadpool if only 1 thread allocated
-      ComputeRows(thread_id,order, body, params[thread_id], mutex);
+      ComputeRows(thread_id,order, body, params[thread_id], &mutex);
 #else
-    ComputeRows(thread_id,order, body, params[thread_id], mutex);
+    ComputeRows(thread_id,order, body, params[thread_id], &mutex);
 #endif
   }
 
@@ -1417,9 +1417,6 @@ static void SOR_LCP (dxWorldProcessContext *context,
   double end_time = (double)tv.tv_sec + (double)tv.tv_usec / 1.e6;
   printf("    quickstep threads start time %f stopped time %f duration %f\n",cur_time,end_time,end_time - cur_time);
   #endif
-
-  delete [] params;
-  delete mutex;
 }
 
 struct dJointWithInfo1
@@ -2118,6 +2115,7 @@ static size_t EstimateSOR_LCPMemoryRequirements(int m,int /*nb*/)
   res += dEFFICIENT_SIZE(sizeof(dReal) * m); // for delta_error
   res += dEFFICIENT_SIZE(sizeof(IndexError) * m); // for order
   res += dEFFICIENT_SIZE(sizeof(int) * m); // for tmpOrder
+  res += dEFFICIENT_SIZE(sizeof(dxSORLCPParameters) * m); // params, at most one per row
 #ifdef REORDER_CONSTRAINTS
   res += dEFFICIENT_SIZE(sizeof(dReal) * m); // for last_lambda
   res += dEFFICIENT_SIZE(sizeof(dReal) * m); // for last_lambda_erp
