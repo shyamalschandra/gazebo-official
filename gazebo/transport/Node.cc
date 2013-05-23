@@ -30,6 +30,7 @@ Node::Node()
   this->id = idCounter++;
   this->topicNamespace = "";
   this->initialized = false;
+  this->processPublishers = false;
 }
 
 /////////////////////////////////////////////////
@@ -136,6 +137,20 @@ void Node::ProcessPublishers()
 
   for (int i = start; i < end; ++i)
     this->publishers[i]->SendMessage();
+
+  this->processPublishers = false;
+}
+
+/////////////////////////////////////////////////
+void Node::SetProcessPublishers(bool _enabled)
+{
+  this->processPublishers = _enabled;
+}
+
+/////////////////////////////////////////////////
+bool Node::GetProcessPublishers() const
+{
+  return this->processPublishers;
 }
 
 /////////////////////////////////////////////////
@@ -159,7 +174,8 @@ bool Node::HandleMessage(const std::string &_topic, MessagePtr _msg)
 /////////////////////////////////////////////////
 void Node::ProcessIncoming()
 {
-  if (!this->initialized)
+  if (!this->initialized ||
+      (this->incomingMsgs.empty() && this->incomingMsgsLocal.empty()))
     return;
 
   boost::recursive_mutex::scoped_lock lock(this->processIncomingMutex);

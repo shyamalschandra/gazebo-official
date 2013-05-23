@@ -24,25 +24,27 @@
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
+#include "gazebo/physics/Physics.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/Base.hh"
 
 using namespace gazebo;
 using namespace physics;
 
-unsigned int Base::idCounter = 0;
+uint32_t Base::idCounter = 0;
 
 //////////////////////////////////////////////////
 Base::Base(BasePtr _parent)
 : parent(_parent)
 {
   this->type = BASE;
-  this->id = ++idCounter;
+  this->id = physics::getUniqueId();
   this->saveable = true;
   this->selected = false;
 
   this->sdf.reset(new sdf::Element);
   this->sdf->AddAttribute("name", "string", "__default__", true);
+  this->name = "__default__";
 
   if (this->parent)
   {
@@ -77,11 +79,19 @@ void Base::Load(sdf::ElementPtr _sdf)
   GZ_ASSERT(_sdf != NULL, "_sdf parameter is NULL");
 
   this->sdf = _sdf;
+
+  if (this->sdf->HasAttribute("name"))
+    this->name = this->sdf->GetValueString("name");
+  else
+    this->name.clear();
+
   if (this->parent)
   {
     this->world = this->parent->GetWorld();
     this->parent->AddChild(shared_from_this());
   }
+
+  this->ComputeScopedName();
 }
 
 //////////////////////////////////////////////////
@@ -132,21 +142,17 @@ void Base::SetName(const std::string &_name)
   GZ_ASSERT(this->sdf != NULL, "Base sdf member is NULL");
   GZ_ASSERT(this->sdf->GetAttribute("name"), "Base sdf missing name attribute");
   this->sdf->GetAttribute("name")->Set(_name);
+  this->name = _name;
 }
 
 //////////////////////////////////////////////////
 std::string Base::GetName() const
 {
-  GZ_ASSERT(this->sdf != NULL, "Base sdf member is NULL");
-
-  if (this->sdf->HasAttribute("name"))
-    return this->sdf->GetValueString("name");
-  else
-    return std::string();
+  return this->name;
 }
 
 //////////////////////////////////////////////////
-unsigned int Base::GetId() const
+uint32_t Base::GetId() const
 {
   return this->id;
 }
@@ -301,19 +307,22 @@ BasePtr Base::GetByName(const std::string &_name)
 //////////////////////////////////////////////////
 std::string Base::GetScopedName() const
 {
+  return this->scopedName;
+}
+
+//////////////////////////////////////////////////
+void Base::ComputeScopedName()
+{
   BasePtr p = this->parent;
-  std::string scopedName = this->GetName();
+  this->scopedName = this->GetName();
 
   while (p)
   {
     if (p->GetParent())
-      scopedName.insert(0, p->GetName()+"::");
+      this->scopedName.insert(0, p->GetName()+"::");
     p = p->GetParent();
   }
-
-  return scopedName;
 }
-
 
 //////////////////////////////////////////////////
 bool Base::HasType(const Base::EntityType &_t) const
