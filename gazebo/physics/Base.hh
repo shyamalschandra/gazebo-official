@@ -169,7 +169,7 @@ namespace gazebo
 
       /// \brief Return the ID of this entity. This id is unique.
       /// \return Integer ID.
-      public: unsigned int GetId() const;
+      public: uint32_t GetId() const;
 
       /// \brief Set whether the object should be "saved", when the user
       /// selects to save the world to xml
@@ -287,6 +287,11 @@ namespace gazebo
       /// \return The SDF values for the object.
       public: virtual const sdf::ElementPtr GetSDF();
 
+      /// \brief Compute the scoped name of this object based on its
+      /// parents.
+      /// \sa Base::GetScopedName
+      protected: void ComputeScopedName();
+
       /// \brief The SDF values for this object.
       protected: sdf::ElementPtr sdf;
 
@@ -306,16 +311,22 @@ namespace gazebo
       private: bool saveable;
 
       /// \brief This entities ID.
-      private: unsigned int id;
+      private: uint32_t id;
 
       /// \brief Used to automaticaly chose a unique ID on creation.
-      private: static unsigned int idCounter;
+      private: static uint32_t idCounter;
 
       /// \brief The type of this object.
       private: unsigned int type;
 
       /// \brief True if selected.
       private: bool selected;
+
+      /// \brief Local copy of the sdf name.
+      private: std::string name;
+
+      /// \brief Local copy of the scoped name.
+      private: std::string scopedName;
 
       protected: friend class Entity;
     };

@@ -36,6 +36,7 @@
 #include "gazebo/sensors/Sensors.hh"
 #include "gazebo/sensors/Sensor.hh"
 
+#include "gazebo/physics/Physics.hh"
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
@@ -61,14 +62,14 @@ Link::Link(EntityPtr _parent)
 //////////////////////////////////////////////////
 Link::~Link()
 {
-  std::vector<Entity*>::iterator iter;
-
   this->attachedModels.clear();
 
-  for (unsigned int i = 0; i < this->visuals.size(); i++)
+  for (Visuals_M::iterator iter = this->visuals.begin();
+      iter != this->visuals.end(); ++iter)
   {
     msgs::Visual msg;
-    msg.set_name(this->visuals[i]);
+    msg.set_name(iter->second.name());
+    msg.set_id(iter->second.id());
     msg.set_delete_me(true);
     this->visPub->Publish(msg);
   }
@@ -108,31 +109,8 @@ void Link::Load(sdf::ElementPtr _sdf)
   this->sdf->GetElement("self_collide")->GetValue()->SetUpdateFunc(
       boost::bind(&Link::GetSelfCollide, this));
 
-  // TODO: this shouldn't be in the physics sim
-  if (this->sdf->HasElement("visual"))
-  {
-    sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
-    while (visualElem)
-    {
-      msgs::Visual msg = msgs::VisualFromSDF(visualElem);
-
-      std::string visName = this->GetScopedName() + "::" + msg.name();
-      msg.set_name(visName);
-      msg.set_parent_name(this->GetScopedName());
-      msg.set_is_static(this->IsStatic());
-
-      this->visPub->Publish(msg);
-
-      std::vector<std::string>::iterator iter;
-      iter = std::find(this->visuals.begin(), this->visuals.end(), msg.name());
-      if (iter != this->visuals.end())
-        gzthrow(std::string("Duplicate visual name[")+msg.name()+"]\n");
-
-      this->visuals.push_back(msg.name());
-
-      visualElem = visualElem->GetNextElement("visual");
-    }
-  }
+  // Parse visuals from SDF
+  this->ParseVisuals();
 
   // Load the geometries
   if (this->sdf->HasElement("collision"))
@@ -153,7 +131,7 @@ void Link::Load(sdf::ElementPtr _sdf)
     {
       std::string sensorName =
         sensors::create_sensor(sensorElem, this->GetWorld()->GetName(),
-                               this->GetScopedName());
+            this->GetScopedName(), this->GetId());
       this->sensors.push_back(sensorName);
       sensorElem = sensorElem->GetNextElement("sensor");
     }
@@ -243,23 +221,27 @@ void Link::Init()
 //////////////////////////////////////////////////
 void Link::Fini()
 {
-  std::vector<std::string>::iterator iter;
-
   this->parentJoints.clear();
   this->childJoints.clear();
   this->inertial.reset();
 
-  for (iter = this->sensors.begin(); iter != this->sensors.end(); ++iter)
+  for (std::vector<std::string>::iterator iter = this->sensors.begin();
+       iter != this->sensors.end(); ++iter)
+  {
     sensors::remove_sensor(*iter);
+  }
   this->sensors.clear();
 
-  for (iter = this->visuals.begin(); iter != this->visuals.end(); ++iter)
+  for (Visuals_M::iterator iter = this->visuals.begin();
+       iter != this->visuals.end(); ++iter)
   {
-    msgs::Request *msg = msgs::CreateRequest("entity_delete", *iter);
+    msgs::Request *msg = msgs::CreateRequest("entity_delete",
+        boost::lexical_cast<std::string>(iter->second.id()));
     this->requestPub->Publish(*msg, true);
   }
 
-  for (iter = this->cgVisuals.begin(); iter != this->cgVisuals.end(); ++iter)
+  for (std::vector<std::string>::iterator iter = this->cgVisuals.begin();
+       iter != this->cgVisuals.end(); ++iter)
   {
     msgs::Request *msg = msgs::CreateRequest("entity_delete", *iter);
     this->requestPub->Publish(*msg, true);
@@ -767,18 +749,15 @@ void Link::FillMsg(msgs::Link &_msg)
       sensor->FillMsg(*_msg.add_sensor());
   }
 
-  if (this->sdf->HasElement("visual"))
-  {
-    sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
-    while (visualElem)
-    {
-      msgs::Visual *vis = _msg.add_visual();
-      vis->CopyFrom(msgs::VisualFromSDF(visualElem));
-      vis->set_name(this->GetScopedName() + "::" + vis->name());
-      vis->set_parent_name(this->GetScopedName());
+  // Parse visuals from SDF
+  if (this->visuals.empty())
+    this->ParseVisuals();
 
-      visualElem = visualElem->GetNextElement("visual");
-    }
+  for (Visuals_M::iterator iter = this->visuals.begin();
+       iter != this->visuals.end(); ++iter)
+  {
+    msgs::Visual *vis = _msg.add_visual();
+    vis->CopyFrom(iter->second);
   }
 
   if (this->sdf->HasElement("projector"))
@@ -981,5 +960,36 @@ void Link::PublishData()
     msgs::Set(this->linkDataMsg.mutable_angular_velocity(),
         this->GetWorldAngularVel());
     this->dataPub->Publish(this->linkDataMsg);
+  }
+}
+
+/////////////////////////////////////////////////
+void Link::ParseVisuals()
+{
+  // TODO: this shouldn't be in the physics sim
+  if (this->sdf->HasElement("visual"))
+  {
+    sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
+    while (visualElem)
+    {
+      msgs::Visual msg = msgs::VisualFromSDF(visualElem);
+
+      std::string visName = this->GetScopedName() + "::" + msg.name();
+      msg.set_name(visName);
+      msg.set_id(physics::getUniqueId());
+      msg.set_parent_name(this->GetScopedName());
+      msg.set_parent_id(this->GetId());
+      msg.set_is_static(this->IsStatic());
+
+      this->visPub->Publish(msg);
+
+      Visuals_M::iterator iter = this->visuals.find(msg.id());
+      if (iter != this->visuals.end())
+        gzthrow(std::string("Duplicate visual name[")+msg.name()+"]\n");
+
+      this->visuals[msg.id()] = msg;
+
+      visualElem = visualElem->GetNextElement("visual");
+    }
   }
 }
