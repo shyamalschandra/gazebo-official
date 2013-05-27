@@ -203,12 +203,29 @@ void Model::Init()
   {
     (*iter)->Init();
   }
+
+  /// Create a cached set of links.
+  for (unsigned int i = 0; i < this->GetChildCount(); ++i)
+  {
+    if (this->GetChild(i)->HasType(Base::LINK))
+    {
+      LinkPtr link = boost::static_pointer_cast<Link>(this->GetChild(i));
+      if (link)
+        this->links.push_back(link);
+      else
+        gzerr << "Child [" << this->GetChild(i)->GetName()
+              << "] has type Base::LINK, but cannot be dynamically casted\n";
+    }
+  }
 }
 
 
 //////////////////////////////////////////////////
 void Model::Update()
 {
+  if (this->IsStatic())
+    return;
+
   this->updateMutex->lock();
 
   for (Joint_V::iterator jiter = this->joints.begin();
@@ -303,6 +320,8 @@ void Model::RemoveChild(EntityPtr _child)
         }
       }
     }
+
+    this->RemoveLink(_child->GetScopedName());
   }
 
   Entity::RemoveChild(_child->GetId());
@@ -321,6 +340,7 @@ void Model::Fini()
   this->attachedModels.clear();
   this->joints.clear();
   this->plugins.clear();
+  this->links.clear();
   this->canonicalLink.reset();
 }
 
@@ -373,9 +393,8 @@ void Model::Reset()
   }
 
   // reset link velocities when resetting model
-  Link_V links = this->GetLinks();
-  for (Link_V::iterator liter = links.begin();
-       liter!= links.end(); ++liter)
+  for (Link_V::iterator liter = this->links.begin();
+       liter!= this->links.end(); ++liter)
   {
     (*liter)->ResetPhysicsStates();
   }
@@ -594,20 +613,7 @@ LinkPtr Model::GetLinkById(unsigned int _id) const
 //////////////////////////////////////////////////
 Link_V Model::GetLinks() const
 {
-  Link_V links;
-  for (unsigned int i = 0; i < this->GetChildCount(); ++i)
-  {
-    if (this->GetChild(i)->HasType(Base::LINK))
-    {
-      LinkPtr link = boost::static_pointer_cast<Link>(this->GetChild(i));
-      if (link)
-        links.push_back(link);
-      else
-        gzerr << "Child [" << this->GetChild(i)->GetName()
-              << "] has type Base::LINK, but cannot be dynamically casted\n";
-    }
-  }
-  return links;
+  return this->links;
 }
 
 //////////////////////////////////////////////////
@@ -737,8 +743,8 @@ unsigned int Model::GetSensorCount() const
   unsigned int result = 0;
 
   // Count all the sensors on all the links
-  Link_V links = this->GetLinks();
-  for (Link_V::const_iterator iter = links.begin(); iter != links.end(); ++iter)
+  for (Link_V::const_iterator iter = this->links.begin();
+       iter != this->links.end(); ++iter)
   {
     result += (*iter)->GetSensorCount();
   }
@@ -1005,4 +1011,18 @@ void Model::SetAutoDisable(bool _auto)
 bool Model::GetAutoDisable() const
 {
   return this->sdf->GetValueBool("allow_auto_disable");
+}
+
+/////////////////////////////////////////////////
+void Model::RemoveLink(const std::string &_name)
+{
+  for (Link_V::iterator iter = this->links.begin();
+       iter != this->links.end(); ++iter)
+  {
+    if ((*iter)->GetName() == _name || (*iter)->GetScopedName() == _name)
+    {
+      this->links.erase(iter);
+      break;
+    }
+  }
 }
