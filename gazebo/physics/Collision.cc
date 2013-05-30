@@ -32,10 +32,6 @@
 #include "physics/Contact.hh"
 #include "physics/Shape.hh"
 #include "physics/BoxShape.hh"
-#include "physics/CylinderShape.hh"
-#include "physics/TrimeshShape.hh"
-#include "physics/SphereShape.hh"
-#include "physics/HeightmapShape.hh"
 #include "physics/SurfaceParams.hh"
 #include "physics/Model.hh"
 #include "physics/Link.hh"
@@ -53,8 +49,10 @@ Collision::Collision(LinkPtr _link)
   this->link = _link;
 
   this->contactsEnabled = false;
+  this->placeable = false;
 
   this->surface.reset(new SurfaceParams());
+  sdf::initFile("collision.sdf", this->sdf);
 }
 
 //////////////////////////////////////////////////
