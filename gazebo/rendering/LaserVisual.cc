@@ -93,4 +93,5 @@ void LaserVisual::OnScan(ConstLaserScanStampedPtr &_msg)
 /////////////////////////////////////////////////
 void LaserVisual::SetEmissive(const common::Color &/*_color*/)
 {
+  /// \TODO: to be implemented
 }
