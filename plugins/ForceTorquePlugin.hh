@@ -18,8 +18,8 @@
  * Desc: a test for getting force and torques at joints
  * Author: John Hsu
  */
-#ifndef GAZEBO_JOINT_TRAJECTORY_PLUGIN_HH
-#define GAZEBO_JOINT_TRAJECTORY_PLUGIN_HH
+#ifndef GAZEBO_FORCE_TORQUE_PLUGIN_HH
+#define GAZEBO_FORCE_TORQUE_PLUGIN_HH
 
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>

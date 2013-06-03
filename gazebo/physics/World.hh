@@ -38,6 +38,7 @@
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
+#include "gazebo/common/Timer.hh"
 
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
@@ -624,8 +625,12 @@ namespace gazebo
       /// \brief Period over which messages should be processed.
       private: common::Time processMsgsPeriod;
 
-      /// \brief Buffer of states.
-      private: std::deque<WorldState> states;
+      /// \brief Alternating buffer of states.
+      private: std::deque<WorldState> states[2];
+
+      /// \brief Keep track of current state buffer being updated
+      private: int currentStateBuffer;
+
       private: WorldState prevStates[2];
       private: int stateToggle;
 
@@ -663,6 +668,9 @@ namespace gazebo
 
       /// \brief Mutex to protect the log worker thread.
       private: boost::mutex logMutex;
+
+      /// \brief Mutex to protect the log state buffers
+      private: boost::mutex logBufferMutex;
 
       /// \brief Mutex to protect the deleteEntity list.
       private: boost::mutex entityDeleteMutex;
