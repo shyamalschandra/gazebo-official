@@ -158,6 +158,10 @@ namespace gazebo
       /// \param[in] _topic The topic to be unadvertised
       public: void Unadvertise(const std::string &_topic);
 
+      /// \brief Unadvertise a publisher
+      /// \param[in] _pub Publisher to unadvertise
+      public: void Unadvertise(PublisherPtr _pub);
+
       /// \brief Send a message. Use a Publisher instead of calling this
       ///        function directly.
       /// \param _topic Name of the topic
@@ -170,6 +174,13 @@ namespace gazebo
       /// \param[in] _topic The topic to use
       /// \param[in] _sublink The subscription transport object to use
       public: void ConnectPubToSub(const std::string &_topic,
+                  const SubscriptionTransportPtr _sublink)
+              GAZEBO_DEPRECATED(1.7);
+
+      /// \brief Connection a local Publisher to a remote Subscriber
+      /// \param[in] _sub The subscription information.
+      /// \param[in] _sublink The subscription transport object to use
+      public: void ConnectPubToSub(const msgs::Subscribe &_sub,
                                     const SubscriptionTransportPtr _sublink);
 
       /// \brief Connect a local Subscriber to a remote Publisher
@@ -251,6 +262,9 @@ namespace gazebo
       private: boost::mutex processNodesMutex;
 
       private: bool pauseIncoming;
+
+      /// \brief True if initialized
+      private: bool initialized;
 
       // Singleton implementation
       private: friend class SingletonT<TopicManager>;

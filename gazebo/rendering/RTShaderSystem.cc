@@ -113,6 +113,13 @@ void RTShaderSystem::AddScene(ScenePtr _scene)
   if (!this->initialized)
     return;
 
+  for (std::vector<ScenePtr>::iterator iter = this->scenes.begin();
+      iter != this->scenes.end(); ++iter)
+  {
+    if ((*iter) == _scene)
+      return;
+  }
+
   // Set the scene manager
   this->shaderGenerator->addSceneManager(_scene->GetManager());
   this->shaderGenerator->createScheme(_scene->GetName() +
@@ -181,8 +188,9 @@ void RTShaderSystem::Clear()
 void RTShaderSystem::AttachViewport(Ogre::Viewport *_viewport, ScenePtr _scene)
 {
 #if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 7
-  _viewport->setMaterialScheme(_scene->GetName() +
-      Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+  if (_viewport && _scene)
+    _viewport->setMaterialScheme(_scene->GetName() +
+        Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 #endif
 }
 
@@ -190,7 +198,8 @@ void RTShaderSystem::AttachViewport(Ogre::Viewport *_viewport, ScenePtr _scene)
 void RTShaderSystem::DetachViewport(Ogre::Viewport *_viewport, ScenePtr _scene)
 {
 #if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 7
-  _viewport->setMaterialScheme(_scene->GetName());
+  if (_viewport && _scene)
+    _viewport->setMaterialScheme(_scene->GetName());
 #endif
 }
 

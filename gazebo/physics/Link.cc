@@ -54,7 +54,6 @@ Link::Link(EntityPtr _parent)
   this->parentJoints.clear();
   this->childJoints.clear();
   this->publishData = false;
-  this->publishDataMutex = new boost::recursive_mutex();
 }
 
 
@@ -100,9 +99,6 @@ Link::~Link()
   this->requestPub.reset();
   this->dataPub.reset();
   this->connections.clear();
-
-  delete this->publishDataMutex;
-  this->publishDataMutex = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -252,6 +248,12 @@ void Link::Init()
 void Link::Fini()
 {
   std::vector<std::string>::iterator iter;
+  this->connections.clear();
+
+  {
+    boost::recursive_mutex::scoped_lock lock(this->publishDataMutex);
+    this->dataPub.reset();
+  }
 
   this->parentJoints.clear();
   this->childJoints.clear();
@@ -653,7 +655,7 @@ bool Link::SetSelected(bool _s)
 }
 
 //////////////////////////////////////////////////
-void Link::SetInertial(const InertialPtr &/*_inertial*/)
+void Link::SetInertial(InertialPtr /*_inertial*/)
 {
   gzwarn << "Link::SetMass is empty\n";
 }
@@ -865,7 +867,7 @@ std::string Link::GetSensorName(unsigned int _i) const
 }
 
 //////////////////////////////////////////////////
-void Link::AttachStaticModel(ModelPtr &_model, const math::Pose &_offset)
+void Link::AttachStaticModel(ModelPtr _model, const math::Pose &_offset)
 {
   if (!_model->IsStatic())
   {
@@ -956,12 +958,13 @@ void Link::SetKinematic(const bool &/*_kinematic*/)
 void Link::SetPublishData(bool _enable)
 {
   {
-    boost::recursive_mutex::scoped_lock lock(*this->publishDataMutex);
+    boost::recursive_mutex::scoped_lock lock(this->publishDataMutex);
     if (this->publishData == _enable)
       return;
 
     this->publishData = _enable;
   }
+
   if (_enable)
   {
     std::string topic = "~/" + this->GetScopedName();
@@ -980,7 +983,8 @@ void Link::SetPublishData(bool _enable)
 /////////////////////////////////////////////////
 void Link::PublishData()
 {
-  if (this->publishData && this->dataPub->HasConnections())
+  boost::recursive_mutex::scoped_lock lock(this->publishDataMutex);
+  if (this->publishData && this->dataPub && this->dataPub->HasConnections())
   {
     msgs::Set(this->linkDataMsg.mutable_time(), this->world->GetSimTime());
     linkDataMsg.set_name(this->GetScopedName());
@@ -988,6 +992,8 @@ void Link::PublishData()
         this->GetWorldLinearVel());
     msgs::Set(this->linkDataMsg.mutable_angular_velocity(),
         this->GetWorldAngularVel());
-    this->dataPub->Publish(this->linkDataMsg);
+
+    if (this->dataPub)
+      this->dataPub->Publish(this->linkDataMsg);
   }
 }

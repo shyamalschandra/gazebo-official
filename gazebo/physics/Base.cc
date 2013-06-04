@@ -70,6 +70,7 @@ Base::~Base()
   this->childrenEnd = this->children.end();
   this->sdf->Reset();
   this->sdf.reset();
+  this->world.reset();
 }
 
 //////////////////////////////////////////////////
@@ -192,6 +193,8 @@ void Base::AddChild(BasePtr _child)
 {
   if (_child == NULL)
     gzthrow("Cannot add a null _child to an entity");
+
+  _child->SetWorld(this->world);
 
   // Add this _child to our list
   this->children.push_back(_child);
@@ -371,7 +374,7 @@ bool Base::operator ==(const Base &ent) const
 }
 
 //////////////////////////////////////////////////
-void Base::SetWorld(const WorldPtr &_newWorld)
+void Base::SetWorld(WorldPtr _newWorld)
 {
   this->world = _newWorld;
 
@@ -383,7 +386,7 @@ void Base::SetWorld(const WorldPtr &_newWorld)
 }
 
 //////////////////////////////////////////////////
-const WorldPtr &Base::GetWorld() const
+WorldPtr Base::GetWorld() const
 {
   return this->world;
 }
