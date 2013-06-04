@@ -160,6 +160,7 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 //////////////////////////////////////////////////
 Camera::~Camera()
 {
+  boost::mutex::scoped_lock lock(this->renderMutex);
   delete [] this->saveFrameBuffer;
   delete [] this->bayerFrameBuffer;
 
@@ -169,7 +170,7 @@ Camera::~Camera()
   if (this->renderTexture)
     Ogre::TextureManager::getSingleton().remove(this->renderTexture->getName());
 
-  if (this->camera)
+  if (this->scene && this->scene->GetManager())
   {
     this->scene->GetManager()->destroyCamera(this->name);
     this->camera = NULL;
@@ -277,13 +278,18 @@ void Camera::Init()
 //////////////////////////////////////////////////
 void Camera::Fini()
 {
+  this->connections.clear();
+
+  boost::mutex::scoped_lock lock(this->renderMutex);
+  RTShaderSystem::DetachViewport(this->viewport, this->scene);
+
   if (this->gaussianNoiseCompositorListener)
     this->gaussianNoiseInstance->removeListener(
       this->gaussianNoiseCompositorListener.get());
-  RTShaderSystem::DetachViewport(this->viewport, this->scene);
-  this->renderTarget->removeAllViewports();
 
-  this->connections.clear();
+  if (this->renderTarget)
+    this->renderTarget->removeAllViewports();
+  this->viewport = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -388,6 +394,7 @@ void Camera::Render()
 //////////////////////////////////////////////////
 void Camera::RenderImpl()
 {
+  boost::mutex::scoped_lock lock(this->renderMutex);
   if (this->renderTarget)
   {
     // Render, but don't swap buffers.

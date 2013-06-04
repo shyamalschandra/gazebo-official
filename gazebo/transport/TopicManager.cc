@@ -52,6 +52,7 @@ class NodeProcess_TBB
 TopicManager::TopicManager()
 {
   this->pauseIncoming = false;
+  this->initialized = false;
   this->advertisedTopicsEnd = this->advertisedTopics.end();
 }
 
@@ -63,10 +64,14 @@ TopicManager::~TopicManager()
 //////////////////////////////////////////////////
 void TopicManager::Init()
 {
-  this->advertisedTopics.clear();
-  this->advertisedTopicsEnd = this->advertisedTopics.end();
-  this->subscribedNodes.clear();
-  this->nodes.clear();
+  if (!this->initialized)
+  {
+    this->advertisedTopics.clear();
+    this->advertisedTopicsEnd = this->advertisedTopics.end();
+    this->subscribedNodes.clear();
+    this->nodes.clear();
+  }
+  this->initialized = true;
 }
 
 //////////////////////////////////////////////////
@@ -259,18 +264,48 @@ void TopicManager::Unsubscribe(const std::string &_topic,
 
 //////////////////////////////////////////////////
 void TopicManager::ConnectPubToSub(const std::string &_topic,
-                                   const SubscriptionTransportPtr _sublink)
+                  const SubscriptionTransportPtr _sublink)
 {
   PublicationPtr publication = this->FindPublication(_topic);
-  publication->AddSubscription(_sublink);
+
+  if (publication)
+  {
+    publication->AddSubscription(_sublink);
+  }
+  else
+  {
+    gzerr << "Unable to get or create a publication on topic["
+      << _topic << "].\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void TopicManager::DisconnectPubFromSub(const std::string &topic,
-    const std::string &host, unsigned int port)
+void TopicManager::ConnectPubToSub(const msgs::Subscribe &_sub,
+                                   const SubscriptionTransportPtr _sublink)
 {
-  PublicationPtr publication = this->FindPublication(topic);
-  publication->RemoveSubscription(host, port);
+  PublicationPtr publication = this->UpdatePublications(_sub.topic(),
+      _sub.msg_type());
+
+  if (publication)
+  {
+    publication->AddSubscription(_sublink);
+  }
+  else
+  {
+    gzerr << "Unable to get or create a publication on topic["
+      << _sub.topic() << "] with message type[" << _sub.msg_type() << "]\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void TopicManager::DisconnectPubFromSub(const std::string &_topic,
+    const std::string &_host, unsigned int _port)
+{
+  PublicationPtr publication = this->FindPublication(_topic);
+  if (publication)
+    publication->RemoveSubscription(_host, _port);
+  else
+    gzerr << "Unable to get a publication on topic[" << _topic << "]\n";
 }
 
 //////////////////////////////////////////////////
@@ -355,22 +390,22 @@ void TopicManager::ConnectSubToPub(const msgs::Publish &_pub)
 
 
 //////////////////////////////////////////////////
-PublicationPtr TopicManager::UpdatePublications(const std::string &topic,
-                                                const std::string &msgType)
+PublicationPtr TopicManager::UpdatePublications(const std::string &_topic,
+                                                const std::string &_msgType)
 {
   // Find a current publication on this topic
-  PublicationPtr pub = this->FindPublication(topic);
+  PublicationPtr pub = this->FindPublication(_topic);
 
   if (pub)
   {
-    if (msgType != pub->GetMsgType())
+    if (_msgType != pub->GetMsgType())
       gzthrow("Attempting to advertise on an existing topic with"
               " a conflicting message type\n");
   }
   else
   {
-    pub = PublicationPtr(new Publication(topic, msgType));
-    this->advertisedTopics[topic] =  pub;
+    pub = PublicationPtr(new Publication(_topic, _msgType));
+    this->advertisedTopics[_topic] =  pub;
     this->advertisedTopicsEnd = this->advertisedTopics.end();
   }
 
@@ -391,6 +426,18 @@ void TopicManager::Unadvertise(const std::string &_topic)
     publication->SetLocallyAdvertised(false);
     ConnectionManager::Instance()->Unadvertise(t);
   }
+}
+
+//////////////////////////////////////////////////
+void TopicManager::Unadvertise(PublisherPtr _pub)
+{
+  GZ_ASSERT(_pub, "Unadvertising a NULL Publisher");
+
+  PublicationPtr publication = this->FindPublication(_pub->GetTopic());
+  if (publication)
+    publication->RemovePublisher(_pub);
+
+  this->Unadvertise(_pub->GetTopic());
 }
 
 //////////////////////////////////////////////////
@@ -426,10 +473,20 @@ TopicManager::GetAdvertisedTopics() const
 //////////////////////////////////////////////////
 void TopicManager::ClearBuffers()
 {
-  PublicationPtr_M::iterator iter;
-  for (iter = this->advertisedTopics.begin();
-       iter != this->advertisedTopics.end(); ++iter)
+  for (std::vector<NodePtr>::iterator iter = this->nodes.begin();
+       iter != this->nodes.end(); ++iter)
   {
+    (*iter)->ClearBuffers();
+  }
+
+  for (SubNodeMap::iterator iter = this->subscribedNodes.begin();
+       iter != this->subscribedNodes.end(); ++iter)
+  {
+    for (std::list<NodePtr>::iterator iter2 = iter->second.begin();
+        iter2 != iter->second.end(); ++iter2)
+    {
+      (*iter2)->ClearBuffers();
+    }
   }
 }
 

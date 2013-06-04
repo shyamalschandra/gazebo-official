@@ -32,7 +32,9 @@
 
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
+#include "gazebo/rendering/Scene.hh"
 
+#include "gazebo/gui/LogPlayWidget.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/Gui.hh"
 #include "gazebo/gui/InsertModelWidget.hh"
@@ -104,6 +106,7 @@ MainWindow::MainWindow()
   this->toolsWidget = new ToolsWidget();
 
   this->renderWidget = new RenderWidget(mainWidget);
+  this->logPlay = new LogPlayWidget(mainWidget);
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
@@ -130,8 +133,11 @@ MainWindow::MainWindow()
 
   mainLayout->setSpacing(0);
   mainLayout->addLayout(centerLayout, 1);
+  mainLayout->addWidget(this->logPlay);
   mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
                         Qt::AlignBottom | Qt::AlignRight);
+
+  this->logPlay->hide();
 
   mainWidget->setLayout(mainLayout);
 
@@ -199,6 +205,8 @@ void MainWindow::Init()
     this->node->Advertise<msgs::WorldControl>("~/world_control");
   this->serverControlPub =
     this->node->Advertise<msgs::ServerControl>("/gazebo/server/control");
+  this->serverControlSub = this->node->Subscribe("/gazebo/server/status",
+        &MainWindow::OnServerStatus, this);
   this->selectionPub =
     this->node->Advertise<msgs::Selection>("~/selection");
   this->scenePub =
@@ -282,6 +290,23 @@ void MainWindow::Open()
     msgs::ServerControl msg;
     msg.set_open_filename(filename);
     this->serverControlPub->Publish(msg);
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OpenLog()
+{
+  std::string filename = QFileDialog::getOpenFileName(this,
+      tr("Open log file"), "",
+      tr("SDF Files (*.log)")).toStdString();
+
+  if (!filename.empty())
+  {
+    msgs::ServerControl msg;
+    msg.set_open_log_filename(filename);
+    this->serverControlPub->Publish(msg);
+
+    this->logPlay->show();
   }
 }
 
@@ -752,6 +777,11 @@ void MainWindow::CreateActions()
   g_openAct->setStatusTip(tr("Open an world file"));
   connect(g_openAct, SIGNAL(triggered()), this, SLOT(Open()));
 
+  g_openLogAct = new QAction(tr("&Open Log"), this);
+  g_openLogAct->setShortcut(tr("Ctrl+L"));
+  g_openLogAct->setStatusTip(tr("Open an log file"));
+  connect(g_openLogAct, SIGNAL(triggered()), this, SLOT(OpenLog()));
+
   /*g_importAct = new QAction(tr("&Import Mesh"), this);
   g_importAct->setShortcut(tr("Ctrl+I"));
   g_importAct->setStatusTip(tr("Import a Collada mesh"));
@@ -1022,6 +1052,7 @@ void MainWindow::CreateMenuBar()
   this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   QMenu *fileMenu = this->menuBar->addMenu(tr("&File"));
+  fileMenu->addAction(g_openLogAct);
   // fileMenu->addAction(g_openAct);
   // fileMenu->addAction(g_importAct);
   // fileMenu->addAction(g_newAct);
@@ -1347,4 +1378,16 @@ void MainWindow::CreateEditors()
 
   // Create a Building Editor
   this->editors.push_back(new BuildingEditor(this));
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnServerStatus(ConstGzStringPtr &_msg)
+{
+  if (_msg->data() == "logfile_opened")
+  {
+    event::Events::pauseRender(true);
+    rendering::get_scene(gui::get_world())->Clear();
+    rendering::get_scene(gui::get_world())->Init();
+    event::Events::pauseRender(false);
+  }
 }

@@ -41,6 +41,7 @@ using namespace sensors;
 //////////////////////////////////////////////////
 Sensor::Sensor(SensorCategory _cat)
 {
+  this->initialized = false;
   this->category = _cat;
 
   this->sdf.reset(new sdf::Element);
@@ -87,6 +88,8 @@ void Sensor::Load(const std::string &_worldName)
 
   this->world = physics::get_world(_worldName);
 
+  GZ_ASSERT(this->world != NULL, "World pointer is NULL");
+
   // loaded, but not updated
   this->lastUpdateTime = common::Time(0.0);
 
@@ -112,7 +115,10 @@ void Sensor::Init()
 
   msgs::Sensor msg;
   this->FillMsg(msg);
-  this->sensorPub->Publish(msg);
+  if (this->sensorPub)
+    this->sensorPub->Publish(msg);
+
+  this->initialized = true;
 }
 
 //////////////////////////////////////////////////
@@ -157,9 +163,25 @@ void Sensor::Update(bool _force)
 }
 
 //////////////////////////////////////////////////
+bool Sensor::IsInitialized() const
+{
+  return this->initialized;
+}
+
+//////////////////////////////////////////////////
 void Sensor::Fini()
 {
+  this->node->Fini();
+  this->node.reset();
+
+  this->sdf->Reset();
+  this->sdf.reset();
+  this->connections.clear();
+
+  this->world.reset();
   this->plugins.clear();
+
+  this->initialized = false;
 }
 
 //////////////////////////////////////////////////
@@ -171,8 +193,11 @@ std::string Sensor::GetName() const
 //////////////////////////////////////////////////
 std::string Sensor::GetScopedName() const
 {
-  return this->world->GetName() + "::" + this->parentName + "::" +
-         this->GetName();
+  std::string worldName;
+  if (this->world)
+    worldName = this->world->GetName();
+
+  return worldName + "::" + this->parentName + "::" + this->GetName();
 }
 
 //////////////////////////////////////////////////

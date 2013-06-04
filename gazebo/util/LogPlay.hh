@@ -19,6 +19,7 @@
 #define _LOGPLAY_HH_
 
 #include <tinyxml.h>
+#include <deque>
 
 #include <list>
 #include <string>
@@ -81,6 +82,9 @@ namespace gazebo
       /// \param[out] _data Data from next entry in the log file.
       public: bool Step(std::string &_data);
 
+      /// \brief Get the number of steps in the log file.
+      public: uint64_t GetSegmentCount() const;
+
       /// \brief Get the number of chunks (steps) in the open log file.
       /// \return The number of recorded states in the log file.
       public: unsigned int GetChunkCount() const;
@@ -102,6 +106,14 @@ namespace gazebo
       /// \return Header of the open log file.
       public: std::string GetHeader() const;
 
+      /// \brief Returns true if LogPlay::Step should be called. This can be
+      /// used to override the world's paused state.
+      /// \return True if LogPlay::Step should be called.
+      public: bool NeedsStep();
+
+      /// \brief Finialize, and shutdown.
+      public: void Fini();
+
       /// \brief Helper function to get chunk data from XML.
       /// \param[in] _xml Pointer to an xml block that has state data.
       /// \param[out] _data Storage for the chunk's data.
@@ -111,8 +123,23 @@ namespace gazebo
       /// \brief Read the header from the log file.
       private: void ReadHeader();
 
+      /// \brief Helper to calculate the total number of steps in the log.
+      private: void CalculateStepCount();
+
+      /// \brief Called when a log control message is received.
+      /// \param[in] _data The log control message.
+      private: void OnLogControl(ConstLogPlayControlPtr &_data);
+
+      /// \brief Publish log status message.
+      private: void PublishStatus();
+
+      /// \brief Helper function to get step data.
+      /// \param[out] _data Populated with the step data.
+      /// \return True on success.
+      private: bool GetStep(std::string &_data);
+
       /// \brief The XML document of the log file.
-      private: TiXmlDocument xmlDoc;
+      private: TiXmlDocument *xmlDoc;
 
       /// \brief Start of the log.
       private: TiXmlElement *logStartXml;
@@ -136,9 +163,37 @@ namespace gazebo
       /// \brief The encoding for the current chunk in the log file.
       private: std::string encoding;
 
+      /// \brief The current chunk of log info.
       private: std::string currentChunk;
 
-      /// \brief This is a singleton
+      /// \brief The current step count.
+      private: uint64_t currentStep;
+
+      /// \brief Total number of segments.
+      private: uint64_t segmentCount;
+
+      /// \brief Total number of chunks.
+      private: uint64_t chunkCount;
+
+      /// \brief Transportation node.
+      private: transport::NodePtr node;
+
+      /// \brief Subscriber to log control messages.
+      private: transport::SubscriberPtr logControlSub;
+
+      /// \brief Publisher of log status messages.
+      private: transport::PublisherPtr logStatusPub;
+
+      /// \brief True if paused.
+      private: bool pause;
+
+      /// \brief Buffer of step data.
+      private: std::deque<std::string> stepBuffer;
+
+      /// \brief True if LogPlay::Step should be called.
+      private: bool needsStep;
+
+      /// \brief This is a singleton.
       private: friend class SingletonT<LogPlay>;
     };
     /// \}

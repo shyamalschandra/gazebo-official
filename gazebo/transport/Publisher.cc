@@ -26,11 +26,14 @@
 using namespace gazebo;
 using namespace transport;
 
+unsigned int Publisher::idCounter = 0;
+
 //////////////////////////////////////////////////
 Publisher::Publisher(const std::string &_topic, const std::string &_msgType,
                      unsigned int _limit, bool /*_latch*/)
   : topic(_topic), msgType(_msgType), queueLimit(_limit)
 {
+  this->id = idCounter++;
   this->queueLimitWarned = false;
   this->updatePeriod = 0;
 }
@@ -41,6 +44,7 @@ Publisher::Publisher(const std::string &_topic, const std::string &_msgType,
   : topic(_topic), msgType(_msgType), queueLimit(_limit),
     updatePeriod(0)
 {
+  this->id = idCounter++;
   if (!math::equal(_hzRate, 0.0))
     this->updatePeriod = 1.0 / _hzRate;
 
@@ -50,7 +54,13 @@ Publisher::Publisher(const std::string &_topic, const std::string &_msgType,
 //////////////////////////////////////////////////
 Publisher::~Publisher()
 {
-  if (!this->messages.empty())
+  bool empty = false;
+  {
+    boost::mutex::scoped_lock lock(this->mutex);
+    empty = this->messages.empty();
+  }
+
+  if (!empty)
     this->SendMessage();
 
   if (!this->topic.empty())
@@ -114,7 +124,7 @@ void Publisher::PublishImpl(const google::protobuf::Message &_message,
 
   {
     boost::mutex::scoped_lock lock(this->mutex);
-    if (this->prevMsg == NULL)
+    if (!this->prevMsg)
       this->prevMsg = msgPtr;
 
     this->messages.push_back(msgPtr);
@@ -168,8 +178,7 @@ void Publisher::SendMessage()
         iter != localBuffer.end(); ++iter)
     {
       // Send the latest message.
-      TopicManager::Instance()->Publish(this->topic, *iter,
-          boost::bind(&Publisher::OnPublishComplete, this));
+      TopicManager::Instance()->Publish(this->topic, *iter);
     }
 
     // Clear the local buffer.
@@ -243,4 +252,14 @@ MessagePtr Publisher::GetPrevMsgPtr() const
   if (this->prevMsg)
     return this->prevMsg;
   return MessagePtr();
+}
+
+//////////////////////////////////////////////////
+void Publisher::ClearBuffers()
+{
+  boost::mutex::scoped_lock lock(this->mutex);
+
+  this->messages.clear();
+  this->prevMsg.reset();
+  this->prevPublishTime = common::Time::Zero;
 }
