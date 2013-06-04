@@ -21,25 +21,26 @@
 
 #include <sstream>
 
-#include "msgs/msgs.hh"
-#include "msgs/MessageTypes.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/msgs/MessageTypes.hh"
 
-#include "common/Events.hh"
-#include "common/Console.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Console.hh"
 
-#include "transport/Publisher.hh"
+#include "gazebo/transport/Publisher.hh"
 
-#include "physics/Contact.hh"
-#include "physics/Shape.hh"
-#include "physics/BoxShape.hh"
-#include "physics/CylinderShape.hh"
-#include "physics/TrimeshShape.hh"
-#include "physics/SphereShape.hh"
-#include "physics/HeightmapShape.hh"
-#include "physics/SurfaceParams.hh"
-#include "physics/Model.hh"
-#include "physics/Link.hh"
-#include "physics/Collision.hh"
+#include "gazebo/physics/Physics.hh"
+#include "gazebo/physics/Contact.hh"
+#include "gazebo/physics/Shape.hh"
+#include "gazebo/physics/BoxShape.hh"
+#include "gazebo/physics/CylinderShape.hh"
+#include "gazebo/physics/TrimeshShape.hh"
+#include "gazebo/physics/SphereShape.hh"
+#include "gazebo/physics/HeightmapShape.hh"
+#include "gazebo/physics/SurfaceParams.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Collision.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -343,7 +344,10 @@ msgs::Visual Collision::CreateCollisionVisual()
 {
   msgs::Visual msg;
   msg.set_name(this->GetScopedName()+"__COLLISION_VISUAL__");
+  // Put in a unique ID because this is a special visual.
+  msg.set_id(physics::getUniqueId());
   msg.set_parent_name(this->parent->GetScopedName());
+  msg.set_parent_id(this->parent->GetId());
   msg.set_is_static(this->IsStatic());
   msg.set_cast_shadows(false);
   msgs::Set(msg.mutable_pose(), this->GetRelativePose());

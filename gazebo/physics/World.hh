@@ -427,6 +427,11 @@ namespace gazebo
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessFactoryMsgs();
 
+      /// \brief Remove a model from the cached list of models.
+      /// This does not delete the model.
+      /// \param[in] _name Name of the model to remove.
+      private: void RemoveModel(const std::string &_name);
+
       /// \brief Process all received model messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessModelMsgs();
@@ -460,9 +465,6 @@ namespace gazebo
 
       /// \brief The entity currently selected by the user.
       private: EntityPtr selectedEntity;
-
-      /// \brief Incoming message buffer.
-      private: std::vector<google::protobuf::Message> messages;
 
       /// \brief Name of the world.
       private: std::string name;
@@ -676,6 +678,9 @@ namespace gazebo
 
       /// \brief Worker thread for logging.
       private: boost::thread *logThread;
+
+      /// \brief A cached list of models. This is here for performance.
+      private: Model_V models;
     };
     /// \}
   }
