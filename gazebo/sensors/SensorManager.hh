@@ -134,7 +134,8 @@ namespace gazebo
       /// \return The name of the sensor
       public: std::string CreateSensor(sdf::ElementPtr _elem,
                                        const std::string &_worldName,
-                                       const std::string &_parentName);
+                                       const std::string &_parentName,
+                                       uint32_t _parentId);
 
       /// \brief Get a sensor
       /// \param[in] _name The name of a sensor to find.
@@ -269,7 +270,7 @@ namespace gazebo
       private: Sensor_V initSensors;
 
       /// \brief List of sensors that require initialization.
-      private: Sensor_V removeSensors;
+      private: std::vector<std::string> removeSensors;
 
       /// \brief A vector of SensorContainer pointers.
       private: typedef std::vector<SensorContainer*> SensorContainer_V;

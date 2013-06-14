@@ -15,16 +15,20 @@
  *
 */
 
-#include "common/Console.hh"
-#include "common/Exception.hh"
-#include "physics/World.hh"
-#include "physics/PhysicsFactory.hh"
-#include "physics/Physics.hh"
-#include "gazebo_config.h"
+#include <boost/thread/mutex.hpp>
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/physics/World.hh"
+#include "gazebo/physics/PhysicsFactory.hh"
+#include "gazebo/physics/Physics.hh"
+#include "gazebo/gazebo_config.h"
 
 using namespace gazebo;
 
 std::vector<physics::WorldPtr> g_worlds;
+
+boost::mutex g_uniqueIdMutex;
+uint32_t g_uniqueId = 0;
 
 /////////////////////////////////////////////////
 bool physics::load()
@@ -167,4 +171,11 @@ bool physics::worlds_running()
   }
 
   return false;
+}
+
+/////////////////////////////////////////////////
+uint32_t physics::getUniqueId()
+{
+  boost::mutex::scoped_lock lock(g_uniqueIdMutex);
+  return g_uniqueId++;
 }
