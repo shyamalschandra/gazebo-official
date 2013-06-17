@@ -40,7 +40,7 @@ SphereMaker::SphereMaker()
   this->visualMsg = new msgs::Visual();
   this->visualMsg->mutable_geometry()->set_type(msgs::Geometry::SPHERE);
 
-  this->visualMsg->mutable_material()->mutable_script()->set_uri(
+  this->visualMsg->mutable_material()->mutable_script()->add_uri(
       "gazebo://media/materials/scripts/gazebo.material");
   this->visualMsg->mutable_material()->mutable_script()->set_name(
       "Gazebo/TurquoiseGlowOutline");
@@ -157,8 +157,7 @@ void SphereMaker::OnMouseDrag(const common::MouseEvent &_event)
 std::string SphereMaker::GetSDFString()
 {
   std::ostringstream newModelStr;
-
-  newModelStr << "<sdf version='1.3'>"
+  newModelStr << "<sdf version ='" << SDF_VERSION << "'>"
     << "<model name='unit_sphere_" << counter << "'>"
     << "  <pose>0 0 0.5 0 0 0</pose>"
     << "  <link name='link'>"

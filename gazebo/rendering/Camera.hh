@@ -63,6 +63,7 @@ namespace gazebo
     class MouseEvent;
     class ViewController;
     class Scene;
+    class GaussianNoiseCompositorListener;
 
     /// \addtogroup gazebo_rendering Rendering
     /// \brief A set of rendering related class, functions, and definitions
@@ -125,9 +126,13 @@ namespace gazebo
       /// This function is called before the camera is destructed
       public: virtual void Fini();
 
+      /// Deprecated.
+      /// \sa GetInitialized
+      public: inline bool IsInitialized() const GAZEBO_DEPRECATED(1.5);
+
       /// \brief Return true if the camera has been initialized
       /// \return True if initialized was successful
-      public: inline bool IsInitialized() const {return this->initialized;}
+      public: bool GetInitialized() const;
 
       /// \internal
       /// \brief Set the ID of the window this camera is rendering into.
@@ -210,7 +215,7 @@ namespace gazebo
 
       /// \brief Get the width of the image
       /// \return Image width
-      public: unsigned int GetImageWidth() const;
+      public: virtual unsigned int GetImageWidth() const;
 
       /// \brief Get the width of the off-screen render texture
       /// \return Render texture width
@@ -218,7 +223,7 @@ namespace gazebo
 
       /// \brief Get the height of the image
       /// \return Image height
-      public: unsigned int GetImageHeight() const;
+      public: virtual unsigned int GetImageHeight() const;
 
       /// \brief Get the depth of the image
       /// \return Depth of the image
@@ -321,6 +326,10 @@ namespace gazebo
       /// \return The scene node the camera is attached to
       public: Ogre::SceneNode *GetSceneNode() const;
 
+      /// \brief Get the camera's pitch scene node
+      /// \return The pitch node the camera is attached to
+      public: Ogre::SceneNode *GetPitchNode() const;
+
       /// \brief Get a pointer to the image data
       ///
       /// Get the raw image data from a camera's buffer.
@@ -347,7 +356,7 @@ namespace gazebo
       /// through the viewport
       /// \param[in] _screenx X coordinate in the camera's viewport, in pixels.
       /// \param[in] _screeny Y coordinate in the camera's viewport, in pixels.
-      /// \param[out] _origin Origing in the world coordinate frame of the
+      /// \param[out] _origin Origin in the world coordinate frame of the
       /// resulting ray
       /// \param[out] _dir Direction of the resulting ray
       public: void GetCameraToViewportRay(int _screenx, int _screeny,
@@ -357,6 +366,9 @@ namespace gazebo
       /// \brief Set whether to capture data
       /// \param[in] _value Set to true to capture data into a memory buffer.
       public: void SetCaptureData(bool _value);
+
+      /// \brief Capture data once and save to disk
+      public: void SetCaptureDataOnce();
 
       /// \brief Set the render target
       /// \param[in] _textureName Name of the new render texture
@@ -403,7 +415,7 @@ namespace gazebo
       /// \return Direction the camera is facing
       public: math::Vector3 GetDirection() const;
 
-      /// \brief Connect a to the new image signal
+      /// \brief Connect to the new image signal
       /// \param[in] _subscriber Callback that is called when a new image is
       /// generated
       /// \return A pointer to the connection. This must be kept in scope.
@@ -446,9 +458,8 @@ namespace gazebo
       /// \return True if the _visual is in the camera's frustum
       public: bool IsVisible(const std::string &_visualName);
 
-      /// \brief Returns true if initialized
-      /// \return Ture if the camera is initialized
-      public: bool GetInitialized() const;
+      /// \brief Return true if the camera is moving due to an animation.
+      public: bool IsAnimating() const;
 
       /// \brief Move the camera to a position (this is an animated motion).
       /// \sa Camera::MoveToPositions
@@ -468,8 +479,15 @@ namespace gazebo
                                    double _time,
                                    boost::function<void()> _onComplete = NULL);
 
+      /// \brief Get the path to saved screenshots.
+      /// \return Path to saved screenshots.
+      public: std::string GetScreenshotPath() const;
+
       /// \brief Implementation of the render call
       protected: virtual void RenderImpl();
+
+      /// \brief Read image data from pixel buffer
+      protected: void ReadPixelBuffer();
 
       /// \brief Implementation of the Camera::TrackVisual call
       /// \param[in] _visualName Name of the visual to track
@@ -573,6 +591,9 @@ namespace gazebo
       /// \brief Number of saved frames.
       protected: unsigned int saveCount;
 
+      /// \brief Path to saved screenshots.
+      protected: std::string screenshotPath;
+
       /// \brief Format for saving images.
       protected: int imageFormat;
 
@@ -590,6 +611,9 @@ namespace gazebo
 
       /// \brief True to capture frames into an image buffer.
       protected: bool captureData;
+
+      /// \brief True to capture a frame once and save to disk.
+      protected: bool captureDataOnce;
 
       /// \brief True if new data is available.
       protected: bool newData;
@@ -647,6 +671,13 @@ namespace gazebo
       /// \brief Screen space ambient occlusion compositor.
       private: Ogre::CompositorInstance *ssaoInstance;
 
+      /// \brief Gaussian noise compositor
+      private: Ogre::CompositorInstance *gaussianNoiseInstance;
+
+      /// \brief Gaussian noise compositor listener
+      private: boost::shared_ptr<GaussianNoiseCompositorListener>
+        gaussianNoiseCompositorListener;
+
       /// \brief Queue of move positions.
       private: std::deque<std::pair<math::Pose, double> > moveToPositionQueue;
 
@@ -655,6 +686,28 @@ namespace gazebo
 
       /// \brief PID used to track a visual smoothly.
       private: common::PID trackVisualPID;
+
+      /// \brief Which noise type we support
+      private: enum NoiseModelType
+      {
+        NONE,
+        GAUSSIAN
+      };
+
+      /// \brief If true, apply the noise model specified by other
+      /// noise parameters
+      private: bool noiseActive;
+
+      /// \brief Which type of noise we're applying
+      private: enum NoiseModelType noiseType;
+
+      /// \brief If noiseType==GAUSSIAN, noiseMean is the mean of the
+      /// distibution from which we sample
+      private: double noiseMean;
+
+      /// \brief If noiseType==GAUSSIAN, noiseStdDev is the standard
+      /// devation of the distibution from which we sample
+      private: double noiseStdDev;
     };
     /// \}
   }

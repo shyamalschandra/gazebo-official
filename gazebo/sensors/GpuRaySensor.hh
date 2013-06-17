@@ -26,11 +26,11 @@
 #include <string>
 #include <boost/thread/mutex.hpp>
 
-#include "math/Angle.hh"
-#include "math/Pose.hh"
-#include "transport/TransportTypes.hh"
-#include "sensors/Sensor.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/math/Angle.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/sensors/Sensor.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 namespace gazebo
 {
@@ -73,6 +73,9 @@ namespace gazebo
 
       /// \brief Finalize the ray
       protected: virtual void Fini();
+
+      // Documentation inherited
+      public: virtual std::string GetTopic() const;
 
       /// \brief Returns a pointer to the internally kept rendering::GpuLaser
       /// \return Pointer to GpuLaser
@@ -160,7 +163,7 @@ namespace gazebo
 
       /// \brief Get all the ranges
       /// \param[out] _range A vector that will contain all the range data
-      public: void GetRanges(std::vector<double> &_ranges) const;
+      public: void GetRanges(std::vector<double> &_ranges);
 
       /// \brief Get detected retro (intensity) value for a ray.
       ///         Warning: If you are accessing all the ray data in a loop
@@ -192,10 +195,6 @@ namespace gazebo
       /// \return True if horizontal, false if not
       public: bool IsHorizontal() const;
 
-      /// Deprecated
-      /// \sa GetRayCountRatio
-      public: double Get1stRatio() const GAZEBO_DEPRECATED;
-
       /// \brief Return the ratio of horizontal ray count to vertical ray
       /// count.
       ///
@@ -203,10 +202,6 @@ namespace gazebo
       /// is the total number of data points returned. When range count
       /// != ray count, then values are interpolated between rays.
       public: double GetRayCountRatio() const;
-
-      /// Deprecated
-      /// \sa GetRangeCountRatio
-      public: double Get2ndRatio() const GAZEBO_DEPRECATED;
 
       /// \brief Return the ratio of horizontal range count to vertical
       /// range count.
@@ -216,47 +211,24 @@ namespace gazebo
       /// != ray count, then values are interpolated between rays.
       public: double GetRangeCountRatio() const;
 
-      /// Deprecated.
-      /// \sa GetHorzFOV
-      public: double GetHFOV() const GAZEBO_DEPRECATED;
-
       /// \brief Get the horizontal field of view of the laser sensor.
       /// \return The horizontal field of view of the laser sensor.
       public: double GetHorzFOV() const;
-
-      /// Deprecated
-      public: double GetCHFOV() const GAZEBO_DEPRECATED;
 
       /// \brief Get Cos Horz field-of-view
       /// \return 2 * atan(tan(this->hfov/2) / cos(this->vfov/2))
       public: double GetCosHorzFOV() const;
 
-      /// Deprecated
-      /// \sa GetVertFOV
-      public: double GetVFOV() const GAZEBO_DEPRECATED;
-
       /// \brief Get the vertical field-of-view.
       public: double GetVertFOV() const;
-
-      /// Deprecated
-      /// \sa GetCosVertFOV
-      public: double GetCVFOV() const GAZEBO_DEPRECATED;
 
       /// \brief Get Cos Vert field-of-view
       /// \return 2 * atan(tan(this->vfov/2) / cos(this->hfov/2))
       public: double GetCosVertFOV() const;
 
-      /// Deprecated.
-      /// \sa GetHorzHalfAngle
-      public: double GetHAngle() const GAZEBO_DEPRECATED;
-
       /// \brief Get (horizontal_max_angle + horizontal_min_angle) * 0.5
       /// \return (horizontal_max_angle + horizontal_min_angle) * 0.5
       public: double GetHorzHalfAngle() const;
-
-      /// Deprecated.
-      /// \sa GetVertHalfAngle
-      public: double GetVAngle() const GAZEBO_DEPRECATED;
 
       /// \brief Get (vertical_max_angle + vertical_min_angle) * 0.5
       /// \return (vertical_max_angle + vertical_min_angle) * 0.5
@@ -271,6 +243,9 @@ namespace gazebo
       /// \brief Disconnect Laser Frame.
       /// \param[in,out] _conn Connection pointer to disconnect.
       public: void DisconnectNewLaserFrame(event::ConnectionPtr &_conn);
+
+      // Documentation inherited
+      public: virtual bool IsActive();
 
       /// \brief Scan SDF elementz.
       protected: sdf::ElementPtr scanElem;
@@ -287,33 +262,6 @@ namespace gazebo
       /// \brief Camera SDF element.
       protected: sdf::ElementPtr cameraElem;
 
-      /// \brief Number of cameras.
-      protected: unsigned int cameraCount;
-
-      /// \brief Horizontal field-of-view.
-      protected: double hfov;
-
-      /// \brief Vertical field-of-view.
-      protected: double vfov;
-
-      /// \brief Cos horizontal field-of-view.
-      protected: double chfov;
-
-      /// \brief Cos vertical field-of-view.
-      protected: double cvfov;
-
-      /// \brief Horizontal half angle.
-      protected: double horzHalfAngle;
-
-      /// \brief Vertical half angle.
-      protected: double vertHalfAngle;
-
-      /// \brief Near clip plane.
-      protected: double near;
-
-      /// \brief Far clip plane.
-      protected: double far;
-
       /// \brief Horizontal ray count.
       protected: unsigned int horzRayCount;
 
@@ -326,14 +274,8 @@ namespace gazebo
       /// \brief Vertical range count.
       protected: unsigned int vertRangeCount;
 
-      /// \brief Ray count ratio.
-      protected: double rayCountRatio;
-
       /// \brief Range count ratio.
       protected: double rangeCountRatio;
-
-      /// \brief True if the sensor is horizontal only.
-      protected: bool isHorizontal;
 
       /// \brief GPU laser rendering.
       private: rendering::GpuLaserPtr laserCam;
@@ -345,7 +287,34 @@ namespace gazebo
       private: boost::mutex mutex;
 
       /// \brief Laser message to publish data.
-      private: msgs::LaserScan laserMsg;
+      private: msgs::LaserScanStamped laserMsg;
+
+      /// \brief Parent entity of gpu ray sensor
+      private: physics::EntityPtr parentEntity;
+
+      /// \brief Publisher to publish ray sensor data
+      private: transport::PublisherPtr scanPub;
+
+      // Which noise type we support
+      private: enum NoiseModelType
+      {
+        NONE,
+        GAUSSIAN
+      };
+
+      // If true, apply the noise model specified by other noise parameters
+      private: bool noiseActive;
+
+      // Which type of noise we're applying
+      private: enum NoiseModelType noiseType;
+
+      // If noiseType==GAUSSIAN, noiseMean is the mean of the distibution
+      // from which we sample
+      private: double noiseMean;
+
+      // If noiseType==GAUSSIAN, noiseStdDev is the standard devation of
+      // the distibution from which we sample
+      private: double noiseStdDev;
     };
     /// \}
   }

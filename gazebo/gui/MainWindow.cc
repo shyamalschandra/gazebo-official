@@ -14,31 +14,48 @@
  * limitations under the License.
  *
  */
+#include "gazebo_config.h"
 
-#include "gazebo.hh"
-#include "common/Console.hh"
-#include "common/Exception.hh"
-#include "common/Events.hh"
+#include "gazebo/gui/TopicSelector.hh"
+#include "gazebo/gui/DataLogger.hh"
+#include "gazebo/gui/viewers/ViewFactory.hh"
+#include "gazebo/gui/viewers/TopicView.hh"
+#include "gazebo/gui/viewers/ImageView.hh"
 
-#include "transport/Node.hh"
-#include "transport/Transport.hh"
+#include "gazebo/gazebo.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Events.hh"
 
-#include "rendering/UserCamera.hh"
-#include "rendering/RenderEvents.hh"
+#include "gazebo/transport/Node.hh"
+#include "gazebo/transport/Transport.hh"
 
-#include "gui/Actions.hh"
-#include "gui/Gui.hh"
-#include "gui/InsertModelWidget.hh"
-#include "gui/SkyWidget.hh"
-#include "gui/ModelListWidget.hh"
-#include "gui/RenderWidget.hh"
-#include "gui/ToolsWidget.hh"
-#include "gui/GLWidget.hh"
-#include "gui/MainWindow.hh"
-#include "gui/GuiEvents.hh"
+#include "gazebo/rendering/UserCamera.hh"
+#include "gazebo/rendering/RenderEvents.hh"
+
+#include "gazebo/gui/Actions.hh"
+#include "gazebo/gui/Gui.hh"
+#include "gazebo/gui/InsertModelWidget.hh"
+#include "gazebo/gui/ModelListWidget.hh"
+#include "gazebo/gui/RenderWidget.hh"
+#include "gazebo/gui/ToolsWidget.hh"
+#include "gazebo/gui/GLWidget.hh"
+#include "gazebo/gui/MainWindow.hh"
+#include "gazebo/gui/GuiEvents.hh"
+#include "gazebo/gui/building/BuildingEditor.hh"
+#include "gazebo/gui/terrain/TerrainEditor.hh"
+
+#include "sdf/sdf.hh"
+
+#ifdef HAVE_QWT
+#include "gazebo/gui/Diagnostics.hh"
+#endif
+
 
 using namespace gazebo;
 using namespace gui;
+
+#define MINIMUM_TAB_WIDTH 250
 
 extern bool g_fullscreen;
 
@@ -46,16 +63,20 @@ extern bool g_fullscreen;
 MainWindow::MainWindow()
   : renderWidget(0)
 {
+  this->menuLayout = NULL;
+  this->menuBar = NULL;
   this->setObjectName("mainWindow");
 
+  // Do these things first.
+  {
+    this->CreateActions();
+  }
+
+  this->inputStepSize = 1;
   this->requestMsg = NULL;
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init();
   gui::set_world(this->node->GetTopicNamespace());
-
-  (void) new QShortcut(Qt::CTRL + Qt::Key_Q, this, SLOT(close()));
-  this->CreateActions();
-  this->CreateMenus();
 
   QWidget *mainWidget = new QWidget;
   QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -63,6 +84,8 @@ MainWindow::MainWindow()
   this->setCentralWidget(mainWidget);
 
   this->setDockOptions(QMainWindow::AnimatedDocks);
+
+  this->leftColumn = new QStackedWidget(this);
 
   this->modelListWidget = new ModelListWidget(this);
   InsertModelWidget *insertModel = new InsertModelWidget(this);
@@ -73,7 +96,10 @@ MainWindow::MainWindow()
   this->tabWidget->addTab(insertModel, "Insert");
   this->tabWidget->setSizePolicy(QSizePolicy::Expanding,
                                  QSizePolicy::Expanding);
-  this->tabWidget->setMinimumWidth(250);
+  this->tabWidget->setMinimumWidth(MINIMUM_TAB_WIDTH);
+  this->AddToLeftColumn("default", this->tabWidget);
+
+  this->CreateEditors();
 
   this->toolsWidget = new ToolsWidget();
 
@@ -82,19 +108,21 @@ MainWindow::MainWindow()
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
   QSplitter *splitter = new QSplitter(this);
-  splitter->addWidget(this->tabWidget);
+  splitter->addWidget(this->leftColumn);
   splitter->addWidget(this->renderWidget);
   splitter->addWidget(this->toolsWidget);
 
   QList<int> sizes;
-  sizes.push_back(300);
-  sizes.push_back(700);
-  sizes.push_back(300);
+  sizes.push_back(MINIMUM_TAB_WIDTH);
+  sizes.push_back(this->width() - MINIMUM_TAB_WIDTH);
+  sizes.push_back(0);
   splitter->setSizes(sizes);
-  splitter->setStretchFactor(0, 1);
+
+  splitter->setStretchFactor(0, 0);
   splitter->setStretchFactor(1, 2);
-  splitter->setStretchFactor(2, 1);
-  splitter->setCollapsible(1, false);
+  splitter->setStretchFactor(2, 0);
+  splitter->setCollapsible(2, false);
+  splitter->setHandleWidth(10);
 
   centerLayout->addWidget(splitter);
   centerLayout->setContentsMargins(0, 0, 0, 0);
@@ -129,6 +157,18 @@ MainWindow::MainWindow()
   this->connections.push_back(
      event::Events::ConnectSetSelectedEntity(
        boost::bind(&MainWindow::OnSetSelectedEntity, this, _1, _2)));
+
+  this->connections.push_back(
+      gui::Events::ConnectInputStepSize(
+      boost::bind(&MainWindow::OnInputStepSizeChanged, this, _1)));
+
+  gui::ViewFactory::RegisterAll();
+
+  // Do these things last
+  {
+    (void) new QShortcut(Qt::CTRL + Qt::Key_Q, this, SLOT(close()));
+    this->CreateMenus();
+  }
 }
 
 /////////////////////////////////////////////////
@@ -203,6 +243,34 @@ void MainWindow::New()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::Diagnostics()
+{
+#ifdef HAVE_QWT
+  gui::Diagnostics *diag = new gui::Diagnostics(this);
+  diag->show();
+#endif
+}
+
+/////////////////////////////////////////////////
+void MainWindow::SelectTopic()
+{
+  TopicSelector *selector = new TopicSelector(this);
+  selector->exec();
+  std::string topic = selector->GetTopic();
+  std::string msgType = selector->GetMsgType();
+  delete selector;
+
+  if (!topic.empty())
+  {
+    TopicView *view = ViewFactory::NewView(msgType, topic, this);
+    if (view)
+      view->show();
+    else
+      gzerr << "Unable to create viewer for message type[" << msgType << "]\n";
+  }
+}
+
+/////////////////////////////////////////////////
 void MainWindow::Open()
 {
   std::string filename = QFileDialog::getOpenFileName(this,
@@ -236,43 +304,143 @@ void MainWindow::Import()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::Save()
-{
-  msgs::ServerControl msg;
-  msg.set_save_world_name(get_world());
-  this->serverControlPub->Publish(msg);
-}
-
-/////////////////////////////////////////////////
 void MainWindow::SaveAs()
 {
   std::string filename = QFileDialog::getSaveFileName(this,
       tr("Save World"), QString(),
       tr("SDF Files (*.xml *.sdf *.world)")).toStdString();
 
-  if (!filename.empty())
+  // Return if the user has canceled.
+  if (filename.empty())
+    return;
+
+  g_saveAct->setEnabled(true);
+  this->saveFilename = filename;
+  this->Save();
+}
+
+/////////////////////////////////////////////////
+void MainWindow::Save()
+{
+  // Get the latest world in SDF.
+  boost::shared_ptr<msgs::Response> response =
+    transport::request(get_world(), "world_sdf");
+
+  msgs::GzString msg;
+  std::string msgData;
+
+  // Make sure the response is correct
+  if (response->response() != "error" && response->type() == msg.GetTypeName())
   {
-    msgs::ServerControl msg;
-    msg.set_save_world_name(get_world());
-    msg.set_save_filename(filename);
-    this->serverControlPub->Publish(msg);
+    // Parse the response message
+    msg.ParseFromString(response->serialized_data());
+
+    // Parse the string into sdf, so that we can insert user camera settings.
+    sdf::SDF sdf_parsed;
+    sdf_parsed.SetFromString(msg.data());
+    // Check that sdf contains world
+    if (sdf_parsed.root->HasElement("world"))
+    {
+      sdf::ElementPtr world = sdf_parsed.root->GetElement("world");
+      sdf::ElementPtr guiElem = world->GetElement("gui");
+
+      if (guiElem->HasAttribute("fullscreen"))
+        guiElem->GetAttribute("fullscreen")->Set(g_fullscreen);
+
+      sdf::ElementPtr cameraElem = guiElem->GetElement("camera");
+      rendering::UserCameraPtr cam = gui::get_active_camera();
+
+      cameraElem->GetElement("pose")->Set(cam->GetWorldPose());
+      cameraElem->GetElement("view_controller")->Set(
+          cam->GetViewControllerTypeString());
+      // TODO: export track_visual properties as well.
+      msgData = sdf_parsed.root->ToString("");
+    }
+    else
+    {
+      msgData = msg.data();
+      gzerr << "Unable to parse world file to add user camera settings.\n";
+    }
+
+    // Open the file
+    std::ofstream out(this->saveFilename.c_str(), std::ios::out);
+
+    if (!out)
+    {
+      QMessageBox msgBox;
+      std::string str = "Unable to open file: " + this->saveFilename + "\n";
+      str += "Check file permissions.";
+      msgBox.setText(str.c_str());
+      msgBox.exec();
+    }
+    else
+      out << msgData;
+
+    out.close();
+  }
+  else
+  {
+    QMessageBox msgBox;
+    msgBox.setText("Unable to save world.\n"
+                   "Unable to retrieve SDF world description from server.");
+    msgBox.exec();
   }
 }
 
 /////////////////////////////////////////////////
 void MainWindow::About()
 {
-  std::string helpTxt = "Gazebo is a 3D multi-robot simulator with dynamics. ";
-  helpTxt += "It is capable of simulating articulated robots in complex and ";
-  helpTxt += "realistic environments.\n\n";
+  std::string helpTxt;
 
-  helpTxt += "Web site:\t\thttp://gazebosim.org\n";
-  helpTxt += "Tutorials:\t\thttp://gazebosim.org/wiki/tutorials\n";
-  helpTxt += "User Guide:\t\thttp://gazebosim.org/user_guide\n";
-  helpTxt += "API:\t\thttp://gazebosim.org/api\n";
-  helpTxt += "SDF:\t\thttp://gazebosim.org/sdf\n";
-  helpTxt += "Messages:\t\thttp://gazebosim.org/msgs\n";
-  QMessageBox::about(this, tr("About Gazebo"), tr(helpTxt.c_str()));
+  helpTxt = "<table>"
+    "<tr><td style='padding-right:20px'>"
+    "<img src=':images/gazebo_neg_60x71.png'/></td>"
+    "<td>";
+  helpTxt += GAZEBO_VERSION_HEADER;
+  helpTxt += "</td></tr></table>";
+
+  helpTxt += "<div style='margin-left: 10px'>"
+  "<div>"
+    "<table>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>Tutorials:</td>"
+        "<td><a href='http://gazebosim.org/wiki/tutorials' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/wiki/tutorials</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>User Guide:</td>"
+        "<td><a href='http://gazebosim.org/user_guide' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/user_guide</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>API:</td>"
+        "<td><a href='http://gazebosim.org/api' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/api</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>SDF:</td>"
+        "<td><a href='http://gazebosim.org/sdf' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/sdf</a></td>"
+      "</tr>"
+      "<tr>"
+        "<td style='padding-right: 10px;'>Messages:</td>"
+        "<td><a href='http://gazebosim.org/msgs' "
+        "style='text-decoration: none; color: #f58113'>"
+        "http://gazebosim.org/msgs</a></td>"
+      "</tr>"
+    "</table>"
+  "</div>";
+
+  QPixmap icon(":images/gazebo_neg_60x71.png");
+  QMessageBox aboutBox(this);
+  aboutBox.setWindowTitle("About Gazebo");
+  aboutBox.setTextFormat(Qt::RichText);
+  aboutBox.setText(QString::fromStdString(helpTxt));
+  aboutBox.exec();
 }
 
 /////////////////////////////////////////////////
@@ -281,7 +449,8 @@ void MainWindow::Play()
   msgs::WorldControl msg;
   msg.set_pause(false);
 
-  g_pauseAct->setChecked(false);
+  g_pauseAct->setVisible(true);
+  g_playAct->setVisible(false);
   this->worldControlPub->Publish(msg);
 }
 
@@ -291,7 +460,8 @@ void MainWindow::Pause()
   msgs::WorldControl msg;
   msg.set_pause(true);
 
-  g_playAct->setChecked(false);
+  g_pauseAct->setVisible(false);
+  g_playAct->setVisible(true);
   this->worldControlPub->Publish(msg);
 }
 
@@ -299,9 +469,15 @@ void MainWindow::Pause()
 void MainWindow::Step()
 {
   msgs::WorldControl msg;
-  msg.set_step(true);
+  msg.set_multi_step(this->inputStepSize);
 
   this->worldControlPub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnInputStepSizeChanged(int _value)
+{
+  this->inputStepSize = _value;
 }
 
 /////////////////////////////////////////////////
@@ -400,6 +576,15 @@ void MainWindow::CreateDirectionalLight()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::CaptureScreenshot()
+{
+  rendering::UserCameraPtr cam = gui::get_active_camera();
+  cam->SetCaptureDataOnce();
+  this->renderWidget->DisplayOverlayMsg(
+      "Screenshot saved in: " + cam->GetScreenshotPath(), 2000);
+}
+
+/////////////////////////////////////////////////
 void MainWindow::InsertModel()
 {
 }
@@ -411,7 +596,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showFullScreen();
     this->renderWidget->showFullScreen();
-    this->tabWidget->hide();
+    this->leftColumn->hide();
     this->toolsWidget->hide();
     this->menuBar->hide();
   }
@@ -419,7 +604,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showNormal();
     this->renderWidget->showNormal();
-    this->tabWidget->show();
+    this->leftColumn->show();
     this->toolsWidget->show();
     this->menuBar->show();
   }
@@ -429,7 +614,14 @@ void MainWindow::OnFullScreen(bool _value)
 void MainWindow::Reset()
 {
   rendering::UserCameraPtr cam = gui::get_active_camera();
-  cam->SetWorldPose(math::Pose(5, -5, 2, 0, GZ_DTOR(11.31), GZ_DTOR(135)));
+
+  math::Vector3 camPos(5, -5, 2);
+  math::Vector3 lookAt(0, 0, 0);
+  math::Vector3 delta = camPos - lookAt;
+
+  double yaw = atan2(delta.x, delta.y);
+  double pitch = atan2(delta.z, sqrt(delta.x*delta.x + delta.y*delta.y));
+  cam->SetWorldPose(math::Pose(camPos, math::Vector3(0, pitch, yaw)));
 }
 
 /////////////////////////////////////////////////
@@ -447,7 +639,7 @@ void MainWindow::ShowCollisions()
 void MainWindow::ShowGrid()
 {
   msgs::Scene msg;
-  msg.set_name("default");
+  msg.set_name(gui::get_world());
   msg.set_grid(g_showGridAct->isChecked());
   this->scenePub->Publish(msg);
 }
@@ -472,6 +664,17 @@ void MainWindow::SetTransparent()
   else
     transport::requestNoReply(this->node->GetTopicNamespace(),
         "set_opaque", "all");
+}
+
+/////////////////////////////////////////////////
+void MainWindow::SetWireframe()
+{
+  if (g_viewWireframeAct->isChecked())
+    transport::requestNoReply(this->node->GetTopicNamespace(),
+        "set_wireframe", "all");
+  else
+    transport::requestNoReply(this->node->GetTopicNamespace(),
+        "set_solid", "all");
 }
 
 /////////////////////////////////////////////////
@@ -516,6 +719,13 @@ void MainWindow::Orbit()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::DataLogger()
+{
+  gui::DataLogger *dataLogger = new gui::DataLogger(this);
+  dataLogger->show();
+}
+
+/////////////////////////////////////////////////
 void MainWindow::CreateActions()
 {
   /*g_newAct = new QAction(tr("&New World"), this);
@@ -523,6 +733,19 @@ void MainWindow::CreateActions()
   g_newAct->setStatusTip(tr("Create a new world"));
   connect(g_newAct, SIGNAL(triggered()), this, SLOT(New()));
   */
+
+  g_topicVisAct = new QAction(tr("Topic Visualization"), this);
+  g_topicVisAct->setShortcut(tr("Ctrl+T"));
+  g_topicVisAct->setStatusTip(tr("Select a topic to visualize"));
+  connect(g_topicVisAct, SIGNAL(triggered()), this, SLOT(SelectTopic()));
+
+#ifdef HAVE_QWT
+  /*g_diagnosticsAct = new QAction(tr("Diagnostic Plot"), this);
+  g_diagnosticsAct->setShortcut(tr("Ctrl+U"));
+  g_diagnosticsAct->setStatusTip(tr("Plot diagnostic information"));
+  connect(g_diagnosticsAct, SIGNAL(triggered()), this, SLOT(Diagnostics()));
+  */
+#endif
 
   g_openAct = new QAction(tr("&Open World"), this);
   g_openAct->setShortcut(tr("Ctrl+O"));
@@ -535,12 +758,11 @@ void MainWindow::CreateActions()
   connect(g_importAct, SIGNAL(triggered()), this, SLOT(Import()));
   */
 
-  /*
   g_saveAct = new QAction(tr("&Save World"), this);
   g_saveAct->setShortcut(tr("Ctrl+S"));
   g_saveAct->setStatusTip(tr("Save world"));
+  g_saveAct->setEnabled(false);
   connect(g_saveAct, SIGNAL(triggered()), this, SLOT(Save()));
-  */
 
   g_saveAsAct = new QAction(tr("Save World &As"), this);
   g_saveAsAct->setShortcut(tr("Ctrl+Shift+S"));
@@ -571,22 +793,46 @@ void MainWindow::CreateActions()
   g_resetWorldAct->setStatusTip(tr("Reset the world"));
   connect(g_resetWorldAct, SIGNAL(triggered()), this, SLOT(OnResetWorld()));
 
-  g_playAct = new QAction(QIcon(":/images/play.png"), tr("Play"), this);
-  g_playAct->setStatusTip(tr("Run the world"));
-  g_playAct->setCheckable(true);
-  g_playAct->setChecked(true);
-  connect(g_playAct, SIGNAL(triggered()), this, SLOT(Play()));
+  QActionGroup *editorGroup = new QActionGroup(this);
 
-  g_pauseAct = new QAction(QIcon(":/images/pause.png"), tr("Pause"), this);
-  g_pauseAct->setStatusTip(tr("Pause the world"));
-  g_pauseAct->setCheckable(true);
-  g_pauseAct->setChecked(false);
-  connect(g_pauseAct, SIGNAL(triggered()), this, SLOT(Pause()));
+  g_editBuildingAct = new QAction(tr("&Building Editor"), editorGroup);
+  g_editBuildingAct->setShortcut(tr("Ctrl+B"));
+  g_editBuildingAct->setStatusTip(tr("Enter Building Editor Mode"));
+  g_editBuildingAct->setCheckable(true);
+  g_editBuildingAct->setChecked(false);
+
+  g_editTerrainAct = new QAction(tr("&Terrain Editor"), editorGroup);
+  g_editTerrainAct->setShortcut(tr("Ctrl+E"));
+  g_editTerrainAct->setStatusTip(tr("Enter Terrain Editor Mode"));
+  g_editTerrainAct->setCheckable(true);
+  g_editTerrainAct->setChecked(false);
 
   g_stepAct = new QAction(QIcon(":/images/end.png"), tr("Step"), this);
   g_stepAct->setStatusTip(tr("Step the world"));
   connect(g_stepAct, SIGNAL(triggered()), this, SLOT(Step()));
+  QIcon icon = g_stepAct->icon();
 
+  // step action's icon is already in gray scale so there is no change in
+  // appearance when it is disabled. So create a custom semi-transparent
+  // icon for the disabled state.
+  QPixmap pixmap(":/images/end.png");
+  QPainter p(&pixmap);
+  p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+  p.fillRect(pixmap.rect(), QColor(0, 0, 0, 100));
+  icon.addPixmap(pixmap, QIcon::Disabled);
+  g_stepAct->setIcon(icon);
+
+  g_playAct = new QAction(QIcon(":/images/play.png"), tr("Play"), this);
+  g_playAct->setStatusTip(tr("Run the world"));
+  g_playAct->setVisible(false);
+  connect(g_playAct, SIGNAL(triggered()), this, SLOT(Play()));
+  connect(g_playAct, SIGNAL(changed()), this, SLOT(OnPlayActionChanged()));
+  this->OnPlayActionChanged();
+
+  g_pauseAct = new QAction(QIcon(":/images/pause.png"), tr("Pause"), this);
+  g_pauseAct->setStatusTip(tr("Pause the world"));
+  g_pauseAct->setVisible(true);
+  connect(g_pauseAct, SIGNAL(triggered()), this, SLOT(Pause()));
 
   g_arrowAct = new QAction(QIcon(":/images/arrow.png"),
       tr("Selection Mode"), this);
@@ -683,6 +929,13 @@ void MainWindow::CreateActions()
   connect(g_transparentAct, SIGNAL(triggered()), this,
           SLOT(SetTransparent()));
 
+  g_viewWireframeAct = new QAction(tr("Wireframe"), this);
+  g_viewWireframeAct->setStatusTip(tr("Wireframe"));
+  g_viewWireframeAct->setCheckable(true);
+  g_viewWireframeAct->setChecked(false);
+  connect(g_viewWireframeAct, SIGNAL(triggered()), this,
+          SLOT(SetWireframe()));
+
   g_showCOMAct = new QAction(tr("Center of Mass"), this);
   g_showCOMAct->setStatusTip(tr("Show COM"));
   g_showCOMAct->setCheckable(true);
@@ -717,60 +970,118 @@ void MainWindow::CreateActions()
   g_orbitAct = new QAction(tr("Orbit View Control"), this);
   g_orbitAct->setStatusTip(tr("Orbit View Style"));
   connect(g_orbitAct, SIGNAL(triggered()), this, SLOT(Orbit()));
+
+  g_dataLoggerAct = new QAction(tr("&Log Data"), this);
+  g_dataLoggerAct->setShortcut(tr("Ctrl+D"));
+  g_dataLoggerAct->setStatusTip(tr("Data Logging Utility"));
+  connect(g_dataLoggerAct, SIGNAL(triggered()), this, SLOT(DataLogger()));
+
+  g_screenshotAct = new QAction(QIcon(":/images/screenshot.png"),
+      tr("Screenshot"), this);
+  g_screenshotAct->setStatusTip(tr("Take a screenshot"));
+  connect(g_screenshotAct, SIGNAL(triggered()), this,
+      SLOT(CaptureScreenshot()));
+}
+
+/////////////////////////////////////////////////
+void MainWindow::ShowMenuBar(QMenuBar *_bar)
+{
+  if (!this->menuLayout)
+    this->menuLayout = new QHBoxLayout;
+
+  // Remove all widgets from the menubar
+  QLayoutItem *child = NULL;
+  while ((child = this->menuLayout->takeAt(0)) != 0)
+  {
+    delete child;
+  }
+
+  if (!_bar)
+  {
+    this->CreateMenuBar();
+    this->menuLayout->addWidget(this->menuBar);
+  }
+  else
+  {
+    if (this->menuBar)
+      this->menuBar->hide();
+    this->menuLayout->addWidget(_bar);
+  }
+
+  this->menuLayout->addStretch(5);
+  this->menuLayout->setContentsMargins(0, 0, 0, 0);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::CreateMenuBar()
+{
+  if (this->menuBar)
+    delete this->menuBar;
+
+  this->menuBar = new QMenuBar;
+  this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+  QMenu *fileMenu = this->menuBar->addMenu(tr("&File"));
+  // fileMenu->addAction(g_openAct);
+  // fileMenu->addAction(g_importAct);
+  // fileMenu->addAction(g_newAct);
+  fileMenu->addAction(g_saveAct);
+  fileMenu->addAction(g_saveAsAct);
+  fileMenu->addSeparator();
+  fileMenu->addAction(g_quitAct);
+
+  QMenu *editMenu = this->menuBar->addMenu(tr("&Edit"));
+  editMenu->addAction(g_resetModelsAct);
+  editMenu->addAction(g_resetWorldAct);
+  editMenu->addAction(g_editBuildingAct);
+
+  // \TODO: Add this back in when implementing the full Terrain Editor spec.
+  // editMenu->addAction(g_editTerrainAct);
+
+  QMenu *viewMenu = this->menuBar->addMenu(tr("&View"));
+  viewMenu->addAction(g_showGridAct);
+  viewMenu->addSeparator();
+
+  viewMenu->addAction(g_transparentAct);
+  viewMenu->addAction(g_viewWireframeAct);
+  viewMenu->addSeparator();
+  viewMenu->addAction(g_showCollisionsAct);
+  viewMenu->addAction(g_showJointsAct);
+  viewMenu->addAction(g_showCOMAct);
+  viewMenu->addAction(g_showContactsAct);
+  viewMenu->addSeparator();
+
+  viewMenu->addAction(g_resetAct);
+  viewMenu->addAction(g_fullScreenAct);
+  viewMenu->addSeparator();
+  // viewMenu->addAction(g_fpsAct);
+  viewMenu->addAction(g_orbitAct);
+
+  QMenu *windowMenu = this->menuBar->addMenu(tr("&Window"));
+  windowMenu->addAction(g_topicVisAct);
+  windowMenu->addSeparator();
+  windowMenu->addAction(g_dataLoggerAct);
+
+#ifdef HAVE_QWT
+  // windowMenu->addAction(g_diagnosticsAct);
+#endif
+
+  this->menuBar->addSeparator();
+
+  QMenu *helpMenu = this->menuBar->addMenu(tr("&Help"));
+  helpMenu->addAction(g_aboutAct);
 }
 
 /////////////////////////////////////////////////
 void MainWindow::CreateMenus()
 {
-  QHBoxLayout *menuLayout = new QHBoxLayout;
+  this->ShowMenuBar();
 
   QFrame *frame = new QFrame;
-  this->menuBar =  new QMenuBar;
-  this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-
-  menuLayout->addWidget(this->menuBar);
-  menuLayout->addStretch(5);
-  menuLayout->setContentsMargins(0, 0, 0, 0);
-
-  frame->setLayout(menuLayout);
+  frame->setLayout(this->menuLayout);
   frame->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
 
   this->setMenuWidget(frame);
-
-  this->fileMenu = this->menuBar->addMenu(tr("&File"));
-  // this->fileMenu->addAction(g_openAct);
-  // this->fileMenu->addAction(g_importAct);
-  // this->fileMenu->addAction(g_newAct);
-  // this->fileMenu->addAction(g_saveAct);
-  this->fileMenu->addAction(g_saveAsAct);
-  this->fileMenu->addSeparator();
-  this->fileMenu->addAction(g_quitAct);
-
-  this->editMenu = this->menuBar->addMenu(tr("&Edit"));
-  this->editMenu->addAction(g_resetModelsAct);
-  this->editMenu->addAction(g_resetWorldAct);
-
-  this->viewMenu = this->menuBar->addMenu(tr("&View"));
-  this->viewMenu->addAction(g_showGridAct);
-  this->viewMenu->addSeparator();
-
-  this->viewMenu->addAction(g_transparentAct);
-  this->viewMenu->addAction(g_showCollisionsAct);
-  this->viewMenu->addAction(g_showJointsAct);
-  this->viewMenu->addAction(g_showCOMAct);
-  this->viewMenu->addAction(g_showContactsAct);
-  this->viewMenu->addSeparator();
-
-  this->viewMenu->addAction(g_resetAct);
-  this->viewMenu->addAction(g_fullScreenAct);
-  this->viewMenu->addSeparator();
-  // this->viewMenu->addAction(g_fpsAct);
-  this->viewMenu->addAction(g_orbitAct);
-
-  this->menuBar->addSeparator();
-
-  this->helpMenu = this->menuBar->addMenu(tr("&Help"));
-  this->helpMenu->addAction(g_aboutAct);
 }
 
 /////////////////////////////////////////////////
@@ -827,11 +1138,6 @@ void MainWindow::OnGUI(ConstGUIPtr &_msg)
       math::Pose cam_pose(cam_pose_pos, cam_pose_rot);
 
       cam->SetWorldPose(cam_pose);
-    }
-
-    if (_msg->camera().has_view_controller())
-    {
-      cam->SetViewController(_msg->camera().view_controller());
     }
 
     if (_msg->camera().has_view_controller())
@@ -975,15 +1281,30 @@ void MainWindow::OnSetSelectedEntity(const std::string &_name,
 /////////////////////////////////////////////////
 void MainWindow::OnStats(ConstWorldStatisticsPtr &_msg)
 {
-  if (_msg->paused() && g_playAct->isChecked())
+  if (_msg->paused() && g_pauseAct->isVisible())
   {
-    g_playAct->setChecked(false);
-    g_pauseAct->setChecked(true);
+    g_pauseAct->setVisible(false);
+    g_playAct->setVisible(true);
   }
-  else if (!_msg->paused() && !g_playAct->isChecked())
+  else if (!_msg->paused() && !g_playAct->isVisible())
   {
-    g_playAct->setChecked(true);
-    g_pauseAct->setChecked(false);
+    g_pauseAct->setVisible(true);
+    g_playAct->setVisible(false);
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnPlayActionChanged()
+{
+  if (g_playAct->isVisible())
+  {
+    g_stepAct->setToolTip("Step the world");
+    g_stepAct->setEnabled(true);
+  }
+  else
+  {
+    g_stepAct->setToolTip("Pause the world before stepping");
+    g_stepAct->setEnabled(false);
   }
 }
 
@@ -994,84 +1315,36 @@ void MainWindow::ItemSelected(QTreeWidgetItem *_item, int)
 }
 
 /////////////////////////////////////////////////
-TreeViewDelegate::TreeViewDelegate(QTreeView *_view, QWidget *_parent)
-  : QItemDelegate(_parent), view(_view)
+void MainWindow::AddToLeftColumn(const std::string &_name, QWidget *_widget)
 {
+  this->leftColumn->addWidget(_widget);
+  this->leftColumnStack[_name] = this->leftColumn->count()-1;
 }
 
 /////////////////////////////////////////////////
-void TreeViewDelegate::paint(QPainter *painter,
-                          const QStyleOptionViewItem &option,
-                          const QModelIndex &index) const
+void MainWindow::ShowLeftColumnWidget(const std::string &_name)
 {
-  const QAbstractItemModel *model = index.model();
-  Q_ASSERT(model);
+  std::map<std::string, int>::iterator iter = this->leftColumnStack.find(_name);
 
-  if (!model->parent(index).isValid())
-  {
-    QRect r = option.rect;
-
-    QColor orange(245, 129, 19);
-    QColor blue(71, 99, 183);
-    QColor grey(100, 100, 100);
-
-    if (option.state & QStyle::State_Open ||
-        option.state & QStyle::State_MouseOver)
-    {
-      painter->setPen(blue);
-      painter->setBrush(QBrush(blue));
-    }
-    else
-    {
-      painter->setPen(grey);
-      painter->setBrush(QBrush(grey));
-    }
-
-    if (option.state & QStyle::State_Open)
-      painter->drawLine(r.left()+8, r.top() + (r.height()*0.5 - 5),
-                        r.left()+8, r.top() + r.height()-1);
-
-    painter->save();
-    painter->setRenderHints(QPainter::Antialiasing |
-                            QPainter::TextAntialiasing);
-
-    painter->drawRoundedRect(r.left()+4, r.top() + (r.height()*0.5 - 5),
-                             10, 10, 20.0, 10.0, Qt::RelativeSize);
-
-
-    // draw text
-    QRect textrect = QRect(r.left() + 20, r.top(),
-                           r.width() - 40,
-                           r.height());
-
-    QString text = elidedText(
-        option.fontMetrics,
-        textrect.width(),
-        Qt::ElideMiddle,
-        model->data(index, Qt::DisplayRole).toString());
-
-    if (option.state & QStyle::State_MouseOver)
-      painter->setPen(QPen(orange, 1));
-    else
-      painter->setPen(QPen(grey, 1));
-
-    this->view->style()->drawItemText(painter, textrect, Qt::AlignLeft,
-        option.palette, this->view->isEnabled(), text);
-
-    painter->restore();
-  }
+  if (iter != this->leftColumnStack.end())
+    this->leftColumn->setCurrentIndex(iter->second);
   else
-  {
-      QItemDelegate::paint(painter, option, index);
-  }
+    gzerr << "Widget with name[" << _name << "] has not been added to the left"
+      << " column stack.\n";
 }
 
 /////////////////////////////////////////////////
-QSize TreeViewDelegate::sizeHint(const QStyleOptionViewItem &_opt,
-    const QModelIndex &_index) const
+RenderWidget *MainWindow::GetRenderWidget() const
 {
-  QStyleOptionViewItem option = _opt;
-  QSize sz = QItemDelegate::sizeHint(_opt, _index) + QSize(2, 2);
-  return sz;
+  return this->renderWidget;
 }
 
+/////////////////////////////////////////////////
+void MainWindow::CreateEditors()
+{
+  // Create a Terrain Editor
+  this->editors.push_back(new TerrainEditor(this));
+
+  // Create a Building Editor
+  this->editors.push_back(new BuildingEditor(this));
+}

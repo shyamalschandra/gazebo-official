@@ -16,6 +16,8 @@
 */
 
 #include <sys/stat.h>
+#include <gazebo/common/Console.hh>
+#include <gazebo/common/Exception.hh>
 #include "sdf/sdf.hh"
 
 std::vector<std::string> params;
@@ -48,6 +50,19 @@ bool file_exists(const std::string &_filename)
 /////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
+  bool success = false;
+
+  try
+  {
+    // Initialize the informational logger. This will log warnings and errors.
+    gazebo::common::Console::Instance()->Init("gzsdf.log");
+  }
+  catch(gazebo::common::Exception &_e)
+  {
+    _e.Print();
+    std::cerr << "Error initializing log file" << std::endl;
+  }
+
   // Get parameters from command line
   for (int i = 1; i < argc; i++)
   {
@@ -94,15 +109,19 @@ int main(int argc, char** argv)
       std::cerr << "Error: SDF parsing the xml failed\n";
       return -1;
     }
+
+    success = true;
     std::cout << "Check complete\n";
   }
   else if (params[0] == "describe")
   {
     sdf->PrintDescription();
+    success = true;
   }
   else if (params[0] == "doc")
   {
     sdf->PrintDoc();
+    success = true;
   }
   else if (params[0] == "convert")
   {
@@ -119,8 +138,20 @@ int main(int argc, char** argv)
     TiXmlDocument xmlDoc;
     if (xmlDoc.LoadFile(params[1]))
     {
-      sdf::Converter::Convert(&xmlDoc, SDF::version, true);
-      xmlDoc.SaveFile(params[1]);
+      if (sdf::Converter::Convert(&xmlDoc, SDF::version, true))
+      {
+        success = true;
+
+        // Create an XML printer to control formatting
+        TiXmlPrinter printer;
+        printer.SetIndent("  ");
+        xmlDoc.Accept(&printer);
+
+        // Output the XML
+        std::ofstream stream(params[1].c_str(), std::ios_base::out);
+        stream << printer.Str();
+        stream.close();
+      }
     }
     else
       std::cerr << "Unable to load file[" << params[1] << "]\n";
@@ -142,6 +173,7 @@ int main(int argc, char** argv)
       std::cerr << "Error: SDF parsing the xml failed\n";
       return -1;
     }
+    success = true;
     sdf->PrintValues();
   }
   else
@@ -150,7 +182,7 @@ int main(int argc, char** argv)
     std::cerr << "Error: Unknown option[" << params[0] << "]\n";
   }
 
-  if (params[0] != "print" && params[0] != "doc")
+  if (params[0] != "print" && params[0] != "doc" && success)
     std::cout << "Success\n";
   return 0;
 }

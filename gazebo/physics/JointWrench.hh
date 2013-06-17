@@ -19,8 +19,8 @@
  * Date: 10 Nov 2009
  */
 
-#ifndef _JOINTFEEDBACK_HH_
-#define _JOINTFEEDBACK_HH_
+#ifndef _JOINT_WRENCH_HH_
+#define _JOINT_WRENCH_HH_
 
 #include "math/Vector3.hh"
 
@@ -33,8 +33,8 @@ namespace gazebo
 
     /// \class JointWrench JointWrench.hh physics/physics.hh
     /// \brief Wrench information from a joint.  These are
-    /// forces and torques on parent and child Links, relative to the Link's
-    /// center of mass.
+    /// forces and torques on parent and child Links, relative to
+    /// the Joint frame immediately after rotation.
     class JointWrench
     {
       /// \brief Operator =
@@ -47,6 +47,32 @@ namespace gazebo
 
                 this->body1Torque = _wrench.body1Torque;
                 this->body2Torque = _wrench.body2Torque;
+                return *this;
+              }
+
+      /// \brief Operator +
+      /// \param[in] _wrench Joint wrench to add
+      /// \return *this
+      public: inline JointWrench &operator +(const JointWrench &_wrench)
+              {
+                this->body1Force += _wrench.body1Force;
+                this->body2Force += _wrench.body2Force;
+
+                this->body1Torque += _wrench.body1Torque;
+                this->body2Torque += _wrench.body2Torque;
+                return *this;
+              }
+
+      /// \brief Operator -
+      /// \param[in] _wrench Joint wrench to subtract
+      /// \return *this
+      public: inline JointWrench &operator -(const JointWrench &_wrench)
+              {
+                this->body1Force -= _wrench.body1Force;
+                this->body2Force -= _wrench.body2Force;
+
+                this->body1Torque -= _wrench.body1Torque;
+                this->body2Torque -= _wrench.body2Torque;
                 return *this;
               }
 

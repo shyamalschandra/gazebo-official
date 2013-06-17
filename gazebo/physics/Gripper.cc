@@ -61,8 +61,8 @@ void Gripper::Load(sdf::ElementPtr _sdf)
 
   sdf::ElementPtr grasp_check = _sdf->GetElement("grasp_check");
   this->min_contact_count = grasp_check->GetValueUInt("min_contact_count");
-  this->attachSteps = grasp_check->GetValueInt("attachSteps");
-  this->detachSteps = grasp_check->GetValueInt("detachSteps");
+  this->attachSteps = grasp_check->GetValueInt("attach_steps");
+  this->detachSteps = grasp_check->GetValueInt("detach_steps");
 
   sdf::ElementPtr palmLinkElem = _sdf->GetElement("palm_link");
   this->palmLink = this->model->GetLink(palmLinkElem->GetValueString());
@@ -71,7 +71,6 @@ void Gripper::Load(sdf::ElementPtr _sdf)
           << "] not found!\n";
 
   sdf::ElementPtr gripperLinkElem = _sdf->GetElement("gripper_link");
-
 
   while (gripperLinkElem)
   {
@@ -85,8 +84,7 @@ void Gripper::Load(sdf::ElementPtr _sdf)
       if (collIter != this->collisions.end())
         continue;
       collision->SetContactsEnabled(true);
-      this->connections.push_back(collision->ConnectContact(
-            boost::bind(&Gripper::OnContact, this, _1, _2)));
+
       this->collisions[collision->GetScopedName()] = collision;
     }
     gripperLinkElem = gripperLinkElem->GetNextElement("gripper_link");
@@ -152,13 +150,13 @@ void Gripper::HandleAttach()
 
     if (this->collisions.find(name1) == this->collisions.end())
     {
-      cc[name1] = boost::shared_dynamic_cast<Collision>(
+      cc[name1] = boost::dynamic_pointer_cast<Collision>(
           this->world->GetEntity(this->contacts[i].collision1));
       contactCounts[name1] += 1;
     }
     if (this->collisions.find(name2) == this->collisions.end())
     {
-      cc[name2] = boost::shared_dynamic_cast<Collision>(
+      cc[name2] = boost::dynamic_pointer_cast<Collision>(
           this->world->GetEntity(this->contacts[i].collision2));
       contactCounts[name2] += 1;
     }
@@ -189,7 +187,7 @@ void Gripper::HandleAttach()
           this->attached = true;
 
           this->fixedJoint->Load(this->palmLink,
-              cc[iter->first]->GetLink(), math::Pose(0, 0, 0, 0, 0, 0));
+              cc[iter->first]->GetLink(), math::Pose());
           this->fixedJoint->Init();
           this->fixedJoint->SetHighStop(0, 0);
           this->fixedJoint->SetLowStop(0, 0);
@@ -213,10 +211,10 @@ void Gripper::HandleDetach()
 void Gripper::OnContact(const std::string &/*_collisionName*/,
                         const physics::Contact &_contact)
 {
-  CollisionPtr collision1 = boost::shared_dynamic_cast<Collision>(
+  CollisionPtr collision1 = boost::dynamic_pointer_cast<Collision>(
         this->world->GetEntity(_contact.collision1));
 
-  CollisionPtr collision2 = boost::shared_dynamic_cast<Collision>(
+  CollisionPtr collision2 = boost::dynamic_pointer_cast<Collision>(
         this->world->GetEntity(_contact.collision1));
 
   if ((collision1 && collision1->IsStatic()) ||

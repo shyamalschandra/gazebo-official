@@ -26,11 +26,11 @@
 #include <iostream>
 #include <cmath>
 
-#include "math/Helpers.hh"
-#include "math/Angle.hh"
-#include "math/Vector3.hh"
-#include "math/Matrix3.hh"
-#include "math/Matrix4.hh"
+#include "gazebo/math/Helpers.hh"
+#include "gazebo/math/Angle.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Matrix3.hh"
+#include "gazebo/math/Matrix4.hh"
 
 namespace gazebo
 {
@@ -150,6 +150,12 @@ namespace gazebo
     /// are yaw, pitch, roll.
     /// \param[in] vec  Euler angle
     public: void SetFromEuler(const Vector3 &_vec);
+
+    /// \brief Set the quaternion from Euler angles.
+    /// \param[in] _roll Roll angle (radians).
+    /// \param[in] _pitch Roll angle (radians).
+    /// \param[in] _yaw Roll angle (radians).
+    public: void SetFromEuler(double _roll, double _pitch, double _yaw);
 
     /// \brief Return the rotation in Euler angles
     /// \return This quaternion as an Euler vector
@@ -360,7 +366,8 @@ namespace gazebo
                 const gazebo::math::Quaternion &_q)
     {
       Vector3 v(_q.GetAsEuler());
-      _out << v.x << " " << v.y << " " << v.z;
+      _out << precision(v.x, 6) << " " << precision(v.y, 6) << " "
+           << precision(v.z, 6);
       return _out;
     }
 

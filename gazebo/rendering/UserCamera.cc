@@ -21,11 +21,12 @@
 
 #include <sstream>
 
-#include "rendering/ogre_gazebo.h"
+#include "gazebo/rendering/ogre_gazebo.h"
 
-#include "common/Console.hh"
-#include "common/Exception.hh"
-#include "common/Events.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Events.hh"
 
 #include "gazebo/rendering/selection_buffer/SelectionBuffer.hh"
 #include "gazebo/rendering/RenderEngine.hh"
@@ -58,6 +59,7 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
   this->viewController = NULL;
 
   this->selectionBuffer = NULL;
+
   // Set default UserCamera render rate to 30Hz
   this->SetRenderRate(30.0);
 }
@@ -90,9 +92,9 @@ void UserCamera::Load()
 void UserCamera::Init()
 {
   this->orbitViewController = new OrbitViewController(
-      boost::shared_dynamic_cast<UserCamera>(shared_from_this()));
+      boost::dynamic_pointer_cast<UserCamera>(shared_from_this()));
   this->fpsViewController = new FPSViewController(
-      boost::shared_dynamic_cast<UserCamera>(shared_from_this()));
+      boost::dynamic_pointer_cast<UserCamera>(shared_from_this()));
   this->viewController = this->orbitViewController;
 
   Camera::Init();
@@ -103,18 +105,20 @@ void UserCamera::Init()
   // lighting. When using deferred shading, the light's use geometry that
   // trigger shaders. If the far clip is too close, the light's geometry is
   // clipped and wholes appear in the lighting.
-  if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::VERTEX)
+  switch (RenderEngine::Instance()->GetRenderPathType())
   {
-    this->SetClipDist(0.1, 100);
-  }
-  else if (RenderEngine::Instance()->GetRenderPathType() ==
-           RenderEngine::FORWARD)
-  {
-    this->SetClipDist(0.1, 5000);
-  }
-  else
-  {
-    this->SetClipDist(0.1, 5000);
+    case RenderEngine::VERTEX:
+      this->SetClipDist(0.1, 100);
+      break;
+
+    case RenderEngine::DEFERRED:
+    case RenderEngine::FORWARD:
+      this->SetClipDist(.1, 5000);
+      break;
+
+    default:
+      this->SetClipDist(.1, 5000);
+      break;
   }
 
   // Removing for now because the axis doesn't not move properly when the
@@ -190,31 +194,7 @@ void UserCamera::AnimationComplete()
 void UserCamera::PostRender()
 {
   Camera::PostRender();
-  sdf::ElementPtr elem = this->sdf->GetElement("save");
-
-  if (elem->GetValueBool("enabled"))
-  {
-    std::string path = elem->GetValueString("path");
-
-    char tmp[1024];
-    if (!path.empty())
-    {
-      snprintf(tmp, sizeof(tmp), "%s/%s-%04d.jpg", path.c_str(),
-          this->name.c_str(), this->saveCount);
-    }
-    else
-    {
-      snprintf(tmp, sizeof(tmp),
-          "%s-%04d.jpg", this->name.c_str(), this->saveCount);
-    }
-
-    // TODO: Use the window manager instead.
-    // this->window->writeContentsToFile(tmp);
-
-    this->saveCount++;
-  }
 }
-
 
 //////////////////////////////////////////////////
 void UserCamera::Fini()
@@ -256,7 +236,7 @@ void UserCamera::HandleKeyReleaseEvent(const std::string &_key)
 
 /////////////////////////////////////////////////
 bool UserCamera::AttachToVisualImpl(VisualPtr _visual, bool _inheritOrientation,
-                                     double _minDist, double _maxDist)
+                                     double /*_minDist*/, double /*_maxDist*/)
 {
   Camera::AttachToVisualImpl(_visual, _inheritOrientation);
   if (_visual)
@@ -284,8 +264,6 @@ bool UserCamera::AttachToVisualImpl(VisualPtr _visual, bool _inheritOrientation,
     pos.z = bb.max.z;
 
     this->SetViewController(OrbitViewController::GetTypeString(), pos);
-    static_cast<OrbitViewController*>(this->viewController)->SetDistanceRange(
-        _minDist, _maxDist);
   }
   else
     this->SetViewController(FPSViewController::GetTypeString());
@@ -340,6 +318,18 @@ void UserCamera::SetViewController(const std::string &type,
 }
 
 //////////////////////////////////////////////////
+unsigned int UserCamera::GetImageWidth() const
+{
+  return this->viewport->getActualWidth();
+}
+
+//////////////////////////////////////////////////
+unsigned int UserCamera::GetImageHeight() const
+{
+  return this->viewport->getActualHeight();
+}
+
+//////////////////////////////////////////////////
 void UserCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
 {
   if (this->viewport)
@@ -359,6 +349,9 @@ void UserCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
       this->gui->Resize(this->viewport->getActualWidth(),
                         this->viewport->getActualHeight());
     }
+
+    delete [] this->saveFrameBuffer;
+    this->saveFrameBuffer = NULL;
   }
 }
 
@@ -372,13 +365,15 @@ void UserCamera::SetViewportDimensions(float /*x_*/, float /*y_*/,
 //////////////////////////////////////////////////
 float UserCamera::GetAvgFPS() const
 {
-  return WindowManager::Instance()->GetAvgFPS(this->windowId);
+  return RenderEngine::Instance()->GetWindowManager()->GetAvgFPS(
+      this->windowId);
 }
 
 //////////////////////////////////////////////////
 float UserCamera::GetTriangleCount() const
 {
-  return WindowManager::Instance()->GetTriangleCount(this->windowId);
+  return RenderEngine::Instance()->GetWindowManager()->GetTriangleCount(
+      this->windowId);
 }
 
 //////////////////////////////////////////////////
@@ -396,7 +391,6 @@ void UserCamera::ShowVisual(bool /*_s*/)
 //////////////////////////////////////////////////
 bool UserCamera::MoveToPosition(const math::Pose &_pose, double _time)
 {
-  this->orbitViewController->SetFocalPoint(_pose.pos);
   return Camera::MoveToPosition(_pose, _time);
 }
 
@@ -498,7 +492,7 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
   this->animState->setLoop(false);
   this->prevAnimTime = common::Time::GetWallTime();
 
-  this->orbitViewController->SetFocalPoint(_visual->GetWorldPose().pos);
+  // this->orbitViewController->SetFocalPoint(_visual->GetWorldPose().pos);
   this->onAnimationComplete =
     boost::bind(&UserCamera::OnMoveToVisualComplete, this);
 }
@@ -506,8 +500,6 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
 /////////////////////////////////////////////////
 void UserCamera::OnMoveToVisualComplete()
 {
-  this->orbitViewController->SetYaw(this->GetWorldPose().rot.GetAsEuler().z);
-  this->orbitViewController->SetPitch(this->GetWorldPose().rot.GetAsEuler().y);
   this->orbitViewController->SetDistance(this->GetWorldPose().pos.Distance(
         this->orbitViewController->GetFocalPoint()));
 }
@@ -518,7 +510,10 @@ void UserCamera::SetRenderTarget(Ogre::RenderTarget *_target)
   Camera::SetRenderTarget(_target);
 
   this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL);
-  this->gui->Init(this->renderTarget);
+
+  if (this->gui)
+    this->gui->Init(this->renderTarget);
+
   this->initialized = true;
 
   this->selectionBuffer = new SelectionBuffer(this->name,
@@ -542,6 +537,7 @@ VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos,
                                 std::string &_mod)
 {
   VisualPtr result;
+
   if (!this->selectionBuffer)
     return result;
 
@@ -609,4 +605,11 @@ VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos) const
   }
 
   return result;
+}
+
+//////////////////////////////////////////////////
+std::string UserCamera::GetViewControllerTypeString()
+{
+  GZ_ASSERT(this->viewController, "ViewController != NULL");
+  return this->viewController->GetTypeString();
 }

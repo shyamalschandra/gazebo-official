@@ -1,5 +1,7 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 
+add_subdirectory(test)
+
 set (msgs
   axis.proto
   boxgeom.proto
@@ -10,6 +12,7 @@ set (msgs
   contacts.proto
   contactsensor.proto
   cylindergeom.proto
+  diagnostics.proto
   factory.proto
   fog.proto
   friction.proto
@@ -32,9 +35,14 @@ set (msgs
   joint_animation.proto
   joint_cmd.proto
   joint_wrench.proto
+  joint_wrench_stamped.proto
   laserscan.proto
+  laserscan_stamped.proto
   light.proto
   link.proto
+  link_data.proto
+  log_control.proto
+  log_status.proto
   material.proto
   meshgeom.proto
   model.proto
@@ -50,6 +58,7 @@ set (msgs
   pose_stamped.proto
   pose_trajectory.proto
   pose_v.proto
+  poses_stamped.proto
   projector.proto
   publishers.proto
   publish.proto
@@ -75,18 +84,23 @@ set (msgs
   vector3d.proto
   visual.proto
   world_control.proto
-  world_reset.proto 
-  world_stats.proto 
-  world_modify.proto 
+  world_reset.proto
+  world_stats.proto
+  world_modify.proto
 )
+
+set (msgs_tests_sources
+  msgs_TEST.cc
+)
+gz_build_tests(${msgs_tests_sources})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 gz_add_executable(gazebomsgs_out generator/GazeboGenerator.cc generator/gazebo_generator.cc)
 target_link_libraries(gazebomsgs_out ${PROTOBUF_LIBRARY} ${PROTOBUF_PROTOC_LIBRARY} pthread)
 
-set (sources msgs.cc)
-set (headers msgs.hh)
+set (sources msgs.cc MsgFactory.cc)
+set (headers msgs.hh MsgFactory.hh)
 
 set(PROTO_SRCS)
 set(PROTO_HDRS)

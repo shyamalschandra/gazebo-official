@@ -15,9 +15,8 @@
  *
 */
 /*
- * Desc: 3D position interface.
- * Author: Sachin Chitta and John Hsu
- * Date: 10 June 2008
+ * Desc: a test for setting joint angles
+ * Author: John Hsu
  */
 #ifndef GAZEBO_JOINT_TRAJECTORY_PLUGIN_HH
 #define GAZEBO_JOINT_TRAJECTORY_PLUGIN_HH
@@ -45,7 +44,9 @@ namespace gazebo
     public: void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf);
 
     /// \brief Update the controller
-    private: void UpdateStates();
+    /// \param[in] _info Update information provided by the server.
+    private: void UpdateStates(const common::UpdateInfo &_info);
+
 
     private: void FixLink(physics::LinkPtr link);
     private: void UnfixLink();

@@ -64,7 +64,7 @@ namespace gazebo
       public: virtual void UpdateParameters(sdf::ElementPtr _sdf);
 
       /// \brief Set the encapsulated collsion object.
-      /// \param[in] _placeable True to make the object m.
+      /// \param[in] _placeable True to make the object movable.
       public: void SetCollision(bool _placeable);
 
       /// \brief Return whether this collision is movable.
@@ -178,9 +178,6 @@ namespace gazebo
       public: void DisconnectContact(event::ConnectionPtr &_conn)
               {contact.Disconnect(_conn);}
 
-      /// \brief DEPRECATED.
-      public: void FillCollisionMsg(msgs::Collision &_msg) GAZEBO_DEPRECATED;
-
       /// \brief Fill a collision message.
       /// \param[out] _msg The message to fill with this collision's data.
       public: void FillMsg(msgs::Collision &_msg);
@@ -193,6 +190,16 @@ namespace gazebo
       /// \return The surface parameters.
       public: inline SurfaceParamsPtr GetSurface() const
               {return this->surface;}
+
+      /// \brief Number of contacts allowed for this collision.
+      /// This overrides global value (in PhysicsEngine) if specified.
+      /// \param[in] _maxContacts max num contacts allowed for this collision.
+      public: virtual void SetMaxContacts(double _maxContacts);
+
+      /// \brief returns number of contacts allowed for this collision.
+      /// This overrides global value (in PhysicsEngine) if specified.
+      /// \return max num contacts allowed for this collision.
+      public: virtual int GetMaxContacts();
 
       /// \brief Helper function used to create a collision visual message.
       /// \return Visual message for a collision.
@@ -220,7 +227,11 @@ namespace gazebo
       /// \brief The laser retro value.
       private: float laserRetro;
 
+      /// \brief Collision state.
       private: CollisionState state;
+
+      /// \brief Number of contact points allowed for this collision.
+      private: int maxContacts;
     };
     /// \}
   }
