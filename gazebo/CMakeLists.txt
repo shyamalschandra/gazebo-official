@@ -14,6 +14,7 @@ link_directories(
   ${ogre_library_dirs}
   ${Boost_LIBRARY_DIRS}
   ${PROJECT_BINARY_DIR}/test
+  ${Simbody_LIB_DIR} #HACK!! remove
 )
 
 if(HAVE_URDFDOM_HEADERS)
@@ -46,7 +47,7 @@ add_dependencies(gazebo_sensors gazebo_rendering)
 if(HAVE_BULLET)
   add_dependencies(gazebo_physics_bullet gazebo_msgs)
 endif()
-if (HAVE_Simbody)
+if (HAVE_SIMBODY)
   add_dependencies(gazebo_physics_simbody gazebo_msgs)
 endif()
 

@@ -33,6 +33,7 @@ set(tests
   laser.cc
   nondefault_world.cc
   physics.cc
+  physics_spawn_drop.cc
   pioneer2dx.cc
   transport.cc
   server_fixture.cc
