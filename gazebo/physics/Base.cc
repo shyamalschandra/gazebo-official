@@ -80,7 +80,7 @@ void Base::Load(sdf::ElementPtr _sdf)
   this->sdf = _sdf;
 
   if (this->sdf->HasAttribute("name"))
-    this->name = this->sdf->GetValueString("name");
+    this->name = this->sdf->Get<std::string>("name");
   else
     this->name.clear();
 

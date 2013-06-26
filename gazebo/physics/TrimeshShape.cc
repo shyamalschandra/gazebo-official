@@ -19,6 +19,7 @@
  * Date: 16 Oct 2009
  */
 
+#include "gazebo/common/Console.hh"
 #include "gazebo/common/Common.hh"
 #include "gazebo/common/MeshManager.hh"
 #include "gazebo/common/Mesh.hh"
@@ -54,7 +55,7 @@ void TrimeshShape::Init()
   this->mesh = NULL;
   common::MeshManager *meshManager = common::MeshManager::Instance();
 
-  filename = common::find_file(this->sdf->GetValueString("uri"));
+  filename = common::find_file(this->sdf->Get<std::string>("uri"));
 
   if (filename == "__default__" || filename.empty())
   {
@@ -73,15 +74,15 @@ void TrimeshShape::Init()
   {
     sdf::ElementPtr submeshElem = this->sdf->GetElement("submesh");
     this->submesh = new common::SubMesh(
-      this->mesh->GetSubMesh(submeshElem->GetValueString("name")));
+      this->mesh->GetSubMesh(submeshElem->Get<std::string>("name")));
 
     if (!this->submesh)
       gzthrow("Unable to get submesh with name[" +
-          submeshElem->GetValueString("name") + "]");
+          submeshElem->Get<std::string>("name") + "]");
 
     // Center the submesh if specified in SDF.
     if (submeshElem->HasElement("center") &&
-        submeshElem->GetValueBool("center"))
+        submeshElem->Get<bool>("center"))
     {
       this->submesh->Center();
     }
@@ -97,7 +98,7 @@ void TrimeshShape::SetScale(const math::Vector3 &_scale)
 //////////////////////////////////////////////////
 math::Vector3 TrimeshShape::GetSize() const
 {
-  return this->sdf->GetValueVector3("scale");
+  return this->sdf->Get<math::Vector3>("scale");
 }
 
 //////////////////////////////////////////////////
@@ -109,7 +110,7 @@ std::string TrimeshShape::GetFilename() const
 //////////////////////////////////////////////////
 std::string TrimeshShape::GetMeshURI() const
 {
-  return this->sdf->GetValueString("uri");
+  return this->sdf->Get<std::string>("uri");
 }
 
 //////////////////////////////////////////////////
