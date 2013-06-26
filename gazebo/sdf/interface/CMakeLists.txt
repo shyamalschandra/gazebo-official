@@ -8,10 +8,11 @@ set (gtest_sources
 )
 
 if (HAVE_URDFDOM AND HAVE_URDFDOM_HEADERS)
-  include_directories(SYSTEM ${urdfdom_INCLUDE_DIRS}
-                             ${urdfdom_headers_INCLUDE_DIRS}
-                             ${console_bridge_INCLUDE_DIRS}
-                             ${CMAKE_SOURCE_DIR}/deps/opende/include)
+  include_directories(SYSTEM
+    ${urdfdom_INCLUDE_DIRS}
+    ${urdfdom_headers_INCLUDE_DIRS}
+    ${console_bridge_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/deps/opende/include)
 
   set (sources ${sources} parser_urdf.cc)
   set (headers ${headers} parser_urdf.hh)
@@ -37,5 +38,7 @@ else(HAVE_URDFDOM AND HAVE_URDFDOM_HEADERS)
     gazebo_common ${tinyxml_libraries} ${Boost_LIBRARIES})
 endif(HAVE_URDFDOM AND HAVE_URDFDOM_HEADERS)
 
-gz_install_library(gazebo_sdf_interface)
-gz_install_includes("sdf/interface" ${headers})
+if (NOT HAVE_SDF)
+  gz_install_library(gazebo_sdf_interface)
+  gz_install_includes("sdf/interface" ${headers})
+endif()

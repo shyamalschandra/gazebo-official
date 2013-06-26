@@ -224,6 +224,7 @@ class ServerFixture : public testing::Test
                rendering::remove_scene(gazebo::physics::get_world()->GetName());
 
                ASSERT_NO_THROW(this->server->Fini());
+
                delete this->server;
                this->server = NULL;
              }
@@ -1066,7 +1067,7 @@ class ServerFixture : public testing::Test
                  // Timeout of 30 seconds (3000 * 10 ms)
                  int waitCount = 0, maxWaitCount = 3000;
                  sdf::ElementPtr model = sdfParsed.root->GetElement("model");
-                 std::string name = model->GetValueString("name");
+                 std::string name = model->Get<std::string>("name");
                  while (!this->HasEntity(name) && ++waitCount < maxWaitCount)
                    common::Time::MSleep(100);
                  ASSERT_LT(waitCount, maxWaitCount);

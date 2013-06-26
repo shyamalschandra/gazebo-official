@@ -14,6 +14,8 @@
  * limitations under the License.
  *
  */
+#include <sdf/sdf.hh>
+
 #include "gazebo_config.h"
 
 #include "gazebo/gui/TopicSelector.hh"
@@ -45,7 +47,6 @@
 #include "gazebo/gui/building/BuildingEditor.hh"
 #include "gazebo/gui/terrain/TerrainEditor.hh"
 
-#include "gazebo/sdf/sdf.hh"
 
 #ifdef HAVE_QWT
 #include "gazebo/gui/Diagnostics.hh"
@@ -1306,6 +1307,13 @@ void MainWindow::OnPlayActionChanged()
     g_stepAct->setToolTip("Pause the world before stepping");
     g_stepAct->setEnabled(false);
   }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnFinishBuilding()
+{
+  g_editBuildingAct->setChecked(!g_editBuildingAct->isChecked());
+  this->OnEditBuilding();
 }
 
 /////////////////////////////////////////////////

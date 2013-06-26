@@ -56,7 +56,7 @@ void MeshShape::Init()
 
   if (!this->mesh)
   {
-    meshStr = common::find_file(this->sdf->GetValueString("uri"));
+    meshStr = common::find_file(this->sdf->Get<std::string>("uri"));
 
     if (meshStr == "__default__" || meshStr.empty())
     {
@@ -76,15 +76,15 @@ void MeshShape::Init()
   {
     sdf::ElementPtr submeshElem = this->sdf->GetElement("submesh");
     this->submesh = new common::SubMesh(
-      this->mesh->GetSubMesh(submeshElem->GetValueString("name")));
+      this->mesh->GetSubMesh(submeshElem->Get<std::string>("name")));
 
     if (!this->submesh)
       gzthrow("Unable to get submesh with name[" +
-          submeshElem->GetValueString("name") + "]");
+          submeshElem->Get<std::string>("name") + "]");
 
     // Center the submesh if specified in SDF.
     if (submeshElem->HasElement("center") &&
-        submeshElem->GetValueBool("center"))
+        submeshElem->Get<bool>("center"))
     {
       this->submesh->Center();
     }
@@ -100,7 +100,7 @@ void MeshShape::SetScale(const math::Vector3 &_scale)
 //////////////////////////////////////////////////
 math::Vector3 MeshShape::GetSize() const
 {
-  return this->sdf->GetValueVector3("scale");
+  return this->sdf->Get<math::Vector3>("scale");
 }
 
 //////////////////////////////////////////////////
@@ -112,7 +112,7 @@ std::string MeshShape::GetFilename() const
 //////////////////////////////////////////////////
 std::string MeshShape::GetMeshURI() const
 {
-  return this->sdf->GetValueString("uri");
+  return this->sdf->Get<std::string>("uri");
 }
 
 //////////////////////////////////////////////////
