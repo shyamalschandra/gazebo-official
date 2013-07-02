@@ -140,9 +140,9 @@ void transport::stop()
 /////////////////////////////////////////////////
 void transport::fini()
 {
-  transport::stop();
   transport::TopicManager::Instance()->Fini();
 
+  transport::stop();
   if (g_runThread)
   {
     g_runThread->join();

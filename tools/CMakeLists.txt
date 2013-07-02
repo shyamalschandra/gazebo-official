@@ -12,6 +12,7 @@ include_directories(
 
 set (test_sources 
   gzlog_TEST.cc 
+  gz_TEST.cc
 )
 
 gz_build_tests(${test_sources})
@@ -39,5 +40,9 @@ gz_install_executable(gzstats)
 add_executable(gzfactory gzfactory.cc)
 target_link_libraries(gzfactory gazebo_common gazebo_transport ${Boost_LIBRARIES} pthread)
 gz_install_executable(gzfactory)
+
+add_executable(gz gz.cc)
+target_link_libraries(gz gazebo_common gazebo_transport ${Boost_LIBRARIES} pthread)
+gz_install_executable(gz)
 
 install (FILES gzmodel_create.sh DESTINATION ${BIN_INSTALL_DIR})
