@@ -136,14 +136,38 @@ namespace gazebo
       private: void OnSetSelectedEntity(const std::string &_name,
                                         const std::string &_mode);
 
-      private: void RotateEntity(rendering::VisualPtr &_vis);
-      private: void TranslateEntity(rendering::VisualPtr &_vis);
+      /// \brief Rotate entity.
+      /// \param[in] _vis Visual representing the entity.
+      /// \param[in] _local True to apply rotation in local frame.
+      private: void RotateEntity(rendering::VisualPtr &_vis,
+          bool _local = false);
+
+      /// \brief Translate entity.
+      /// \param[in] _vis Visual representing the entity.
+      /// \param[in] _local True to apply translation in local frame.
+      private: void TranslateEntity(rendering::VisualPtr &_vis,
+          bool _local = false);
+
+      /// \brief Scale entity.
+      /// \param[in] _vis Visual representing the entity.
+      /// \param[in] _local True to apply scaling in local frame.
+      private: void ScaleEntity(rendering::VisualPtr &_vis,
+          bool _local = false);
+
 
       private: void OnMouseMoveVisual(const std::string &_visualName);
       private: void OnSelectionMsg(ConstSelectionPtr &_msg);
 
       private: bool eventFilter(QObject *_obj, QEvent *_event);
+
+      /// \brief Publish visual's pose to the server
+      /// \param[in] _vis Pointer to the visual whose pose is to be published.
       private: void PublishVisualPose(rendering::VisualPtr _vis);
+
+      /// \brief Publish visual's scale to the server
+      /// \param[in] _vis Pointer to the visual whose scale is to be published.
+      private: void PublishVisualScale(rendering::VisualPtr _vis);
+
       private: void ClearSelection();
 
       /// \brief Copy an object by name
@@ -201,6 +225,10 @@ namespace gazebo
       /// \brief Flag that is set to true when GLWidget has responded to
       ///  OnCreateScene
       private: bool sceneCreated;
+
+      private: rendering::ManipulatorPtr manipulator;
+
+      private: math::Vector3 mouseVisualScale;
     };
   }
 }
