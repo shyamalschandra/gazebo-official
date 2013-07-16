@@ -5,6 +5,7 @@ set (sdfs
   collision.sdf
   contact.sdf
   geometry.sdf
+  gps.sdf
   gripper.sdf
   gui.sdf
   imu.sdf
@@ -13,6 +14,7 @@ set (sdfs
   light.sdf
   link.sdf
   model.sdf
+  noise.sdf
   physics.sdf
   plugin.sdf
   projector.sdf
@@ -23,6 +25,7 @@ set (sdfs
   root.sdf
   scene.sdf
   sensor.sdf
+  spherical_coordinates.sdf
   state.sdf
   surface.sdf
   visual.sdf

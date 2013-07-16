@@ -28,6 +28,7 @@ set (sources
   PID.cc
   SkeletonAnimation.cc
   Skeleton.cc
+  SphericalCoordinates.cc
   STLLoader.cc
   SystemPaths.cc
   Time.cc
@@ -61,6 +62,7 @@ set (headers
   SkeletonAnimation.hh
   Skeleton.hh
   SingletonT.hh
+  SphericalCoordinates.hh
   STLLoader.hh
   SystemPaths.hh
   Time.hh
