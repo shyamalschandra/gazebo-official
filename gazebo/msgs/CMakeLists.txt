@@ -76,6 +76,7 @@ set (msgs
   spheregeom.proto
   subscribe.proto
   surface.proto
+  tactile.proto
   test.proto
   time.proto
   topic_info.proto
@@ -137,3 +138,4 @@ configure_file (${PROJECT_SOURCE_DIR}/gazebo/msgs/MessageTypes.hh.in
 
 gz_install_library(gazebo_msgs)
 gz_install_includes("msgs" ${PROTO_HDRS} ${headers} ${CMAKE_CURRENT_BINARY_DIR}/MessageTypes.hh)
+gz_install_includes("msgs/proto" ${msgs})

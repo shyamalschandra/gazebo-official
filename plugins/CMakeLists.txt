@@ -1,6 +1,4 @@
 include_directories(
-  ${PROJECT_BINARY_DIR}/gazebo
-  ${PROJECT_SOURCE_DIR}/gazebo
   ${PROTOBUF_INCLUDE_DIR}
 )
 
@@ -24,6 +22,7 @@ set (plugins
   ForceTorquePlugin
   ModelTrajectoryTestPlugin
   MudPlugin
+  PressurePlugin
   RayPlugin
   RubblePlugin
   SpringTestPlugin
