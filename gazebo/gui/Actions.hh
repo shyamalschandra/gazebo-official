@@ -41,6 +41,7 @@ namespace gazebo
     extern QAction *g_resetWorldAct;
     extern QAction *g_editBuildingAct;
     extern QAction *g_editTerrainAct;
+    extern QAction *g_editModelAct;
 
     extern QAction *g_playAct;
     extern QAction *g_pauseAct;
@@ -71,6 +72,7 @@ namespace gazebo
     extern QAction *g_arrowAct;
     extern QAction *g_translateAct;
     extern QAction *g_rotateAct;
+    extern QAction *g_scaleAct;
 
     extern QAction *g_topicVisAct;
 
