@@ -49,6 +49,7 @@ set (headers
   Events.hh
   Exception.hh
   Image.hh
+  KeyEvent.hh
   KeyFrame.hh
   Material.hh
   Mesh.hh
@@ -101,6 +102,15 @@ endforeach()
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/common.hh.in ${CMAKE_CURRENT_BINARY_DIR}/common.hh )
 
 gz_add_library(gazebo_common ${sources})
+
+set_property(
+  SOURCE SystemPaths.cc SystemPaths_TEST.cc ModelDatabase.cc
+  PROPERTY COMPILE_DEFINITIONS
+  GAZEBO_PLUGIN_PATH="${GAZEBO_PLUGIN_PATH}"
+  GAZEBO_RESOURCE_PATH="${GAZEBO_RESOURCE_PATH}"
+  GAZEBO_MODEL_DATABASE_URI="${GAZEBO_MODEL_DATABASE_URI}"
+  OGRE_RESOURCE_PATH="${OGRE_RESOURCE_PATH}"
+)
 
 target_link_libraries(gazebo_common gazebo_math
                                     ${libdl_library}
