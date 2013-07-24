@@ -5,9 +5,11 @@ set (sources
   ContactSensor.cc
   DepthCameraSensor.cc
   ForceTorqueSensor.cc
+  GpsSensor.cc
   GpuRaySensor.cc
   ImuSensor.cc
   MultiCameraSensor.cc
+  Noise.cc
   RaySensor.cc
   RFIDSensor.cc
   RFIDTag.cc
@@ -23,9 +25,11 @@ set (headers
   ContactSensor.hh
   DepthCameraSensor.hh
   ForceTorqueSensor.hh
+  GpsSensor.hh
   GpuRaySensor.hh
   ImuSensor.hh
   MultiCameraSensor.hh
+  Noise.hh
   RaySensor.hh
   RFIDSensor.hh
   RFIDTag.hh
