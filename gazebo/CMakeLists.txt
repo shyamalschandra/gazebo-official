@@ -42,7 +42,6 @@ if (HAVE_Simbody)
   add_dependencies(gazebo_physics_simbody gazebo_msgs)
 endif()
 
-gz_add_executable(gzmaster master_main.cc Master.cc gazebo.cc)
 gz_add_executable(gzserver server_main.cc Server.cc Master.cc gazebo.cc)
 gz_add_executable(gazebo gazebo_main.cc Server.cc Master.cc gazebo.cc)
 
@@ -114,3 +113,8 @@ gz_install_library(libgazebo)
 
 set(headers Server.hh Master.hh gazebo.hh gazebo_core.hh)
 gz_install_includes("" ${headers})
+
+# Man pages
+manpage(gazebo 1)
+manpage(gzserver 1)
+
