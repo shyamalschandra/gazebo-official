@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright 2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,13 @@
  * limitations under the License.
  *
 */
-
 #ifndef _COMMON_HH_
 #define _COMMON_HH_
 
-#include <string>
+// Deprecated header file for case-sensitive filesystems
+#warning The gazebo/common/Common.hh header file is deprecated \
+  and will be removed in gazebo 2.0. Please include \
+  gazebo/common/CommonIface.hh instead.
+#include "gazebo/common/CommonIface.hh"
 
-namespace gazebo
-{
-  namespace common
-  {
-    /// \addtogroup gazebo_common
-    /// \{
-
-    /// \brief add path prefix to common::SystemPaths
-    void add_search_path_suffix(const std::string &_suffix);
-
-    /// \brief search for file in common::SystemPaths
-    /// \param[in] _file Name of the file to find.
-    std::string find_file(const std::string &_file);
-
-    /// \brief search for file in common::SystemPaths
-    /// \param[in] _file Name of the file to find.
-    /// \param[in] _searchLocalPath True to search in the current working
-    /// directory.
-    std::string find_file(const std::string &_file,
-                          bool _searchLocalPath);
-
-    /// \brief search for a file in common::SystemPaths
-    /// \param[in] _file the file name to look for
-    /// \return The path containing the file
-    std::string find_file_path(const std::string &_file);
-
-    /// \}
-  }
-}
 #endif
