@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright 2012 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,32 @@
  * limitations under the License.
  *
 */
-#ifndef _RENDERING_HH_
-#define _RENDERING_HH_
+#ifndef _GAZEBO_GUIIFACE_HH_
+#define _GAZEBO_GUIIFACE_HH_
 
-// Deprecated header file for case-sensitive filesystems
-#warning The gazebo/rendering/Rendering.hh header file is deprecated \
-  and will be removed in gazebo 2.0. Please include \
-  gazebo/rendering/RenderingIface.hh instead.
+#include <string>
 #include "gazebo/rendering/RenderingIface.hh"
 
+namespace gazebo
+{
+  namespace gui
+  {
+    void load();
+
+    void init();
+
+    bool run(int _argc, char **_argv);
+    void stop();
+
+    void set_world(const std::string& _name);
+    std::string get_world();
+
+    void set_active_camera(rendering::UserCameraPtr _cam);
+    rendering::UserCameraPtr get_active_camera();
+    void clear_active_camera();
+
+    unsigned int get_entity_id(const std::string &_name);
+    bool has_entity_name(const std::string &_name);
+  }
+}
 #endif

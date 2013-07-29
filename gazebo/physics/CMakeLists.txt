@@ -27,7 +27,7 @@ set (sources
   Model.cc
   ModelState.cc
   MultiRayShape.cc
-  Physics.cc
+  PhysicsIface.cc
   PhysicsEngine.cc
   PhysicsFactory.cc
   PlaneShape.cc
@@ -68,7 +68,7 @@ set (headers
   Model.hh
   ModelState.hh
   MultiRayShape.hh
-  Physics.hh
+  PhysicsIface.hh
   PhysicsEngine.hh
   PhysicsFactory.hh
   PhysicsTypes.hh
@@ -120,6 +120,15 @@ target_link_libraries(gzphysics
 gz_install_executable( gzphysics )
 gz_install_library(gazebo_physics)
 gz_install_includes("physics" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/physics.hh)
+
+# Deprecated Physics.hh
+# Install until gazebo 2.0 on case-sensitive filesystems
+if (FILESYSTEM_CASE_SENSITIVE)
+  if (${GAZEBO_VERSION} VERSION_EQUAL 2.0)
+    message(WARNING "Installing deprecated Physics.hh. This should be removed in Gazebo 2.0 and later.")
+  endif()
+  gz_install_includes("physics" Physics.hh)
+endif()
 
 # unit tests
 set (gtest_sources
