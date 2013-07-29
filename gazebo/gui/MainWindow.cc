@@ -46,6 +46,7 @@
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/building/BuildingEditor.hh"
 #include "gazebo/gui/terrain/TerrainEditor.hh"
+#include "gazebo/gui/model/ModelEditor.hh"
 
 
 #ifdef HAVE_QWT
@@ -548,6 +549,12 @@ void MainWindow::Rotate()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::Scale()
+{
+  gui::Events::manipMode("scale");
+}
+
+/////////////////////////////////////////////////
 void MainWindow::CreateBox()
 {
   g_arrowAct->setChecked(true);
@@ -828,6 +835,12 @@ void MainWindow::CreateActions()
   g_editTerrainAct->setCheckable(true);
   g_editTerrainAct->setChecked(false);
 
+  g_editModelAct = new QAction(tr("&Model Editor"), editorGroup);
+  g_editModelAct->setShortcut(tr("Ctrl+M"));
+  g_editModelAct->setStatusTip(tr("Enter Model Editor Mode"));
+  g_editModelAct->setCheckable(true);
+  g_editModelAct->setChecked(false);
+
   g_stepAct = new QAction(QIcon(":/images/end.png"), tr("Step"), this);
   g_stepAct->setStatusTip(tr("Step the world"));
   connect(g_stepAct, SIGNAL(triggered()), this, SLOT(Step()));
@@ -867,6 +880,13 @@ void MainWindow::CreateActions()
   g_rotateAct->setChecked(false);
   connect(g_rotateAct, SIGNAL(triggered()), this, SLOT(Rotate()));
   this->CreateDisabledIcon(":/images/rotate.png", g_rotateAct);
+
+  g_scaleAct = new QAction(QIcon(":/images/scale.png"),
+      tr("Scale Mode"), this);
+  g_scaleAct->setStatusTip(tr("Scale an object"));
+  g_scaleAct->setCheckable(true);
+  g_scaleAct->setChecked(false);
+  connect(g_scaleAct, SIGNAL(triggered()), this, SLOT(Scale()));
 
   g_boxCreateAct = new QAction(QIcon(":/images/box.png"), tr("Box"), this);
   g_boxCreateAct->setStatusTip(tr("Create a box"));
@@ -1057,6 +1077,9 @@ void MainWindow::CreateMenuBar()
 
   // \TODO: Add this back in when implementing the full Terrain Editor spec.
   // editMenu->addAction(g_editTerrainAct);
+
+  // \TODO: Add this back in when implementing the full Model Editor spec.
+  editMenu->addAction(g_editModelAct);
 
   QMenu *viewMenu = this->menuBar->addMenu(tr("&View"));
   viewMenu->addAction(g_showGridAct);
@@ -1367,6 +1390,9 @@ void MainWindow::CreateEditors()
 
   // Create a Building Editor
   this->editors.push_back(new BuildingEditor(this));
+
+  // Create a Building Editor
+  this->editors.push_back(new ModelEditor(this));
 }
 
 /////////////////////////////////////////////////

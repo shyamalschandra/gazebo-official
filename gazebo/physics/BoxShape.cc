@@ -51,6 +51,17 @@ math::Vector3 BoxShape::GetSize() const
 }
 
 //////////////////////////////////////////////////
+void BoxShape::SetScale(const math::Vector3 &_scale)
+{
+  if (_scale == this->scale)
+    return;
+
+  this->SetSize((_scale/this->scale)*this->GetSize());
+
+  this->scale = _scale;
+}
+
+//////////////////////////////////////////////////
 void BoxShape::FillMsg(msgs::Geometry &_msg)
 {
   _msg.set_type(msgs::Geometry::BOX);
