@@ -112,6 +112,11 @@ namespace gazebo
       /// \brief Process a make object mouse presse event.
       private: void OnMousePressMakeEntity();
 
+      /// \brief Callback for a mouse double click event.
+      /// \param[in] _event The mouse double click event
+      /// \return True if handled by this function.
+      private: bool OnMouseDoubleClick(const common::MouseEvent &_event);
+
       private: void OnRequest(ConstRequestPtr &_msg);
 
       private: void OnCreateScene(const std::string &_name);
@@ -119,12 +124,18 @@ namespace gazebo
       private: void OnMoveMode(bool _mode);
       private: void OnCreateEntity(const std::string &_type,
                                    const std::string &_data);
+
+      /// \brief Callback for a joint creation event
+      /// \param[in] _type Type of joint
+      private: void OnCreateJoint(const std::string &_type);
+
       private: void OnFPS();
       private: void OnOrbit();
       private: void OnManipMode(const std::string &_mode);
 
       private: void OnSetSelectedEntity(const std::string &_name,
                                         const std::string &_mode);
+
 
       private: void OnSelectionMsg(ConstSelectionPtr &_msg);
 
