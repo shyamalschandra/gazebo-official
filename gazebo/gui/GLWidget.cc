@@ -135,6 +135,9 @@ GLWidget::GLWidget(QWidget *_parent)
 
   MouseEventHandler::Instance()->AddMoveFilter("glwidget",
       boost::bind(&GLWidget::OnMouseMove, this, _1));
+
+  MouseEventHandler::Instance()->AddDoubleClickFilter("glwidget",
+      boost::bind(&GLWidget::OnMouseDoubleClick, this, _1));
 }
 
 /////////////////////////////////////////////////
@@ -288,6 +291,12 @@ void GLWidget::keyReleaseEvent(QKeyEvent *_event)
   {
     this->PopHistory();
   }
+  else if (_event->key() == Qt::Key_R)
+    g_rotateAct->trigger();
+  else if (_event->key() == Qt::Key_T)
+    g_translateAct->trigger();
+  else if (_event->key() == Qt::Key_S)
+    g_scaleAct->trigger();
 
   /// Switch between RTS modes
   if (this->keyModifiers == Qt::NoModifier)
@@ -307,7 +316,6 @@ void GLWidget::keyReleaseEvent(QKeyEvent *_event)
   this->mouseEvent.alt =
     this->keyModifiers & Qt::AltModifier ? true : false;
 
-
   ModelManipulator::Instance()->OnKeyReleaseEvent(this->keyEvent);
   this->keyText = "";
 
@@ -318,32 +326,36 @@ void GLWidget::keyReleaseEvent(QKeyEvent *_event)
 }
 
 /////////////////////////////////////////////////
-void GLWidget::mouseDoubleClickEvent(QMouseEvent * /*_event*/)
+void GLWidget::mouseDoubleClickEvent(QMouseEvent *_event)
 {
-  rendering::VisualPtr vis = this->userCamera->GetVisual(this->mouseEvent.pos);
-  if (vis)
-  {
-    if (vis->IsPlane())
-    {
-      math::Pose pose, camPose;
-      camPose = this->userCamera->GetWorldPose();
-      if (this->scene->GetFirstContact(this->userCamera,
-                                   this->mouseEvent.pos, pose.pos))
-      {
-        this->userCamera->SetFocalPoint(pose.pos);
+  if (!this->scene)
+    return;
 
-        math::Vector3 dir = pose.pos - camPose.pos;
-        pose.pos = camPose.pos + (dir * 0.8);
+  this->mouseEvent.pressPos.Set(_event->pos().x(), _event->pos().y());
+  this->mouseEvent.prevPos = this->mouseEvent.pressPos;
 
-        pose.rot = this->userCamera->GetWorldRotation();
-        this->userCamera->MoveToPosition(pose, 0.5);
-      }
-    }
-    else
-    {
-      this->userCamera->MoveToVisual(vis);
-    }
-  }
+  /// Set the button which cause the press event
+  if (_event->button() == Qt::LeftButton)
+    this->mouseEvent.button = common::MouseEvent::LEFT;
+  else if (_event->button() == Qt::RightButton)
+    this->mouseEvent.button = common::MouseEvent::RIGHT;
+  else if (_event->button() == Qt::MidButton)
+    this->mouseEvent.button = common::MouseEvent::MIDDLE;
+
+  this->mouseEvent.buttons = common::MouseEvent::NO_BUTTON;
+  this->mouseEvent.type = common::MouseEvent::PRESS;
+
+  this->mouseEvent.buttons |= _event->buttons() & Qt::LeftButton ?
+    common::MouseEvent::LEFT : 0x0;
+  this->mouseEvent.buttons |= _event->buttons() & Qt::RightButton ?
+    common::MouseEvent::RIGHT : 0x0;
+  this->mouseEvent.buttons |= _event->buttons() & Qt::MidButton ?
+    common::MouseEvent::MIDDLE : 0x0;
+
+  this->mouseEvent.dragging = false;
+
+  // Process Mouse Events
+  MouseEventHandler::Instance()->HandleDoubleClick(this->mouseEvent);
 }
 
 /////////////////////////////////////////////////
@@ -390,6 +402,7 @@ bool GLWidget::OnMousePress(const common::MouseEvent & /*_event*/)
       || this->state == "scale")
     ModelManipulator::Instance()->OnMousePressEvent(this->mouseEvent);
 
+
   return true;
 }
 
@@ -418,6 +431,39 @@ bool GLWidget::OnMouseMove(const common::MouseEvent & /*_event*/)
   else if (this->state == "translate" || this->state == "rotate"
       || this->state == "scale")
     ModelManipulator::Instance()->OnMouseMoveEvent(this->mouseEvent);
+
+  return true;
+}
+
+/////////////////////////////////////////////////
+bool GLWidget::OnMouseDoubleClick(const common::MouseEvent & /*_event*/)
+{
+  rendering::VisualPtr vis = this->userCamera->GetVisual(this->mouseEvent.pos);
+  if (vis && gui::get_entity_id(vis->GetRootVisual()->GetName()))
+  {
+    if (vis->IsPlane())
+    {
+      math::Pose pose, camPose;
+      camPose = this->userCamera->GetWorldPose();
+      if (this->scene->GetFirstContact(this->userCamera,
+                                   this->mouseEvent.pos, pose.pos))
+      {
+        this->userCamera->SetFocalPoint(pose.pos);
+
+        math::Vector3 dir = pose.pos - camPose.pos;
+        pose.pos = camPose.pos + (dir * 0.8);
+
+        pose.rot = this->userCamera->GetWorldRotation();
+        this->userCamera->MoveToPosition(pose, 0.5);
+      }
+    }
+    else
+    {
+      this->userCamera->MoveToVisual(vis);
+    }
+  }
+  else
+    return false;
 
   return true;
 }
@@ -758,14 +804,12 @@ void GLWidget::OnFPS()
   this->userCamera->SetViewController(
       rendering::FPSViewController::GetTypeString());
 }
-
 /////////////////////////////////////////////////
 void GLWidget::OnOrbit()
 {
   this->userCamera->SetViewController(
       rendering::OrbitViewController::GetTypeString());
 }
-
 
 /////////////////////////////////////////////////
 void GLWidget::OnSelectionMsg(ConstSelectionPtr &_msg)
