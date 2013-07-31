@@ -13,7 +13,7 @@ set (sources
   BVHLoader.cc
   ColladaLoader.cc
   Color.cc
-  Common.cc
+  CommonIface.cc
   Console.cc
   Event.cc
   Events.cc
@@ -41,7 +41,7 @@ set (headers
   Base64.hh
   BVHLoader.hh
   ColladaLoader.hh
-  Common.hh
+  CommonIface.hh
   CommonTypes.hh
   Color.hh
   Console.hh
@@ -139,3 +139,12 @@ endif()
 
 gz_install_library(gazebo_common)
 gz_install_includes("common" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/common.hh)
+
+# Deprecated Common.hh
+# Install until gazebo 2.0 on case-sensitive filesystems
+if (FILESYSTEM_CASE_SENSITIVE)
+  if (${GAZEBO_VERSION} VERSION_EQUAL 2.0)
+    message(WARNING "Installing deprecated Common.hh. This should be removed in Gazebo 2.0 and later.")
+  endif()
+  gz_install_includes("common" Common.hh)
+endif()

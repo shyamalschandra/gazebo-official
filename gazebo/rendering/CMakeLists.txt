@@ -39,7 +39,7 @@ set (sources
   Projector.cc
   RenderEngine.cc
   RenderEvents.cc
-  Rendering.cc
+  RenderingIface.cc
   Road2d.cc
   RFIDVisual.cc
   RFIDTagVisual.cc
@@ -80,7 +80,7 @@ set (headers
   Projector.hh
   RenderEngine.hh
   RenderEvents.hh
-  Rendering.hh
+  RenderingIface.hh
   RenderTypes.hh
   Road2d.hh
   RFIDVisual.hh
@@ -128,6 +128,15 @@ endif()
 
 gz_install_library(gazebo_rendering)
 gz_install_includes("rendering" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
+
+# Deprecated Rendering.hh
+# Install until gazebo 2.0 on case-sensitive filesystems
+if (FILESYSTEM_CASE_SENSITIVE)
+  if (${GAZEBO_VERSION} VERSION_EQUAL 2.0)
+    message(WARNING "Installing deprecated Rendering.hh. This should be removed in Gazebo 2.0 and later.")
+  endif()
+  gz_install_includes("rendering" Rendering.hh)
+endif()
 
 # unit tests
 set (gtest_sources

@@ -12,7 +12,7 @@ set (sources
   Subscriber.cc
   SubscriptionTransport.cc
   TopicManager.cc
-  Transport.cc
+  TransportIface.cc
 ) 
 
 set (headers
@@ -28,7 +28,7 @@ set (headers
   Subscriber.hh
   SubscriptionTransport.hh
   TopicManager.hh
-  Transport.hh
+  TransportIface.hh
   TransportTypes.hh
 )
 
@@ -41,7 +41,7 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/transport.hh.in
                 ${CMAKE_CURRENT_BINARY_DIR}/transport.hh )
 
 set_property(
-  SOURCE Transport.cc
+  SOURCE TransportIface.cc
   PROPERTY COMPILE_DEFINITIONS
   GAZEBO_DEFAULT_MASTER_HOST="${GAZEBO_DEFAULT_MASTER_HOST}"
   GAZEBO_DEFAULT_MASTER_PORT=${GAZEBO_DEFAULT_MASTER_PORT}
@@ -58,6 +58,15 @@ target_link_libraries(gazebo_transport
 
 gz_install_library(gazebo_transport)
 gz_install_includes("transport" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/transport.hh)
+
+# Deprecated Transport.hh
+# Install until gazebo 2.0 on case-sensitive filesystems
+if (FILESYSTEM_CASE_SENSITIVE)
+  if (${GAZEBO_VERSION} VERSION_EQUAL 2.0)
+    message(WARNING "Installing deprecated Transport.hh. This should be removed in Gazebo 2.0 and later.")
+  endif()
+  gz_install_includes("transport" Transport.hh)
+endif()
 
 # unit tests
 set (gtest_sources
