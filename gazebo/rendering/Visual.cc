@@ -138,7 +138,6 @@ Visual::~Visual()
     */
   this->lines.clear();
 
-
   if (this->sceneNode != NULL)
   {
     this->DestroyAllAttachedMovableObjects(this->sceneNode);
@@ -487,6 +486,7 @@ void Visual::Update()
     return;
 
   std::list<DynamicLines*>::iterator iter;
+  //std::list<DynamicLines*>::iterator iterP;
 
   // Update the lines
   for (iter = this->lines.begin(); iter != this->lines.end(); ++iter)
@@ -1490,12 +1490,12 @@ void Visual::SetRibbonTrail(bool _value, const common::Color &_initialColor,
 }
 
 //////////////////////////////////////////////////
-DynamicLines *Visual::CreateDynamicLine(RenderOpType type)
+DynamicLines *Visual::CreateDynamicLine(RenderOpType _type)
 {
   this->preRenderConnection = event::Events::ConnectPreRender(
       boost::bind(&Visual::Update, this));
 
-  DynamicLines *line = new DynamicLines(type);
+  DynamicLines *line = new DynamicLines(_type);
   this->lines.push_back(line);
   this->AttachObject(line);
   return line;
