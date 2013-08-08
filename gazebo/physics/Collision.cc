@@ -29,6 +29,7 @@
 
 #include "gazebo/transport/Publisher.hh"
 
+#include "gazebo/physics/Physics.hh"
 #include "gazebo/physics/Contact.hh"
 #include "gazebo/physics/Shape.hh"
 #include "gazebo/physics/BoxShape.hh"
@@ -345,7 +346,10 @@ msgs::Visual Collision::CreateCollisionVisual()
 {
   msgs::Visual msg;
   msg.set_name(this->GetScopedName()+"__COLLISION_VISUAL__");
+  // Put in a unique ID because this is a special visual.
+  msg.set_id(physics::getUniqueId());
   msg.set_parent_name(this->parent->GetScopedName());
+  msg.set_parent_id(this->parent->GetId());
   msg.set_is_static(this->IsStatic());
   msg.set_cast_shadows(false);
   msgs::Set(msg.mutable_pose(), this->GetRelativePose());

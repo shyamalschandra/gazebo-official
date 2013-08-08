@@ -53,12 +53,6 @@ CameraSensor::~CameraSensor()
 }
 
 //////////////////////////////////////////////////
-void CameraSensor::SetParent(const std::string &_name)
-{
-  Sensor::SetParent(_name);
-}
-
-//////////////////////////////////////////////////
 void CameraSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
 {
   Sensor::Load(_worldName, _sdf);
@@ -135,7 +129,7 @@ void CameraSensor::Init()
     if (cameraSdf->HasElement("pose"))
       cameraPose = cameraSdf->Get<math::Pose>("pose") + cameraPose;
     this->camera->SetWorldPose(cameraPose);
-    this->camera->AttachToVisual(this->parentName, true);
+    this->camera->AttachToVisual(this->parentId, true);
   }
   else
     gzerr << "No world name\n";
@@ -156,7 +150,9 @@ void CameraSensor::Fini()
   Sensor::Fini();
 
   if (this->camera)
+  {
     this->scene->RemoveCamera(this->camera->GetName());
+  }
 
   this->camera.reset();
   this->scene.reset();

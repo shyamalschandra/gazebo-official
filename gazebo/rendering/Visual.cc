@@ -44,10 +44,13 @@
 using namespace gazebo;
 using namespace rendering;
 
+// Note: The value of GZ_UINT32_MAX is reserved as a flag.
+uint32_t Visual::visualIdCount = GZ_UINT32_MAX - 1;
 
 //////////////////////////////////////////////////
 Visual::Visual(const std::string &_name, VisualPtr _parent, bool _useRTShader)
 {
+  this->id = this->visualIdCount--;
   this->boundingBox = NULL;
   this->useRTShader = _useRTShader;
 
@@ -92,6 +95,7 @@ Visual::Visual(const std::string &_name, VisualPtr _parent, bool _useRTShader)
 //////////////////////////////////////////////////
 Visual::Visual(const std::string &_name, ScenePtr _scene, bool _useRTShader)
 {
+  this->id = this->visualIdCount--;
   this->boundingBox = NULL;
   this->useRTShader = _useRTShader;
 
@@ -157,6 +161,7 @@ Visual::~Visual()
 void Visual::Fini()
 {
   this->plugins.clear();
+
   // Detach from the parent
   if (this->parent)
     this->parent->DetachVisual(this->GetName());
@@ -204,7 +209,7 @@ VisualPtr Visual::Clone(const std::string &_name, VisualPtr _newParent)
 }
 
 /////////////////////////////////////////////////
-void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode* _sceneNode)
+void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode *_sceneNode)
 {
   if (!_sceneNode)
     return;
@@ -2396,4 +2401,16 @@ void Visual::LoadPlugin(sdf::ElementPtr _sdf)
   std::string pluginName = _sdf->Get<std::string>("name");
   std::string filename = _sdf->Get<std::string>("filename");
   this->LoadPlugin(filename, pluginName, _sdf);
+}
+
+//////////////////////////////////////////////////
+uint32_t Visual::GetId() const
+{
+  return this->id;
+}
+
+//////////////////////////////////////////////////
+void Visual::SetId(uint32_t _id)
+{
+  this->id = _id;
 }
