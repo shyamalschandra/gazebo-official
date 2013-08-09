@@ -425,7 +425,7 @@ void Visual::Load()
     if (ent->hasSkeleton())
       this->skeleton = ent->getSkeleton();
 
-    for (unsigned int i = 0; i < ent->getNumSubEntities(); i++)
+    for (unsigned int i = 0; i < ent->getNumSubEntities(); ++i)
     {
       ent->getSubEntity(i)->setCustomParameter(1, Ogre::Vector4(
           this->sdf->Get<double>("laser_retro"), 0.0, 0.0, 0.0));
