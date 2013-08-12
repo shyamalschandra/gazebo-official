@@ -73,6 +73,26 @@ endif()
 
 set (CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 
+if (APPLE)
+	# NOTE MacOSX provides different system versions than CMake is parsing.
+	#      The following table lists the most recent OSX versions
+	#     9.x.x = Mac OSX Leopard (10.5)
+	#    10.x.x = Mac OSX Snow Leopard (10.6)
+	#    11.x.x = Mac OSX Lion (10.7)
+	#    12.x.x = Mac OSX Mountain Lion (10.8)
+	if (${CMAKE_SYSTEM_VERSION} LESS 10)
+		add_definitions(-DMAC_OS_X_VERSION=1050)
+	elseif (${CMAKE_SYSTEM_VERSION} GREATER 10 AND ${CMAKE_SYSTEM_VERSION} LESS 11)
+		add_definitions(-DMAC_OS_X_VERSION=1060)
+	elseif (${CMAKE_SYSTEM_VERSION} GREATER 11 AND ${CMAKE_SYSTEM_VERSION} LESS 12)
+		add_definitions(-DMAC_OS_X_VERSION=1070)
+	elseif (${CMAKE_SYSTEM_VERSION} GREATER 12 OR ${CMAKE_SYSTEM_VERSION} EQUAL 12)
+		add_definitions(-DMAC_OS_X_VERSION=1080)
+	else ()
+		add_definitions(-DMAC_OS_X_VERSION=0)
+	endif ()
+endif ()
+
 
 # developer's option to cache PKG_CONFIG_PATH and
 # LD_LIBRARY_PATH for local installs
@@ -169,7 +189,10 @@ string(REPLACE "\n" "" OGRE_RESOURCE_PATH ${OGRE_RESOURCE_PATH})
 
 
 if (SSE2_FOUND)
-  set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse -msse2 -mfpmath=sse")
+  set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse -msse2")
+  if (NOT APPLE)
+    set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -mfpmath=sse")
+  endif()
 endif()
 if (SSE3_FOUND)
   set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse3")
@@ -193,7 +216,13 @@ endif()
 # Check for DRI capable Display
 include (${gazebo_cmake_dir}/CheckDRIDisplay.cmake)
 
-set (CMAKE_C_FLAGS_RELEASE " -s -O3 -DNDEBUG ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release" FORCE)
+set (CMAKE_C_FLAGS_RELEASE "")
+if (NOT APPLE)
+  # -s doesn't work with default osx compiler clang, alternative:
+  # http://stackoverflow.com/questions/6085491/gcc-vs-clang-symbol-strippingu
+  set (CMAKE_C_FLAGS_RELEASE "-s")
+endif()
+set (CMAKE_C_FLAGS_RELEASE " ${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release" FORCE)
 set (CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 
 set (CMAKE_C_FLAGS_RELWITHDEBINFO " -g -O2 ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release with debug support" FORCE)
@@ -260,7 +289,9 @@ if (UNIX)
   gz_setup_unix()
 else (WIN32)
   gz_setup_windows()
-else (APPLE)
+endif()
+
+if(APPLE)
   gz_setup_apple()
 endif()
 
