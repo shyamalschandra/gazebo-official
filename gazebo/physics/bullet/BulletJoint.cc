@@ -51,6 +51,24 @@ void BulletJoint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
+void BulletJoint::Init()
+{
+  Joint::Init();
+
+  if (this->sdf->HasElement("physics") &&
+      this->sdf->GetElement("physics")->HasElement("bullet"))
+  {
+    sdf::ElementPtr elem =
+      this->sdf->GetElement("physics")->GetElement("bullet");
+
+    if (elem->HasElement("provide_feedback"))
+    {
+      this->SetProvideFeedback(elem->Get<bool>("provide_feedback"));
+    }
+  }
+}
+
+//////////////////////////////////////////////////
 void BulletJoint::Reset()
 {
   Joint::Reset();
@@ -103,6 +121,44 @@ void BulletJoint::Detach()
 }
 
 //////////////////////////////////////////////////
+void BulletJoint::CacheForceTorque()
+{
+  if (!this->provideFeedback)
+    return;
+
+  // caching force torque for the joint
+  // if cached, GetForceTorque should use this value
+  // this->forceTorque
+  if (this->parentLink)
+  {
+    btRigidBody parentRB = this->constraint->getRigidBodyB();
+    gzerr << "   " << this->GetName()
+          << " : " << BulletTypes::ConvertVector3(parentRB.getTotalForce())
+          << " : " << BulletTypes::ConvertVector3(parentRB.getTotalTorque())
+          << " : " << BulletTypes::ConvertVector3(
+                        this->feedback->m_appliedForceBodyB)
+          << " : " << BulletTypes::ConvertVector3(
+                        this->feedback->m_appliedTorqueBodyB)
+          << "\n";
+
+    // btVector3 tmp = this->constraint->getDeltaLinearVelocity();
+  }
+  if (this->childLink)
+  {
+    btRigidBody childRB = this->constraint->getRigidBodyA();
+    // gzerr << BulletTypes::ConvertVector3(childRB.getDeltaLinearVelocity())
+    gzerr << "   " << this->GetName()
+          << " : " << BulletTypes::ConvertVector3(childRB.getTotalForce())
+          << " : " << BulletTypes::ConvertVector3(childRB.getTotalTorque())
+          << " : " << BulletTypes::ConvertVector3(
+                        this->feedback->m_appliedForceBodyA)
+          << " : " << BulletTypes::ConvertVector3(
+                        this->feedback->m_appliedTorqueBodyA)
+          << "\n";
+  }
+}
+
+//////////////////////////////////////////////////
 JointWrench BulletJoint::GetForceTorque(int _index)
 {
   return this->GetForceTorque(static_cast<unsigned int>(_index));
@@ -112,5 +168,27 @@ JointWrench BulletJoint::GetForceTorque(int _index)
 JointWrench BulletJoint::GetForceTorque(unsigned int /*_index*/)
 {
   JointWrench wrench;
+
+
   return wrench;
+}
+
+//////////////////////////////////////////////////
+void BulletJoint::SetProvideFeedback(bool _enable)
+{
+  Joint::SetProvideFeedback(_enable);
+
+  if (this->provideFeedback)
+  {
+    this->feedback = new btJointFeedback;
+    this->feedback->m_appliedForceBodyA = btVector3(0, 0, 0);
+    this->feedback->m_appliedForceBodyB = btVector3(0, 0, 0);
+    this->feedback->m_appliedTorqueBodyA = btVector3(0, 0, 0);
+    this->feedback->m_appliedTorqueBodyB = btVector3(0, 0, 0);
+
+    if (this->constraint)
+      this->constraint->setJointFeedback(this->feedback);
+    else
+      gzerr << "Bullet Joint ID is invalid\n";
+  }
 }
