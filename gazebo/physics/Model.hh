@@ -28,7 +28,6 @@
 
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
-
 #include "gazebo/physics/ModelState.hh"
 #include "gazebo/physics/Entity.hh"
 
@@ -41,7 +40,6 @@ namespace gazebo
 {
   namespace physics
   {
-    class JointController;
     class Gripper;
 
     /// \addtogroup gazebo_physics
@@ -161,9 +159,12 @@ namespace gazebo
       /// \return Pointer to the joint
       public: JointPtr GetJoint(const std::string &name);
 
+      /// \cond
+      /// This is an internal function
       /// \brief Get a link by id.
       /// \return Pointer to the link, NULL if the id is invalid.
       public: LinkPtr GetLinkById(unsigned int _id) const;
+      /// \endcond
 
       /// \brief Get a link by name.
       /// \param[in] _name Name of the link to get.
@@ -197,7 +198,7 @@ namespace gazebo
       /// \param[in] _jointName Name of the joint to set.
       /// \param[in] _position Position to set the joint to.
       public: void SetJointPosition(const std::string &_jointName,
-                                    double _position);
+                                    double _position, int _index = 0);
 
       /// \brief Set the positions of a set of joints.
       /// \sa JointController::SetJointPositions.
@@ -305,6 +306,11 @@ namespace gazebo
       /// \param[in] _sdf SDF parameter.
       private: void LoadGripper(sdf::ElementPtr _sdf);
 
+      /// \brief Get a handle to the Controller for the joints in this model.
+      /// \return A handle to the Controller for the joints in this model.
+      public: JointControllerPtr GetJointController()
+        { return this->jointController; }
+
       /// used by Model::AttachStaticModel
       protected: std::vector<ModelPtr> attachedModels;
 
@@ -339,7 +345,7 @@ namespace gazebo
       private: boost::recursive_mutex *updateMutex;
 
       /// \brief Controller for the joints.
-      private: JointController *jointController;
+      private: JointControllerPtr jointController;
 
       private: bool pluginsLoaded;
     };

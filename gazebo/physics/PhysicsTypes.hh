@@ -18,6 +18,8 @@
 #define _PHYSICSTYPES_HH_
 
 #include <vector>
+#include <map>
+#include <string>
 #include <boost/shared_ptr.hpp>
 
 /// \file
@@ -36,6 +38,7 @@ namespace gazebo
     class Link;
     class Collision;
     class Joint;
+    class JointController;
     class Contact;
     class PhysicsEngine;
     class Mass;
@@ -47,9 +50,13 @@ namespace gazebo
     class SurfaceParams;
     class BoxShape;
     class CylinderShape;
+    class MeshShape;
     class SphereShape;
     class MeshShape;
     class HeightmapShape;
+    class ModelState;
+    class LinkState;
+    class JointState;
 
     /// \def BasePtr
     /// \brief Boost shared pointer to a Base object
@@ -86,6 +93,10 @@ namespace gazebo
     /// \def JointPtr
     /// \brief Boost shared pointer to a Joint object
     typedef boost::shared_ptr<Joint> JointPtr;
+
+    /// \def JointControllerPtr
+    /// \brief Boost shared pointer to a JointController object
+    typedef boost::shared_ptr<JointController> JointControllerPtr;
 
     /// \def  PhysicsEnginePtr
     /// \brief Boost shared pointer to a PhysicsEngine object
@@ -151,6 +162,10 @@ namespace gazebo
     /// \brief Vector of JointPtr
     typedef std::vector<JointPtr> Joint_V;
 
+    /// \def JointController_V
+    /// \brief Vector of JointControllerPtr
+    typedef std::vector<JointControllerPtr> JointController_V;
+
     /// \def Link_V
     /// \brief Vector of LinkPtr
     typedef std::vector<LinkPtr>  Link_V;
@@ -158,6 +173,18 @@ namespace gazebo
     /// \def Collision_V
     /// \brief Vector of CollisionPtr
     typedef std::vector<CollisionPtr>  Collision_V;
+
+    /// \def ModelState_M
+    /// \brief Map of model state
+    typedef std::map<std::string, ModelState> ModelState_M;
+
+    /// \def LinkState_M
+    /// \brief Map of link state
+    typedef std::map<std::string, LinkState> LinkState_M;
+
+    /// \def JointState_M
+    /// \brief Map of joint state
+    typedef std::map<std::string, JointState> JointState_M;
 
     #ifndef GZ_COLLIDE_BITS
 
@@ -176,7 +203,7 @@ namespace gazebo
 
     /// \def GZ_SENSOR_COLLIDE
     /// \brief Collision object will collide only with sensors
-    #define GZ_SENSOR_COLLIDE 0x00000003
+    #define GZ_SENSOR_COLLIDE 0x00000002
 
     /// \def GZ_GHOST_COLLIDE
     /// \brief Collides with everything else but other ghost.

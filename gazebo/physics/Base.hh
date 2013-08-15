@@ -26,7 +26,8 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <string>
 
-#include "gazebo/sdf/sdf.hh"
+#include <sdf/sdf.hh>
+
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 
@@ -123,8 +124,11 @@ namespace gazebo
                 PLANE_SHAPE     = 0x00100000,
                 /// \brief SphereShape type
                 SPHERE_SHAPE    = 0x00200000,
-                /// \brief TrimeshShape type
-                TRIMESH_SHAPE   = 0x00400000
+                /// \brief MeshShape type
+                MESH_SHAPE   = 0x00400000,
+
+                /// \brief Indicates a collision shape used for sensing
+                SENSOR_COLLISION   = 0x00800000
               };
 
       /// \brief Constructor
@@ -208,10 +212,13 @@ namespace gazebo
       /// \return The number of children.
       public: unsigned int GetChildCount() const;
 
+      /// \cond
+      /// This is an internal function.
       /// \brief Get a child or self by id.
       /// \param[in] _id ID of the object to retreive.
       /// \return A pointer to the object, NULL if not found
       public: BasePtr GetById(unsigned int _id) const;
+      /// \endcond
 
       /// \brief Get by name.
       /// \param[in] _name Get a child (or self) object by name
@@ -284,6 +291,11 @@ namespace gazebo
       /// \return The SDF values for the object.
       public: virtual const sdf::ElementPtr GetSDF();
 
+      /// \brief Compute the scoped name of this object based on its
+      /// parents.
+      /// \sa Base::GetScopedName
+      protected: void ComputeScopedName();
+
       /// \brief The SDF values for this object.
       protected: sdf::ElementPtr sdf;
 
@@ -313,6 +325,12 @@ namespace gazebo
 
       /// \brief True if selected.
       private: bool selected;
+
+      /// \brief Local copy of the sdf name.
+      private: std::string name;
+
+      /// \brief Local copy of the scoped name.
+      private: std::string scopedName;
 
       protected: friend class Entity;
     };

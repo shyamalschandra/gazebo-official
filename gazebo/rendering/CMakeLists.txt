@@ -25,11 +25,13 @@ set (sources
   DynamicLines.cc
   DynamicRenderable.cc
   FPSViewController.cc
+  GpuLaser.cc
   Grid.cc
   GUIOverlay.cc
   Heightmap.cc
   JointVisual.cc
   LaserVisual.cc
+  SonarVisual.cc
   Light.cc
   Material.cc
   MovableText.cc
@@ -49,6 +51,7 @@ set (sources
   Visual.cc
   WireBox.cc
   WindowManager.cc
+  WrenchVisual.cc
 )
 
 set (headers
@@ -63,11 +66,13 @@ set (headers
   DynamicLines.hh
   DynamicRenderable.hh
   FPSViewController.hh
+  GpuLaser.hh
   Grid.hh
   GUIOverlay.hh
   Heightmap.hh
   JointVisual.hh
   LaserVisual.hh
+  SonarVisual.hh
   Light.hh
   Material.hh
   MovableText.hh
@@ -88,6 +93,7 @@ set (headers
   Visual.hh
   WireBox.hh
   WindowManager.hh
+  WrenchVisual.hh
   ogre_gazebo.h
   cegui.h
 )
@@ -95,7 +101,7 @@ set (headers
 set (rendering_headers "" CACHE INTERNAL "rendering headers" FORCE)
 foreach (hdr ${headers})
   APPEND_TO_CACHED_STRING(rendering_headers
-                          "Rendering Headers" "#include \"rendering/${hdr}\"\n")
+    "Rendering Headers" "#include \"gazebo/rendering/${hdr}\"\n")
 endforeach()
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rendering.hh.in
                 ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
@@ -108,7 +114,6 @@ gz_add_library(gazebo_rendering ${sources})
 
 target_link_libraries( gazebo_rendering
   gazebo_common 
-  gazebo_sdf_interface
   gazebo_skyx
   gazebo_selection_buffer
   ${ogre_libraries} 
@@ -123,3 +128,8 @@ endif()
 
 gz_install_library(gazebo_rendering)
 gz_install_includes("rendering" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
+
+# unit tests
+set (gtest_sources
+  GpuLaser_TEST.cc)
+gz_build_dri_tests(${gtest_sources})

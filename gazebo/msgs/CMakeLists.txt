@@ -10,6 +10,7 @@ set (msgs
   contacts.proto
   contactsensor.proto
   cylindergeom.proto
+  diagnostics.proto
   factory.proto
   fog.proto
   friction.proto
@@ -34,8 +35,12 @@ set (msgs
   joint_wrench.proto
   joint_wrench_stamped.proto
   laserscan.proto
+  laserscan_stamped.proto
   light.proto
   link.proto
+  link_data.proto
+  log_control.proto
+  log_status.proto
   material.proto
   meshgeom.proto
   model.proto
@@ -46,15 +51,19 @@ set (msgs
   planegeom.proto
   pid.proto
   plugin.proto
+  pointcloud.proto
   pose.proto
   pose_animation.proto
   pose_stamped.proto
   pose_trajectory.proto
   pose_v.proto
+  poses_stamped.proto
   projector.proto
   publishers.proto
   publish.proto
   quaternion.proto
+  sonar.proto
+  sonar_stamped.proto
   raysensor.proto
   request.proto
   response.proto
@@ -68,6 +77,7 @@ set (msgs
   spheregeom.proto
   subscribe.proto
   surface.proto
+  tactile.proto
   test.proto
   time.proto
   topic_info.proto
@@ -76,18 +86,26 @@ set (msgs
   vector3d.proto
   visual.proto
   world_control.proto
-  world_reset.proto 
-  world_stats.proto 
-  world_modify.proto 
+  world_reset.proto
+  world_stats.proto
+  world_modify.proto
+  wrench.proto
+  wrench_stamped.proto
 )
+
+set (msgs_tests_sources
+  msgs_TEST.cc
+  MsgFactory_TEST.cc
+)
+gz_build_tests(${msgs_tests_sources})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 gz_add_executable(gazebomsgs_out generator/GazeboGenerator.cc generator/gazebo_generator.cc)
 target_link_libraries(gazebomsgs_out ${PROTOBUF_LIBRARY} ${PROTOBUF_PROTOC_LIBRARY} pthread)
 
-set (sources msgs.cc)
-set (headers msgs.hh)
+set (sources msgs.cc MsgFactory.cc)
+set (headers msgs.hh MsgFactory.hh)
 
 set(PROTO_SRCS)
 set(PROTO_HDRS)
@@ -109,7 +127,16 @@ endforeach()
 set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS} PROPERTIES GENERATED TRUE)
 
 gz_add_library(gazebo_msgs ${PROTO_SRCS} ${sources})
-target_link_libraries( gazebo_msgs ${PROTOBUF_LIBRARY} gazebo_sdf_interface)
+target_link_libraries(gazebo_msgs
+  gazebo_common
+  gazebo_math
+  ${PROTOBUF_LIBRARY}
+)
+
+if (NOT HAVE_SDF)
+  target_link_libraries(gazebo_msgs gazebo_sdf_interface)
+endif()
+
 add_dependencies(gazebo_msgs gazebomsgs_out)
 
 set (message_headers "" CACHE INTERNAL "Include dirs description")
@@ -124,3 +151,4 @@ configure_file (${PROJECT_SOURCE_DIR}/gazebo/msgs/MessageTypes.hh.in
 
 gz_install_library(gazebo_msgs)
 gz_install_includes("msgs" ${PROTO_HDRS} ${headers} ${CMAKE_CURRENT_BINARY_DIR}/MessageTypes.hh)
+gz_install_includes("msgs/proto" ${msgs})

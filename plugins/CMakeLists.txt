@@ -1,22 +1,30 @@
 include_directories(
-  ${PROJECT_BINARY_DIR}/gazebo 
-  ${PROJECT_SOURCE_DIR}/gazebo 
+  ${PROJECT_SOURCE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
+  ${SDF_INCLUDE_DIRS}
+)
+
+link_directories(
+  ${SDF_LIBRARY_DIRS}
 )
 
 set (plugins
   CameraPlugin
-  DepthCameraPlugin
-  GpuRayPlugin
-  ContactPlugin
   CartTestPlugin
+  ContactPlugin
+  DepthCameraPlugin
+  DiffDrivePlugin
   ForceTorquePlugin
+  GpuRayPlugin
+  JointTrajectoryPlugin
   ModelTrajectoryTestPlugin
+  MudPlugin
+  PressurePlugin
   RayPlugin
   RubblePlugin
+  SkidSteerDrivePlugin
+  SonarPlugin
   SpringTestPlugin
-  DiffDrivePlugin
-  JointTrajectoryPlugin
   VehiclePlugin)
 
 foreach (src ${plugins})

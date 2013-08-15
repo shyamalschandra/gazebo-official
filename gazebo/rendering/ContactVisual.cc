@@ -95,7 +95,7 @@ void ContactVisual::Update()
       double depth = this->contactsMsg->contact(i).depth(j);
 
       math::Vector3 force = msgs::Convert(
-          this->contactsMsg->contact(i).wrench(j).body_1_force());
+          this->contactsMsg->contact(i).wrench(j).body_1_wrench().force());
 
       // Scaling factor for the normal line.
       // Eq in the family of Y = 1/(1+exp(-(x^2)))
@@ -183,6 +183,11 @@ void ContactVisual::CreateNewPoint()
 
   cp->depth->AddPoint(math::Vector3(0, 0, 0));
   cp->depth->AddPoint(math::Vector3(0, 0, -1));
+
+  obj->setVisibilityFlags(GZ_VISIBILITY_GUI);
+  cp->depth->setVisibilityFlags(GZ_VISIBILITY_GUI);
+  cp->normal->setVisibilityFlags(GZ_VISIBILITY_GUI);
+
   cp->sceneNode->attachObject(cp->depth);
   cp->sceneNode->attachObject(cp->normal);
   cp->sceneNode->setVisible(false);

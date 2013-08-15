@@ -44,13 +44,20 @@ namespace gazebo
     public: void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf);
 
     /// \brief Update the controller
-    private: void UpdateStates();
+    /// \param[in] _info Update information provided by the server.
+    private: void UpdateStates(const common::UpdateInfo &_info);
+
+
+    /// \brief Testing
+    private: void FixLink(physics::LinkPtr _link);
+    private: void UnfixLink();
 
     private: physics::WorldPtr world;
     private: physics::ModelPtr model;
 
     // The possible list of joint elements
     private: physics::Joint_V joints;
+    private: physics::JointPtr joint;
 
     private: boost::mutex update_mutex;
 
