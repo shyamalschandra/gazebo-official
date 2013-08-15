@@ -25,9 +25,9 @@
 #include <string>
 #include <vector>
 
-#include "rendering/Camera.hh"
-#include "rendering/RenderTypes.hh"
-#include "common/CommonTypes.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/common/CommonTypes.hh"
 
 namespace gazebo
 {
@@ -99,6 +99,10 @@ namespace gazebo
       public: void SetViewController(const std::string &_type,
                                      const math::Vector3 &_pos);
 
+      /// \brief Get current view controller type.
+      /// \return Type of the current view controller: "orbit", "fps"
+      public: std::string GetViewControllerTypeString();
+
       /// \brief Resize the camera.
       /// \param[in] _w Width of the camera image.
       /// \param[in] _h Height of the camera image.
@@ -166,6 +170,12 @@ namespace gazebo
       /// \brief Set the point the camera should orbit around.
       /// \param[in] _pt The focal point
       public: void SetFocalPoint(const math::Vector3 &_pt);
+
+      // Documentation inherited
+      public: virtual unsigned int GetImageWidth() const;
+
+      // Documentation inherited
+      public: virtual unsigned int GetImageHeight() const;
 
       /// \brief Set the camera to be attached to a visual.
       ///

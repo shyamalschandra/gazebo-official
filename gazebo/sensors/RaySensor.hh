@@ -25,10 +25,10 @@
 #include <vector>
 #include <string>
 
-#include "math/Angle.hh"
-#include "math/Pose.hh"
-#include "transport/TransportTypes.hh"
-#include "sensors/Sensor.hh"
+#include "gazebo/math/Angle.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/sensors/Sensor.hh"
 
 namespace gazebo
 {
@@ -162,13 +162,33 @@ namespace gazebo
       public: physics::MultiRayShapePtr GetLaserShape() const
               {return this->laserShape;}
 
+      // Documentation inherited
+      public: virtual bool IsActive();
+
       private: physics::CollisionPtr laserCollision;
       private: physics::MultiRayShapePtr laserShape;
       private: physics::EntityPtr parentEntity;
 
       private: transport::PublisherPtr scanPub;
-      private: boost::mutex *mutex;
-      private: msgs::LaserScan laserMsg;
+      private: boost::mutex mutex;
+      private: msgs::LaserScanStamped laserMsg;
+
+      // Which noise type we support
+      private: enum NoiseModelType
+      {
+        NONE,
+        GAUSSIAN
+      };
+      // If true, apply the noise model specified by other noise parameters
+      private: bool noiseActive;
+      // Which type of noise we're applying
+      private: enum NoiseModelType noiseType;
+      // If noiseType==GAUSSIAN, noiseMean is the mean of the distibution
+      // from which we sample
+      private: double noiseMean;
+      // If noiseType==GAUSSIAN, noiseStdDev is the standard devation of
+      // the distibution from which we sample
+      private: double noiseStdDev;
     };
     /// \}
   }

@@ -29,6 +29,7 @@
 
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/common/CommonTypes.hh"
+#include "gazebo/common/UpdateInfo.hh"
 
 #include "gazebo/math/MathTypes.hh"
 #include "gazebo/math/Box.hh"
@@ -89,6 +90,10 @@ namespace gazebo
       /// \brief Set the initial pose.
       /// \param[in] _pose The initial pose.
       public: void SetInitialRelativePose(const math::Pose &_pose);
+
+      /// \brief Get the initial relative pose.
+      /// \return The initial relative pose.
+      public: math::Pose GetInitialRelativePose() const;
 
       /// \brief Return the bounding box for the entity.
       /// \return The bounding box.
@@ -276,7 +281,8 @@ namespace gazebo
       private: void UpdatePhysicsPose(bool update_children = true);
 
       /// \brief Update an animation.
-      private: void UpdateAnimation();
+      /// \param[in] _info Update information.
+      private: void UpdateAnimation(const common::UpdateInfo &_info);
 
       /// \brief A helper that prevents numerous dynamic_casts.
       protected: EntityPtr parentEntity;

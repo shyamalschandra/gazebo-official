@@ -21,24 +21,25 @@
 
 #include <boost/thread/recursive_mutex.hpp>
 
-#include "msgs/msgs.hh"
+#include "gazebo/msgs/msgs.hh"
 
-#include "common/Events.hh"
-#include "common/Console.hh"
-#include "common/Animation.hh"
-#include "common/KeyFrame.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Animation.hh"
+#include "gazebo/common/KeyFrame.hh"
 
-#include "transport/Publisher.hh"
-#include "transport/Transport.hh"
-#include "transport/Node.hh"
+#include "gazebo/transport/Publisher.hh"
+#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/Node.hh"
 
-#include "physics/RayShape.hh"
-#include "physics/Collision.hh"
-#include "physics/Model.hh"
-#include "physics/Link.hh"
-#include "physics/World.hh"
-#include "physics/PhysicsEngine.hh"
-#include "physics/Entity.hh"
+#include "gazebo/physics/RayShape.hh"
+#include "gazebo/physics/Collision.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/World.hh"
+#include "gazebo/physics/PhysicsEngine.hh"
+#include "gazebo/physics/Entity.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -52,11 +53,13 @@ Entity::Entity(BasePtr _parent)
   this->AddType(ENTITY);
 
   this->visualMsg = new msgs::Visual;
+  this->visualMsg->set_parent_name(this->world->GetName());
   this->poseMsg = new msgs::Pose;
 
   if (this->parent && this->parent->HasType(ENTITY))
   {
-    this->parentEntity = boost::shared_dynamic_cast<Entity>(this->parent);
+    this->parentEntity = boost::dynamic_pointer_cast<Entity>(this->parent);
+    this->visualMsg->set_parent_name(this->parentEntity->GetScopedName());
     this->SetStatic(this->parentEntity->IsStatic());
   }
 
@@ -66,8 +69,6 @@ Entity::Entity(BasePtr _parent)
 //////////////////////////////////////////////////
 Entity::~Entity()
 {
-  Base_V::iterator iter;
-
   // TODO: put this back in
   // this->GetWorld()->GetPhysicsEngine()->RemoveEntity(this);
 
@@ -99,16 +100,19 @@ void Entity::Load(sdf::ElementPtr _sdf)
   if (this->sdf->HasElement("pose"))
   {
     if (this->parent && this->parentEntity)
-      this->worldPose = this->sdf->GetValuePose("pose") +
+      this->worldPose = this->sdf->Get<math::Pose>("pose") +
                         this->parentEntity->worldPose;
     else
-      this->worldPose = this->sdf->GetValuePose("pose");
+      this->worldPose = this->sdf->Get<math::Pose>("pose");
 
-    this->initialRelativePose = this->sdf->GetValuePose("pose");
+    this->initialRelativePose = this->sdf->Get<math::Pose>("pose");
   }
 
   if (this->parent)
     this->visualMsg->set_parent_name(this->parent->GetScopedName());
+  else
+    this->visualMsg->set_parent_name(this->world->GetName());
+
   msgs::Set(this->visualMsg->mutable_pose(), this->GetRelativePose());
 
   this->visPub->Publish(*this->visualMsg);
@@ -140,7 +144,7 @@ void Entity::SetStatic(const bool &_s)
 
   for (iter = this->children.begin(); iter != this->childrenEnd; ++iter)
   {
-    EntityPtr e = boost::shared_dynamic_cast<Entity>(*iter);
+    EntityPtr e = boost::dynamic_pointer_cast<Entity>(*iter);
     if (e)
       e->SetStatic(_s);
   }
@@ -156,6 +160,12 @@ bool Entity::IsStatic() const
 void Entity::SetInitialRelativePose(const math::Pose &_p)
 {
   this->initialRelativePose = _p;
+}
+
+//////////////////////////////////////////////////
+math::Pose Entity::GetInitialRelativePose() const
+{
+  return this->initialRelativePose;
 }
 
 //////////////////////////////////////////////////
@@ -178,8 +188,8 @@ void Entity::SetAnimation(common::PoseAnimationPtr _anim)
   this->prevAnimationTime = this->world->GetSimTime();
   this->animation = _anim;
   this->onAnimationComplete.clear();
-  this->animationConnection = event::Events::ConnectWorldUpdateStart(
-      boost::bind(&Entity::UpdateAnimation, this));
+  this->animationConnection = event::Events::ConnectWorldUpdateBegin(
+      boost::bind(&Entity::UpdateAnimation, this, _1));
 }
 
 //////////////////////////////////////////////////
@@ -191,8 +201,8 @@ void Entity::SetAnimation(const common::PoseAnimationPtr &_anim,
   this->prevAnimationTime = this->world->GetSimTime();
   this->animation = _anim;
   this->onAnimationComplete = _onComplete;
-  this->animationConnection = event::Events::ConnectWorldUpdateStart(
-      boost::bind(&Entity::UpdateAnimation, this));
+  this->animationConnection = event::Events::ConnectWorldUpdateBegin(
+      boost::bind(&Entity::UpdateAnimation, this, _1));
 }
 
 //////////////////////////////////////////////////
@@ -202,7 +212,7 @@ void Entity::StopAnimation()
   this->onAnimationComplete.clear();
   if (this->animationConnection)
   {
-    event::Events::DisconnectWorldUpdateStart(this->animationConnection);
+    event::Events::DisconnectWorldUpdateBegin(this->animationConnection);
     this->animationConnection.reset();
   }
 }
@@ -210,12 +220,10 @@ void Entity::StopAnimation()
 //////////////////////////////////////////////////
 void Entity::PublishPose()
 {
-  math::Pose relativePose = this->GetRelativePose();
-  if (relativePose != msgs::Convert(*this->poseMsg))
-  {
-    msgs::Set(this->poseMsg, relativePose);
-    this->world->EnqueueMsg(this->poseMsg);
-  }
+  GZ_ASSERT(this->GetParentModel() != NULL,
+      "An entity without a parent model should not happen");
+
+  this->world->PublishModelPose(this->GetParentModel());
 }
 
 //////////////////////////////////////////////////
@@ -270,7 +278,7 @@ void Entity::SetWorldTwist(const math::Vector3 &_linear,
       {
         if ((*iter)->HasType(ENTITY))
         {
-          EntityPtr entity = boost::shared_static_cast<Entity>(*iter);
+          EntityPtr entity = boost::static_pointer_cast<Entity>(*iter);
           entity->SetWorldTwist(_linear, _angular, _updateChildren);
         }
       }
@@ -304,7 +312,7 @@ void Entity::SetWorldPoseModel(const math::Pose &_pose, bool _notify,
   {
     if ((*iter)->HasType(ENTITY))
     {
-      EntityPtr entity = boost::shared_static_cast<Entity>(*iter);
+      EntityPtr entity = boost::static_pointer_cast<Entity>(*iter);
 
       if (entity->IsCanonicalLink())
         entity->worldPose = (entity->initialRelativePose + _pose);
@@ -334,11 +342,9 @@ void Entity::SetWorldPoseCanonicalLink(const math::Pose &_pose, bool _notify,
   // also update parent model's pose
   if (this->parentEntity->HasType(MODEL))
   {
-    this->parentEntity->worldPose.pos = _pose.pos -
-      this->parentEntity->worldPose.rot.RotateVector(
-          this->initialRelativePose.pos);
-    this->parentEntity->worldPose.rot = _pose.rot *
-      this->initialRelativePose.rot.GetInverse();
+    // setting parent Model world pose from canonical link world pose
+    // where _pose is the canonical link's world pose
+    this->parentEntity->worldPose = (-this->initialRelativePose) + _pose;
 
     this->parentEntity->worldPose.Correct();
 
@@ -419,7 +425,7 @@ void Entity::UpdatePhysicsPose(bool _updateChildren)
       if ((*iter)->HasType(LINK))
       {
         // call child Link::OnPoseChange()
-        boost::shared_static_cast<Link>(*iter)->OnPoseChange();
+        boost::static_pointer_cast<Link>(*iter)->OnPoseChange();
       }
     }
   }
@@ -432,7 +438,7 @@ void Entity::UpdatePhysicsPose(bool _updateChildren)
     for (Base_V::iterator iter = this->children.begin();
          iter != this->childrenEnd; ++iter)
     {
-      CollisionPtr coll = boost::shared_static_cast<Collision>(*iter);
+      CollisionPtr coll = boost::static_pointer_cast<Collision>(*iter);
       if (coll && (*iter)->HasType(COLLISION))
       {
         // update collision pose
@@ -456,14 +462,15 @@ ModelPtr Entity::GetParentModel()
 {
   BasePtr p;
   if (this->HasType(MODEL))
-    return boost::shared_dynamic_cast<Model>(shared_from_this());
+    return boost::dynamic_pointer_cast<Model>(shared_from_this());
 
   p = this->parent;
+  GZ_ASSERT(p, "Parent of an entity is NULL");
 
   while (p->GetParent() && p->GetParent()->HasType(MODEL))
     p = p->GetParent();
 
-  return boost::shared_dynamic_cast<Model>(p);
+  return boost::dynamic_pointer_cast<Model>(p);
 }
 
 //////////////////////////////////////////////////
@@ -471,7 +478,7 @@ CollisionPtr Entity::GetChildCollision(const std::string &_name)
 {
   BasePtr base = this->GetByName(_name);
   if (base)
-    return boost::shared_dynamic_cast<Collision>(base);
+    return boost::dynamic_pointer_cast<Collision>(base);
 
   return CollisionPtr();
 }
@@ -481,7 +488,7 @@ LinkPtr Entity::GetChildLink(const std::string &_name)
 {
   BasePtr base = this->GetByName(_name);
   if (base)
-    return boost::shared_dynamic_cast<Link>(base);
+    return boost::dynamic_pointer_cast<Link>(base);
 
   return LinkPtr();
 }
@@ -531,7 +538,7 @@ void Entity::UpdateParameters(sdf::ElementPtr _sdf)
   if (this->parent && this->parentEntity)
     parentPose = this->parentEntity->worldPose;
 
-  math::Pose newPose = _sdf->GetValuePose("pose");
+  math::Pose newPose = _sdf->Get<math::Pose>("pose");
   if (newPose != this->GetRelativePose())
   {
     this->SetRelativePose(newPose);
@@ -539,12 +546,11 @@ void Entity::UpdateParameters(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-void Entity::UpdateAnimation()
+void Entity::UpdateAnimation(const common::UpdateInfo &_info)
 {
   common::PoseKeyFrame kf(0);
 
-  this->animation->AddTime(
-      (this->world->GetSimTime() - this->prevAnimationTime).Double());
+  this->animation->AddTime((_info.simTime - this->prevAnimationTime).Double());
   this->animation->GetInterpolatedKeyFrame(kf);
 
   math::Pose offset;
@@ -552,11 +558,11 @@ void Entity::UpdateAnimation()
   offset.rot = kf.GetRotation();
 
   this->SetWorldPose(offset);
-  this->prevAnimationTime = this->world->GetSimTime();
+  this->prevAnimationTime = _info.simTime;
 
   if (this->animation->GetLength() <= this->animation->GetTime())
   {
-    event::Events::DisconnectWorldUpdateStart(this->animationConnection);
+    event::Events::DisconnectWorldUpdateBegin(this->animationConnection);
     this->animationConnection.reset();
     if (this->onAnimationComplete)
     {
@@ -588,7 +594,7 @@ math::Box Entity::GetCollisionBoundingBox() const
 math::Box Entity::GetCollisionBoundingBoxHelper(BasePtr _base) const
 {
   if (_base->HasType(COLLISION))
-    return boost::shared_dynamic_cast<Collision>(_base)->GetBoundingBox();
+    return boost::dynamic_pointer_cast<Collision>(_base)->GetBoundingBox();
 
   math::Box box;
 
@@ -616,7 +622,8 @@ void Entity::PlaceOnEntity(const std::string &_entityName)
 void Entity::GetNearestEntityBelow(double &_distBelow,
                                    std::string &_entityName)
 {
-  RayShapePtr rayShape = boost::shared_dynamic_cast<RayShape>(
+  this->GetWorld()->GetPhysicsEngine()->InitForThread();
+  RayShapePtr rayShape = boost::dynamic_pointer_cast<RayShape>(
     this->GetWorld()->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
 
   math::Box box = this->GetCollisionBoundingBox();

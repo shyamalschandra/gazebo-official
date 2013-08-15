@@ -19,10 +19,13 @@
  * Date: 14 Dec 2007
  */
 
-#include "transport/transport.hh"
-#include "rendering/Scene.hh"
-#include "rendering/DynamicLines.hh"
-#include "rendering/LaserVisual.hh"
+#include "gazebo/common/MeshManager.hh"
+#include "gazebo/transport/transport.hh"
+
+#include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/DynamicLines.hh"
+#include "gazebo/rendering/LaserVisual.hh"
 
 using namespace gazebo;
 using namespace rendering;
@@ -53,7 +56,7 @@ LaserVisual::~LaserVisual()
 }
 
 /////////////////////////////////////////////////
-void LaserVisual::OnScan(ConstLaserScanPtr &_msg)
+void LaserVisual::OnScan(ConstLaserScanStampedPtr &_msg)
 {
   // Skip the update if the user is moving the laser.
   if (this->GetScene()->GetSelectedVisual() &&
@@ -63,26 +66,27 @@ void LaserVisual::OnScan(ConstLaserScanPtr &_msg)
     return;
   }
 
-  double angle = _msg->angle_min();
+  double angle = _msg->scan().angle_min();
   double r;
   math::Vector3 pt;
-  math::Pose offset = msgs::Convert(_msg->world_pose()) - this->GetWorldPose();
+  math::Pose offset = msgs::Convert(_msg->scan().world_pose()) -
+                      this->GetWorldPose();
 
   this->rayFan->SetPoint(0, offset.pos);
-  for (int i = 0; i < _msg->ranges_size(); i++)
+  for (size_t i = 0; static_cast<int>(i) < _msg->scan().ranges_size(); i++)
   {
-    r = _msg->ranges(i) + _msg->range_min();
+    r = _msg->scan().ranges(i);
     pt.x = 0 + r * cos(angle);
     pt.y = 0 + r * sin(angle);
     pt.z = 0;
-    pt += offset.pos;
+    pt = offset.rot * pt + offset.pos;
 
-    if (i+1 >= static_cast<int>(this->rayFan->GetPointCount()))
+    if (i+1 >= this->rayFan->GetPointCount())
       this->rayFan->AddPoint(pt);
     else
       this->rayFan->SetPoint(i+1, pt);
 
-    angle += _msg->angle_step();
+    angle += _msg->scan().angle_step();
   }
 }
 

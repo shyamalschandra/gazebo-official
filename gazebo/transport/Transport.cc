@@ -19,10 +19,10 @@
 #include <boost/lexical_cast.hpp>
 #include <string>
 
-#include "transport/Node.hh"
-#include "transport/Publisher.hh"
-#include "transport/Subscriber.hh"
-#include "transport/ConnectionManager.hh"
+#include "gazebo/transport/Node.hh"
+#include "gazebo/transport/Publisher.hh"
+#include "gazebo/transport/Subscriber.hh"
+#include "gazebo/transport/ConnectionManager.hh"
 #include "Transport.hh"
 
 using namespace gazebo;
@@ -31,40 +31,57 @@ boost::thread *g_runThread = NULL;
 boost::condition_variable g_responseCondition;
 boost::mutex requestMutex;
 bool g_stopped = true;
+bool g_minimalComms = false;
 
 std::list<msgs::Request *> g_requests;
 std::list<boost::shared_ptr<msgs::Response> > g_responses;
 
 /////////////////////////////////////////////////
-bool transport::get_master_uri(std::string &master_host,
-                               unsigned int &master_port)
+void dummy_callback_fn(uint32_t)
 {
-  char *char_uri = getenv("GAZEBO_MASTER_URI");
+}
+
+/////////////////////////////////////////////////
+bool transport::get_master_uri(std::string &_masterHost,
+                               unsigned int &_masterPort)
+{
+  char *charURI = getenv("GAZEBO_MASTER_URI");
 
   // Set to default host and port
-  if (!char_uri || strlen(char_uri) == 0)
+  if (!charURI || strlen(charURI) == 0)
   {
-    master_host = "localhost";
-    master_port = 11345;
+    _masterHost = GAZEBO_DEFAULT_MASTER_HOST;
+    _masterPort = GAZEBO_DEFAULT_MASTER_PORT;
     return false;
   }
 
-  std::string master_uri = char_uri;
+  std::string masterURI = charURI;
 
-  boost::replace_first(master_uri, "http://", "");
-  int last_colon = master_uri.find_last_of(":");
-  master_host = master_uri.substr(0, last_colon);
-  master_port = boost::lexical_cast<unsigned int>(
-      master_uri.substr(last_colon+1, master_uri.size() - (last_colon+1)));
+  boost::replace_first(masterURI, "http://", "");
+  size_t lastColon = masterURI.find_last_of(":");
+  _masterHost = masterURI.substr(0, lastColon);
+
+  if (lastColon == std::string::npos)
+  {
+    gzerr << "Port missing in master URI[" << masterURI
+          << "]. Using default value of " << GAZEBO_DEFAULT_MASTER_PORT
+          << ".\n";
+    _masterPort = GAZEBO_DEFAULT_MASTER_PORT;
+  }
+  else
+  {
+    _masterPort = boost::lexical_cast<unsigned int>(
+        masterURI.substr(lastColon + 1, masterURI.size() - (lastColon + 1)));
+  }
 
   return true;
 }
 
 /////////////////////////////////////////////////
-bool transport::init(const std::string &master_host, unsigned int master_port)
+bool transport::init(const std::string &_masterHost, unsigned int _masterPort)
 {
-  std::string host = master_host;
-  unsigned int port = master_port;
+  std::string host = _masterHost;
+  unsigned int port = _masterPort;
 
   if (host.empty())
     get_master_uri(host, port);
@@ -92,8 +109,11 @@ void transport::run()
   {
     TopicManager::Instance()->GetTopicNamespaces(namespaces);
 
-    // 25 seconds max wait time
-    common::Time::MSleep(500);
+    if (namespaces.empty())
+    {
+      // 25 seconds max wait time
+      common::Time::MSleep(500);
+    }
 
     trys++;
   }
@@ -112,15 +132,15 @@ bool transport::is_stopped()
 void transport::stop()
 {
   g_stopped = true;
+  g_responseCondition.notify_all();
   transport::ConnectionManager::Instance()->Stop();
 }
 
 /////////////////////////////////////////////////
 void transport::fini()
 {
-  g_stopped = true;
+  transport::stop();
   transport::TopicManager::Instance()->Fini();
-  transport::ConnectionManager::Instance()->Stop();
 
   if (g_runThread)
   {
@@ -146,7 +166,7 @@ void transport::pause_incoming(bool _pause)
 /////////////////////////////////////////////////
 void on_response(ConstResponsePtr &_msg)
 {
-  if (g_requests.size() <= 0)
+  if (g_requests.empty())
     return;
 
   std::list<msgs::Request *>::iterator iter;
@@ -188,9 +208,11 @@ boost::shared_ptr<msgs::Response> transport::request(
   node->Init(_worldName);
 
   PublisherPtr requestPub = node->Advertise<msgs::Request>("~/request");
+  requestPub->WaitForConnection();
+
   SubscriberPtr responseSub = node->Subscribe("~/response", &on_response);
 
-  requestPub->Publish(*request);
+  requestPub->Publish(*request, true);
 
   boost::shared_ptr<msgs::Response> response;
   std::list<boost::shared_ptr<msgs::Response> >::iterator iter;
@@ -258,3 +280,74 @@ void transport::requestNoReply(NodePtr _node, const std::string &_request,
   // Clean up the publisher.
   requestPub.reset();
 }
+
+/////////////////////////////////////////////////
+std::map<std::string, std::list<std::string> > transport::getAdvertisedTopics()
+{
+  std::map<std::string, std::list<std::string> > result;
+  std::list<msgs::Publish> publishers;
+
+  ConnectionManager::Instance()->GetAllPublishers(publishers);
+
+  for (std::list<msgs::Publish>::iterator iter = publishers.begin();
+      iter != publishers.end(); ++iter)
+  {
+    result[(*iter).msg_type()].push_back((*iter).topic());
+  }
+
+  return result;
+}
+
+/////////////////////////////////////////////////
+std::list<std::string> transport::getAdvertisedTopics(
+    const std::string &_msgType)
+{
+  std::list<std::string> result;
+  std::list<msgs::Publish> publishers;
+
+  ConnectionManager::Instance()->GetAllPublishers(publishers);
+
+  for (std::list<msgs::Publish>::iterator iter = publishers.begin();
+      iter != publishers.end(); ++iter)
+  {
+    if (std::find(result.begin(), result.end(), (*iter).topic()) !=
+        result.end())
+      continue;
+
+    if (_msgType.empty() || _msgType == (*iter).msg_type())
+      result.push_back((*iter).topic());
+  }
+
+  return result;
+}
+
+/////////////////////////////////////////////////
+std::string transport::getTopicMsgType(const std::string &_topicName)
+{
+  std::string result;
+  std::list<msgs::Publish> publishers;
+
+  ConnectionManager::Instance()->GetAllPublishers(publishers);
+
+  for (std::list<msgs::Publish>::iterator iter = publishers.begin();
+      iter != publishers.end() && result.empty(); ++iter)
+  {
+    if (_topicName == (*iter).topic())
+      result = (*iter).msg_type();
+  }
+
+  return result;
+}
+
+/////////////////////////////////////////////////
+void transport::setMinimalComms(bool _enabled)
+{
+  g_minimalComms = _enabled;
+}
+
+/////////////////////////////////////////////////
+bool transport::getMinimalComms()
+{
+  return g_minimalComms;
+}
+
