@@ -128,6 +128,25 @@ if (PKG_CONFIG_FOUND)
   endif()
 
   #################################################
+  # Find Simbody
+  set(SimTK_INSTALL_DIR ${SimTK_INSTALL_PREFIX})
+  find_package(Simbody REQUIRED)
+  if (SIMBODY_FOUND)
+    set (HAVE_SIMBODY TRUE)
+  else()
+    set (HAVE_SIMBODY FALSE)
+  endif()
+  
+  #################################################
+  # Find bullet
+  pkg_check_modules(BULLET bullet>=2.81)
+  if (BULLET_FOUND)
+    set (HAVE_BULLET TRUE)
+  else()
+    set (HAVE_BULLET FALSE)
+  endif()
+
+  #################################################
   # Find tinyxml. Only debian distributions package tinyxml with a pkg-config
   find_path (tinyxml_include_dir tinyxml.h ${tinyxml_include_dirs} ENV CPATH)
   if (NOT tinyxml_include_dir)
@@ -289,15 +308,6 @@ if (PKG_CONFIG_FOUND)
     set (HAVE_GTS FALSE)
     BUILD_WARNING ("GNU Triangulation Surface library not found - Gazebo will not have CSG support.")
   endif ()
-
-  #################################################
-  # Find bullet
-  pkg_check_modules(BULLET bullet)
-  if (BULLET_FOUND)
-    set (HAVE_BULLET TRUE)
-  else()
-    set (HAVE_BULLET FALSE)
-  endif()
 
 else (PKG_CONFIG_FOUND)
   set (BUILD_GAZEBO OFF CACHE INTERNAL "Build Gazebo" FORCE)
