@@ -4,18 +4,21 @@ set (sources
   Diagnostics.cc
   LogPlay.cc
   LogRecord.cc
+  OpenAL.cc
 )
 
 set (headers 
   Diagnostics.hh
   LogPlay.hh
   LogRecord.hh
+  OpenAL.hh
   UtilTypes.hh
 )
 
 set (gtest_sources
   Diagnostics_TEST.cc
   LogRecord_TEST.cc
+  OpenAL_TEST.cc
 )
 gz_build_tests(${gtest_sources})
 
