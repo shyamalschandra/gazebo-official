@@ -12,7 +12,8 @@ link_directories(
 )
 
 set (test_sources 
-  gzlog_TEST.cc 
+  gz_log_TEST.cc 
+  gz_TEST.cc
 )
 
 gz_build_tests(${test_sources})
@@ -41,7 +42,15 @@ add_executable(gzfactory gzfactory.cc)
 target_link_libraries(gzfactory gazebo_common gazebo_transport pthread)
 gz_install_executable(gzfactory)
 
+add_executable(gz gz.cc gz_topic.cc gz_log.cc)
+target_link_libraries(gz
+ gazebo_msgs gazebo_common gazebo_transport gazebo_gui gazebo_physics
+ gazebo_sensors ${QT_LIBRARIES} ${Boost_LIBRARIES} pthread)
+gz_install_executable(gz)
+
 install (PROGRAMS gzmodel_create gzmodel_create.sh DESTINATION ${BIN_INSTALL_DIR})
 if (${GAZEBO_VERSION} VERSION_GREATER 1.9)
   message (WARNING "Installing deprecated gzmodel_create.sh. This should be removed after Gazebo 1.9")
 endif()
+
+install(FILES gz_completion DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo)

@@ -509,8 +509,12 @@ void view(int _argc, char **_argv)
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
+  gzerr << "gztopic is deprecated. Use the gz command line: gz help topic.\n";
+
   if (!parse(argc, argv))
     return 0;
+
+  gazebo::common::Console::Instance()->SetQuiet(true);
 
   if (params[0] == "list")
     list();

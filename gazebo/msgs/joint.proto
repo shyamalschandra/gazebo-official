@@ -41,4 +41,3 @@ message Joint
   optional double suspension_erp = 16;
   repeated Sensor sensor         = 17;
 }
-

@@ -175,6 +175,8 @@ void Delete(po::variables_map &vm)
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
+  gzerr << "gzfactory is deprecated. Use the gz command line: gz help model.\n";
+
   po::options_description v_desc("Options");
   v_desc.add_options()
     ("help,h", "Produce this help message.")

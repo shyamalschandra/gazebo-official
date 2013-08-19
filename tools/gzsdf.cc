@@ -61,6 +61,7 @@ bool file_exists(const std::string &_filename)
 /////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
+  gzerr << "gzsdf is deprecated. Use the gz command line: gz help sdf.\n";
   bool success = false;
 
   try
