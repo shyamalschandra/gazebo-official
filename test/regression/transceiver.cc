@@ -176,7 +176,7 @@ void TransceiverTest::TxRxObstacle(const std::string &_physicsEngine)
   // Wireless Transmitter - tx
   std::string txModelName = "tx";
   std::string txSensorName = "wirelessTx";
-  math::Pose txPose(math::Vector3(0, 0, 0.055),
+  math::Pose txPose(math::Vector3(0, 0, 0.5),
       math::Quaternion(0, 0, 0));
 
   // Spawn tx
@@ -192,7 +192,7 @@ void TransceiverTest::TxRxObstacle(const std::string &_physicsEngine)
   // Wireless Receiver - rx1
   std::string rx1ModelName = "rx1";
   std::string rx1SensorName = "wirelessRx1";
-  math::Pose rx1Pose(math::Vector3(3, 0, 0.055),
+  math::Pose rx1Pose(math::Vector3(3, 0, 0.5),
       math::Quaternion(0, 0, 0));
 
   // Spawn rx1
@@ -209,7 +209,7 @@ void TransceiverTest::TxRxObstacle(const std::string &_physicsEngine)
   // Wireless Receiver - rx2
   std::string rx2ModelName = "rx2";
   std::string rx2SensorName = "wirelessRx2";
-  math::Pose rx2Pose(math::Vector3(-3, 0, 0.055), math::Quaternion(0, 0, 0));
+  math::Pose rx2Pose(math::Vector3(-3, 0, 0.5), math::Quaternion(0, 0, 0));
 
   // Spawn rx2
   SpawnWirelessReceiverSensor(rx2ModelName, rx2SensorName, rx2Pose.pos,
@@ -223,7 +223,7 @@ void TransceiverTest::TxRxObstacle(const std::string &_physicsEngine)
   ASSERT_TRUE(rx2);
 
   // Spawn an obstacle between the transmitter and the receiver
-  SpawnBox("Box", math::Vector3(1, 1, 1), math::Vector3(-1.5, 0, 0.055),
+  SpawnBox("Box", math::Vector3(1, 1, 1), math::Vector3(-1.5, 0, 0),
       math::Vector3(0, 0, 0), true);
 
   // Initialize gazebo transport layer
@@ -313,9 +313,9 @@ TEST_P(TransceiverTest, EmptyWorld)
 }
 
 /////////////////////////////////////////////////
-TEST_P(TransceiverTest, Obstacle)
+TEST_F(TransceiverTest, Obstacle)
 {
-  TxRxObstacle(GetParam());
+  TxRxObstacle("ode");
 }
 
 /////////////////////////////////////////////////
