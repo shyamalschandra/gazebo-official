@@ -57,6 +57,10 @@ Joint::Joint(BasePtr _parent)
   this->upperLimit[1] =  1e16;
   this->inertiaRatio[0] = 0;
   this->inertiaRatio[1] = 0;
+  this->wrench.body1Force = math::Vector3(0, 0, 0);
+  this->wrench.body1Torque = math::Vector3(0, 0, 0);
+  this->wrench.body2Force = math::Vector3(0, 0, 0);
+  this->wrench.body2Torque = math::Vector3(0, 0, 0);
 }
 
 //////////////////////////////////////////////////
@@ -106,6 +110,16 @@ void Joint::Load(LinkPtr _parent, LinkPtr _child, const math::Pose &_pose)
 void Joint::Load(sdf::ElementPtr _sdf)
 {
   Base::Load(_sdf);
+
+  // Joint force and torque feedback
+  if (_sdf->HasElement("physics"))
+  {
+    sdf::ElementPtr physics_elem = _sdf->GetElement("physics");
+    if (physics_elem->HasElement("provide_feedback"))
+    {
+      this->SetProvideFeedback(physics_elem->Get<bool>("provide_feedback"));
+    }
+  }
 
   sdf::ElementPtr parentElem = _sdf->GetElement("parent");
   sdf::ElementPtr childElem = _sdf->GetElement("child");
@@ -541,6 +555,7 @@ void Joint::ApplyDamping()
   // dampingCoefficient are used for adaptive damping to enforce stability.
   double dampingForce = -fabs(this->dampingCoefficient) * this->GetVelocity(0);
   this->SetForce(0, dampingForce);
+  // gzerr << this->GetVelocity(0) << " : " << dampingForce << "\n";
 }
 
 //////////////////////////////////////////////////

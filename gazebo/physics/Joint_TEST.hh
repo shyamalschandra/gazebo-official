@@ -34,9 +34,33 @@ class Joint_TEST : public ServerFixture
              {
              }
 
+  /// \brief Load example world with a few joints
+  /// Measure / verify static force torques against analytical answers.
+  /// Change gravity to tip over the joints.
+  /// Wait until joint stops are hit and joint motion settles,
+  /// then check force torques values against analytical values.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void ForceTorque(const std::string &_physicsEngine);
+
+  /// \brief Load example world with a few joints.
+  /// Servo the joints to a fixed target position using simple PID controller.
+  /// Measure / verify static force torques against analytical answers.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void GetForceTorqueWithAppliedForce(
+    const std::string &_physicsEngine);
+
   /// \brief Spawn model with each type of joint.
   /// \param[in] _physicsEngine Type of physics engine to use.
   public: void SpawnJointTypes(const std::string &_physicsEngine);
+
+  /// \brief Create a hinge joint between link and world.
+  /// Apply force and check acceleration against analytical solution.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void JointTorqueTest(const std::string &_physicsEngine);
+
+  /// \brief Create and destroy joints repeatedly, monitors memory usage.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void JointCreationDestructionTest(const std::string &_physicsEngine);
 
   /// \brief Spawn a model with a joint connecting to the world. The function
   ///        will wait for duration _wait for the model to spawn and attempt
