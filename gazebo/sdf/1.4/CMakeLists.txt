@@ -39,6 +39,7 @@ set (sdfs
   sonar.sdf
   state.sdf
   surface.sdf
+  transceiver.sdf
   visual.sdf
   world.sdf
 )
