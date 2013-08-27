@@ -134,6 +134,25 @@ std::string Sensor::GetParentName() const
 }
 
 //////////////////////////////////////////////////
+bool Sensor::NeedsUpdate()
+{
+  // Adjust time-to-update period to compensate for delays caused by another
+  // sensor's update in the same thread.
+
+  common::Time simTime;
+  if (this->category == IMAGE && this->scene)
+    simTime = this->scene->GetSimTime();
+  else
+    simTime = this->world->GetSimTime();
+
+  if (simTime == this->lastUpdateTime)
+    return false;
+    
+  return (simTime - this->lastUpdateTime +
+      this->updateDelay) >= this->updatePeriod;
+}
+
+//////////////////////////////////////////////////
 void Sensor::Update(bool _force)
 {
   if (this->IsActive() || _force)
@@ -149,6 +168,8 @@ void Sensor::Update(bool _force)
 
     // Adjust time-to-update period to compensate for delays caused by another
     // sensor's update in the same thread.
+    // NOTE: If you change this equation, also change the matching equation in
+    // Sensor::NeedsUpdate
     common::Time adjustedElapsed = simTime - this->lastUpdateTime +
         this->updateDelay;
 
@@ -164,9 +185,8 @@ void Sensor::Update(bool _force)
       if (this->updateDelay >= this->updatePeriod)
         this->updateDelay = common::Time::Zero;
 
-      this->lastUpdateTime = simTime;
-      this->UpdateImpl(_force);
-      this->updated();
+      if (this->UpdateImpl(_force))
+        this->updated();
     }
   }
 }
