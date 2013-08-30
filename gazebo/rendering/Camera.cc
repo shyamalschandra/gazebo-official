@@ -100,7 +100,7 @@ class GaussianNoiseCompositorListener
 }  // namespace gazebo
 
 //////////////////////////////////////////////////
-Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
+Camera::Camera(const std::string &_name, ScenePtr _scene,
                bool _autoRender)
 {
   this->initialized = false;
@@ -119,9 +119,10 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
   this->saveCount = 0;
   this->bayerFrameBuffer = NULL;
 
-  std::ostringstream stream;
-  stream << _namePrefix << "(" << this->cameraCounter++ << ")";
-  this->name = stream.str();
+  this->name = _name;
+  this->scopedName = this->scene->GetName() + "::" + _name;
+  this->scopedUniqueName = this->scopedName + "(" + 
+    boost::lexical_cast<std::string>(++this->cameraCounter) + ")";
 
   this->renderTarget = NULL;
   this->renderTexture = NULL;
@@ -155,6 +156,9 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 
   // Set default render rate to unlimited
   this->SetRenderRate(0.0);
+
+  this->node = transport::NodePtr(new transport::Node());
+  this->node->Init();
 }
 
 //////////////////////////////////////////////////
@@ -173,7 +177,7 @@ Camera::~Camera()
 
   if (this->camera)
   {
-    this->scene->GetManager()->destroyCamera(this->name);
+    this->scene->GetManager()->destroyCamera(this->scopedUniqueName);
     this->camera = NULL;
   }
 
@@ -248,6 +252,14 @@ void Camera::Load()
       gzwarn << "ignoring unknown noise model type \"" << type << "\"" <<
         std::endl;
   }
+
+  // Only create a command subscription for real cameras. Ignore camera's 
+  // created for visualization purposes.
+  if (this->name.find("_GUIONLY_") == std::string::npos)
+  {
+    this->cmdSub = this->node->Subscribe("~/" + this->GetName() + "/cmd",
+        &Camera::OnCmdMsg, this, true);
+  }
 }
 
 //////////////////////////////////////////////////
@@ -261,7 +273,7 @@ void Camera::Init()
 
   // Create a scene node to control pitch motion
   this->pitchNode =
-    this->sceneNode->createChildSceneNode(this->name + "PitchNode");
+    this->sceneNode->createChildSceneNode(this->scopedUniqueName + "PitchNode");
   this->pitchNode->pitch(Ogre::Degree(0));
 
   this->pitchNode->attachObject(this->camera);
@@ -278,6 +290,8 @@ void Camera::Init()
 //////////////////////////////////////////////////
 void Camera::Fini()
 {
+  this->node.reset();
+
   if (this->gaussianNoiseCompositorListener)
   {
     this->gaussianNoiseInstance->removeListener(
@@ -313,6 +327,17 @@ void Camera::SetScene(ScenePtr _scene)
 //////////////////////////////////////////////////
 void Camera::Update()
 {
+  boost::mutex::scoped_lock lock(this->receiveMutex);
+
+  // Process all the command messages.
+  for (CameraCmdMsgs_L::iterator iter = this->commandMsgs.begin();
+      iter != this->commandMsgs.end(); ++iter)
+  {
+    if ((*iter)->has_follow_model())
+      this->TrackVisual((*iter)->follow_model());
+  }
+  this->commandMsgs.clear();
+
   std::list<msgs::Request>::iterator iter = this->requests.begin();
   while (iter != this->requests.end())
   {
@@ -414,7 +439,6 @@ void Camera::Update()
     this->SetWorldPosition(pos);
   }
 }
-
 
 //////////////////////////////////////////////////
 void Camera::Render()
@@ -537,6 +561,15 @@ void Camera::SetWorldPose(const math::Pose &_pose)
 {
   this->SetWorldPosition(_pose.pos);
   this->SetWorldRotation(_pose.rot);
+}
+
+//////////////////////////////////////////////////
+math::Pose Camera::GetWorldPose() const
+{
+  math::Pose pose;
+  pose.pos = Conversions::Convert(this->camera->getDerivedPosition());
+  pose.rot = Conversions::Convert(this->camera->getDerivedOrientation());
+  return pose;
 }
 
 //////////////////////////////////////////////////
@@ -888,9 +921,9 @@ math::Vector3 Camera::GetRight()
 }
 
 //////////////////////////////////////////////////
-void Camera::SetSceneNode(Ogre::SceneNode *node)
+void Camera::SetSceneNode(Ogre::SceneNode *_node)
 {
-  this->sceneNode = node;
+  this->sceneNode = _node;
 }
 
 //////////////////////////////////////////////////
@@ -930,6 +963,12 @@ std::string Camera::GetName() const
 }
 
 //////////////////////////////////////////////////
+std::string Camera::GetScopedName() const
+{
+  return this->scopedName;
+}
+
+//////////////////////////////////////////////////
 bool Camera::SaveFrame(const std::string &_filename)
 {
   return Camera::SaveFrame(this->saveFrameBuffer, this->GetImageWidth(),
@@ -945,7 +984,7 @@ std::string Camera::GetFrameFilename()
   std::string path = saveElem->Get<std::string>("path");
   boost::filesystem::path pathToFile;
 
-  std::string friendlyName = this->GetName();
+  std::string friendlyName = this->scopedUniqueName;
 
   boost::replace_all(friendlyName, "::", "_");
 
@@ -1629,4 +1668,11 @@ bool Camera::IsInitialized() const
 bool Camera::GetInitialized() const
 {
   return this->initialized && this->scene->GetInitialized();
+}
+
+//////////////////////////////////////////////////
+void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
+{
+  boost::mutex::scoped_lock lock(this->receiveMutex);
+  this->commandMsgs.push_back(_msg);
 }
