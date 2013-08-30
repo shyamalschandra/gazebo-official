@@ -496,6 +496,14 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  ++i;
                }
                EXPECT_LT(i, 50);
+
+               i = 0;
+               while (sensors::get_sensor(_cameraName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnRaySensor(const std::string &_modelName,
@@ -564,6 +572,14 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  ++i;
                }
                EXPECT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_raySensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnGpuRaySensor(const std::string &_modelName,
@@ -632,7 +648,15 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_raySensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnImuSensor(const std::string &_modelName,
@@ -669,6 +693,7 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  << "    <imu>" << std::endl;
 
                if (_noiseType.size() > 0)
+               {
                  newModelStr << "      <noise>" << std::endl
                  << "        <type>" << _noiseType << "</type>" << std::endl
                  << "        <rate>" << std::endl
@@ -692,6 +717,7 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  << "</bias_stddev>" << std::endl
                  << "        </accel>" << std::endl
                  << "      </noise>" << std::endl;
+               }
 
                newModelStr << "    </imu>" << std::endl
                  << "  </sensor>" << std::endl
@@ -709,7 +735,15 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_imuSensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn a contact sensor with the specified collision geometry
@@ -773,7 +807,15 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_sensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn an IMU sensor on a link
@@ -843,6 +885,14 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  ++i;
                }
                EXPECT_LT(i, 50);
+
+               i = 0;
+               while (sensors::get_sensor(_sensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn an Wireless transmitter sensor on a link
@@ -871,7 +921,8 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  << "<static>true</static>"
                  << "<pose>" << _pos << " " << _rpy << "</pose>"
                  << "<link name ='link'>"
-                 << "  <sensor name='" << _sensorName << "' type='wireless_transmitter'>"
+                 << "  <sensor name='" << _sensorName
+                 << "' type='wireless_transmitter'>"
                  << "    <always_on>1</always_on>"
                  << "    <update_rate>1</update_rate>"
                  << "    <visualize>false</visualize>"
@@ -888,7 +939,7 @@ class ServerFixture : public testing::TestWithParam<const char*>
 
                msg.set_sdf(newModelStr.str());
                this->factoryPub->Publish(msg);
-               WaitUntilEntitySpawn(_name, 20, 50);
+               WaitUntilEntitySpawn(_name, 100, 100);
              }
 
   /// \brief Spawn an Wireless receiver sensor on a link
@@ -919,7 +970,8 @@ class ServerFixture : public testing::TestWithParam<const char*>
                  << "<static>true</static>"
                  << "<pose>" << _pos << " " << _rpy << "</pose>"
                  << "<link name ='link'>"
-                 << "  <sensor name='" << _sensorName << "' type='wireless_receiver'>"
+                 << "  <sensor name='" << _sensorName
+                 << "' type='wireless_receiver'>"
                  << "    <update_rate>1</update_rate>"
                  << "    <visualize>true</visualize>"
                  << "    <transceiver>"
@@ -936,7 +988,7 @@ class ServerFixture : public testing::TestWithParam<const char*>
 
                msg.set_sdf(newModelStr.str());
                this->factoryPub->Publish(msg);
-               WaitUntilEntitySpawn(_name, 20, 50);
+               WaitUntilEntitySpawn(_name, 100, 100);
              }
 
   /// \brief Wait for a number of ms. and attempts until the entity is spawned
