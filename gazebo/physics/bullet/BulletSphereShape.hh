@@ -23,6 +23,7 @@
 #define _BULLETSPHERESHAPE_HH_
 
 #include "gazebo/physics/bullet/BulletPhysics.hh"
+#include "gazebo/physics/World.hh"
 #include "gazebo/physics/SphereShape.hh"
 
 namespace gazebo
@@ -48,9 +49,8 @@ namespace gazebo
               {
                 if (_radius < 0)
                 {
-                    gzerr << "Sphere shape does not support negative"
-                          << " radius\n";
-                    return;
+                  gzerr << "Sphere shape does not support negative radius\n";
+                  return;
                 }
                 if (math::equal(_radius, 0.0))
                 {
@@ -69,16 +69,29 @@ namespace gazebo
                 btCollisionShape *shape = bParent->GetCollisionShape();
                 if (!shape)
                 {
+                  this->initialSize = math::Vector3(_radius, _radius, _radius);
                   bParent->SetCollisionShape(new btSphereShape(_radius));
                 }
                 else
                 {
-                  double sphereRadius = this->GetRadius();
-                  double sphereScale = _radius / sphereRadius;
-                  shape->setLocalScaling(btVector3(sphereScale, sphereScale,
-                      sphereScale));
+                  btVector3 sphereScale;
+                  sphereScale.setX(_radius / this->initialSize.x);
+                  sphereScale.setY(_radius / this->initialSize.y);
+                  sphereScale.setZ(_radius / this->initialSize.z);
+
+                  shape->setLocalScaling(sphereScale);
+
+                  // clear bullet cache
+                  // otherwise collisions won't work properly after scaling
+                  BulletLinkPtr bLink =
+                      boost::dynamic_pointer_cast<BulletLink>(
+                      bParent->GetLink());
+                  bLink->ClearCollisionCache();
                 }
               }
+
+      /// \brief Initial size of sphere.
+      private: math::Vector3 initialSize;
     };
     /// \}
   }
