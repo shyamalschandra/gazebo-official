@@ -1,4 +1,5 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
+
 include ( ${QT_USE_FILE} )
 
 link_directories(
@@ -32,6 +33,7 @@ set (sources
   KeyEventHandler.cc
   LightMaker.cc
   MainWindow.cc
+  ModelManipulator.cc
   MeshMaker.cc
   ModelEditWidget.cc
   ModelListWidget.cc
@@ -71,6 +73,7 @@ set (headers
   GuiEvents.hh
   KeyEventHandler.hh
   LightMaker.hh
+  ModelManipulator.hh
   MeshMaker.hh
   MouseEventHandler.hh
   ModelMaker.hh

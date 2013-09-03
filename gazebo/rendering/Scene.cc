@@ -49,6 +49,7 @@
 #include "gazebo/rendering/RFIDVisual.hh"
 #include "gazebo/rendering/RFIDTagVisual.hh"
 #include "gazebo/rendering/VideoVisual.hh"
+#include "gazebo/rendering/TransmitterVisual.hh"
 
 #if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
 #include "gazebo/rendering/deferred_shading/SSAOLogic.hh"
@@ -80,7 +81,8 @@ struct VisualMessageLess {
 
 
 //////////////////////////////////////////////////
-Scene::Scene(const std::string &_name, bool _enableVisualizations)
+Scene::Scene(const std::string &_name, bool _enableVisualizations,
+    bool _isServer)
 {
   this->initialized = false;
   this->showCOMs = false;
@@ -114,7 +116,15 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations)
 
   this->lightSub = this->node->Subscribe("~/light", &Scene::OnLightMsg, this);
 
-  this->poseSub = this->node->Subscribe("~/pose/info", &Scene::OnPoseMsg, this);
+  if (_isServer)
+    this->poseSub = this->node->Subscribe("~/pose/local/info",
+    &Scene::OnPoseMsg, this);
+  else
+  {
+    this->poseSub = this->node->Subscribe("~/pose/info",
+        &Scene::OnPoseMsg, this);
+  }
+
   this->jointSub = this->node->Subscribe("~/joint", &Scene::OnJointMsg, this);
   this->skeletonPoseSub = this->node->Subscribe("~/skeleton_pose/info",
           &Scene::OnSkeletonPoseMsg, this);
@@ -164,7 +174,7 @@ void Scene::Clear()
   delete this->terrain;
   this->terrain = NULL;
 
-  while (this->visuals.size() > 0)
+  while (!this->visuals.empty())
     this->RemoveVisual(this->visuals.begin()->second);
   this->visuals.clear();
 
@@ -1380,6 +1390,12 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
   {
     boost::shared_ptr<msgs::Visual> vm(new msgs::Visual(
           _msg.visual(j)));
+    if (_msg.has_scale())
+    {
+      vm->mutable_scale()->set_x(_msg.scale().x());
+      vm->mutable_scale()->set_y(_msg.scale().y());
+      vm->mutable_scale()->set_z(_msg.scale().z());
+    }
     this->visualMsgs.push_back(vm);
   }
 
@@ -1515,7 +1531,6 @@ void Scene::PreRender()
   VisualMsgs_L visualMsgsCopy;
   JointMsgs_L jointMsgsCopy;
   LinkMsgs_L linkMsgsCopy;
-  RequestMsgs_L requestMsgsCopy;
 
   {
     boost::mutex::scoped_lock lock(*this->receiveMutex);
@@ -1843,6 +1858,18 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
     RFIDVisualPtr rfidVis(new RFIDVisual(
           _msg->name() + "_GUIONLY_rfid_vis", parentVis, _msg->topic()));
     this->visuals[rfidVis->GetName()] = rfidVis;
+  }
+  else if (_msg->type() == "wireless_transmitter" && _msg->visualize() &&
+           !_msg->topic().empty())
+  {
+    VisualPtr parentVis = this->GetVisual(_msg->parent());
+    if (!parentVis)
+      return false;
+
+    VisualPtr transmitterVis(new TransmitterVisual(
+          _msg->name() + "_GUIONLY_transmitter_vis", parentVis, _msg->topic()));
+    this->visuals[transmitterVis->GetName()] = transmitterVis;
+    transmitterVis->Load();
   }
 
   return true;
@@ -2551,7 +2578,7 @@ void Scene::RemoveVisual(VisualPtr _vis)
 /////////////////////////////////////////////////
 void Scene::SetGrid(bool _enabled)
 {
-  if (_enabled && this->grids.size() == 0)
+  if (_enabled && this->grids.empty())
   {
     Grid *grid = new Grid(this, 20, 1, 10, common::Color(0.3, 0.3, 0.3, 0.5));
     grid->Init();

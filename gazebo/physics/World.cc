@@ -38,6 +38,7 @@
 #include "gazebo/transport/Subscriber.hh"
 
 #include "gazebo/util/LogPlay.hh"
+
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Events.hh"
@@ -45,6 +46,7 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Plugin.hh"
 
+#include "gazebo/util/OpenAL.hh"
 #include "gazebo/util/Diagnostics.hh"
 #include "gazebo/util/LogRecord.hh"
 
@@ -56,6 +58,7 @@
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/Actor.hh"
 #include "gazebo/physics/World.hh"
+#include "gazebo/common/SphericalCoordinates.hh"
 
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/ContactManager.hh"
@@ -165,6 +168,10 @@ void World::Load(sdf::ElementPtr _sdf)
   else
     this->name = this->sdf->Get<std::string>("name");
 
+#ifdef HAVE_OPENAL
+  util::OpenAL::Instance()->Load(this->sdf->GetElement("audio"));
+#endif
+
   this->sceneMsg.CopyFrom(msgs::SceneFromSDF(this->sdf->GetElement("scene")));
   this->sceneMsg.set_name(this->GetName());
 
@@ -174,8 +181,16 @@ void World::Load(sdf::ElementPtr _sdf)
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->GetName());
 
+  // pose pub for server side, mainly used for updating and timestamping
+  // Scene, which in turn will be used by rendering sensors.
+  // TODO: replace local communication with shared memory for efficiency.
+  this->poseLocalPub = this->node->Advertise<msgs::PosesStamped>(
+    "~/pose/local/info", 10);
+
+  // pose pub for client with a cap on publishing rate to reduce traffic
+  // overhead
   this->posePub = this->node->Advertise<msgs::PosesStamped>(
-    "~/pose/info", 10, 60.0);
+    "~/pose/info", 10, 60);
 
   this->guiPub = this->node->Advertise<msgs::GUI>("~/gui", 5);
   if (this->sdf->HasElement("gui"))
@@ -208,6 +223,25 @@ void World::Load(sdf::ElementPtr _sdf)
 
   // This should come before loading of entities
   this->physicsEngine->Load(this->sdf->GetElement("physics"));
+
+  // This should also come before loading of entities
+  {
+    sdf::ElementPtr spherical = this->sdf->GetElement("spherical_coordinates");
+    common::SphericalCoordinates::SurfaceType surfaceType =
+      common::SphericalCoordinates::Convert(
+        spherical->Get<std::string>("surface_model"));
+    math::Angle latitude, longitude, heading;
+    double elevation = spherical->Get<double>("elevation");
+    latitude.SetFromDegree(spherical->Get<double>("latitude_deg"));
+    longitude.SetFromDegree(spherical->Get<double>("longitude_deg"));
+    heading.SetFromDegree(spherical->Get<double>("heading_deg"));
+
+    this->sphericalCoordinates.reset(new common::SphericalCoordinates(
+      surfaceType, latitude, longitude, elevation, heading));
+  }
+
+  if (this->sphericalCoordinates == NULL)
+    gzthrow("Unable to create spherical coordinates data structure\n");
 
   this->rootElement.reset(new Base(BasePtr()));
   this->rootElement->SetName(this->GetName());
@@ -667,6 +701,10 @@ void World::Fini()
 
   this->prevStates[0].SetWorld(WorldPtr());
   this->prevStates[1].SetWorld(WorldPtr());
+
+#ifdef HAVE_OPENAL
+  util::OpenAL::Instance()->Fini();
+#endif
 }
 
 //////////////////////////////////////////////////
@@ -685,6 +723,12 @@ std::string World::GetName() const
 PhysicsEnginePtr World::GetPhysicsEngine() const
 {
   return this->physicsEngine;
+}
+
+//////////////////////////////////////////////////
+common::SphericalCoordinatesPtr World::GetSphericalCoordinates() const
+{
+  return this->sphericalCoordinates;
 }
 
 //////////////////////////////////////////////////
@@ -1271,7 +1315,7 @@ void World::ProcessEntityMsgs()
     this->rootElement->RemoveChild((*iter));
   }
 
-  if (this->deleteEntity.size() > 0)
+  if (!this->deleteEntity.empty())
   {
     this->EnableAllModels();
     this->deleteEntity.clear();
@@ -1434,9 +1478,14 @@ void World::ProcessModelMsgs()
       // FillMsg fills the visual components from initial sdf
       // but problem is that Visuals may have changed e.g. through ~/visual,
       // so don't publish them to subscribers.
-      msg.clear_visual();
       for (int i = 0; i < msg.link_size(); ++i)
+      {
         msg.mutable_link(i)->clear_visual();
+        for (int j = 0; j < msg.link(i).collision_size(); ++j)
+        {
+          msg.mutable_link(i)->mutable_collision(j)->clear_visual();
+        }
+      }
 
       this->modelPub->Publish(msg);
     }
@@ -1775,36 +1824,47 @@ void World::ProcessMessages()
 {
   {
     boost::recursive_mutex::scoped_lock lock(*this->receiveMutex);
-    msgs::Pose *poseMsg;
 
-    if (this->posePub && this->posePub->HasConnections() &&
-        this->publishModelPoses.size() > 0)
+    if ((this->posePub && this->posePub->HasConnections()) ||
+        (this->poseLocalPub && this->poseLocalPub->HasConnections()))
     {
       msgs::PosesStamped msg;
 
       // Time stamp this PosesStamped message
       msgs::Set(msg.mutable_time(), this->GetSimTime());
 
-      for (std::set<ModelPtr>::iterator iter = this->publishModelPoses.begin();
-          iter != this->publishModelPoses.end(); ++iter)
+      if (!this->publishModelPoses.empty())
       {
-        poseMsg = msg.add_pose();
-
-        // Publish the model's relative pose
-        poseMsg->set_name((*iter)->GetScopedName());
-        msgs::Set(poseMsg, (*iter)->GetRelativePose());
-
-        // Publish each of the model's children relative poses
-        Link_V links = (*iter)->GetLinks();
-        for (Link_V::iterator linkIter = links.begin();
-            linkIter != links.end(); ++linkIter)
+        for (std::set<ModelPtr>::iterator iter =
+            this->publishModelPoses.begin();
+            iter != this->publishModelPoses.end(); ++iter)
         {
-          poseMsg = msg.add_pose();
-          poseMsg->set_name((*linkIter)->GetScopedName());
-          msgs::Set(poseMsg, (*linkIter)->GetRelativePose());
+          msgs::Pose *poseMsg = msg.add_pose();
+
+          // Publish the model's relative pose
+          poseMsg->set_name((*iter)->GetScopedName());
+          msgs::Set(poseMsg, (*iter)->GetRelativePose());
+
+          // Publish each of the model's children relative poses
+          Link_V links = (*iter)->GetLinks();
+          for (Link_V::iterator linkIter = links.begin();
+              linkIter != links.end(); ++linkIter)
+          {
+            poseMsg = msg.add_pose();
+            poseMsg->set_name((*linkIter)->GetScopedName());
+            msgs::Set(poseMsg, (*linkIter)->GetRelativePose());
+          }
         }
+        if (this->posePub && this->posePub->HasConnections())
+          this->posePub->Publish(msg);
       }
-      this->posePub->Publish(msg);
+
+      if (this->poseLocalPub && this->poseLocalPub->HasConnections())
+      {
+        // rendering::Scene depends on this timestamp, which is used by
+        // rendering sensors to time stamp their data
+        this->poseLocalPub->Publish(msg);
+      }
     }
     this->publishModelPoses.clear();
   }
