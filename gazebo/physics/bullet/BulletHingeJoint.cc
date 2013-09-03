@@ -165,6 +165,9 @@ void BulletHingeJoint::Init()
 
   // Allows access to impulse
   this->bulletHinge->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 //////////////////////////////////////////////////
@@ -212,12 +215,6 @@ void BulletHingeJoint::SetAxis(int /*_index*/, const math::Vector3 &_axis)
   /*btmath::Vector3 vec(_axis.x, _axis.y, _axis.z);
   ((btHingeConstraint*)this->bulletHinge)->setAxis(vec);
   */
-}
-
-//////////////////////////////////////////////////
-void BulletHingeJoint::SetDamping(int /*index*/, double /*_damping*/)
-{
-  gzerr << "Not implemented\n";
 }
 
 //////////////////////////////////////////////////
@@ -273,33 +270,10 @@ double BulletHingeJoint::GetMaxForce(int /*_index*/)
 }
 
 //////////////////////////////////////////////////
-void BulletHingeJoint::SetForce(int _index, double _effort)
+void BulletHingeJoint::SetForceImpl(int /*_index*/, double _effort)
 {
-  if (_index < 0 || static_cast<unsigned int>(_index) >= this->GetAngleCount())
-  {
-    gzerr << "Calling BulletHingeJoint::SetForce with an index ["
-          << _index << "] out of range\n";
-    return;
-  }
-
-  // truncating SetForce effort if velocity limit reached.
-  if (this->velocityLimit[_index] >= 0)
-  {
-    if (this->GetVelocity(_index) > this->velocityLimit[_index])
-      _effort = _effort > 0 ? 0 : _effort;
-    else if (this->GetVelocity(_index) < -this->velocityLimit[_index])
-      _effort = _effort < 0 ? 0 : _effort;
-  }
-
-  // truncate effort unless effortLimit is negative.
-  if (this->effortLimit[_index] >= 0)
-    _effort = math::clamp(_effort, -this->effortLimit[_index],
-       this->effortLimit[_index]);
-
   if (this->bulletHinge)
   {
-    BulletJoint::SetForce(_index, _effort);
-
     // z-axis of constraint frame
     btVector3 hingeAxisLocalA =
       this->bulletHinge->getFrameOffsetA().getBasis().getColumn(2);

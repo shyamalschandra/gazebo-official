@@ -58,15 +58,9 @@ void BulletBallJoint::SetAnchor(int /*_index*/,
 }
 
 //////////////////////////////////////////////////
-void BulletBallJoint::SetDamping(int /*_index*/, double /*_damping*/)
+void BulletBallJoint::Init()
 {
-  gzerr << "Not implemented\n";
-}
-
-//////////////////////////////////////////////////
-void BulletBallJoint::Attach(LinkPtr _one, LinkPtr _two)
-{
-  BallJoint<BulletJoint>::Attach(_one, _two);
+  BallJoint<BulletJoint>::Init();
 
   BulletLinkPtr bulletChildLink =
     boost::static_pointer_cast<BulletLink>(this->childLink);
@@ -97,6 +91,9 @@ void BulletBallJoint::Attach(LinkPtr _one, LinkPtr _two)
 
   // Allows access to impulse
   this->constraint->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 /////////////////////////////////////////////////
@@ -127,22 +124,23 @@ void BulletBallJoint::SetMaxForce(int /*_index*/, double /*_t*/)
 }
 
 /////////////////////////////////////////////////
-math::Angle BulletBallJoint::GetAngle(int /*_index*/) const
-{
-  gzerr << "Not implemented\n";
-  return 0;
-}
-
-/////////////////////////////////////////////////
 math::Vector3 BulletBallJoint::GetGlobalAxis(int /*_index*/) const
 {
+  gzerr << "Not implemented\n";
   return math::Vector3();
 }
 
 /////////////////////////////////////////////////
 math::Angle BulletBallJoint::GetAngleImpl(int /*_index*/) const
 {
+  gzerr << "Not implemented\n";
   return math::Angle();
+}
+
+//////////////////////////////////////////////////
+void BulletBallJoint::SetForceImpl(int /*_index*/, double /*_torque*/)
+{
+  gzerr << "Not implemented";
 }
 
 //////////////////////////////////////////////////

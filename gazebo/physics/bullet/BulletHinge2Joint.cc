@@ -52,9 +52,9 @@ void BulletHinge2Joint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-void BulletHinge2Joint::Attach(LinkPtr _one, LinkPtr _two)
+void BulletHinge2Joint::Init()
 {
-  Hinge2Joint<BulletJoint>::Attach(_one, _two);
+  Hinge2Joint<BulletJoint>::Init();
 
   BulletLinkPtr bulletChildLink =
     boost::static_pointer_cast<BulletLink>(this->childLink);
@@ -87,6 +87,9 @@ void BulletHinge2Joint::Attach(LinkPtr _one, LinkPtr _two)
 
   // Allows access to impulse
   this->constraint->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 //////////////////////////////////////////////////
@@ -139,13 +142,7 @@ void BulletHinge2Joint::SetAxis(int /*_index*/, const math::Vector3 &/*_axis*/)
 }
 
 //////////////////////////////////////////////////
-void BulletHinge2Joint::SetDamping(int /*index*/, double /*_damping*/)
-{
-  gzerr << "Not implemented\n";
-}
-
-//////////////////////////////////////////////////
-void BulletHinge2Joint::SetForce(int /*_index*/, double /*_torque*/)
+void BulletHinge2Joint::SetForceImpl(int /*_index*/, double /*_torque*/)
 {
   gzerr << "Not implemented";
 }
