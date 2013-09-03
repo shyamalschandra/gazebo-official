@@ -15,7 +15,7 @@ set (GAZEBO_MINOR_VERSION 9)
 # The patch version may have been bumped for prerelease purposes; be sure to
 # check gazebo-release/ubuntu/debian/changelog@default to determine what the
 # next patch version should be for a regular release.
-set (GAZEBO_PATCH_VERSION 0)
+set (GAZEBO_PATCH_VERSION 1)
 
 set (GAZEBO_VERSION ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION})
 set (GAZEBO_VERSION_FULL ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION}.${GAZEBO_PATCH_VERSION})
@@ -319,12 +319,6 @@ else (build_errors)
  
   include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
-  # This is only needed for backward compatibility with the internal
-  # version of SDF
-  if (NOT HAVE_SDF)
-    include_directories(${PROJECT_SOURCE_DIR}/gazebo)
-  endif()
-  
   message (STATUS "C Flags:${CMAKE_CXX_FLAGS}")
   message (STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
   message (STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
@@ -385,12 +379,7 @@ else (build_errors)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_rendering_deferred)
   endif()
     
-  if (HAVE_SDF)
-    set(PKG_DEPENDS Boost Protobuf SDFormat)
-  else()
-    set(PKG_DEPENDS Boost Protobuf)
-    set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_sdf_interface)
-  endif()
+  set(PKG_DEPENDS Boost Protobuf SDFormat)
 
   set(cmake_conf_file "cmake/gazebo-config.cmake")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${cmake_conf_file}.in" "${CMAKE_CURRENT_BINARY_DIR}/${cmake_conf_file}" @ONLY)
