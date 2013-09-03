@@ -13,12 +13,6 @@ link_directories(
   ${PROJECT_BINARY_DIR}/test
 )
 
-# Remove this whole if block in Gazebo 2.0
-if (NOT HAVE_SDF)
-  add_subdirectory(sdf)
-  include_directories(${PROJECT_SOURCE_DIR}/gazebo)
-endif()
-
 add_subdirectory(msgs)
 add_subdirectory(math)
 add_subdirectory(transport)
@@ -42,18 +36,8 @@ if (HAVE_Simbody)
   add_dependencies(gazebo_physics_simbody gazebo_msgs)
 endif()
 
-gz_add_executable(gzmaster master_main.cc Master.cc gazebo.cc)
 gz_add_executable(gzserver server_main.cc Server.cc Master.cc gazebo.cc)
 gz_add_executable(gazebo gazebo_main.cc Server.cc Master.cc gazebo.cc)
-
-target_link_libraries(gzmaster
-  gazebo_common
-  gazebo_util                  
-  gazebo_transport
-  gazebo_msgs
-  pthread
-)
-
 
 target_link_libraries(gzserver
   gazebo_common
@@ -82,8 +66,6 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "CHECK")
   target_link_libraries(gzserver gcov)
 endif()
 
-
-gz_install_executable(gzmaster)
 gz_install_executable(gzserver)
 gz_install_executable(gazebo)
 
@@ -101,13 +83,6 @@ target_link_libraries(libgazebo
   gazebo_math
   pthread
 )
-
-if (NOT HAVE_SDF)
-  target_link_libraries(libgazebo gazebo_sdf_interface)
-  target_link_libraries(gazebo gazebo_sdf_interface)
-  target_link_libraries(gzserver gazebo_sdf_interface)
-  target_link_libraries(gzmaster gazebo_sdf_interface)
-endif()
 
 add_dependencies(libgazebo gazebo_msgs)
 gz_install_library(libgazebo)

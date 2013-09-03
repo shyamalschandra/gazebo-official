@@ -283,9 +283,9 @@ void Actor::LoadScript(sdf::ElementPtr _sdf)
     }
   }
   double scriptTime = 0.0;
-  if (this->skelAnimation.size() > 0)
+  if (!this->skelAnimation.empty())
   {
-    if (this->trajInfo.size() == 0)
+    if (this->trajInfo.empty())
     {
       TrajectoryInfo tinfo;
       tinfo.id = 0;
@@ -328,13 +328,13 @@ void Actor::LoadAnimation(sdf::ElementPtr _sdf)
     std::string animFile = _sdf->Get<std::string>("filename");
     std::string extension = animFile.substr(animFile.rfind(".") + 1,
         animFile.size());
-    double scale = _sdf->Get<double>("scale");
+    double animScale = _sdf->Get<double>("scale");
     Skeleton *skel = NULL;
 
     if (extension == "bvh")
     {
       BVHLoader loader;
-      skel = loader.Load(animFile, scale);
+      skel = loader.Load(animFile, animScale);
     }
     else
       if (extension == "dae")
@@ -346,7 +346,7 @@ void Actor::LoadAnimation(sdf::ElementPtr _sdf)
         if (animMesh && animMesh->HasSkeleton())
         {
           skel = animMesh->GetSkeleton();
-          skel->Scale(scale);
+          skel->Scale(animScale);
         }
       }
 
