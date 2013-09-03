@@ -19,8 +19,15 @@
 #define _TEST_GENERATOR_HH_
 
 #define ODE_SUPPORT(testclass) INSTANTIATE_TEST_CASE_P(TestODE, \
-    testclass, ::testing::Values("ode"));
+    testclass, ::testing::Values("ode"))
+#define SIMBODY_SUPPORT(testclass)
 #define BULLET_SUPPORT(testclass)
+
+#ifdef HAVE_SIMBODY
+#undef SIMBODY_SUPPORT
+#define SIMBODY_SUPPORT(testclass) INSTANTIATE_TEST_CASE_P(TestSimbody, \
+    testclass, ::testing::Values("simbody"));
+#endif
 
 #ifdef HAVE_BULLET
 #undef BULLET_SUPPORT
@@ -30,7 +37,8 @@
 
 /// \brief Helper macro to instantiate gtest for using different physics engines
 #define INSTANTIATE_PHYSICS_ENGINES_TEST(testclass) \
-    ODE_SUPPORT(testclass) \
+    ODE_SUPPORT(testclass); \
+    SIMBODY_SUPPORT(testclass); \
     BULLET_SUPPORT(testclass)
 
 #endif

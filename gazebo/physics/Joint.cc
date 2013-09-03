@@ -57,6 +57,11 @@ Joint::Joint(BasePtr _parent)
   this->upperLimit[1] =  1e16;
   this->inertiaRatio[0] = 0;
   this->inertiaRatio[1] = 0;
+  this->dampingCoefficient = 0;
+  this->wrench.body1Force = math::Vector3(0, 0, 0);
+  this->wrench.body1Torque = math::Vector3(0, 0, 0);
+  this->wrench.body2Force = math::Vector3(0, 0, 0);
+  this->wrench.body2Torque = math::Vector3(0, 0, 0);
 }
 
 //////////////////////////////////////////////////
@@ -106,6 +111,16 @@ void Joint::Load(LinkPtr _parent, LinkPtr _child, const math::Pose &_pose)
 void Joint::Load(sdf::ElementPtr _sdf)
 {
   Base::Load(_sdf);
+
+  // Joint force and torque feedback
+  if (_sdf->HasElement("physics"))
+  {
+    sdf::ElementPtr physics_elem = _sdf->GetElement("physics");
+    if (physics_elem->HasElement("provide_feedback"))
+    {
+      this->SetProvideFeedback(physics_elem->Get<bool>("provide_feedback"));
+    }
+  }
 
   sdf::ElementPtr parentElem = _sdf->GetElement("parent");
   sdf::ElementPtr childElem = _sdf->GetElement("child");
@@ -510,7 +525,8 @@ void Joint::SetForce(int _index, double _force)
   else
     gzerr << "Something's wrong, joint [" << this->GetName()
           << "] index [" << _index
-          << "] out of range.\n";
+          << "] out of range [" << this->GetAngleCount()
+          << "] when trying to set force.\n";
 }
 
 //////////////////////////////////////////////////
@@ -523,6 +539,7 @@ double Joint::GetForce(unsigned int _index)
   else
   {
     gzerr << "Invalid joint index [" << _index
+          << "] out of range [" << this->GetAngleCount()
           << "] when trying to get force\n";
     return 0;
   }
