@@ -496,6 +496,14 @@ class ServerFixture : public testing::Test
                  ++i;
                }
                EXPECT_LT(i, 50);
+
+               i = 0;
+               while (sensors::get_sensor(_cameraName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnRaySensor(const std::string &_modelName,
@@ -564,6 +572,14 @@ class ServerFixture : public testing::Test
                  ++i;
                }
                EXPECT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_raySensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnGpuRaySensor(const std::string &_modelName,
@@ -632,7 +648,15 @@ class ServerFixture : public testing::Test
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_raySensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   protected: void SpawnImuSensor(const std::string &_modelName,
@@ -669,6 +693,7 @@ class ServerFixture : public testing::Test
                  << "    <imu>" << std::endl;
 
                if (_noiseType.size() > 0)
+               {
                  newModelStr << "      <noise>" << std::endl
                  << "        <type>" << _noiseType << "</type>" << std::endl
                  << "        <rate>" << std::endl
@@ -692,6 +717,7 @@ class ServerFixture : public testing::Test
                  << "</bias_stddev>" << std::endl
                  << "        </accel>" << std::endl
                  << "      </noise>" << std::endl;
+               }
 
                newModelStr << "    </imu>" << std::endl
                  << "  </sensor>" << std::endl
@@ -709,7 +735,15 @@ class ServerFixture : public testing::Test
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_imuSensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn a contact sensor with the specified collision geometry
@@ -773,7 +807,15 @@ class ServerFixture : public testing::Test
                  common::Time::MSleep(100);
                  ++i;
                }
-               EXPECT_LT(i, 100);
+               ASSERT_LT(i, 100);
+
+               i = 0;
+               while (sensors::get_sensor(_sensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn an IMU sensor on a link
@@ -843,6 +885,14 @@ class ServerFixture : public testing::Test
                  ++i;
                }
                EXPECT_LT(i, 50);
+
+               i = 0;
+               while (sensors::get_sensor(_sensorName) == NULL && i < 100)
+               {
+                 common::Time::MSleep(100);
+                 ++i;
+               }
+               ASSERT_LT(i, 100);
              }
 
   /// \brief Spawn an Wireless transmitter sensor on a link
@@ -889,7 +939,7 @@ class ServerFixture : public testing::Test
 
                msg.set_sdf(newModelStr.str());
                this->factoryPub->Publish(msg);
-               WaitUntilEntitySpawn(_name, 20, 50);
+               WaitUntilEntitySpawn(_name, 100, 100);
              }
 
   /// \brief Spawn an Wireless receiver sensor on a link
@@ -938,7 +988,7 @@ class ServerFixture : public testing::Test
 
                msg.set_sdf(newModelStr.str());
                this->factoryPub->Publish(msg);
-               WaitUntilEntitySpawn(_name, 20, 50);
+               WaitUntilEntitySpawn(_name, 100, 100);
              }
 
   /// \brief Wait for a number of ms. and attempts until the entity is spawned
