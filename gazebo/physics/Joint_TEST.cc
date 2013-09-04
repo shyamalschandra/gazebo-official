@@ -240,6 +240,9 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
           << " / -750 -450 0"
           << "]\n";
 
+    gzdbg << "joint angle1[" << std::setprecision(17) << joint_01->GetAngle(0)
+          << "] angle2[" << joint_12->GetAngle(0) << "]\n";
+
     // test joint_12 wrench
     physics::JointWrench wrench_12 = joint_12->GetForceTorque(0u);
     EXPECT_NEAR(wrench_12.body1Force.x,   300.0,  3.0);
@@ -291,8 +294,6 @@ TEST_F(Joint_TEST, ForceTorque2Simbody)
 #endif  // HAVE_SIMBODY
 
 #ifdef HAVE_BULLET
-
-/// bullet collision parameters needs tweaking?
 TEST_F(Joint_TEST, ForceTorque2Bullet)
 {
   ForceTorque2("bullet");
@@ -371,15 +372,15 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
       EXPECT_NEAR(wrench_01.body2Torque.y, -wrench_01.body1Torque.y, TOL_CONT);
       EXPECT_NEAR(wrench_01.body2Torque.z, -wrench_01.body1Torque.z, TOL_CONT);
 
-      // gzdbg << "joint_01 force torque : "
-      //       << "step [" << i
-      //       << "] GetForce [" << joint_01->GetForce(0u)
-      //       << "] command [" << effort1
-      //       << "] force1 [" << wrench_01.body1Force
-      //       << "] torque1 [" << wrench_01.body1Torque
-      //       << "] force2 [" << wrench_01.body2Force
-      //       << "] torque2 [" << wrench_01.body2Torque
-      //       << "]\n";
+      gzdbg << "joint_01 force torque : "
+            << "step [" << i
+            << "] GetForce [" << joint_01->GetForce(0u)
+            << "] command [" << effort1
+            << "] force1 [" << wrench_01.body1Force
+            << "] torque1 [" << wrench_01.body1Torque
+            << "] force2 [" << wrench_01.body2Force
+            << "] torque2 [" << wrench_01.body2Torque
+            << "]\n";
     }
 
     // test joint_12 wrench
@@ -400,16 +401,19 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
       EXPECT_NEAR(wrench_12.body2Torque.y,    0.000, TOL_CONT);
       EXPECT_NEAR(wrench_12.body2Torque.z,   17.678, TOL_CONT);
 
-      // gzdbg << "joint_12 force torque : "
-      //       << "step [" << i
-      //       << "] GetForce [" << joint_12->GetForce(0u)
-      //       << "] command [" << effort2
-      //       << "] force1 [" << wrench_12.body1Force
-      //       << "] torque1 [" << wrench_12.body1Torque
-      //       << "] force2 [" << wrench_12.body2Force
-      //       << "] torque2 [" << wrench_12.body2Torque
-      //       << "]\n";
+      gzdbg << "joint_12 force torque : "
+            << "step [" << i
+            << "] GetForce [" << joint_12->GetForce(0u)
+            << "] command [" << effort2
+            << "] force1 [" << wrench_12.body1Force
+            << "] torque1 [" << wrench_12.body1Torque
+            << "] force2 [" << wrench_12.body2Force
+            << "] torque2 [" << wrench_12.body2Torque
+            << "]\n";
     }
+    gzdbg << "angles[" << i << "] 1[" << joint_01->GetAngle(0)
+          << "] 2[" << joint_12->GetAngle(0)
+          << "]\n";
   }
 }
 
@@ -482,6 +486,13 @@ TEST_F(Joint_TEST, SpawnJointTypesBullet)
   SpawnJointTypes("bullet");
 }
 #endif  // HAVE_BULLET
+
+#ifdef HAVE_SIMBODY
+TEST_F(Joint_TEST, SpawnJointTypesSimbody)
+{
+  SpawnJointTypes("simbody");
+}
+#endif  // HAVE_SIMBODY
 
 void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
 {
@@ -645,7 +656,7 @@ TEST_F(Joint_TEST, JointTorqueTestBullet)
 {
   gzerr << "JointTorqueTestBullet fails because dynamic joint manipulation "
         << "is not yet working\n";
-  // JointTorqueTest("bullet");
+  JointTorqueTest("bullet");
 }
 #endif  // HAVE_BULLET
 

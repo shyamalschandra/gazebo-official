@@ -1019,6 +1019,8 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
       math::Pose childPose;
       if (this->childLink)
         childPose = this->childLink->GetWorldPose();
+      else
+        gzerr << "missing child link, double check model.";
 
       math::Pose parentPose = this->parentLink->GetWorldPose();
 
@@ -1235,7 +1237,7 @@ void ODEJoint::SetDamping(int /*_index*/, double _damping)
         boost::bind(&ODEJoint::CFMDamping, this));
     else
       this->applyDamping = physics::Joint::ConnectJointUpdate(
-        boost::bind(&ODEJoint::ApplyDamping, this));
+        boost::bind(&Joint::ApplyDamping, this));
     this->dampingInitialized = true;
   }
 }
