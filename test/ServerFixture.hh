@@ -854,6 +854,7 @@ class ServerFixture : public testing::Test
   /// \param[in] _freq Frequency of transmission (MHz)
   /// \param[in] _power Transmission power (dBm)
   /// \param[in] _gain Antenna gain (dBi)
+  /// \param[in] _visualize Enable sensor visualization
   protected: void SpawnWirelessTransmitterSensor(const std::string &_name,
                  const std::string &_sensorName,
                  const math::Vector3 &_pos,
@@ -861,7 +862,8 @@ class ServerFixture : public testing::Test
                  const std::string &_essid,
                  double _freq,
                  double _power,
-                 double _gain)
+                 double _gain,
+                 bool _visualize = true)
              {
                msgs::Factory msg;
                std::ostringstream newModelStr;
@@ -872,10 +874,10 @@ class ServerFixture : public testing::Test
                  << "<pose>" << _pos << " " << _rpy << "</pose>"
                  << "<link name ='link'>"
                  << "  <sensor name='" << _sensorName
-                 <<         "' type='wireless_transmitter'>"
+                 << "' type='wireless_transmitter'>"
                  << "    <always_on>1</always_on>"
                  << "    <update_rate>1</update_rate>"
-                 << "    <visualize>false</visualize>"
+                 << "    <visualize>" << _visualize << "</visualize>"
                  << "    <transceiver>"
                  << "      <essid>" << _essid << "</essid>"
                  << "      <frequency>" << _freq << "</frequency>"
@@ -902,6 +904,7 @@ class ServerFixture : public testing::Test
   /// \param[in] _power Transmission power (dBm)
   /// \param[in] _gain Antenna gain (dBi)
   /// \param[in] _sensitivity Receiver sensitibity (dBm)
+  /// \param[in] _visualize Enable sensor visualization
   protected: void SpawnWirelessReceiverSensor(const std::string &_name,
                  const std::string &_sensorName,
                  const math::Vector3 &_pos,
@@ -910,7 +913,8 @@ class ServerFixture : public testing::Test
                  double _maxFreq,
                  double _power,
                  double _gain,
-                 double _sensitivity)
+                 double _sensitivity,
+                 bool _visualize = true)
              {
                msgs::Factory msg;
                std::ostringstream newModelStr;
@@ -921,9 +925,9 @@ class ServerFixture : public testing::Test
                  << "<pose>" << _pos << " " << _rpy << "</pose>"
                  << "<link name ='link'>"
                  << "  <sensor name='" << _sensorName
-                 <<         "' type='wireless_receiver'>"
+                 << "' type='wireless_receiver'>"
                  << "    <update_rate>1</update_rate>"
-                 << "    <visualize>true</visualize>"
+                 << "    <visualize>" << _visualize << "</visualize>"
                  << "    <transceiver>"
                  << "      <min_frequency>" << _minFreq << "</min_frequency>"
                  << "      <max_frequency>" << _maxFreq << "</max_frequency>"
@@ -946,18 +950,18 @@ class ServerFixture : public testing::Test
   /// \param[in] _sleep_each Number of milliseconds to sleep in each iteration
   /// \param[in] _retries Number of iterations until give up
   private: void WaitUntilEntitySpawn(const std::string &_name,
-                                     unsigned int sleep_each,
-                                     int retries)
+               unsigned int sleep_each,
+               int retries)
+           {
+             int i = 0;
+             // Wait for the entity to spawn
+             while (!this->HasEntity(_name) && i < retries)
              {
-               int i = 0;
-               // Wait for the entity to spawn
-               while (!this->HasEntity(_name) && i < retries)
-               {
-                 common::Time::MSleep(sleep_each);
-                 ++i;
-               }
-               EXPECT_LT(i, retries);
+               common::Time::MSleep(sleep_each);
+               ++i;
              }
+             EXPECT_LT(i, retries);
+           }
 
   protected: void SpawnCylinder(const std::string &_name,
                  const math::Vector3 &_pos, const math::Vector3 &_rpy,
@@ -1202,7 +1206,7 @@ class ServerFixture : public testing::Test
              }
 
   protected: void LoadPlugin(const std::string &_filename,
-                             const std::string &_name)
+                 const std::string &_name)
              {
                // Get the first world...we assume it the only one running
                physics::WorldPtr world = physics::get_world();
@@ -1231,40 +1235,40 @@ class ServerFixture : public testing::Test
              }
 
   protected: void GetMemInfo(double &_resident, double &_share)
-            {
+             {
 #ifdef __linux__
-              int totalSize, residentPages, sharePages;
-              totalSize = residentPages = sharePages = 0;
+               int totalSize, residentPages, sharePages;
+               totalSize = residentPages = sharePages = 0;
 
-              std::ifstream buffer("/proc/self/statm");
-              buffer >> totalSize >> residentPages >> sharePages;
-              buffer.close();
+               std::ifstream buffer("/proc/self/statm");
+               buffer >> totalSize >> residentPages >> sharePages;
+               buffer.close();
 
-              // in case x86-64 is configured to use 2MB pages
-              int64_t pageSizeKb = sysconf(_SC_PAGE_SIZE) / 1024;
+               // in case x86-64 is configured to use 2MB pages
+               int64_t pageSizeKb = sysconf(_SC_PAGE_SIZE) / 1024;
 
-              _resident = residentPages * pageSizeKb;
-              _share = sharePages * pageSizeKb;
+               _resident = residentPages * pageSizeKb;
+               _share = sharePages * pageSizeKb;
 #elif __MACH__
-              // /proc is only available on Linux
-              // for OSX, use task_info to get resident and virtual memory
-              struct task_basic_info t_info;
-              mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
-              if (KERN_SUCCESS != task_info(mach_task_self(),
-                                            TASK_BASIC_INFO,
-                                            (task_info_t)&t_info,
-                                            &t_info_count))
-              {
-                gzerr << "failure calling task_info\n";
-                return;
-              }
-              _resident = static_cast<double>(t_info.resident_size/1024);
-              _share = static_cast<double>(t_info.virtual_size/1024);
+               // /proc is only available on Linux
+               // for OSX, use task_info to get resident and virtual memory
+               struct task_basic_info t_info;
+               mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+               if (KERN_SUCCESS != task_info(mach_task_self(),
+                     TASK_BASIC_INFO,
+                     (task_info_t)&t_info,
+                     &t_info_count))
+               {
+                 gzerr << "failure calling task_info\n";
+                 return;
+               }
+               _resident = static_cast<double>(t_info.resident_size/1024);
+               _share = static_cast<double>(t_info.virtual_size/1024);
 #else
-              gzerr << "Unsupported architecture\n";
-              return;
+               gzerr << "Unsupported architecture\n";
+               return;
 #endif
-            }
+             }
 
   protected: Server *server;
   protected: boost::thread *serverThread;
