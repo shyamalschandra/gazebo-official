@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright 2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,27 @@ namespace gazebo
   {
     class GzTerrainMatGen;
 
+    class DummyPageProvider : public Ogre::PageProvider
+    {
+      public:
+      bool prepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+      bool loadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+      bool unloadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+      bool unprepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+    };
+
     /// \addtogroup gazebo_rendering
     /// \{
 
@@ -52,6 +73,9 @@ namespace gazebo
     /// \brief Rendering a terrain using heightmap information
     class Heightmap
     {
+      /// \brief Number of pieces in which a terrain is subdivided for paging.
+      public: static const unsigned int NumTerrainSubdivisions;
+
       /// \brief Constructor
       /// \param[in] _scene Pointer to the scene that will contain the heightmap
       public: Heightmap(ScenePtr _scene);
@@ -150,6 +174,13 @@ namespace gazebo
       public: Ogre::TerrainGroup::RayResult GetMouseHit(CameraPtr _camera,
                   math::Vector2i _mousePos);
 
+      /// \brief Split a terrain into subterrains
+      /// \param[in] _heightmap Source vector of floats with the heights.
+      /// \param[in] _n Number of subterrains.
+      /// \param[out] _v Destination vector with the subterrains.
+      public: void SplitHeights(const std::vector<float> &_heightmap, int _n,
+                  std::vector<std::vector<float> > &_v);
+
       /// \brief Modify the height at a specific point.
       /// \param[in] _pos Position in world coordinates.
       /// \param[in] _outsideRadius Controls the radius of effect.
@@ -176,6 +207,22 @@ namespace gazebo
       /// \brief Internal function used to setup shadows for the terrain.
       /// \param[in] _enabled True to enable shadows.
       private: void SetupShadows(bool _enabled);
+
+      /// \brief Path for the terrain pages generated on disk.
+      private: static const std::string PagingPath;
+
+      /// \brief The terrain pages are loaded if the distance from the camera is
+      /// within the loadRadius. See Ogre::TerrainPaging::createWorldSection().
+      /// LoadRadiusFactor is a multiplier applied to the terrain size to create
+      /// a load radius that depends on the terrain size.
+      private: static const double LoadRadiusFactor;
+
+      /// \brief The terrain pages are held in memory but not loaded if they
+      /// are not ready when the camera is within holdRadius distance. See
+      /// Ogre::TerrainPaging::createWorldSection(). HoldRadiusFactor is a
+      /// multiplier applied to the terrain size to create a hold radius that
+      /// depends on the terrain size.
+      private: static const double HoldRadiusFactor;
 
       /// \brief The scene.
       private: ScenePtr scene;
@@ -221,6 +268,28 @@ namespace gazebo
 
       /// \brief Pointer to the terrain material generator.
       private: GzTerrainMatGen *gzMatGen;
+
+      /// \brief A page provided is needed to use the paging system.
+      private: DummyPageProvider dummyPageProvider;
+
+      /// \brief Central registration point for extension classes,
+      /// such as the PageStrategy, PageContentFactory.
+      private: Ogre::PageManager *pageManager;
+
+      /// \brief Type of paging applied
+      private: Ogre::TerrainPaging *terrainPaging;
+
+      /// \brief Collection of world content
+      private: Ogre::PagedWorld* world;
+
+      /// \brief Collection of terrains. Every terrain might be paged.
+      private: std::vector<std::vector<float> > subTerrains;
+
+      /// \brief Used to iterate over all the terrains
+      private: int terrainIdx;
+
+      /// \brief Flag that enables/disables the terrain paging
+      private: bool useTerrainPaging;
     };
     /// \}
 
