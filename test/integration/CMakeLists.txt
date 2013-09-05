@@ -27,6 +27,11 @@ set(tests
   contact_sensor.cc
   factory.cc
   file_handling.cc
+  gz_joint.cc
+  gz_log.cc
+  gz_model.cc
+  gz_physics.cc
+  gz_world.cc
   imu.cc
   laser.cc
   manpages.cc
@@ -35,6 +40,7 @@ set(tests
   physics_msgs.cc
   pioneer2dx.cc
   transport.cc
+  sensor_stress.cc
   server_fixture.cc
   speed.cc
   #state_log.cc
@@ -57,6 +63,7 @@ gz_build_display_tests(${display_tests})
 set(dri_tests
   camera_sensor.cc
   gpu_laser.cc
+  gz_camera.cc
   heightmap.cc
   pr2.cc
   projector.cc
