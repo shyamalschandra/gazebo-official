@@ -24,9 +24,9 @@
 
 #include <string>
 #include <vector>
+#include <boost/filesystem.hpp>
 
 #include "gazebo/rendering/ogre_gazebo.h"
-
 #include "gazebo/common/Image.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Vector2d.hh"
@@ -45,22 +45,35 @@ namespace gazebo
   {
     class GzTerrainMatGen;
 
+    /// \class DummyPageProvider Heightmap.hh rendering/rendering.hh
+    /// \brief Pretends to provide procedural page content to avoid page loading
     class DummyPageProvider : public Ogre::PageProvider
     {
+      /// \brief Give a provider the opportunity to prepare page content
+      /// procedurally. The parameters are not used.
+      public: bool prepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+
+      /// \brief Give a provider the opportunity to load page content
+      /// procedurally. The parameters are not used.
+      public: bool loadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+
+      /// \brief Give a provider the opportunity to unload page content
+      /// procedurally. The parameters are not used.
+      public: bool unloadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+      {
+        return true;
+      }
+
+      /// \brief Give a provider the opportunity to unprepare page content
+      /// procedurally. The parameters are not used.
       public:
-      bool prepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
-      {
-        return true;
-      }
-      bool loadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
-      {
-        return true;
-      }
-      bool unloadProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
-      {
-        return true;
-      }
-      bool unprepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
+          bool unprepareProceduralPage(Ogre::Page*, Ogre::PagedWorldSection*)
       {
         return true;
       }
@@ -73,9 +86,6 @@ namespace gazebo
     /// \brief Rendering a terrain using heightmap information
     class Heightmap
     {
-      /// \brief Number of pieces in which a terrain is subdivided for paging.
-      public: static const unsigned int NumTerrainSubdivisions;
-
       /// \brief Constructor
       /// \param[in] _scene Pointer to the scene that will contain the heightmap
       public: Heightmap(ScenePtr _scene);
@@ -208,8 +218,11 @@ namespace gazebo
       /// \param[in] _enabled True to enable shadows.
       private: void SetupShadows(bool _enabled);
 
+      /// \brief Number of pieces in which a terrain is subdivided for paging.
+      public: static const unsigned int NumTerrainSubdivisions;
+
       /// \brief Path for the terrain pages generated on disk.
-      private: static const std::string PagingPath;
+      private: boost::filesystem::path pagingPath;
 
       /// \brief The terrain pages are loaded if the distance from the camera is
       /// within the loadRadius. See Ogre::TerrainPaging::createWorldSection().
@@ -269,7 +282,7 @@ namespace gazebo
       /// \brief Pointer to the terrain material generator.
       private: GzTerrainMatGen *gzMatGen;
 
-      /// \brief A page provided is needed to use the paging system.
+      /// \brief A page provider is needed to use the paging system.
       private: DummyPageProvider dummyPageProvider;
 
       /// \brief Central registration point for extension classes,
@@ -280,7 +293,7 @@ namespace gazebo
       private: Ogre::TerrainPaging *terrainPaging;
 
       /// \brief Collection of world content
-      private: Ogre::PagedWorld* world;
+      private: Ogre::PagedWorld *world;
 
       /// \brief Collection of terrains. Every terrain might be paged.
       private: std::vector<std::vector<float> > subTerrains;

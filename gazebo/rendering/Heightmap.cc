@@ -21,7 +21,6 @@
 
 #include <string.h>
 #include <math.h>
-#include <boost/filesystem.hpp>
 
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/CommonIface.hh"
@@ -38,7 +37,6 @@
 using namespace gazebo;
 using namespace rendering;
 
-const std::string Heightmap::PagingPath = "/tmp/gazebo_paging/";
 const unsigned int Heightmap::NumTerrainSubdivisions = 16;
 const double Heightmap::LoadRadiusFactor = 1.0;
 const double Heightmap::HoldRadiusFactor = 1.15;
@@ -52,9 +50,18 @@ Heightmap::Heightmap(ScenePtr _scene)
   this->terrainIdx = 0;
   this->useTerrainPaging = false;
 
+  boost::filesystem::path tmpDir = boost::filesystem::temp_directory_path();
+  boost::filesystem::path gzPagingDir = "gazebo-paging";
+  boost::filesystem::path instanceDir =
+      boost::filesystem::unique_path("instance-%%%%%%%%%%");
+
+  this->pagingPath = tmpDir / gzPagingDir / instanceDir;
+
   // Remove previous page files from disk
-  boost::filesystem::remove_all(this->PagingPath);
-  boost::filesystem::create_directory(this->PagingPath);
+  boost::filesystem::remove_all(tmpDir / gzPagingDir);
+
+  // Create a temporal and unique directory for page files
+  boost::filesystem::create_directories(this->pagingPath);
 }
 
 //////////////////////////////////////////////////
@@ -72,8 +79,11 @@ Heightmap::~Heightmap()
 
   this->scene.reset();
 
+  OGRE_DELETE(this->pageManager);
+  OGRE_DELETE(this->terrainPaging);
+
   // Remove page files from disk
-  boost::filesystem::remove_all(this->PagingPath);
+  boost::filesystem::remove_all(this->pagingPath);
 }
 
 //////////////////////////////////////////////////
@@ -256,8 +266,9 @@ void Heightmap::Load()
       1 + ((this->dataSize - 1) / sqrt(nTerrains)),
       this->terrainSize.x / (sqrt(nTerrains)));
 
+  boost::filesystem::path prefix = this->pagingPath / "gazebo_terrain";
   this->terrainGroup->setFilenameConvention(
-    Ogre::String(this->PagingPath + "gazebo_terrain"), Ogre::String("dat"));
+    Ogre::String(prefix.string()), Ogre::String("dat"));
 
   Ogre::Vector3 orig = Conversions::Convert(this->terrainOrigin);
   math::Vector3 origin(
@@ -290,7 +301,7 @@ void Heightmap::Load()
 
     this->terrainPaging = OGRE_NEW Ogre::TerrainPaging(this->pageManager);
     this->world = pageManager->createWorld();
-    terrainPaging->createWorldSection(world, this->terrainGroup,
+    this->terrainPaging->createWorldSection(world, this->terrainGroup,
         this->LoadRadiusFactor * this->terrainSize.x,
         this->HoldRadiusFactor * this->terrainSize.x,
         0, 0, sqrt(nTerrains) - 1, sqrt(nTerrains) - 1);
@@ -440,7 +451,7 @@ void Heightmap::DefineTerrain(int _x, int _y)
     if (this->useTerrainPaging)
     {
       this->terrainGroup->defineTerrain(_x, _y,
-          &subTerrains[this->terrainIdx][0]);
+          &this->subTerrains[this->terrainIdx][0]);
       ++terrainIdx;
     }
     else
