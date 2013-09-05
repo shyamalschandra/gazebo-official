@@ -135,7 +135,7 @@ TEST_F(Joint_TEST, JointTorqueTest)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
@@ -193,7 +193,7 @@ TEST_F(Joint_TEST, JointTorqueTest)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
@@ -278,6 +278,7 @@ TEST_F(Joint_TEST, JointCreationDestructionTest)
       joint->Init();
       joint->SetAxis(0, axis);
     }
+
     // remove the joint
     {
       bool paused = world->IsPaused();
@@ -298,7 +299,7 @@ TEST_F(Joint_TEST, JointCreationDestructionTest)
       world->SetPaused(paused);
     }
 
-    world->StepWorld(200);
+    world->Step(200);
 
     this->GetMemInfo(residentCur, shareCur);
 
