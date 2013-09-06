@@ -298,13 +298,15 @@ TEST_F(Joint_TEST, JointCreationDestructionTest)
       world->SetPaused(paused);
     }
 
-    gazebo::common::Time::MSleep(10);
+    world->StepWorld(200);
 
     this->GetMemInfo(residentCur, shareCur);
-    if (i > 1)  // give it 2 cycles to stabilize
+
+    // give it 2 cycles to stabilize
+    if (i > 1)
     {
-      EXPECT_LE(residentCur, residentLast);
-      EXPECT_LE(shareCur, shareLast);
+      EXPECT_LE(residentCur, residentLast + residentLast*0.01);
+      EXPECT_LE(shareCur, shareLast + shareLast*0.01);
     }
     // gzdbg << "memory res[" << residentCur
     //       << "] shr[" << shareCur
