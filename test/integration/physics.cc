@@ -24,7 +24,8 @@
 #define PHYSICS_TOL 1e-2
 using namespace gazebo;
 
-class PhysicsTest : public ServerFixture
+class PhysicsTest : public ServerFixture,
+                    public testing::WithParamInterface<const char*>
 {
   public: void EmptyWorld(const std::string &_physicsEngine);
   public: void SpawnDrop(const std::string &_physicsEngine);
@@ -1565,7 +1566,7 @@ TEST_F(PhysicsTest, ZeroMaxContactsODE)
   ASSERT_TRUE(model);
 }
 
-INSTANTIATE_PHYSICS_ENGINES_TEST(PhysicsTest)
+INSTANTIATE_TEST_CASE_P(PhysicsEngines, PhysicsTest, PHYSICS_ENGINE_VALUES);
 
 int main(int argc, char **argv)
 {

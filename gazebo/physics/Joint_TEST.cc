@@ -19,14 +19,21 @@
 #include "gazebo/physics/physics.hh"
 #include "gazebo/physics/Joint.hh"
 #include "gazebo/physics/Joint_TEST.hh"
-#include "test/regression/helper_physics_generator.hh"
+#include "test/integration/helper_physics_generator.hh"
 
 #define TOL 1e-6
 using namespace gazebo;
 
+// Fixture for testing all joint types.
+class Joint_TEST_All : public Joint_TEST {};
+
+// Fixture for testing rotational joints.
+class Joint_TEST_Rotational : public Joint_TEST {};
+
 ////////////////////////////////////////////////////////////////////////
 // Test for spawning each joint type
-void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine)
+void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine,
+                                 const std::string &_jointType)
 {
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
@@ -38,37 +45,23 @@ void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine)
   ASSERT_TRUE(physics != NULL);
   EXPECT_EQ(physics->GetType(), _physicsEngine);
 
-  std::vector<std::string> types;
-  types.push_back("revolute");
-  types.push_back("prismatic");
-  types.push_back("screw");
-  types.push_back("universal");
-  types.push_back("ball");
-  types.push_back("revolute2");
-
   physics::JointPtr joint;
-  for (std::vector<std::string>::iterator iter = types.begin();
-       iter != types.end(); ++iter)
-  {
-    gzdbg << "SpawnJoint " << *iter << " child parent" << std::endl;
-    joint = SpawnJoint(*iter, false, false);
-    EXPECT_TRUE(joint != NULL);
+  gzdbg << "SpawnJoint " << _jointType << " child parent" << std::endl;
+  joint = SpawnJoint(_jointType, false, false);
+  EXPECT_TRUE(joint != NULL);
 
-    gzdbg << "SpawnJoint " << *iter << " child world" << std::endl;
-    joint = SpawnJoint(*iter, false, true);
-    EXPECT_TRUE(joint != NULL);
+  gzdbg << "SpawnJoint " << _jointType << " child world" << std::endl;
+  joint = SpawnJoint(_jointType, false, true);
+  EXPECT_TRUE(joint != NULL);
 
-    gzdbg << "SpawnJoint " << *iter << " world parent" << std::endl;
-    joint = SpawnJoint(*iter, true, false);
-    EXPECT_TRUE(joint != NULL);
-  }
-
-  world->StepWorld(100);
+  gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
+  joint = SpawnJoint(_jointType, true, false);
+  EXPECT_TRUE(joint != NULL);
 }
 
-TEST_P(Joint_TEST, SpawnJointTypes)
+TEST_P(Joint_TEST_All, SpawnJointTypes)
 {
-  SpawnJointTypes(GetParam());
+  SpawnJointTypes(this->physicsEngine, this->jointType);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -163,6 +156,16 @@ TEST_P(Joint_TEST, SpawnJointRotational)
 {
   SpawnJointRotational(GetParam());
 }
+
+INSTANTIATE_TEST_CASE_P(TestRuns, Joint_TEST_All, ::testing::Combine(
+  PHYSICS_ENGINE_VALUES,
+  ::testing::Values("revolute"
+                  , "prismatic"
+                  , "screw"
+                  , "universal"
+                  , "ball"
+                  , "revolute2"
+                    )));
 
 ////////////////////////////////////////////////////////////////////////
 // Create a joint between link and world
@@ -445,8 +448,6 @@ TEST_F(Joint_TEST, joint_SDF14)
   EXPECT_EQ(parent->GetName(), "body2");
   EXPECT_EQ(child->GetName(), "body1");
 }
-
-INSTANTIATE_PHYSICS_ENGINES_TEST(Joint_TEST);
 
 int main(int argc, char **argv)
 {
