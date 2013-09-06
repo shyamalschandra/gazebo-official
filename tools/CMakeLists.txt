@@ -18,11 +18,7 @@ set (test_sources
 gz_build_tests(${test_sources})
 
 add_executable(gzsdf gzsdf.cc)
-if (NOT HAVE_SDF)
-  target_link_libraries(gzsdf ${tinyxml_libraries} gazebo_sdf_interface gazebo_common)
-else()
-  target_link_libraries(gzsdf ${tinyxml_libraries} gazebo_common)
-endif()
+target_link_libraries(gzsdf ${tinyxml_libraries} gazebo_common)
 gz_install_executable(gzsdf)
 
 add_executable(gztopic gztopic.cc)
@@ -41,4 +37,7 @@ add_executable(gzfactory gzfactory.cc)
 target_link_libraries(gzfactory gazebo_common gazebo_transport pthread)
 gz_install_executable(gzfactory)
 
-install (FILES gzmodel_create.sh DESTINATION ${BIN_INSTALL_DIR})
+install (PROGRAMS gzmodel_create gzmodel_create.sh DESTINATION ${BIN_INSTALL_DIR})
+if (${GAZEBO_VERSION} VERSION_GREATER 1.9)
+  message (WARNING "Installing deprecated gzmodel_create.sh. This should be removed after Gazebo 1.9")
+endif()
