@@ -100,7 +100,7 @@ class GaussianNoiseCompositorListener
 }  // namespace gazebo
 
 //////////////////////////////////////////////////
-Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
+Camera::Camera(const std::string &_name, ScenePtr _scene,
                bool _autoRender)
 {
   this->initialized = false;
@@ -119,9 +119,10 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
   this->saveCount = 0;
   this->bayerFrameBuffer = NULL;
 
-  std::ostringstream stream;
-  stream << _namePrefix << "(" << this->cameraCounter++ << ")";
-  this->name = stream.str();
+  this->name = _name;
+  this->scopedName = this->scene->GetName() + "::" + _name;
+  this->scopedUniqueName = this->scopedName + "(" +
+    boost::lexical_cast<std::string>(++this->cameraCounter) + ")";
 
   this->renderTarget = NULL;
   this->renderTexture = NULL;
@@ -155,6 +156,9 @@ Camera::Camera(const std::string &_namePrefix, ScenePtr _scene,
 
   // Set default render rate to unlimited
   this->SetRenderRate(0.0);
+
+  this->node = transport::NodePtr(new transport::Node());
+  this->node->Init();
 }
 
 //////////////////////////////////////////////////
@@ -173,12 +177,13 @@ Camera::~Camera()
 
   if (this->camera)
   {
-    this->scene->GetManager()->destroyCamera(this->name);
+    this->scene->GetManager()->destroyCamera(this->scopedUniqueName);
     this->camera = NULL;
   }
 
   this->connections.clear();
 
+  this->sdf->Reset();
   this->imageElem.reset();
   this->sdf.reset();
 }
@@ -248,6 +253,14 @@ void Camera::Load()
       gzwarn << "ignoring unknown noise model type \"" << type << "\"" <<
         std::endl;
   }
+
+  // Only create a command subscription for real cameras. Ignore camera's
+  // created for visualization purposes.
+  if (this->name.find("_GUIONLY_") == std::string::npos)
+  {
+    this->cmdSub = this->node->Subscribe("~/" + this->GetName() + "/cmd",
+        &Camera::OnCmdMsg, this, true);
+  }
 }
 
 //////////////////////////////////////////////////
@@ -255,13 +268,13 @@ void Camera::Init()
 {
   this->SetSceneNode(
       this->scene->GetManager()->getRootSceneNode()->createChildSceneNode(
-        this->GetName() + "_SceneNode"));
+        this->scopedUniqueName + "_SceneNode"));
 
   this->CreateCamera();
 
   // Create a scene node to control pitch motion
   this->pitchNode =
-    this->sceneNode->createChildSceneNode(this->name + "PitchNode");
+    this->sceneNode->createChildSceneNode(this->scopedUniqueName + "PitchNode");
   this->pitchNode->pitch(Ogre::Degree(0));
 
   this->pitchNode->attachObject(this->camera);
@@ -278,6 +291,10 @@ void Camera::Init()
 //////////////////////////////////////////////////
 void Camera::Fini()
 {
+  this->initialized = false;
+  this->connections.clear();
+  this->node.reset();
+
   if (this->gaussianNoiseCompositorListener)
   {
     this->gaussianNoiseInstance->removeListener(
@@ -289,7 +306,8 @@ void Camera::Fini()
   if (this->renderTarget && this->scene->GetInitialized())
     this->renderTarget->removeAllViewports();
 
-  this->connections.clear();
+  this->viewport = NULL;
+  this->renderTarget = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -313,6 +331,17 @@ void Camera::SetScene(ScenePtr _scene)
 //////////////////////////////////////////////////
 void Camera::Update()
 {
+  boost::mutex::scoped_lock lock(this->receiveMutex);
+
+  // Process all the command messages.
+  for (CameraCmdMsgs_L::iterator iter = this->commandMsgs.begin();
+      iter != this->commandMsgs.end(); ++iter)
+  {
+    if ((*iter)->has_follow_model())
+      this->TrackVisual((*iter)->follow_model());
+  }
+  this->commandMsgs.clear();
+
   std::list<msgs::Request>::iterator iter = this->requests.begin();
   while (iter != this->requests.end())
   {
@@ -326,11 +355,17 @@ void Camera::Update()
     {
       msgs::TrackVisual msg;
       msg.ParseFromString((*iter).data());
-      if (this->AttachToVisualImpl(msg.name(), msg.inherit_orientation(),
-                                    msg.min_dist(), msg.max_dist()))
-      {
+      bool result = false;
+
+      if (msg.id() < GZ_UINT32_MAX)
+        result = this->AttachToVisualImpl(msg.id(),
+            msg.inherit_orientation(), msg.min_dist(), msg.max_dist());
+      else
+        result = this->AttachToVisualImpl(msg.name(),
+            msg.inherit_orientation(), msg.min_dist(), msg.max_dist());
+
+      if (result)
         erase = true;
-      }
     }
 
     if (erase)
@@ -415,11 +450,11 @@ void Camera::Update()
   }
 }
 
-
 //////////////////////////////////////////////////
 void Camera::Render()
 {
-  if (common::Time::GetWallTime() - this->lastRenderWallTime >=
+  if (this->initialized &&
+      common::Time::GetWallTime() - this->lastRenderWallTime >=
       this->renderPeriod)
   {
     this->newData = true;
@@ -527,6 +562,14 @@ math::Quaternion Camera::GetWorldRotation() const
   math::Vector3 sRot, pRot;
 
   sRot = Conversions::Convert(this->sceneNode->getOrientation()).GetAsEuler();
+
+  // As far as I can tell, OGRE is broken. It makes a strong assumption
+  // that the camera is always oriented along its local -Z axis, and that
+  // the global coordinat frame is right-handed with +Y up, +X right, and +Z
+  // out of the screen.
+  // This -1.0 multiplication is a hack to get back the correct orientation.
+  sRot.x *= -1.0;
+
   pRot = Conversions::Convert(this->pitchNode->getOrientation()).GetAsEuler();
 
   return math::Quaternion(sRot.x, pRot.y, sRot.z);
@@ -537,6 +580,15 @@ void Camera::SetWorldPose(const math::Pose &_pose)
 {
   this->SetWorldPosition(_pose.pos);
   this->SetWorldRotation(_pose.rot);
+}
+
+//////////////////////////////////////////////////
+math::Pose Camera::GetWorldPose() const
+{
+  math::Pose pose;
+  pose.pos = Conversions::Convert(this->camera->getDerivedPosition());
+  pose.rot = Conversions::Convert(this->camera->getDerivedOrientation());
+  return pose;
 }
 
 //////////////////////////////////////////////////
@@ -560,13 +612,22 @@ void Camera::SetWorldRotation(const math::Quaternion &_quant)
   math::Quaternion p, s;
   math::Vector3 rpy = _quant.GetAsEuler();
   p.SetFromEuler(math::Vector3(0, rpy.y, 0));
-  s.SetFromEuler(math::Vector3(rpy.x, 0, rpy.z));
+
+  // As far as I can tell, OGRE is broken. It makes a strong assumption
+  // that the camera is always oriented along its local -Z axis, and that
+  // the global coordinat frame is right-handed with +Y up, +X right, and +Z
+  // out of the screen.
+  // The -1.0 to Roll is a hack to set the correct orientation.
+  s.SetFromEuler(math::Vector3(-rpy.x, 0, rpy.z));
 
   this->sceneNode->setOrientation(
       Ogre::Quaternion(s.w, s.x, s.y, s.z));
 
   this->pitchNode->setOrientation(
       Ogre::Quaternion(p.w, p.x, p.y, p.z));
+
+  this->sceneNode->needUpdate();
+  this->pitchNode->needUpdate();
 }
 
 //////////////////////////////////////////////////
@@ -888,9 +949,9 @@ math::Vector3 Camera::GetRight()
 }
 
 //////////////////////////////////////////////////
-void Camera::SetSceneNode(Ogre::SceneNode *node)
+void Camera::SetSceneNode(Ogre::SceneNode *_node)
 {
-  this->sceneNode = node;
+  this->sceneNode = _node;
 }
 
 //////////////////////////////////////////////////
@@ -930,6 +991,12 @@ std::string Camera::GetName() const
 }
 
 //////////////////////////////////////////////////
+std::string Camera::GetScopedName() const
+{
+  return this->scopedName;
+}
+
+//////////////////////////////////////////////////
 bool Camera::SaveFrame(const std::string &_filename)
 {
   return Camera::SaveFrame(this->saveFrameBuffer, this->GetImageWidth(),
@@ -945,7 +1012,7 @@ std::string Camera::GetFrameFilename()
   std::string path = saveElem->Get<std::string>("path");
   boost::filesystem::path pathToFile;
 
-  std::string friendlyName = this->GetName();
+  std::string friendlyName = this->scopedUniqueName;
 
   boost::replace_all(friendlyName, "::", "_");
 
@@ -1185,11 +1252,11 @@ void Camera::SetCaptureDataOnce()
 }
 
 //////////////////////////////////////////////////
-void Camera::CreateRenderTexture(const std::string &textureName)
+void Camera::CreateRenderTexture(const std::string &_textureName)
 {
   // Create the render texture
   this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
-      textureName,
+      _textureName,
       "General",
       Ogre::TEX_TYPE_2D,
       this->GetImageWidth(),
@@ -1211,15 +1278,12 @@ ScenePtr Camera::GetScene() const
 //////////////////////////////////////////////////
 void Camera::CreateCamera()
 {
-  this->camera = this->scene->GetManager()->createCamera(this->name);
+  this->camera = this->scene->GetManager()->createCamera(
+      this->scopedUniqueName);
 
-  // Use X/Y as horizon, Z up
-  this->camera->pitch(Ogre::Degree(90));
-
-  // Don't yaw along variable axis, causes leaning
-  this->camera->setFixedYawAxis(true, Ogre::Vector3::UNIT_Z);
-
-  this->camera->setDirection(1, 0, 0);
+  this->camera->setFixedYawAxis(false);
+  this->camera->yaw(Ogre::Degree(-90.0));
+  this->camera->roll(Ogre::Degree(-90.0));
 }
 
 //////////////////////////////////////////////////
@@ -1254,6 +1318,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
     this->viewport = this->renderTarget->addViewport(this->camera);
     this->viewport->setClearEveryFrame(true);
     this->viewport->setShadowsEnabled(true);
+    this->viewport->setOverlaysEnabled(false);
 
     RTShaderSystem::AttachViewport(this->viewport, this->GetScene());
 
@@ -1331,12 +1396,41 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
 }
 
 //////////////////////////////////////////////////
+void Camera::AttachToVisual(uint32_t _visualId,
+                            bool _inheritOrientation,
+                            double _minDist, double _maxDist)
+{
+  msgs::Request request;
+  msgs::TrackVisual track;
+
+  track.set_name(this->GetName() + "_attach_to_visual_track");
+  track.set_id(_visualId);
+  track.set_min_dist(_minDist);
+  track.set_max_dist(_maxDist);
+  track.set_inherit_orientation(_inheritOrientation);
+
+  std::string *serializedData = request.mutable_data();
+  track.SerializeToString(serializedData);
+
+  request.set_request("attach_visual");
+  request.set_id(_visualId);
+  this->requests.push_back(request);
+}
+
+//////////////////////////////////////////////////
 void Camera::AttachToVisual(const std::string &_visualName,
                             bool _inheritOrientation,
                             double _minDist, double _maxDist)
 {
   msgs::Request request;
   msgs::TrackVisual track;
+
+  VisualPtr visual = this->scene->GetVisual(_visualName);
+
+  if (visual)
+    track.set_id(visual->GetId());
+  else
+    track.set_id(GZ_UINT32_MAX);
 
   track.set_name(_visualName);
   track.set_min_dist(_minDist);
@@ -1359,6 +1453,15 @@ void Camera::TrackVisual(const std::string &_name)
   request.set_data(_name);
   request.set_id(0);
   this->requests.push_back(request);
+}
+
+//////////////////////////////////////////////////
+bool Camera::AttachToVisualImpl(uint32_t _id,
+    bool _inheritOrientation, double _minDist, double _maxDist)
+{
+  VisualPtr visual = this->scene->GetVisual(_id);
+  return this->AttachToVisualImpl(visual, _inheritOrientation,
+                                  _minDist, _maxDist);
 }
 
 //////////////////////////////////////////////////
@@ -1629,4 +1732,11 @@ bool Camera::IsInitialized() const
 bool Camera::GetInitialized() const
 {
   return this->initialized && this->scene->GetInitialized();
+}
+
+//////////////////////////////////////////////////
+void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
+{
+  boost::mutex::scoped_lock lock(this->receiveMutex);
+  this->commandMsgs.push_back(_msg);
 }

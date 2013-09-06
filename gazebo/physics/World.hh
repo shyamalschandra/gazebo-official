@@ -275,7 +275,11 @@ namespace gazebo
 
       /// \brief Step callback.
       /// \param[in] _steps The number of steps the World should take.
-      public: void StepWorld(int _steps);
+      public: void StepWorld(int _steps) GAZEBO_DEPRECATED(1.9);
+
+      /// \brief Step callback.
+      /// \param[in] _steps The number of steps the World should take.
+      public: void Step(int _steps);
 
       /// \brief Load a plugin
       /// \param[in] _filename The filename of the plugin.
@@ -316,6 +320,10 @@ namespace gazebo
       /// iteration.
       /// \param[in] _model Pointer to the model to publish.
       public: void PublishModelPose(physics::ModelPtr _model);
+
+      /// \brief Get the total number of iterations.
+      /// \return Number of iterations that simulation has taken.
+      public: uint32_t GetIterations() const;
 
       /// \cond
       /// This is an internal function.
@@ -431,6 +439,11 @@ namespace gazebo
       /// \brief Process all received factory messages.
       /// Must only be called from the World::ProcessMessages function.
       private: void ProcessFactoryMsgs();
+
+      /// \brief Remove a model from the cached list of models.
+      /// This does not delete the model.
+      /// \param[in] _name Name of the model to remove.
+      private: void RemoveModel(const std::string &_name);
 
       /// \brief Process all received model messages.
       /// Must only be called from the World::ProcessMessages function.
@@ -684,6 +697,9 @@ namespace gazebo
 
       /// \brief Worker thread for logging.
       private: boost::thread *logThread;
+
+      /// \brief A cached list of models. This is here for performance.
+      private: Model_V models;
     };
     /// \}
   }
