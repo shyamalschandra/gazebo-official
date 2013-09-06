@@ -50,7 +50,7 @@ std::string custom_exec(std::string _cmd)
 
 /////////////////////////////////////////////////
 /// Check to make sure that 'gzlog info' returns correct information
-TEST(gz_log, Info)
+TEST(gzlog, Info)
 {
   std::string info = custom_exec(std::string("gzlog info ") +
       PROJECT_SOURCE_PATH + "/test/data/pr2_state.log");
@@ -73,7 +73,7 @@ TEST(gz_log, Info)
 
 /////////////////////////////////////////////////
 /// Check to make sure that 'gzlog echo' returns correct information
-TEST(gz_log, Echo)
+TEST(gzlog, Echo)
 {
   std::string echo = custom_exec(std::string("gzlog echo ") +
       PROJECT_SOURCE_PATH + "/test/data/empty_state.log");
@@ -128,7 +128,7 @@ TEST(gz_log, Echo)
 
 /////////////////////////////////////////////////
 /// Check to make sure that 'gzlog echo --filter' returns correct information
-TEST(gz_log, EchoFilter)
+TEST(gzlog, EchoFilter)
 {
   std::string echo;
 
@@ -174,7 +174,7 @@ TEST(gz_log, EchoFilter)
 
 /////////////////////////////////////////////////
 /// Check to Hz filtering
-TEST(gz_log, HzFilter)
+TEST(gzlog, HzFilter)
 {
   std::string echo, validEcho;
 
@@ -206,7 +206,7 @@ TEST(gz_log, HzFilter)
 /////////////////////////////////////////////////
 /// Check to make sure that 'gzlog step' returns correct information
 /// Just check number of characters returned for now
-TEST(gz_log, Step)
+TEST(gzlog, Step)
 {
   std::string stepCmd;
   stepCmd = std::string("gzlog step ") + PROJECT_SOURCE_PATH +
@@ -218,23 +218,15 @@ TEST(gz_log, Step)
 
   // Call gzlog step and press space once, then q
   std::string stepq1 = custom_exec(std::string("echo ' q' | ") + stepCmd);
-#ifdef HAVE_SDF
   EXPECT_EQ(stepq1.length(), 124131u);
-#else
-  EXPECT_EQ(stepq1.length(), 124082u);
-#endif
 
   // Call gzlog step and press space twice, then q
   std::string stepq2 = custom_exec(std::string("echo '  q' | ") + stepCmd);
-#ifdef HAVE_SDF
   EXPECT_EQ(stepq2.length(), 132516u);
-#else
-  EXPECT_EQ(stepq2.length(), 132427u);
-#endif
 }
 
 /////////////////////////////////////////////////
-TEST(gz_log, HangCheck)
+TEST(gzlog, HangCheck)
 {
   gazebo::common::Time start = gazebo::common::Time::GetWallTime();
   custom_exec("gzlog stop");

@@ -15,7 +15,7 @@ set (GAZEBO_MINOR_VERSION 9)
 # The patch version may have been bumped for prerelease purposes; be sure to
 # check gazebo-release/ubuntu/debian/changelog@default to determine what the
 # next patch version should be for a regular release.
-set (GAZEBO_PATCH_VERSION 0)
+set (GAZEBO_PATCH_VERSION 1)
 
 set (GAZEBO_VERSION ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION})
 set (GAZEBO_VERSION_FULL ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION}.${GAZEBO_PATCH_VERSION})
@@ -57,6 +57,9 @@ endif()
 
 enable_testing()
 
+# Use GNUInstallDirst to get canonical paths
+include(GNUInstallDirs)
+
 # with -fPIC
 if(UNIX AND NOT WIN32)
   set (CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "Install Prefix")
@@ -84,11 +87,11 @@ if(LD_LIBRARY_PATH)
 endif()
 
 
-set (INCLUDE_INSTALL_DIR "include/gazebo-${GAZEBO_VERSION}/gazebo") 
-set (LIB_INSTALL_DIR "lib" CACHE STRING "Installation directory for libraries (relative to CMAKE_INSTALL_PREFIX)") 
-set (BIN_INSTALL_DIR "bin" CACHE STRING "Installation directory for binaries (relative to CMAKE_INSTALL_PREFIX)") 
-
-
+set (INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/gazebo-${GAZEBO_VERSION}/gazebo") 
+set (LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR})
+set (LIB_INSTALL_DIR_ARCH_INDEPENDENT "lib/")
+set (BIN_INSTALL_DIR ${CMAKE_INSTALL_BINDIR})
+    
 set (USE_FULL_RPATH OFF CACHE BOOL "Set to true to enable full rpath")
 
 if (USE_FULL_RPATH)
@@ -160,7 +163,7 @@ message (STATUS "----------------------------------------\n")
 set(GAZEBO_DEFAULT_MASTER_HOST localhost)
 set(GAZEBO_DEFAULT_MASTER_PORT 11345)
 set(GAZEBO_PLUGIN_PATH ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins)
-set(GAZEBO_RESOURCE_PATH ${CMAKE_INSTALL_PREFIX}/share/gazebo-${GAZEBO_VERSION}:${CMAKE_INSTALL_PREFIX}/share/gazebo_models)
+set(GAZEBO_RESOURCE_PATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo-${GAZEBO_VERSION}:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo_models)
 set(GAZEBO_MODEL_DATABASE_URI http://gazebosim.org/models)
 set(OGRE_RESOURCE_PATH ${OGRE_PLUGINDIR})
 # Seems that OGRE_PLUGINDIR can end in a newline, which will cause problems when
@@ -169,7 +172,10 @@ string(REPLACE "\n" "" OGRE_RESOURCE_PATH ${OGRE_RESOURCE_PATH})
 
 
 if (SSE2_FOUND)
-  set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse -msse2 -mfpmath=sse")
+  set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse -msse2")
+  if (NOT APPLE)
+    set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -mfpmath=sse")
+  endif()
 endif()
 if (SSE3_FOUND)
   set (CMAKE_C_FLAGS_ALL "${CMAKE_C_FLAGS_ALL} -msse3")
@@ -193,7 +199,13 @@ endif()
 # Check for DRI capable Display
 include (${gazebo_cmake_dir}/CheckDRIDisplay.cmake)
 
-set (CMAKE_C_FLAGS_RELEASE " -s -O3 -DNDEBUG ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release" FORCE)
+set (CMAKE_C_FLAGS_RELEASE "")
+if (NOT APPLE)
+  # -s doesn't work with default osx compiler clang, alternative:
+  # http://stackoverflow.com/questions/6085491/gcc-vs-clang-symbol-strippingu
+  set (CMAKE_C_FLAGS_RELEASE "-s")
+endif()
+set (CMAKE_C_FLAGS_RELEASE " ${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release" FORCE)
 set (CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 
 set (CMAKE_C_FLAGS_RELWITHDEBINFO " -g -O2 ${CMAKE_C_FLAGS_ALL}" CACHE INTERNAL "C Flags for release with debug support" FORCE)
@@ -250,19 +262,23 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_BUILD_TYPE_UPPERCASE}")
     build_warning("CMAKE_BUILD_TYPE was specified in uppercase. This will stop to be supported soon. Valid types: Debug Release RelWithDebInfo Profile Check")
 endif ()
 
-message (STATUS "\n\n====== Configuring 3rd Party Packages ======")
-add_subdirectory(deps)
-message (STATUS "----------------------------------------\n")
-
 #################################################
 # OS Specific initialization
 if (UNIX)
   gz_setup_unix()
 else (WIN32)
   gz_setup_windows()
-else (APPLE)
+endif()
+
+if(APPLE)
   gz_setup_apple()
 endif()
+
+#################################################
+# Configure 3rd Party Packages after OS Specific initialization
+message (STATUS "\n\n====== Configuring 3rd Party Packages ======")
+add_subdirectory(deps)
+message (STATUS "----------------------------------------\n")
 
 #################################################
 # Print warnings and errors
@@ -297,18 +313,12 @@ else (build_errors)
   gz_install_includes("" ${PROJECT_BINARY_DIR}/gazebo/gazebo_config.h)
 
   configure_file(${CMAKE_SOURCE_DIR}/cmake/setup.sh.in ${PROJECT_BINARY_DIR}/setup.sh @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/setup.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo-${GAZEBO_VERSION}/)
-  configure_file(${CMAKE_SOURCE_DIR}/cmake/setup-unversioned.sh.in ${PROJECT_BINARY_DIR}/unversioned/setup.sh @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/unversioned/setup.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo/)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/setup.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo-${GAZEBO_VERSION}/)
+  # Also install the setup.sh in an unversioned location
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/setup.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo/)
  
   include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
-  # This is only needed for backward compatibility with the internal
-  # version of SDF
-  if (NOT HAVE_SDF)
-    include_directories(${PROJECT_SOURCE_DIR}/gazebo)
-  endif()
-  
   message (STATUS "C Flags:${CMAKE_CXX_FLAGS}")
   message (STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
   message (STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
@@ -330,23 +340,50 @@ else (build_errors)
 
   foreach (pkgconfig ${pkgconfig_files})
     configure_file(${CMAKE_SOURCE_DIR}/cmake/pkgconfig/${pkgconfig}.in ${CMAKE_CURRENT_BINARY_DIR}/cmake/pkgconfig/${pkgconfig}.pc @ONLY)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/pkgconfig/${pkgconfig}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig COMPONENT pkgconfig)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/pkgconfig/${pkgconfig}.pc DESTINATION ${LIB_INSTALL_DIR_ARCH_INDEPENDENT}/pkgconfig COMPONENT pkgconfig)
   endforeach()
 
   ########################################
   # Make the cmake config files
   set(PKG_NAME ${PROJECT_NAME_UPPER})
-  if (HAVE_SDF)
-    set(PKG_LIBRARIES gazebo_physics gazebo_common gazebo_math gazebo_rendering gazebo_gui gazebo_ode gazebo_msgs gazebo_transport)
-    set(PKG_DEPENDS Boost Protobuf SDFormat)
-  else()
-    set(PKG_LIBRARIES gazebo_physics gazebo_common gazebo_math gazebo_rendering gazebo_gui gazebo_ode gazebo_msgs gazebo_transport gazebo_sdf_interface)
-    set(PKG_DEPENDS Boost Protobuf)
+  set(PKG_LIBRARIES
+    gazebo_ccd
+    gazebo_common
+    gazebo_gimpact
+    gazebo_gui
+    gazebo_gui_building
+    gazebo_gui_viewers
+    gazebo_math
+    gazebo_msgs
+    gazebo_ode
+    gazebo_opcode
+    gazebo_opende_ou
+    gazebo_physics
+    gazebo_physics_ode
+    gazebo_rendering
+    gazebo_selection_buffer
+    gazebo_sensors
+    gazebo_skyx
+    gazebo_transport
+    gazebo_util)
+    
+  if (INCLUDE_PLAYER)
+    set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_player)
   endif()
+
+  if (HAVE_BULLET)
+    set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_physics_bullet)
+  endif()
+  
+  if (${OGRE_VERSION} GREATER 1.7.4)
+    set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_rendering_deferred)
+  endif()
+    
+  set(PKG_DEPENDS Boost Protobuf SDFormat)
 
   set(cmake_conf_file "cmake/gazebo-config.cmake")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${cmake_conf_file}.in" "${CMAKE_CURRENT_BINARY_DIR}/${cmake_conf_file}" @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${cmake_conf_file} DESTINATION share/${PROJECT_NAME_LOWER}/cmake/ COMPONENT cmake)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${cmake_conf_file} DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME_LOWER}/cmake/ COMPONENT cmake)
 
 
   ########################################
