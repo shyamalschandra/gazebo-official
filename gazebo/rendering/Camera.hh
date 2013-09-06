@@ -30,6 +30,11 @@
 #include <deque>
 #include <sdf/sdf.hh>
 
+#include "gazebo/msgs/msgs.hh"
+
+#include "gazebo/transport/Node.hh"
+#include "gazebo/transport/Subscriber.hh"
+
 #include "gazebo/common/Event.hh"
 #include "gazebo/common/PID.hh"
 #include "gazebo/common/Time.hh"
@@ -162,6 +167,10 @@ namespace gazebo
       /// \brief Set the global pose of the camera
       /// \param[in] _pose The new math::Pose of the camera
       public: virtual void SetWorldPose(const math::Pose &_pose);
+
+      /// \brief Get the world pose.
+      /// \return The pose of the camera in the world coordinate frame.
+      public: math::Pose GetWorldPose() const;
 
       /// \brief Set the world position
       /// \param[in] _pos The new position of the camera
@@ -337,9 +346,13 @@ namespace gazebo
       /// \return Pointer to the raw data, null if data is not available.
       public: virtual const unsigned char *GetImageData(unsigned int i = 0);
 
-      /// \brief Get the camera's name
+      /// \brief Get the camera's short name
       /// \return The name of the camera
       public: std::string GetName() const;
+
+      /// \brief Get the camera's scoped name (scene_name::camera_name)
+      /// \return The name of the camera
+      public: std::string GetScopedName() const;
 
       /// \brief Set the camera's name
       /// \param[in] _name New name for the camera
@@ -400,6 +413,18 @@ namespace gazebo
       /// \param[in] _maxDist Maximum distance the camera is allowd to get from
       /// the visual
       public: void AttachToVisual(const std::string &_visualName,
+                  bool _inheritOrientation,
+                  double _minDist = 0.0, double _maxDist = 0.0);
+
+      /// \brief Attach the camera to a scene node
+      /// \param[in] _id ID of the visual to attach the camera to
+      /// \param[in] _inheritOrientation True means camera acquires the visual's
+      /// orientation
+      /// \param[in] _minDist Minimum distance the camera is allowed to get to
+      /// the visual
+      /// \param[in] _maxDist Maximum distance the camera is allowd to get from
+      /// the visual
+      public: void AttachToVisual(uint32_t _id,
                   bool _inheritOrientation,
                   double _minDist = 0.0, double _maxDist = 0.0);
 
@@ -512,6 +537,19 @@ namespace gazebo
                      bool _inheritOrientation,
                      double _minDist = 0, double _maxDist = 0);
 
+      /// \brief Attach the camera to a scene node
+      /// \param[in] _id ID of the visual to attach the camera to
+      /// \param[in] _inheritOrientation True means camera acquires the visual's
+      /// orientation
+      /// \param[in] _minDist Minimum distance the camera is allowed to get to
+      /// the visual
+      /// \param[in] _maxDist Maximum distance the camera is allowd to get from
+      /// the visual
+      /// \return True on success
+      protected: virtual bool AttachToVisualImpl(uint32_t _id,
+                     bool _inheritOrientation,
+                     double _minDist = 0, double _maxDist = 0);
+
       /// \brief Attach the camera to a visual
       /// \param[in] _visual The visual to attach the camera to
       /// \param[in] _inheritOrientation True means camera acquires the visual's
@@ -551,12 +589,21 @@ namespace gazebo
       /// \return Integer representation of the Ogre image format
       private: static int GetOgrePixelFormat(const std::string &_format);
 
+      /// \brief Receive command message.
+      /// \param[in] _msg Camera Command message.
+      private: void OnCmdMsg(ConstCameraCmdPtr &_msg);
 
       /// \brief Create the ogre camera.
       private: void CreateCamera();
 
       /// \brief Name of the camera.
       protected: std::string name;
+
+      /// \brief Scene ccoped name of the camera.
+      protected: std::string scopedName;
+
+      /// \brief Scene ccoped name of the camera with a unique ID.
+      protected: std::string scopedUniqueName;
 
       /// \brief Camera's SDF values.
       protected: sdf::ElementPtr sdf;
@@ -714,6 +761,23 @@ namespace gazebo
       /// \brief If noiseType==GAUSSIAN, noiseStdDev is the standard
       /// devation of the distibution from which we sample
       private: double noiseStdDev;
+
+      /// \brief Communication Node
+      private: transport::NodePtr node;
+
+      /// \brief Subscribe to camera command topic
+      private: transport::SubscriberPtr cmdSub;
+
+      /// \def CameraCmdMsgs_L
+      /// \brief List for holding camera command messages.
+      typedef std::list<boost::shared_ptr<msgs::CameraCmd const> >
+        CameraCmdMsgs_L;
+
+      /// \brief List of camera cmd messages.
+      private: CameraCmdMsgs_L commandMsgs;
+
+      /// \brief Mutex to lock the various message buffers.
+      private: boost::mutex receiveMutex;
     };
     /// \}
   }
