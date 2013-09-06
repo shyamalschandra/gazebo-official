@@ -871,7 +871,11 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       if (joint)
       {
         // Detach upper_joint.
-        joint->Detach();
+        //joint->Detach();
+        // freeze joint limit instead
+        math::Angle curAngle = joint->GetAngle(0u);
+        joint->SetLowStop(0, curAngle - 0.1);
+        joint->SetHighStop(0, curAngle + 0.1);
       }
       else
       {
