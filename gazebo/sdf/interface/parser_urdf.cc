@@ -501,7 +501,7 @@ void URDF2Gazebo::ParseGazeboExtension(TiXmlDocument &_urdfXml)
 
           std::ostringstream origStream;
           origStream << *childElem;
-          gzdbg << "extension [" << origStream.str() << "] not converted.\n";
+          gzlog << "extension [" << origStream.str() << "] not converted.\n";
           xmlNewDoc.Parse(origStream.str().c_str());
 
           // save all unknown stuff in a vector of blobs
@@ -1271,25 +1271,25 @@ void URDF2Gazebo::CreateSDF(TiXmlElement *_root,
       ((!_link->inertial) || gazebo::math::equal(_link->inertial->mass, 0.0)))
     {
       if (!_link->child_links.empty())
-        gzwarn << "urdf2gazebo: link[" << _link->name
-               << "] has no inertia, ["
-               << static_cast<int>(_link->child_links.size())
-               << "] children links ignored\n.";
+        gzlog << "urdf2gazebo: link[" << _link->name
+              << "] has no inertia, ["
+              << static_cast<int>(_link->child_links.size())
+              << "] children links ignored\n.";
 
       if (!_link->child_joints.empty())
-        gzwarn << "urdf2gazebo: link[" << _link->name
-               << "] has no inertia, ["
-               << static_cast<int>(_link->child_links.size())
-               << "] children joints ignored\n.";
+        gzlog << "urdf2gazebo: link[" << _link->name
+              << "] has no inertia, ["
+              << static_cast<int>(_link->child_links.size())
+              << "] children joints ignored\n.";
 
       if (_link->parent_joint)
-        gzwarn << "urdf2gazebo: link[" << _link->name
-               << "] has no inertia, "
-               << "parent joint [" << _link->parent_joint->name
-               << "] ignored\n.";
+        gzlog << "urdf2gazebo: link[" << _link->name
+              << "] has no inertia, "
+              << "parent joint [" << _link->parent_joint->name
+              << "] ignored\n.";
 
-        gzwarn << "urdf2gazebo: link[" << _link->name
-               << "] has no inertia, not modeled in gazebo\n";
+        gzlog << "urdf2gazebo: link[" << _link->name
+              << "] has no inertia, not modeled in gazebo\n";
       return;
     }
 
@@ -1355,7 +1355,7 @@ void URDF2Gazebo::CreateLink(TiXmlElement *_root,
     _currentTransform = localTransform * _currentTransform;
   }
   else
-    gzdbg << "[" << _link->name << "] has no parent joint\n";
+    gzlog << "[" << _link->name << "] has no parent joint\n";
 
   // create origin tag for this element
   this->AddTransform(elem, _currentTransform);
