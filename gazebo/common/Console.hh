@@ -41,7 +41,7 @@ namespace gazebo
     #define gzmsg (gazebo::common::Console::Instance()->ColorMsg("Msg", 32))
 
     /// \brief Output a debug message
-    #define gzdbg (gazebo::common::Console::Instance()->ColorMsg("Dbg", 36))
+    #define gzdbg (gazebo::common::Console::Instance()->Log())
 
     /// \brief Output a warning message
     #define gzwarn (gazebo::common::Console::Instance()->ColorErr("Warning", \
