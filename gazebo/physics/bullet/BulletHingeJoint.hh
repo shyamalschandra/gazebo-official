@@ -72,9 +72,6 @@ namespace gazebo
       public: virtual double GetMaxForce(int _index);
 
       // Documentation inherited.
-      public: virtual void SetForce(int _index, double _effort);
-
-      // Documentation inherited.
       public: virtual void SetHighStop(int _index, const math::Angle &_angle);
 
       // Documentation inherited.
@@ -102,6 +99,9 @@ namespace gazebo
       /// \brief Initial value of joint axis, expressed as unit vector
       ///        in world frame.
       private: math::Vector3 initialWorldAxis;
+
+      // Documentation inherited.
+      protected: virtual void SetForceImpl(int _index, double _effort);
     };
     /// \}
   }

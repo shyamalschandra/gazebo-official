@@ -131,6 +131,9 @@ void BulletBallJoint::Init()
 
   // Allows access to impulse
   this->constraint->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 //////////////////////////////////////////////////
@@ -167,21 +170,16 @@ void BulletBallJoint::SetMaxForce(int /*_index*/, double /*_t*/)
 }
 
 /////////////////////////////////////////////////
-math::Angle BulletBallJoint::GetAngle(int /*_index*/) const
-{
-  gzerr << "Not implemented\n";
-  return 0;
-}
-
-/////////////////////////////////////////////////
 math::Vector3 BulletBallJoint::GetGlobalAxis(int /*_index*/) const
 {
+  gzerr << "Not implemented\n";
   return math::Vector3();
 }
 
 /////////////////////////////////////////////////
 math::Angle BulletBallJoint::GetAngleImpl(int /*_index*/) const
 {
+  gzerr << "Not implemented\n";
   return math::Angle();
 }
 
@@ -197,6 +195,16 @@ void BulletBallJoint::SetHighStop(int /*_index*/,
     // this->bulletBall->setLimit(this->btBall->getLowerLimit(),
     //                         _angle.Radian());
   }
+  else
+  {
+    gzerr << "Joint was not created first\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void BulletBallJoint::SetForceImpl(int /*_index*/, double /*_torque*/)
+{
+  gzerr << "Not implemented";
 }
 
 //////////////////////////////////////////////////
@@ -211,5 +219,7 @@ void BulletBallJoint::SetLowStop(int /*_index*/,
     // this->bulletBall->setLimit(-_angle.Radian(),
     //                         this->bulletBall->getUpperLimit());
   }
+  else
+    gzerr << "Joint was not created first\n";
 }
 
