@@ -55,14 +55,14 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void SetAxis(int _index, const math::Vector3 &_axis);
 
-      /// \brief Set joint damping, not yet implemented
-      public: virtual void SetDamping(int _index, const double _damping);
-
       /// \brief Set the high stop of an axis(index).
       public: virtual void SetHighStop(int _index, const math::Angle &_angle);
 
       /// \brief Set the low stop of an axis(index).
       public: virtual void SetLowStop(int _index, const math::Angle &_angle);
+
+      // Documentation inherited.
+      public: virtual void SetDamping(int _index, const double _damping);
 
       /// \brief Get the high stop of an axis(index).
       public: virtual math::Angle GetHighStop(int _index);
@@ -76,9 +76,6 @@ namespace gazebo
        /// \brief Set the velocity of an axis(index).
       public: virtual void SetVelocity(int _index, double _angle);
 
-      /// \brief Set the slider force
-      public: virtual void SetForce(int _index, double _effort);
-
       /// \brief Set the max allowed force of an axis(index).
       public: virtual void SetMaxForce(int _index, double _force);
 
@@ -90,6 +87,9 @@ namespace gazebo
 
       /// \brief Get the angle of rotation
       public: virtual math::Angle GetAngleImpl(int _index) const;
+
+      /// \brief Set the slider force
+      protected: virtual void SetForceImpl(int _index, double _effort);
 
       /// \brief Pointer to bullet slider constraint
       private: btSliderConstraint *bulletSlider;
