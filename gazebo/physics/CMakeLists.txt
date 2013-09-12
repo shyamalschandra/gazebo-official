@@ -112,6 +112,10 @@ if (HAVE_DART)
   target_link_libraries(gazebo_physics gazebo_physics_dart)
 endif()
 
+if (HAVE_DART)
+  target_link_libraries(gazebo_physics gazebo_physics_dart)
+endif()
+
 gz_install_library(gazebo_physics)
 gz_install_includes("physics" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/physics.hh)
 

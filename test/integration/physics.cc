@@ -70,10 +70,10 @@ void PhysicsTest::EmptyWorld(const std::string &_physicsEngine)
   EXPECT_GT(t, 0.99*dt*static_cast<double>(steps+1));
 }
 
-//TEST_P(PhysicsTest, EmptyWorld)
-//{
-//  EmptyWorld(GetParam());
-//}
+TEST_P(PhysicsTest, EmptyWorld)
+{
+  EmptyWorld(GetParam());
+}
 
 ////////////////////////////////////////////////////////////////////////
 // SpawnDrop:
@@ -275,10 +275,10 @@ void PhysicsTest::SpawnDrop(const std::string &_physicsEngine)
   }
 }
 
-//TEST_P(PhysicsTest, SpawnDrop)
-//{
-//  SpawnDrop(GetParam());
-//}
+TEST_P(PhysicsTest, SpawnDrop)
+{
+  SpawnDrop(GetParam());
+}
 
 ////////////////////////////////////////////////////////////////////////
 // SpawnDropCoGOffset:
@@ -553,10 +553,10 @@ void PhysicsTest::SpawnDropCoGOffset(const std::string &_physicsEngine)
   }
 }
 
-//TEST_P(PhysicsTest, SpawnDropCoGOffset)
-//{
-//  SpawnDropCoGOffset(GetParam());
-//}
+TEST_P(PhysicsTest, SpawnDropCoGOffset)
+{
+  SpawnDropCoGOffset(GetParam());
+}
 
 TEST_P(PhysicsTest, SpawnDropCoGOffsetDART)
 {
@@ -877,9 +877,10 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
       {
         // Detach upper_joint.
         // joint->Detach();
+        // freeze joint limit instead
         math::Angle curAngle = joint->GetAngle(0u);
         joint->SetLowStop(0, curAngle - 0.01);
-        joint->SetHighStop(0, curAngle + 0.1);
+        joint->SetHighStop(0, curAngle + 0.01);
       }
       else
       {
@@ -965,10 +966,10 @@ void PhysicsTest::RevoluteJoint(const std::string &_physicsEngine)
   }
 }
 
-//TEST_P(PhysicsTest, RevoluteJoint)
-//{
-//  RevoluteJoint(GetParam());
-//}
+TEST_P(PhysicsTest, RevoluteJoint)
+{
+  RevoluteJoint(GetParam());
+}
 
 /// \TODO: Redo state test
 // TEST_F(PhysicsTest, State)
@@ -1088,18 +1089,18 @@ void PhysicsTest::JointDampingTest(const std::string &_physicsEngine)
   }
 }
 
-//// This test doesn't pass yet in Bullet
-//TEST_F(PhysicsTest, JointDampingODE)
-//{
-//  JointDampingTest("ode");
-//}
+// This test doesn't pass yet in Bullet
+TEST_F(PhysicsTest, JointDampingTestODE)
+{
+  JointDampingTest("ode");
+}
 
-//#ifdef HAVE_DART
-//TEST_F(PhysicsTest, JointDampingDART)
-//{
-//  JointDampingTest("dart");
-//}
-//#endif // HAVE_DART
+#ifdef HAVE_DART
+TEST_F(PhysicsTest, JointDampingTestDART)
+{
+  JointDampingTest("dart");
+}
+#endif // HAVE_DART
 
 void PhysicsTest::DropStuff(const std::string &_physicsEngine)
 {
@@ -1210,11 +1211,11 @@ void PhysicsTest::DropStuff(const std::string &_physicsEngine)
   }
 }
 
-//// This test doesn't pass yet in Bullet
-//TEST_F(PhysicsTest, DropStuff)
-//{
-//  DropStuff("ode");
-//}
+// This test doesn't pass yet in Bullet
+TEST_F(PhysicsTest, DropStuff)
+{
+  DropStuff("ode");
+}
 
 #ifdef HAVE_DART
 TEST_F(PhysicsTest, DropStuffDART)
@@ -1308,11 +1309,11 @@ void PhysicsTest::CollisionTest(const std::string &_physicsEngine)
   }
 }
 
-//// This test doesn't pass yet in Bullet
-//TEST_F(PhysicsTest, CollisionTest)
-//{
-//  CollisionTest("ode");
-//}
+// This test doesn't pass yet in Bullet
+TEST_F(PhysicsTest, CollisionTest)
+{
+  CollisionTest("ode");
+}
 
 #ifdef HAVE_DART
 TEST_F(PhysicsTest, CollisionTestDART)
@@ -1468,10 +1469,10 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
   }
 }
 
-//TEST_P(PhysicsTest, SimplePendulum)
-//{
-//  SimplePendulum(GetParam());
-//}
+TEST_P(PhysicsTest, SimplePendulum)
+{
+  SimplePendulum(GetParam());
+}
 
 ////////////////////////////////////////////////////////////////////////
 // CollisionFiltering:
@@ -1575,25 +1576,25 @@ void PhysicsTest::CollisionFiltering(const std::string &_physicsEngine)
 }
 
 /////////////////////////////////////////////////
-//TEST_P(PhysicsTest, CollisionFiltering)
-//{
-//  CollisionFiltering(GetParam());
-//}
+TEST_P(PhysicsTest, CollisionFiltering)
+{
+  CollisionFiltering(GetParam());
+}
 
 /////////////////////////////////////////////////
 // This test verifies that gazebo doesn't crash when collisions occur
 // and the <world><physics><ode><max_contacts> value is zero.
 // The crash was reported in issue #593 on bitbucket
-//TEST_F(PhysicsTest, ZeroMaxContactsODE)
-//{
-//  // Load an empty world
-//  Load("worlds/zero_max_contacts.world");
-//  physics::WorldPtr world = physics::get_world("default");
-//  ASSERT_TRUE(world != NULL);
+TEST_F(PhysicsTest, ZeroMaxContactsODE)
+{
+  // Load an empty world
+  Load("worlds/zero_max_contacts.world");
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
-//  physics::ModelPtr model = world->GetModel("ground_plane");
-//  ASSERT_TRUE(model);
-//}
+  physics::ModelPtr model = world->GetModel("ground_plane");
+  ASSERT_TRUE(model);
+}
 
 INSTANTIATE_TEST_CASE_P(PhysicsEngines, PhysicsTest, PHYSICS_ENGINE_VALUES);
 
