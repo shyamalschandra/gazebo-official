@@ -133,7 +133,7 @@ namespace gazebo
       /// \brief Get Self-Collision Flag, if this is true, this body will
       /// collide with other bodies even if they share the same parent.
       /// \return True if self collision is enabled.
-      public: bool GetSelfCollide();
+      public: bool GetSelfCollide() const;
 
       /// \brief Set the laser retro reflectiveness.
       /// \param[in] _retro Retro value for all child collisions.
@@ -441,6 +441,12 @@ namespace gazebo
       /// \brief Enable/Disable link data publishing
       /// \param[in] _enable True to enable publishing, false to stop publishing
       public: void SetPublishData(bool _enable);
+
+      /// \brief Get the parent joints.
+      public: Joint_V GetParentJoints() const {return this->parentJoints;}
+
+      /// \brief Get the child joints.
+      public: Joint_V GetChildJoints() const {return this->childJoints;}
 
       /// \brief Publish timestamped link data such as velocity.
       private: void PublishData();

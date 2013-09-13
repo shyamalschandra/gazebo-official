@@ -174,7 +174,21 @@ void Model::Init()
   for (Joint_V::iterator iter = this->joints.begin();
        iter != this->joints.end(); ++iter)
   {
-    (*iter)->Init();
+    try
+    {
+      (*iter)->Init();
+    }
+    catch(...)
+    {
+      gzerr << "Init joint failed" << std::endl;
+      return;
+    }
+  }
+
+  // Initialize the joints messages for visualizer
+  for (Joint_V::iterator iter = this->joints.begin();
+       iter != this->joints.end(); ++iter)
+  {
     // The following message used to be filled and sent in Model::LoadJoint
     // It is moved here, after Joint::Init, so that the joint properties
     // can be included in the message.
@@ -614,7 +628,10 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint = this->GetWorld()->GetPhysicsEngine()->CreateJoint(stype,
      boost::static_pointer_cast<Model>(shared_from_this()));
   if (!joint)
+  {
+    gzerr << "Unable to create joint of type[" << stype << "]\n";
     gzthrow("Unable to create joint of type[" + stype + "]\n");
+  }
 
   joint->SetModel(boost::static_pointer_cast<Model>(shared_from_this()));
 
@@ -622,7 +639,10 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint->Load(_sdf);
 
   if (this->GetJoint(joint->GetScopedName()) != NULL)
+  {
+    gzerr << "can't have two joint with the same name\n";
     gzthrow("can't have two joint with the same name");
+  }
 
   this->joints.push_back(joint);
 
