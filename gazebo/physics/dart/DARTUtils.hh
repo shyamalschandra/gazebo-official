@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright 2012 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,27 @@
  *
 */
 
-#ifndef _HELPER_PHYSICS_GENERATOR_HH_
-#define _HELPER_PHYSICS_GENERATOR_HH_
+#ifndef _DARTUTILS_HH_
+#define _DARTUTILS_HH_
 
-#define BULLET_SUPPORT
+#include "gazebo/math/Pose.hh"
+#include "gazebo/physics/dart/dart_inc.h"
 
-#ifdef HAVE_BULLET
-# undef BULLET_SUPPORT
-# define BULLET_SUPPORT , "bullet"
-#endif
+namespace gazebo
+{
+  namespace physics
+  {
+    /// \ingroup gazebo_physics
+    /// \addtogroup gazebo_physics_dart DART Physics
+    /// \brief dart utilities
+    /// \{
 
-#define DART_SUPPORT
+    /// \brief DART Utils class
+    class DARTUtils
+    {
 
-#ifdef HAVE_DART
-# undef DART_SUPPORT
-# define DART_SUPPORT , "dart"
-#endif
-
-/// \brief Helper macro to instantiate gtest for different physics engines
-#define PHYSICS_ENGINE_VALUES ::testing::Values("ode" \
-  BULLET_SUPPORT \
-  DART_SUPPORT \
-  )
-
+    };
+    /// \}
+  }
+}
 #endif
