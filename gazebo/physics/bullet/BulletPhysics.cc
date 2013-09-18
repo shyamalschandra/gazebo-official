@@ -215,7 +215,8 @@ bool ContactCallback(btManifoldPoint &_cp,
 {
   _cp.m_combinedFriction = std::min(_obj1->m_collisionObject->getFriction(),
     _obj0->m_collisionObject->getFriction());
-  //this return value is currently ignored, but to be on the safe side:
+
+  // this return value is currently ignored, but to be on the safe side:
   //  return false if you don't calculate friction
   return true;
 }
@@ -315,8 +316,8 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
   // but can lead to improper stacking of objects, see
   // http://web.archive.org/web/20120430155635/http://bulletphysics.org/
   //     mediawiki-1.5.8/index.php/BtContactSolverInfo#Split_Impulse
-  info.m_splitImpulse = 0;
-  info.m_splitImpulsePenetrationThreshold = 0.00;
+  info.m_splitImpulse = 1;
+  info.m_splitImpulsePenetrationThreshold = -0.02;
 
   // Use multiple friction directions.
   // This is important for rolling without slip (see issue #480)
@@ -471,7 +472,8 @@ void BulletPhysics::UpdatePhysics()
   // need to lock, otherwise might conflict with world resetting
   boost::recursive_mutex::scoped_lock lock(*this->physicsUpdateMutex);
 
-  this->dynamicsWorld->stepSimulation(this->maxStepSize, 0);
+  this->dynamicsWorld->stepSimulation(
+    this->maxStepSize, 1, this->maxStepSize);
 }
 
 //////////////////////////////////////////////////
@@ -491,14 +493,17 @@ void BulletPhysics::Reset()
 
 //////////////////////////////////////////////////
 
-// //////////////////////////////////////////////////
-// void BulletPhysics::SetSORPGSIters(unsigned int _iters)
-// {
-//   // TODO: set SDF parameter
-//   btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
-//   // Line below commented out because it wasn't helping pendulum test.
-//   // info.m_numIterations = _iters;
-// }
+//////////////////////////////////////////////////
+void BulletPhysics::SetSORPGSIters(unsigned int _iters)
+{
+  // TODO: set SDF parameter
+  btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
+  // Line below commented out because it wasn't helping pendulum test.
+  info.m_numIterations = _iters;
+
+  this->sdf->GetElement("bullet")->GetElement(
+      "solver")->GetElement("iters")->Set(_iters);
+}
 
 
 //////////////////////////////////////////////////
