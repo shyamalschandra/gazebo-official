@@ -14,8 +14,11 @@
  * limitations under the License.
  *
 */
+#include <fstream>
+#include <iomanip>
 #include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/uuid/sha1.hpp>
+
 #include <gazebo/gazebo_config.h>
 
 #ifdef HAVE_FFMPEG
@@ -25,6 +28,7 @@ extern "C" {
 }
 #endif
 
+#include "gazebo/common/Exception.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/common/CommonIface.hh"
 
@@ -77,4 +81,24 @@ std::string common::find_file_path(const std::string &_file)
     int index = filepath.find_last_of("/");
     return filepath.substr(0, index);
   }
+}
+
+//////////////////////////////////////////////////
+std::string common::GetSHA1(void const *_buffer, std::size_t byte_count)
+{
+  boost::uuids::detail::sha1 sha1;
+  unsigned int hash[5];
+  std::stringstream stream;
+
+  sha1.process_bytes(_buffer, byte_count);
+  sha1.get_digest(hash);
+
+  stream << std::setfill('0') << std::setw(sizeof(hash[0]) * 2) << std::hex;
+
+  for (std::size_t i = 0; i < sizeof(hash) / sizeof(hash[0]); ++i)
+  {
+    stream << hash[i];
+  }
+
+  return stream.str();
 }
