@@ -199,3 +199,17 @@ endmacro()
 if (ENABLE_TESTS_COMPILATION)
   include (${gazebo_cmake_dir}/GazeboTestUtils.cmake)
 endif()
+
+#################################################
+# Macro to setup supported compiler warnings
+# Based on work of Florent Lamiraux, Thomas Moulard, JRL, CNRS/AIST. 
+include(CheckCXXCompilerFlag)
+
+macro(filter_valid_compiler_warnigns) 
+  foreach(flag ${ARGN})
+    CHECK_CXX_COMPILER_FLAG(${flag} R${flag})
+    if(${R${flag}})
+      set(WARNING_CXX_FLAGS "${WARNING_CXX_FLAGS} ${flag}")
+    endif()
+  endforeach()
+endmacro()
