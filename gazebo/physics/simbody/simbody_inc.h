@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright 2011 Nate Koenig
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,15 @@
  *
 */
 
-#ifndef _HELPER_PHYSICS_GENERATOR_HH_
-#define _HELPER_PHYSICS_GENERATOR_HH_
+#ifndef SIMBODY_INC_H_
+#define SIMBODY_INC_H_
 
-#define BULLET_SUPPORT
-
-#ifdef HAVE_BULLET
-# undef BULLET_SUPPORT
-# define BULLET_SUPPORT , "bullet"
-#endif
-
-#define SIMBODY_SUPPORT
-
-#ifdef HAVE_SIMBODY
-# undef SIMBODY_SUPPORT
-# define SIMBODY_SUPPORT , "simbody"
-#endif
-
-/// \brief Helper macro to instantiate gtest for different physics engines
-#define PHYSICS_ENGINE_VALUES ::testing::Values("ode" \
-  BULLET_SUPPORT \
-  SIMBODY_SUPPORT \
-  )
+// This disables warning messages for ODE
+#pragma GCC system_header
+// #include <SimTKcommon.h>
+// #include <SimTKsimbody.h>
+// #include <SimTKmath.h>
+// #include <Simbody.h>
+// using namespace SimTK;
 
 #endif

@@ -1017,6 +1017,8 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
       math::Pose childPose;
       if (this->childLink)
         childPose = this->childLink->GetWorldPose();
+      else
+        gzerr << "missing child link, double check model.";
 
       math::Pose parentPose = this->parentLink->GetWorldPose();
 
