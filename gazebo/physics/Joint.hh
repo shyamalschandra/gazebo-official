@@ -279,13 +279,28 @@ namespace gazebo
       /// \return The force applied to an axis.
       public: virtual double GetForce(unsigned int _index);
 
-      /// \brief get internal force and torque values at a joint
-      /// Note that you must set
-      ///   <provide_feedback>true<provide_feedback>
-      /// in the joint sdf to use this.
-      /// \param[in] _index Force and torque on child link if _index = 0
-      /// and on parent link of _index = 1
-      /// \return The force and torque at the joint
+      /// \brief get internal force and torque values at a joint.
+      ///
+      ///   The force and torque values are returned in  a JointWrench
+      ///   data structure.  Where JointWrench.body1Force contains the
+      ///   force applied by the parent Link on the Joint specified in
+      ///   the parent Link frame, and JointWrench.body2Force contains
+      ///   the force applied by the child Link on the Joint specified
+      ///   in the child Link frame.  Note that this sign convention
+      ///   is opposite of the reaction forces of the Joint on the Links.
+      ///
+      ///   FIXME TODO: change name of this function to something like:
+      ///     GetNegatedForceTorqueInLinkFrame
+      ///   and make GetForceTorque call return non-negated reaction forces
+      ///   in perspective Link frames.
+      ///
+      ///   Note that for ODE you must set
+      ///     <provide_feedback>true<provide_feedback>
+      ///   in the joint sdf to use this.
+      ///
+      /// \param[in] _index Not used right now
+      /// \return The force and torque at the joint, see above for details
+      /// on conventions.
       public: virtual JointWrench GetForceTorque(unsigned int _index) = 0;
 
       /// \brief Set the max allowed force of an axis(index).
@@ -399,6 +414,11 @@ namespace gazebo
       /// \param[in] _pose Pose of the anchor.
       private: void LoadImpl(const math::Pose &_pose);
 
+      /// \brief Helper function to load a joint.
+      /// This function is deprecated, use LoadImpl(math::Pose &)
+      /// \param[in] _pos Position of the anchor.
+      private: void LoadImpl(const math::Vector3 &_pos) GAZEBO_DEPRECATED(1.5);
+
       /// \brief Computes inertiaRatio for this joint during Joint::Init
       /// The inertia ratio for each joint between [1, +inf] gives a sense
       /// of how well this model will perform in iterative LCP methods.
@@ -429,6 +449,11 @@ namespace gazebo
 
       /// \brief joint dampingCoefficient
       protected: double dampingCoefficient;
+
+      public: double GetDampingCoefficient()
+              {
+                return this->dampingCoefficient;
+              }
 
       /// \brief apply damping for adding viscous damping forces on updates
       protected: gazebo::event::ConnectionPtr applyDamping;

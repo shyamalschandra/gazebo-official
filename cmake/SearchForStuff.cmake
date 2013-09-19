@@ -124,14 +124,15 @@ if (PKG_CONFIG_FOUND)
   endif()
 
   #################################################
-  # Find bullet
-  pkg_check_modules(BULLET bullet>=2.81)
-  if (BULLET_FOUND)
-    set (HAVE_BULLET TRUE)
+  # Find Simbody
+  set(SimTK_INSTALL_DIR ${SimTK_INSTALL_PREFIX})
+  find_package(Simbody REQUIRED)
+  if (SIMBODY_FOUND)
+    set (HAVE_SIMBODY TRUE)
   else()
-    set (HAVE_BULLET FALSE)
+    set (HAVE_SIMBODY FALSE)
   endif()
-
+  
   #################################################
   # Find tinyxml. Only debian distributions package tinyxml with a pkg-config
   find_path (tinyxml_include_dir tinyxml.h ${tinyxml_include_dirs} ENV CPATH)
@@ -299,7 +300,7 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find bullet
-  pkg_check_modules(BULLET bullet)
+  pkg_check_modules(BULLET bullet>=2.81)
   if (BULLET_FOUND)
     set (HAVE_BULLET TRUE)
   else()

@@ -32,6 +32,7 @@
 
 #include "gazebo/physics/ContactManager.hh"
 #include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
 
@@ -124,6 +125,18 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
 }
 
 //////////////////////////////////////////////////
+void PhysicsEngine::SetUpdateRate(double _value)
+{
+  this->SetRealTimeUpdateRate(_value);
+}
+
+//////////////////////////////////////////////////
+double PhysicsEngine::GetUpdateRate()
+{
+  return this->GetRealTimeUpdateRate();
+}
+
+//////////////////////////////////////////////////
 double PhysicsEngine::GetUpdatePeriod()
 {
   double updateRate = this->GetRealTimeUpdateRate();
@@ -131,6 +144,25 @@ double PhysicsEngine::GetUpdatePeriod()
     return 1.0/updateRate;
   else
     return 0;
+}
+
+//////////////////////////////////////////////////
+ModelPtr PhysicsEngine::CreateModel(BasePtr _base)
+{
+  ModelPtr ret(new Model(_base));
+  return ret;
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetStepTime(double _value)
+{
+  this->SetMaxStepSize(_value);
+}
+
+//////////////////////////////////////////////////
+double PhysicsEngine::GetStepTime()
+{
+  return this->GetMaxStepSize();
 }
 
 //////////////////////////////////////////////////
