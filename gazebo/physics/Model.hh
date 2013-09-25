@@ -188,7 +188,7 @@ namespace gazebo
 
       /// \brief Fill a model message.
       /// \param[in] _msg Message to fill using this model's data.
-      public: void FillMsg(msgs::Model &_msg);
+      public: virtual void FillMsg(msgs::Model &_msg);
 
       /// \brief Update parameters from a model message.
       /// \param[in] _msg Message to process.
@@ -320,23 +320,24 @@ namespace gazebo
 
       /// used by Model::AttachStaticModel
       protected: std::vector<math::Pose> attachedModelsOffset;
+
       /// \brief The canonical link of the model.
       private: LinkPtr canonicalLink;
 
       /// \brief All the joints in the model.
-      private: Joint_V joints;
+      protected: Joint_V joints;
 
       /// \brief All the links in the model.
       private: Link_V links;
 
       /// \brief All the grippers in the model.
-      private: std::vector<Gripper*> grippers;
+      protected: std::vector<Gripper*> grippers;
 
       /// \brief All the model plugins.
       private: std::vector<ModelPluginPtr> plugins;
 
       /// \brief Publisher for joint info.
-      private: transport::PublisherPtr jointPub;
+      protected: transport::PublisherPtr jointPub;
 
       /// \brief The joint animations.
       private: std::map<std::string, common::NumericAnimationPtr>
