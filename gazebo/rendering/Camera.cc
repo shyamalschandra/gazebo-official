@@ -363,7 +363,7 @@ void Camera::Update()
       if (this->onAnimationComplete)
         this->onAnimationComplete();
 
-      if (this->moveToPositionQueue.size() > 0)
+      if (!this->moveToPositionQueue.empty())
       {
         this->MoveToPosition(this->moveToPositionQueue[0].first,
                              this->moveToPositionQueue[0].second);
@@ -1259,7 +1259,8 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
 
     this->viewport->setBackgroundColour(
         Conversions::Convert(this->scene->GetBackgroundColor()));
-    this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL & ~GZ_VISIBILITY_GUI);
+    this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL &
+        ~(GZ_VISIBILITY_GUI | GZ_VISIBILITY_SELECTABLE));
 
     double ratio = static_cast<double>(this->viewport->getActualWidth()) /
                    static_cast<double>(this->viewport->getActualHeight());
@@ -1617,12 +1618,6 @@ double Camera::GetRenderRate() const
 //////////////////////////////////////////////////
 void Camera::AnimationComplete()
 {
-}
-
-//////////////////////////////////////////////////
-bool Camera::IsInitialized() const
-{
-  return this->GetInitialized();
 }
 
 //////////////////////////////////////////////////

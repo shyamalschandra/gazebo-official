@@ -393,14 +393,14 @@ namespace gazebo
       /// \param[in] _flags The visiblity flags.
       /// \sa GZ_VISIBILITY_ALL
       /// \sa GZ_VISIBILITY_GUI
-      /// \sa GZ_VISIBILITY_NOT_SELECTABLE
+      /// \sa GZ_VISIBILITY_SELECTABLE
       public: void SetVisibilityFlags(uint32_t _flags);
 
       /// \brief Get visibility flags for this visual and all children.
       /// \return The visiblity flags.
       /// \sa GZ_VISIBILITY_ALL
       /// \sa GZ_VISIBILITY_GUI
-      /// \sa GZ_VISIBILITY_NOT_SELECTABLE
+      /// \sa GZ_VISIBILITY_SELECTABLE
       public: uint32_t GetVisibilityFlags();
 
       /// \brief Display the bounding box visual.
@@ -553,6 +553,9 @@ namespace gazebo
 
       /// \brief A wire frame bounding box.
       private: WireBox *boundingBox;
+
+      /// \brief Scale of visual.
+      private: math::Vector3 scale;
     };
     /// \}
   }

@@ -142,12 +142,13 @@ void RenderEngine::Load()
 
 //////////////////////////////////////////////////
 ScenePtr RenderEngine::CreateScene(const std::string &_name,
-                                   bool _enableVisualizations)
+                                   bool _enableVisualizations,
+                                   bool _isServer)
 {
   if (this->renderPathType == NONE)
     return ScenePtr();
 
-  ScenePtr scene(new Scene(_name, _enableVisualizations));
+  ScenePtr scene(new Scene(_name, _enableVisualizations, _isServer));
   this->scenes.push_back(scene);
 
   scene->Load();
@@ -289,7 +290,11 @@ void RenderEngine::Fini()
 
   RTShaderSystem::Instance()->Fini();
 
-  this->scenes.clear();
+  // Deallocate memory for every scene
+  while (!this->scenes.empty())
+  {
+    this->RemoveScene(this->scenes.front()->GetName());
+  }
 
   // TODO: this was causing a segfault. Need to debug, and put back in
   if (this->root)
@@ -341,7 +346,7 @@ void RenderEngine::LoadPlugins()
     common::SystemPaths::Instance()->GetOgrePaths();
 
   for (iter = ogrePaths.begin();
-       iter!= ogrePaths.end(); ++iter)
+       iter != ogrePaths.end(); ++iter)
   {
     std::string path(*iter);
     DIR *dir = opendir(path.c_str());
@@ -368,7 +373,7 @@ void RenderEngine::LoadPlugins()
     plugins.push_back(path+"/"+prefix+"Plugin_BSPSceneManager");
     plugins.push_back(path+"/"+prefix+"Plugin_OctreeSceneManager");
 
-    for (piter = plugins.begin(); piter!= plugins.end(); ++piter)
+    for (piter = plugins.begin(); piter != plugins.end(); ++piter)
     {
       try
       {
@@ -422,7 +427,6 @@ void RenderEngine::AddResourcePath(const std::string &_uri)
 
       // Parse all material files in the path if any exist
       boost::filesystem::path dir(path);
-      std::list<boost::filesystem::path> resultSet;
 
       if (boost::filesystem::exists(dir) &&
           boost::filesystem::is_directory(dir))
@@ -544,7 +548,7 @@ void RenderEngine::SetupResources()
           std::make_pair(prefix + "/gui/animations", "Animations"));
     }
 
-    for (aiter = archNames.begin(); aiter!= archNames.end(); ++aiter)
+    for (aiter = archNames.begin(); aiter != archNames.end(); ++aiter)
     {
       try
       {

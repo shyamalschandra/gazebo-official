@@ -1,5 +1,4 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
-include (${gazebo_cmake_dir}/FindSSE.cmake)
 include (CheckCXXSourceCompiles)
 
 include (${gazebo_cmake_dir}/FindOS.cmake)
@@ -57,15 +56,21 @@ else ()
 endif ()
 
 ########################################
+include (FindOpenAL)
+if (NOT OPENAL_FOUND)
+  BUILD_WARNING ("OpenAL not found, audio support will be disabled.")
+  set (HAVE_OPENAL OFF CACHE BOOL "HAVE OpenAL" FORCE)
+else ()
+  set (HAVE_OPENAL ON CACHE BOOL "HAVE OpenAL" FORCE)
+endif ()
+
+########################################
 # Find packages
 if (PKG_CONFIG_FOUND)
 
-  pkg_check_modules(SDF sdformat)
+  pkg_check_modules(SDF sdformat>=1.4.7)
   if (NOT SDF_FOUND)
-    BUILD_WARNING ("Missing: SDF. Required for reading and writing SDF files. The deprecated SDF version will be used. Pay attention to this warning, because it will become an error in Gazebo 2.0.")
-    set (HAVE_SDF FALSE)
-  else()
-    set (HAVE_SDF TRUE)
+    BUILD_ERROR ("Missing: SDF. Required for reading and writing SDF files.")
   endif()
 
   pkg_check_modules(CURL libcurl)
@@ -204,9 +209,6 @@ if (PKG_CONFIG_FOUND)
     set(ogre_cflags ${ogre_cflags} ${OGRE_CFLAGS})
   endif ()
 
-  set (OGRE_INCLUDE_DIRS ${ogre_include_dirs}
-       CACHE INTERNAL "Ogre include path")
-
   pkg_check_modules(OGRE-Terrain OGRE-Terrain)
   if (OGRE-Terrain_FOUND)
     set(ogre_ldflags ${ogre_ldflags} ${OGRE-Terrain_LDFLAGS})
@@ -215,6 +217,9 @@ if (PKG_CONFIG_FOUND)
     set(ogre_library_dirs ${ogre_library_dirs} ${OGRE-Terrain_LIBRARY_DIRS})
     set(ogre_cflags ${ogre_cflags} ${OGRE-Terrain_CFLAGS})
   endif()
+
+  set (OGRE_INCLUDE_DIRS ${ogre_include_dirs}
+       CACHE INTERNAL "Ogre include path")
 
   # Also find OGRE's plugin directory, which is provided in its .pc file as the
   # `plugindir` variable.  We have to call pkg-config manually to get it.
@@ -259,8 +264,10 @@ if (PKG_CONFIG_FOUND)
     BUILD_WARNING ("libavcodec not found. Audio-video capabilities will be disabled.")
   endif ()
 
-  if (libavformat_FOUND AND libavcodec_FOUND AND libswscale)
+  if (libavformat_FOUND AND libavcodec_FOUND AND libswscale_FOUND)
     set (HAVE_FFMPEG TRUE)
+  else ()
+    set (HAVE_FFMPEG FALSE)
   endif ()
 
   ########################################
@@ -405,6 +412,11 @@ if (libdl_library AND libdl_include_dir)
 else (libdl_library AND libdl_include_dir)
   SET (HAVE_DL FALSE)
 endif ()
+
+########################################
+# Include man pages stuff
+include (${gazebo_cmake_dir}/Ronn2Man.cmake)
+add_manpage_target()
 
 ########################################
 # Find QWT (QT graphing library)

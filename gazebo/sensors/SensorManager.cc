@@ -68,12 +68,6 @@ SensorManager::~SensorManager()
 }
 
 //////////////////////////////////////////////////
-void SensorManager::Run()
-{
-  this->RunThreads();
-}
-
-//////////////////////////////////////////////////
 void SensorManager::RunThreads()
 {
   // Start the non-image sensor containers. The first item in the
@@ -616,6 +610,9 @@ void SensorManager::SensorContainer::ResetLastUpdateTimes()
     GZ_ASSERT((*iter) != NULL, "Sensor is NULL");
     (*iter)->ResetLastUpdateTime();
   }
+
+  // Tell the run loop that world time has been reset.
+  this->runCondition.notify_one();
 }
 
 //////////////////////////////////////////////////

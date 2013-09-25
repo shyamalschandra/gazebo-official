@@ -93,7 +93,8 @@ namespace gazebo
       /// this should be set to true for user interfaces, and false for
       /// sensor generation.
       public: Scene(const std::string &_name,
-                    bool _enableVisualizations = false);
+                    bool _enableVisualizations = false,
+                    bool _isServer = false);
 
       /// \brief Destructor
       public: virtual ~Scene();
@@ -428,6 +429,10 @@ namespace gazebo
       /// and when they are received and applied by the Scene.
       /// \return The current simulation time in Scene
       public: common::Time GetSimTime() const;
+
+      /// \brief Get the number of visuals.
+      /// \return The number of visuals in the Scene.
+      public: uint32_t GetVisualCount() const;
 
       /// \brief Helper function to setup the sky.
       private: void SetSky();
