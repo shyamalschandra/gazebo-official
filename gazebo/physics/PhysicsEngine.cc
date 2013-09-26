@@ -32,6 +32,7 @@
 
 #include "gazebo/physics/ContactManager.hh"
 #include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
 
@@ -121,6 +122,14 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
     result = this->CreateCollision(_shapeType, link);
 
   return result;
+}
+
+//////////////////////////////////////////////////
+ModelPtr PhysicsEngine::CreateModel(BasePtr _base)
+{
+  ModelPtr ret(new Model(_base));
+
+  return ret;
 }
 
 //////////////////////////////////////////////////
