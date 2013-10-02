@@ -16,8 +16,6 @@ set (files
   model_nesting.world
   pioneer2dx.world
   openal.world
-  trimesh_test.world
-  cart_test.world
   double_pendulums.world
   mud.world
   plugin.world
@@ -27,6 +25,7 @@ set (files
   ray_cpu.world
   rubble.world
   shapes.world
+  simple_arm.world
   weshare2012.world
   willowgarage.world)
 
