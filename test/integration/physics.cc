@@ -1156,8 +1156,13 @@ void PhysicsTest::JointDampingTest(const std::string &_physicsEngine)
 
     EXPECT_EQ(vel.x, 0.0);
 
+#ifdef HAVE_DART
+    EXPECT_NEAR(vel.y, -10.2009, 0.013);
+    EXPECT_NEAR(vel.z, -6.51755, 0.013);
+#else
     EXPECT_NEAR(vel.y, -10.2009, PHYSICS_TOL);
     EXPECT_NEAR(vel.z, -6.51755, PHYSICS_TOL);
+#endif
 
     EXPECT_DOUBLE_EQ(pose.pos.x, 3.0);
     EXPECT_NEAR(pose.pos.y, 0.0, PHYSICS_TOL);
@@ -1172,6 +1177,13 @@ TEST_P(PhysicsTest, JointDampingTest)
 {
   JointDampingTest(GetParam());
 }
+
+#ifdef HAVE_DART
+TEST_F(PhysicsTest, JointDampingDART)
+{
+  JointDampingTest("dart");
+}
+#endif // HAVE_DART
 
 void PhysicsTest::DropStuff(const std::string &_physicsEngine)
 {
@@ -1229,7 +1241,14 @@ void PhysicsTest::DropStuff(const std::string &_physicsEngine)
           else
           {
             EXPECT_LT(fabs(vel.z), 0.0101);  // sometimes -0.01, why?
+#ifdef HAVE_DART
+            // DART needs more tolerance until supports 'correction for
+            // penetration' feature.
+            // See: https://github.com/dartsim/dart/issues/100
+            EXPECT_LT(fabs(pose.pos.z - 0.5), 0.00410);
+#else
             EXPECT_LT(fabs(pose.pos.z - 0.5), 0.00001);
+#endif
           }
         }
 
@@ -1250,8 +1269,16 @@ void PhysicsTest::DropStuff(const std::string &_physicsEngine)
           }
           else
           {
+#ifdef HAVE_DART
+            // DART needs more tolerance until supports 'correction for
+            // penetration' feature.
+            // See: https://github.com/dartsim/dart/issues/100
+            EXPECT_LT(fabs(vel.z), 0.015);
+            EXPECT_LT(fabs(pose.pos.z - 0.5), 0.00410);
+#else
             EXPECT_LT(fabs(vel.z), 3e-5);
             EXPECT_LT(fabs(pose.pos.z - 0.5), 0.00001);
+#endif
           }
         }
 
@@ -1273,7 +1300,14 @@ void PhysicsTest::DropStuff(const std::string &_physicsEngine)
           else
           {
             EXPECT_LT(fabs(vel.z), 0.011);
+#ifdef HAVE_DART
+            // DART needs more tolerance until supports 'correction for
+            // penetration' feature.
+            // See: https://github.com/dartsim/dart/issues/100
+            EXPECT_LT(fabs(pose.pos.z - 0.5), 0.0041);
+#else
             EXPECT_LT(fabs(pose.pos.z - 0.5), 0.0001);
+#endif
           }
         }
       }
@@ -1287,6 +1321,13 @@ TEST_F(PhysicsTest, DropStuffODE)
 {
   DropStuff("ode");
 }
+
+#ifdef HAVE_DART
+TEST_F(PhysicsTest, DropStuffDART)
+{
+  DropStuff("dart");
+}
+#endif // HAVE_DART
 
 void PhysicsTest::InelasticCollision(const std::string &_physicsEngine)
 {
