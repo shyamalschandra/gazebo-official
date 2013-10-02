@@ -138,13 +138,13 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
   msgs::Contacts contacts02;
 
   // let objects stablize
-  world->StepWorld(1000);
+  world->Step(1000);
 
   int steps = 1000;
   while ((contacts01.contact_size() == 0 || contacts02.contact_size() == 0)
       && --steps > 0)
   {
-    world->StepWorld(1);
+    world->Step(1);
     contacts01 = contactSensor01->GetContacts();
     contacts02 = contactSensor02->GetContacts();
   }
@@ -256,7 +256,7 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
         EXPECT_EQ((expectedForce[vi] < 0), (actualForce[vi] < 0));
 
         // Verify torque with a large tolerance
-        double odeTorqueTol = 2;
+        double odeTorqueTol = 4;
         EXPECT_LT(fabs(actualTorque.x), odeTorqueTol);
         EXPECT_LT(fabs(actualTorque.y), odeTorqueTol);
         EXPECT_LT(fabs(actualTorque.z), odeTorqueTol);
@@ -348,13 +348,13 @@ void ContactSensor::TorqueTest(const std::string &_physicsEngine)
   physics->SetContactMaxCorrectingVel(0);
   physics->SetSORPGSIters(100);
 
-  world->StepWorld(1);
+  world->Step(1);
 
   // run simulation until contacts occur
   int steps = 2000;
   while (contacts.contact_size() == 0 && --steps > 0)
   {
-    world->StepWorld(1);
+    world->Step(1);
     contacts = contactSensor->GetContacts();
   }
 
