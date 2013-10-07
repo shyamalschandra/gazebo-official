@@ -84,11 +84,6 @@ struct VisualMessageLess {
 Scene::Scene(const std::string &_name, bool _enableVisualizations,
     bool _isServer)
 {
-  // \todo: This is a hack. There is no guarantee (other than the
-  // improbability of creating an extreme number of visuals), that
-  // this contactVisId is unique.
-  this->contactVisId = GZ_UINT32_MAX;
-
   this->initialized = false;
   this->showCOMs = false;
   this->showCollisions = false;
@@ -122,10 +117,8 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->lightSub = this->node->Subscribe("~/light", &Scene::OnLightMsg, this);
 
   if (_isServer)
-  {
     this->poseSub = this->node->Subscribe("~/pose/local/info",
-        &Scene::OnPoseMsg, this);
-  }
+    &Scene::OnPoseMsg, this);
   else
   {
     this->poseSub = this->node->Subscribe("~/pose/info",
@@ -159,7 +152,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->terrain = NULL;
   this->selectedVis.reset();
 
-  this->sceneSimTimePosesApplied = common::Time();
+  this->sceneSimTimePosesApplied  = common::Time();
   this->sceneSimTimePosesReceived = common::Time();
 }
 
@@ -181,12 +174,8 @@ void Scene::Clear()
   delete this->terrain;
   this->terrain = NULL;
 
-  // Erase the world visual
-  this->visuals.erase(this->visuals.begin());
-
   while (!this->visuals.empty())
-    if (this->visuals.begin()->second)
-      this->RemoveVisual(this->visuals.begin()->second);
+    this->RemoveVisual(this->visuals.begin()->second);
   this->visuals.clear();
 
   for (uint32_t i = 0; i < this->grids.size(); i++)
@@ -280,8 +269,6 @@ VisualPtr Scene::GetWorldVisual() const
 void Scene::Init()
 {
   this->worldVisual.reset(new Visual("__world_node__", shared_from_this()));
-  this->worldVisual->SetId(0);
-  this->visuals[0] = this->worldVisual;
 
   // RTShader system self-enables if the render path type is FORWARD,
   RTShaderSystem::Instance()->AddScene(shared_from_this());
@@ -320,6 +307,8 @@ void Scene::Init()
 
   Road2d *road = new Road2d();
   road->Load(this->worldVisual);
+
+  this->initialized = true;
 }
 
 //////////////////////////////////////////////////
@@ -627,44 +616,20 @@ LightPtr Scene::GetLight(uint32_t _index) const
 }
 
 //////////////////////////////////////////////////
-VisualPtr Scene::GetVisual(uint32_t _id) const
-{
-  Visual_M::const_iterator iter = this->visuals.find(_id);
-  if (iter != this->visuals.end())
-    return iter->second;
-  return VisualPtr();
-}
-
-//////////////////////////////////////////////////
 VisualPtr Scene::GetVisual(const std::string &_name) const
 {
   VisualPtr result;
-
-  Visual_M::const_iterator iter;
-  for (iter = this->visuals.begin(); iter != this->visuals.end(); ++iter)
-    if (iter->second->GetName() == _name)
-      break;
-
+  Visual_M::const_iterator iter = this->visuals.find(_name);
   if (iter != this->visuals.end())
     result = iter->second;
   else
   {
-    std::string otherName = this->GetName() + "::" + _name;
-    for (iter = this->visuals.begin(); iter != this->visuals.end(); ++iter)
-      if (iter->second->GetName() == otherName)
-        break;
-
+    iter = this->visuals.find(this->GetName() + "::" + _name);
     if (iter != this->visuals.end())
       result = iter->second;
   }
 
   return result;
-}
-
-//////////////////////////////////////////////////
-uint32_t Scene::GetVisualCount() const
-{
-  return this->visuals.size();
 }
 
 //////////////////////////////////////////////////
@@ -1341,22 +1306,12 @@ void Scene::GetMeshInformation(const Ogre::Mesh *mesh,
 /////////////////////////////////////////////////
 bool Scene::ProcessSceneMsg(ConstScenePtr &_msg)
 {
+  for (int i = 0; i < _msg->model_size(); i++)
   {
-    boost::recursive_mutex::scoped_lock lock(this->poseMsgMutex);
-    for (int i = 0; i < _msg->model_size(); i++)
-    {
-      PoseMsgs_M::iterator iter = this->poseMsgs.find(_msg->model(i).id());
-      if (iter != this->poseMsgs.end())
-        iter->second.CopyFrom(_msg->model(i).pose());
-      else
-        this->poseMsgs.insert(
-            std::make_pair(_msg->model(i).id(), _msg->model(i).pose()));
+    this->poseMsgs.push_front(_msg->model(i).pose());
+    this->poseMsgs.front().set_name(_msg->model(i).name());
 
-      this->poseMsgs[_msg->model(i).id()].set_name(_msg->model(i).name());
-      this->poseMsgs[_msg->model(i).id()].set_id(_msg->model(i).id());
-
-      this->ProcessModelMsg(_msg->model(i));
-    }
+    this->ProcessModelMsg(_msg->model(i));
   }
 
   for (int i = 0; i < _msg->light_size(); i++)
@@ -1461,19 +1416,8 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
   for (int j = 0; j < _msg.link_size(); j++)
   {
     linkName = modelName + _msg.link(j).name();
-
-    {
-      boost::recursive_mutex::scoped_lock lock(this->poseMsgMutex);
-      PoseMsgs_M::iterator iter = this->poseMsgs.find(_msg.link(j).id());
-      if (iter != this->poseMsgs.end())
-        iter->second.CopyFrom(_msg.link(j).pose());
-      else
-        this->poseMsgs.insert(
-            std::make_pair(_msg.link(j).id(), _msg.link(j).pose()));
-
-      this->poseMsgs[_msg.link(j).id()].set_name(linkName);
-      this->poseMsgs[_msg.link(j).id()].set_id(_msg.link(j).id());
-    }
+    this->poseMsgs.push_front(_msg.link(j).pose());
+    this->poseMsgs.front().set_name(linkName);
 
     if (_msg.link(j).has_inertial())
     {
@@ -1574,7 +1518,7 @@ void Scene::PreRender()
   static ModelMsgs_L::iterator modelIter;
   static VisualMsgs_L::iterator visualIter;
   static LightMsgs_L::iterator lightIter;
-  static PoseMsgs_M::iterator pIter;
+  static PoseMsgs_L::iterator pIter;
   static SkeletonPoseMsgs_L::iterator spIter;
   static JointMsgs_L::iterator jointIter;
   static SensorMsgs_L::iterator sensorIter;
@@ -1625,10 +1569,7 @@ void Scene::PreRender()
   for (sIter = sceneMsgsCopy.begin(); sIter != sceneMsgsCopy.end();)
   {
     if (this->ProcessSceneMsg(*sIter))
-    {
-      this->initialized = true;
       sceneMsgsCopy.erase(sIter++);
-    }
     else
       ++sIter;
   }
@@ -1687,13 +1628,13 @@ void Scene::PreRender()
       ++linkIter;
   }
 
-  // Process the request messages
-  for (rIter =  this->requestMsgs.begin();
-      rIter != this->requestMsgs.end(); ++rIter)
-  {
-    this->ProcessRequestMsg(*rIter);
-  }
-  this->requestMsgs.clear();
+    // Process the request messages
+    for (rIter =  this->requestMsgs.begin();
+         rIter != this->requestMsgs.end(); ++rIter)
+    {
+      this->ProcessRequestMsg(*rIter);
+    }
+    this->requestMsgs.clear();
 
 
   {
@@ -1722,7 +1663,7 @@ void Scene::PreRender()
   }
 
   {
-    boost::recursive_mutex::scoped_lock lock(this->poseMsgMutex);
+    boost::mutex::scoped_lock lock(*this->receiveMutex);
 
     // Process all the model messages last. Remove pose message from the list
     // only when a corresponding visual exits. We may receive pose updates
@@ -1730,17 +1671,17 @@ void Scene::PreRender()
     pIter = this->poseMsgs.begin();
     while (pIter != this->poseMsgs.end())
     {
-      Visual_M::iterator iter = this->visuals.find(pIter->first);
+      Visual_M::iterator iter = this->visuals.find((*pIter).name());
       if (iter != this->visuals.end() && iter->second)
       {
         // If an object is selected, don't let the physics engine move it.
         if (!this->selectedVis || this->selectionMode != "move" ||
-            iter->first != this->selectedVis->GetId())
+            iter->first.find(this->selectedVis->GetName()) == std::string::npos)
         {
-          math::Pose pose = msgs::Convert(pIter->second);
+          math::Pose pose = msgs::Convert(*pIter);
           GZ_ASSERT(iter->second, "Visual pointer is NULL");
           iter->second->SetPose(pose);
-          PoseMsgs_M::iterator prev = pIter++;
+          PoseMsgs_L::iterator prev = pIter++;
           this->poseMsgs.erase(prev);
         }
         else
@@ -1754,16 +1695,17 @@ void Scene::PreRender()
     spIter = this->skeletonPoseMsgs.begin();
     while (spIter != this->skeletonPoseMsgs.end())
     {
-      Visual_M::iterator iter = this->visuals.find((*spIter)->model_id());
+      Visual_M::iterator iter = this->visuals.find((*spIter)->model_name());
       for (int i = 0; i < (*spIter)->pose_size(); i++)
       {
         const msgs::Pose& pose_msg = (*spIter)->pose(i);
-        Visual_M::iterator iter2 = this->visuals.find(pose_msg.id());
+        Visual_M::iterator iter2 = this->visuals.find(pose_msg.name());
         if (iter2 != this->visuals.end())
         {
           // If an object is selected, don't let the physics engine move it.
           if (!this->selectedVis || this->selectionMode != "move" ||
-              iter->first != this->selectedVis->GetId())
+              iter->first.find(this->selectedVis->GetName()) ==
+              std::string::npos)
           {
             math::Pose pose = msgs::Convert(pose_msg);
             iter2->second->SetPose(pose);
@@ -1780,7 +1722,6 @@ void Scene::PreRender()
       else
         ++spIter;
     }
-
     // official time stamp of approval
     this->sceneSimTimePosesApplied = this->sceneSimTimePosesReceived;
 
@@ -1809,24 +1750,23 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
       && !_msg->topic().empty())
   {
     std::string rayVisualName = _msg->parent() + "::" + _msg->name();
-    if (this->visuals.find(_msg->id()) == this->visuals.end())
+    if (this->visuals.find(rayVisualName+"_laser_vis") == this->visuals.end())
     {
-      VisualPtr parentVis = this->GetVisual(_msg->parent_id());
+      VisualPtr parentVis = this->GetVisual(_msg->parent());
       if (!parentVis)
         return false;
 
       LaserVisualPtr laserVis(new LaserVisual(
             rayVisualName+"_GUIONLY_laser_vis", parentVis, _msg->topic()));
       laserVis->Load();
-      laserVis->SetId(_msg->id());
-      this->visuals[_msg->id()] = laserVis;
+      this->visuals[rayVisualName+"_laser_vis"] = laserVis;
     }
   }
   else if ((_msg->type() == "sonar") && _msg->visualize()
       && !_msg->topic().empty())
   {
     std::string sonarVisualName = _msg->parent() + "::" + _msg->name();
-    if (this->visuals.find(_msg->id()) == this->visuals.end())
+    if (this->visuals.find(sonarVisualName+"_sonar_vis") == this->visuals.end())
     {
       VisualPtr parentVis = this->GetVisual(_msg->parent());
       if (!parentVis)
@@ -1835,15 +1775,15 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
       SonarVisualPtr sonarVis(new SonarVisual(
             sonarVisualName+"_GUIONLY_sonar_vis", parentVis, _msg->topic()));
       sonarVis->Load();
-      sonarVis->SetId(_msg->id());
-      this->visuals[_msg->id()] = sonarVis;
+      this->visuals[sonarVisualName+"_sonar_vis"] = sonarVis;
     }
   }
   else if ((_msg->type() == "force_torque") && _msg->visualize()
       && !_msg->topic().empty())
   {
     std::string wrenchVisualName = _msg->parent() + "::" + _msg->name();
-    if (this->visuals.find(_msg->id()) == this->visuals.end())
+    if (this->visuals.find(wrenchVisualName + "_wrench_vis") ==
+        this->visuals.end())
     {
       ConstJointPtr jointMsg = this->joints[_msg->parent()];
 
@@ -1859,13 +1799,12 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
             wrenchVisualName+"_GUIONLY_wrench_vis", parentVis,
             _msg->topic()));
       wrenchVis->Load(jointMsg);
-      wrenchVis->SetId(_msg->id());
-      this->visuals[_msg->id()] = wrenchVis;
+      this->visuals[wrenchVisualName+"_wrench_vis"] = wrenchVis;
     }
   }
   else if (_msg->type() == "camera" && _msg->visualize())
   {
-    VisualPtr parentVis = this->GetVisual(_msg->parent_id());
+    VisualPtr parentVis = this->GetVisual(_msg->parent());
     if (!parentVis)
       return false;
 
@@ -1873,36 +1812,29 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
     if (_msg->camera().image_size().x() > 0 &&
         _msg->camera().image_size().y() > 0)
     {
-      Visual_M::iterator iter = this->visuals.find(_msg->id());
-      if (iter == this->visuals.end())
-      {
-        CameraVisualPtr cameraVis(new CameraVisual(
-              _msg->name()+"_GUIONLY_camera_vis", parentVis));
+      CameraVisualPtr cameraVis(new CameraVisual(
+            _msg->name()+"_GUIONLY_camera_vis", parentVis));
 
-        // need to call AttachVisual in order for cameraVis to be added to
-        // parentVis' children list so that it can be properly deleted.
-        parentVis->AttachVisual(cameraVis);
+      // need to call AttachVisual in order for cameraVis to be added to
+      // parentVis' children list so that it can be properly deleted.
+      parentVis->AttachVisual(cameraVis);
 
-        cameraVis->SetPose(msgs::Convert(_msg->pose()));
+      cameraVis->SetPose(msgs::Convert(_msg->pose()));
 
-        cameraVis->SetId(_msg->id());
-        cameraVis->Load(_msg->camera().image_size().x(),
-            _msg->camera().image_size().y());
+      cameraVis->Load(_msg->camera().image_size().x(),
+                      _msg->camera().image_size().y());
 
-        this->visuals[cameraVis->GetId()] = cameraVis;
-      }
+      this->visuals[cameraVis->GetName()] = cameraVis;
     }
   }
   else if (_msg->type() == "contact" && _msg->visualize() &&
            !_msg->topic().empty())
   {
     ContactVisualPtr contactVis(new ContactVisual(
-          _msg->name()+"__GUIONLY_CONTACT_VISUAL__",
+          _msg->name()+"_GUIONLY_contact_vis",
           this->worldVisual, _msg->topic()));
-    contactVis->SetId(_msg->id());
 
-    this->contactVisId = _msg->id();
-    this->visuals[contactVis->GetId()] = contactVis;
+    this->visuals[contactVis->GetName()] = contactVis;
   }
   else if (_msg->type() == "rfidtag" && _msg->visualize() &&
            !_msg->topic().empty())
@@ -1913,9 +1845,8 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
 
     RFIDTagVisualPtr rfidVis(new RFIDTagVisual(
           _msg->name() + "_GUIONLY_rfidtag_vis", parentVis, _msg->topic()));
-    rfidVis->SetId(_msg->id());
 
-    this->visuals[rfidVis->GetId()] = rfidVis;
+    this->visuals[rfidVis->GetName()] = rfidVis;
   }
   else if (_msg->type() == "rfid" && _msg->visualize() &&
            !_msg->topic().empty())
@@ -1926,8 +1857,7 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
 
     RFIDVisualPtr rfidVis(new RFIDVisual(
           _msg->name() + "_GUIONLY_rfid_vis", parentVis, _msg->topic()));
-    rfidVis->SetId(_msg->id());
-    this->visuals[rfidVis->GetId()] = rfidVis;
+    this->visuals[rfidVis->GetName()] = rfidVis;
   }
   else if (_msg->type() == "wireless_transmitter" && _msg->visualize() &&
            !_msg->topic().empty())
@@ -1938,7 +1868,7 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
 
     VisualPtr transmitterVis(new TransmitterVisual(
           _msg->name() + "_GUIONLY_transmitter_vis", parentVis, _msg->topic()));
-    this->visuals[transmitterVis->GetId()] = transmitterVis;
+    this->visuals[transmitterVis->GetName()] = transmitterVis;
     transmitterVis->Load();
   }
 
@@ -1948,21 +1878,15 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
 /////////////////////////////////////////////////
 bool Scene::ProcessLinkMsg(ConstLinkPtr &_msg)
 {
-  VisualPtr linkVis;
-
-  if (_msg->has_id())
-    linkVis = this->GetVisual(_msg->id());
-  else
-    linkVis = this->GetVisual(_msg->name());
+  VisualPtr linkVis = this->GetVisual(_msg->name());
 
   if (!linkVis)
   {
-    gzerr << "No link visual with id[" << _msg->id() << "] and name["
-      << _msg->name() << "]\n";
+    gzerr << "No link visual\n";
     return false;
   }
 
-  if (!this->GetVisual(_msg->name() + "_COM_VISUAL__"))
+  if (this->visuals.find(_msg->name() + "_COM_VISUAL__") == this->visuals.end())
   {
     this->CreateCOMVisual(_msg, linkVis);
   }
@@ -1986,33 +1910,31 @@ bool Scene::ProcessLinkMsg(ConstLinkPtr &_msg)
 /////////////////////////////////////////////////
 bool Scene::ProcessJointMsg(ConstJointPtr &_msg)
 {
-  bool good = false;
+  this->joints[_msg->name()] = _msg;
 
-  if (_msg->has_id())
-    good = this->visuals.find(_msg->id()) != this->visuals.end();
-  else
-    good = this->GetVisual(_msg->name()) != NULL;
+  Visual_M::iterator iter;
+  iter = this->visuals.find(_msg->name() + "_JOINT_VISUAL__");
 
-  if (good)
+  if (iter == this->visuals.end())
   {
     VisualPtr childVis;
 
     if (_msg->child() == "world")
       childVis = this->worldVisual;
     else
-      childVis = this->GetVisual(_msg->child_id());
+      childVis = this->GetVisual(_msg->child());
 
     if (!childVis)
       return false;
 
-    JointVisualPtr jointVis(new JointVisual(
-            _msg->name() + "_JOINT_VISUAL__", childVis));
+    JointVisualPtr jointVis(new JointVisual(_msg->name() + "_JOINT_VISUAL__",
+        childVis));
     jointVis->Load(_msg);
     jointVis->SetVisible(this->showJoints);
-    if (_msg->has_id())
-      jointVis->SetId(_msg->id());
+    jointVis->GetSceneNode()->_setDerivedOrientation(
+        Ogre::Quaternion(1, 0, 0, 0));
 
-    this->visuals[jointVis->GetId()] = jointVis;
+    this->visuals[jointVis->GetName()] = jointVis;
   }
 
   return true;
@@ -2084,19 +2006,10 @@ void Scene::ProcessRequestMsg(ConstRequestPtr &_msg)
     // Otherwise delete a visual
     else
     {
-      VisualPtr visPtr;
-      try
-      {
-        Visual_M::iterator iter;
-        iter = this->visuals.find(boost::lexical_cast<uint32_t>(_msg->data()));
-        visPtr = iter->second;
-      } catch(...)
-      {
-        visPtr = this->GetVisual(_msg->data());
-      }
-
-      if (visPtr)
-        this->RemoveVisual(visPtr);
+      Visual_M::iterator iter;
+      iter = this->visuals.find(_msg->data());
+      if (iter != this->visuals.end())
+        this->RemoveVisual(iter->second);
     }
   }
   else if (_msg->request() == "show_contact")
@@ -2236,15 +2149,8 @@ void Scene::ProcessRequestMsg(ConstRequestPtr &_msg)
 bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
 {
   bool result = false;
-  Visual_M::iterator iter = this->visuals.end();
-
-  if (_msg->has_id())
-    iter = this->visuals.find(_msg->id());
-  else
-  {
-    VisualPtr vis = this->GetVisual(_msg->name());
-    iter = vis ? this->visuals.find(vis->GetId()) : this->visuals.end();
-  }
+  Visual_M::iterator iter;
+  iter = this->visuals.find(_msg->name());
 
   if (_msg->has_delete_me() && _msg->delete_me())
   {
@@ -2291,40 +2197,29 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
     // If the visual has a parent which is not the name of the scene...
     if (_msg->has_parent_name() && _msg->parent_name() != this->GetName())
     {
-      if (_msg->has_id())
-        iter = this->visuals.find(_msg->id());
-      else
-      {
-        VisualPtr vis = this->GetVisual(_msg->name());
-        iter = vis ? this->visuals.find(vis->GetId()) : this->visuals.end();
-      }
-
+      iter = this->visuals.find(_msg->name());
       if (iter != this->visuals.end())
         gzerr << "Visual already exists. This shouldn't happen.\n";
 
       // Make sure the parent visual exists before trying to add a child
       // visual
-      iter = this->visuals.find(_msg->parent_id());
+      iter = this->visuals.find(_msg->parent_name());
       if (iter != this->visuals.end())
       {
         visual.reset(new Visual(_msg->name(), iter->second));
-        if (_msg->has_id())
-          visual->SetId(_msg->id());
       }
     }
     else
     {
       // Add a visual that is attached to the scene root
       visual.reset(new Visual(_msg->name(), this->worldVisual));
-      if (_msg->has_id())
-        visual->SetId(_msg->id());
     }
 
     if (visual)
     {
       result = true;
       visual->LoadFromMsg(_msg);
-      this->visuals[visual->GetId()] = visual;
+      this->visuals[_msg->name()] = visual;
       if (visual->GetName().find("__COLLISION_VISUAL__") != std::string::npos ||
           visual->GetName().find("__SKELETON_VISUAL__") != std::string::npos)
       {
@@ -2355,18 +2250,25 @@ common::Time Scene::GetSimTime() const
 /////////////////////////////////////////////////
 void Scene::OnPoseMsg(ConstPosesStampedPtr &_msg)
 {
-  boost::recursive_mutex::scoped_lock lock(this->poseMsgMutex);
+  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  PoseMsgs_L::iterator iter;
+
   this->sceneSimTimePosesReceived =
     common::Time(_msg->time().sec(), _msg->time().nsec());
 
   for (int i = 0; i < _msg->pose_size(); ++i)
   {
-    PoseMsgs_M::iterator iter = this->poseMsgs.find(_msg->pose(i).id());
-    if (iter != this->poseMsgs.end())
-      iter->second.CopyFrom(_msg->pose(i));
-    else
-      this->poseMsgs.insert(
-          std::make_pair(_msg->pose(i).id(), _msg->pose(i)));
+    // Find an old model message, and remove them
+    for (iter = this->poseMsgs.begin(); iter != this->poseMsgs.end(); ++iter)
+    {
+      if ((*iter).name() == _msg->pose(i).name())
+      {
+        this->poseMsgs.erase(iter);
+        break;
+      }
+    }
+
+    this->poseMsgs.push_back(_msg->pose(i));
   }
 }
 
@@ -2632,10 +2534,10 @@ bool Scene::GetShadowsEnabled() const
 /////////////////////////////////////////////////
 void Scene::AddVisual(VisualPtr _vis)
 {
-  if (this->visuals.find(_vis->GetId()) != this->visuals.end())
+  if (this->visuals.find(_vis->GetName()) != this->visuals.end())
     gzerr << "Duplicate visuals detected[" << _vis->GetName() << "]\n";
 
-  this->visuals[_vis->GetId()] = _vis;
+  this->visuals[_vis->GetName()] = _vis;
 }
 
 /////////////////////////////////////////////////
@@ -2661,14 +2563,14 @@ void Scene::RemoveVisual(VisualPtr _vis)
     }
 
     // Delete the visual
-    Visual_M::iterator iter = this->visuals.find(_vis->GetId());
+    Visual_M::iterator iter = this->visuals.find(_vis->GetName());
     if (iter != this->visuals.end())
     {
       iter->second->Fini();
       this->visuals.erase(iter);
     }
 
-    if (this->selectedVis && this->selectedVis->GetId() == _vis->GetId())
+    if (this->selectedVis && this->selectedVis->GetName() == _vis->GetName())
       this->selectedVis.reset();
   }
 }
@@ -2717,8 +2619,8 @@ void Scene::CreateCOMVisual(ConstLinkPtr &_msg, VisualPtr _linkVisual)
   COMVisualPtr comVis(new COMVisual(_msg->name() + "_COM_VISUAL__",
                                     _linkVisual));
   comVis->Load(_msg);
-  comVis->SetVisible(false);
-  this->visuals[comVis->GetId()] = comVis;
+  comVis->SetVisible(this->showCOMs);
+  this->visuals[comVis->GetName()] = comVis;
 }
 
 /////////////////////////////////////////////////
@@ -2728,14 +2630,21 @@ void Scene::CreateCOMVisual(sdf::ElementPtr _elem, VisualPtr _linkVisual)
                                     _linkVisual));
   comVis->Load(_elem);
   comVis->SetVisible(false);
-  this->visuals[comVis->GetId()] = comVis;
+  this->visuals[comVis->GetName()] = comVis;
 }
 
 /////////////////////////////////////////////////
-VisualPtr Scene::CloneVisual(const std::string & /*_visualName*/,
-                             const std::string & /*_newName*/)
+VisualPtr Scene::CloneVisual(const std::string &_visualName,
+                             const std::string &_newName)
 {
-  return VisualPtr();
+  VisualPtr result;
+  VisualPtr vis = this->GetVisual(_visualName);
+  if (vis)
+  {
+    result = vis->Clone(_newName, this->worldVisual);
+    this->visuals[_newName] = result;
+  }
+  return result;
 }
 
 /////////////////////////////////////////////////
@@ -2799,19 +2708,16 @@ void Scene::ShowJoints(bool _show)
 /////////////////////////////////////////////////
 void Scene::ShowContacts(bool _show)
 {
-  ContactVisualPtr vis;
+  ContactVisualPtr vis = boost::dynamic_pointer_cast<ContactVisual>(
+      this->visuals["__GUIONLY_CONTACT_VISUAL__"]);
 
-  if (this->contactVisId == GZ_UINT32_MAX && _show)
+  if (!vis && _show)
   {
     vis.reset(new ContactVisual("__GUIONLY_CONTACT_VISUAL__",
               this->worldVisual, "~/physics/contacts"));
     vis->SetEnabled(_show);
-    this->contactVisId = vis->GetId();
-    this->visuals[this->contactVisId] = vis;
+    this->visuals[vis->GetName()] = vis;
   }
-  else
-    vis = boost::dynamic_pointer_cast<ContactVisual>(
-        this->visuals[this->contactVisId]);
 
   if (vis)
     vis->SetEnabled(_show);
