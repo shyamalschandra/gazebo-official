@@ -7,7 +7,7 @@ package gazebo.msgs;
 import "image.proto";
 import "vector3d.proto";
 
-message HeightmapGeom2
+message HeightmapGeom
 {
   optional Image  image            = 1; // The height data
   required Vector3d size           = 2; // Size in meters
