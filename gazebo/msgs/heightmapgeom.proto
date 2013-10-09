@@ -16,7 +16,6 @@ message HeightmapGeom
   optional int32 width             = 5;
   optional int32 height            = 6;
 
-
   message Texture
   {
     required string diffuse        = 1;
