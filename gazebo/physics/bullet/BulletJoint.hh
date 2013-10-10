@@ -71,6 +71,10 @@ namespace gazebo
       // Documentation inherited
       public: virtual void SetDamping(int _index, double _damping);
 
+      // Documentation inherited.
+      public: virtual void SetStiffnessDamping(unsigned int _index,
+        double _stiffness, double _damping, double _reference = 0);
+
       /// \brief Get the anchor point
       public: virtual math::Vector3 GetAnchor(int /*_index*/) const
               {
@@ -133,7 +137,7 @@ namespace gazebo
       public: virtual void Init();
 
       // Documentation inherited.
-      public: virtual void ApplyDamping();
+      public: virtual void ApplyStiffnessDamping();
 
       /// \brief Set the force applied to this physics::Joint.
       /// Note that the unit of force should be consistent with the rest

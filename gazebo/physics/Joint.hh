@@ -159,10 +159,12 @@ namespace gazebo
       public: virtual void SetAxis(int _index, const math::Vector3 &_axis) = 0;
 
       /// \brief Set the joint damping.
+      /// Deprecated by SetStiffnessDamping.
       /// \param[in] _index Index of the axis to set, currently ignored, to be
       ///                   implemented.
       /// \param[in] _damping Damping value for the axis.
-      public: virtual void SetDamping(int _index, double _damping) = 0;
+      public: virtual void SetDamping(int _index, double _damping)
+        GAZEBO_DEPRECATED(2.0) = 0;
 
       /// \brief Returns the current joint damping coefficient.
       /// \param[in] _index Index of the axis to get, currently ignored, to be
@@ -171,7 +173,26 @@ namespace gazebo
       public: double GetDamping(int _index);
 
       /// \brief Callback to apply damping force to joint.
-      public: virtual void ApplyDamping();
+      /// Deprecated by ApplyStiffnessDamping.
+      public: virtual void ApplyDamping() GAZEBO_DEPRECATED(2.0);
+
+      /// \brief Callback to apply spring stiffness and viscous damping
+      /// effects to joint.
+      public: virtual void ApplyStiffnessDamping();
+
+      /// \brief Set the joint spring stiffness.
+      /// \param[in] _index Index of the axis to set, currently ignored, to be
+      ///                   implemented.
+      /// \param[in] _stiffness Stiffness value for the axis.
+      /// \param[in] _reference Spring zero load reference position.
+      public: virtual void SetStiffnessDamping(unsigned int _index,
+        double _stiffness, double _damping, double _reference = 0) = 0;
+
+      /// \brief Returns the current joint spring stiffness coefficient.
+      /// \param[in] _index Index of the axis to get, currently ignored, to be
+      ///                   implemented.
+      /// \return Joint spring stiffness coefficient for this joint.
+      public: double GetStiffness(unsigned int _index);
 
       /// \brief Connect a boost::slot the the joint update signal.
       /// \param[in] _subscriber Callback for the connection.
@@ -389,7 +410,7 @@ namespace gazebo
       /// \brief:  get the joint upper limit
       /// (replaces GetLowStop and GetHighStop)
       /// \param[in] _index Index of the axis.
-      /// \return Upper limit of the axis.
+      /// \return Lower limit of the axis.
       public: math::Angle GetLowerLimit(unsigned int _index) const;
 
       /// \brief:  get the joint lower limit
@@ -397,6 +418,18 @@ namespace gazebo
       /// \param[in] _index Index of the axis.
       /// \return Upper limit of the axis.
       public: math::Angle GetUpperLimit(unsigned int _index) const;
+
+      /// \brief:  set the joint upper limit
+      /// (replaces SetLowStop and SetHighStop)
+      /// \param[in] _index Index of the axis.
+      /// \param[in] _limit Lower limit of the axis.
+      public: void SetLowerLimit(unsigned int _index, math::Angle _limit);
+
+      /// \brief:  set the joint lower limit
+      /// (replacee GetLowStop and GetHighStop)
+      /// \param[in] _index Index of the axis.
+      /// \param[in] _limit Upper limit of the axis.
+      public: void SetUpperLimit(unsigned int _index, math::Angle _limit);
 
       /// \brief Set whether the joint should generate feedback.
       /// \param[in] _enable True to enable joint feedback.
@@ -406,8 +439,9 @@ namespace gazebo
       public: virtual void CacheForceTorque() { }
 
       /// \brief Get damping coefficient of this joint
+      /// Depreated, use GetDamping(_index) instead.
       /// \return viscous joint damping coefficient
-      public: double GetDampingCoefficient() const;
+      public: double GetDampingCoefficient() const GAZEBO_DEPRECATED(2.0);
 
       /// \brief Get the angle of an axis helper function.
       /// \param[in] _index Index of the axis.
@@ -446,8 +480,19 @@ namespace gazebo
       /// \brief Anchor link.
       protected: LinkPtr anchorLink;
 
-      /// \brief joint dampingCoefficient
-      protected: double dampingCoefficient;
+      /// \brief joint dissipationCoefficient
+      /// not used, replaced by dissipationCoefficient array
+      protected: double dampingCoefficient GAZEBO_DEPRECATED(2.0);
+
+      /// \brief joint viscous damping coefficient
+      /// Replaces dampingCoefficient
+      protected: double dissipationCoefficient[MAX_JOINT_AXIS];
+
+      /// \brief joint stiffnessCoefficient
+      protected: double stiffnessCoefficient[MAX_JOINT_AXIS];
+
+      /// \brief joint spring reference (zero load) position
+      protected: double springReferencePosition[MAX_JOINT_AXIS];
 
       /// \brief apply damping for adding viscous damping forces on updates
       protected: gazebo::event::ConnectionPtr applyDamping;
@@ -472,8 +517,10 @@ namespace gazebo
       /// clears them at the end of update step.
       protected: JointWrench wrench;
 
-      /// \brief option to use CFM damping
-      protected: bool useCFMDamping;
+      /// \brief option to use implicit damping
+      /// Deprecated, pushing this flag into individual physics engine,
+      /// for example: ODEJoint::useImplicitSpringDamper.
+      protected: bool useCFMDamping GAZEBO_DEPRECATED(2.0);
 
       /// \brief An SDF pointer that allows us to only read the joint.sdf
       /// file once, which in turns limits disk reads.
