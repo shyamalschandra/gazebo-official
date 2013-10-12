@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright 2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@
 #include <vector>
 
 #include "gazebo/common/Image.hh"
+#include "gazebo/common/HeightmapData.hh"
+#include "gazebo/common/SDTS.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
@@ -123,6 +125,12 @@ namespace gazebo
 
       /// \brief Image used to generate the heights.
       protected: common::Image img;
+
+      /// \brief SDTS used to generate the heights.
+      protected: common::SDTS *sdts;
+
+      /// \brief HeightmapData used to generate the heights.
+      protected: common::HeightmapData *heightmapData;
 
       /// \brief Size of the height lookup table.
       protected: unsigned int vertSize;

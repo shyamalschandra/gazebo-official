@@ -72,7 +72,10 @@
         <collision name="collision">
           <geometry>
             <heightmap>
-              <uri>file://media/materials/textures/heightmap_bowl.png</uri>
+              <!-- <uri>file://media/materials/textures/heightmap_bowl.png</uri> -->
+	      <!-- <uri>file://media/materials/textures/ne_small.jpg</uri> -->
+	            <!-- <uri>file://media/materials/textures/ne_small2.tif</uri> -->
+              <uri>file://media/materials/textures/imgn38w123_1_squared.img</uri>
               <size>129 129 10</size>
               <pos>0 0 0</pos>
             </heightmap>
@@ -106,7 +109,10 @@
                 <min_height>4</min_height>
                 <fade_dist>5</fade_dist>
               </blend>
-              <uri>file://media/materials/textures/heightmap_bowl.png</uri>
+              <!-- <uri>file://media/materials/textures/heightmap_bowl.png</uri> -->
+	            <!-- <uri>file://media/materials/textures/ne_small2.tif</uri> -->
+              <uri>file://media/materials/textures/imgn38w123_1_squared.img</uri>
+
               <size>129 129 10</size>
               <pos>0 0 0</pos>
             </heightmap>
