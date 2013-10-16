@@ -20,6 +20,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <utility>
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
@@ -74,7 +75,9 @@ namespace gazebo
       /// This is the non-blocking version of ModelDatabase::GetModels
       /// \param[in] _func Callback function that receives the list of
       /// models.
-      public: void GetModels(boost::function<
+      /// \return A boost shared pointer. This pointer must remain valid in
+      /// order to receive the callback.
+      public: boost::shared_ptr<bool> GetModels(boost::function<
                   void (const std::map<std::string, std::string> &)> _func);
 
       /// \brief Get the name of a model based on a URI.
@@ -150,8 +153,11 @@ namespace gazebo
       /// \brief True to stop the background thread
       private: bool stop;
 
-      /// \brief Cache update mutex
+      /// \brief Cache update mutex.
       private: boost::mutex updateMutex;
+
+      /// \brief Protects callback list.
+      private: boost::mutex callbacksMutex;
 
       /// \brief Mutex to protect cache thread status checks.
       private: boost::recursive_mutex startCacheMutex;
@@ -167,9 +173,13 @@ namespace gazebo
       private: typedef boost::function<
                void (const std::map<std::string, std::string> &)> CallbackFunc;
 
+      // \todo Remove this along with the deprecated version of GetModels.
+      private: std::list<CallbackFunc> deprecatedCallbacks;
+
       /// \brief List of all callbacks set from the
       /// ModelDatabase::GetModels function.
-      private: std::list<CallbackFunc> callbacks;
+      private: std::list<
+               std::pair<boost::shared_ptr<bool>, CallbackFunc> > callbacks;
 
       /// \brief Handy trick to automatically call a singleton's
       /// constructor.
@@ -177,6 +187,11 @@ namespace gazebo
 
       /// \brief Singleton implementation
       private: friend class SingletonT<ModelDatabase>;
+
+      /// \brief Triggered when the model data has been updated after
+      /// calling ModelDatabase::GetModels()
+      private: static EventT<
+              void (std::map<std::string, std::string>)> modelDBUpdated;
     };
   }
 }

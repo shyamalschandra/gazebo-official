@@ -91,7 +91,7 @@ void ModelDatabase::Start(bool _fetchImmediately)
 /////////////////////////////////////////////////
 void ModelDatabase::Fini()
 {
-  this->callbacks.clear();
+  this->deprecatedCallbacks.clear();
 
   // Stop the update thread.
   this->stop = true;
@@ -274,7 +274,9 @@ void ModelDatabase::UpdateModelCache(bool _fetchImmediately)
   {
     // Wait for an update request.
     if (!_fetchImmediately)
+    {
       this->updateCacheCondition.wait(lock);
+    }
     else
       _fetchImmediately = false;
 
@@ -287,12 +289,31 @@ void ModelDatabase::UpdateModelCache(bool _fetchImmediately)
       gzerr << "Unable to download model manifests\n";
     else
     {
-      for (std::list<CallbackFunc>::iterator iter = this->callbacks.begin();
-           iter != this->callbacks.end(); ++iter)
+      boost::mutex::scoped_lock lock2(this->callbacksMutex);
+
+      for (std::list<CallbackFunc>::iterator iter =
+          this->deprecatedCallbacks.begin();
+          iter != this->deprecatedCallbacks.end(); ++iter)
       {
         (*iter)(this->modelCache);
       }
-      this->callbacks.clear();
+      this->deprecatedCallbacks.clear();
+
+      events::Event::modelDBUpdated(this->modelCache);
+
+      /*
+      std::list<std::pair<boost::shared_ptr<bool>, CallbackFunc> >::iterator
+        iter = this->callbacks.begin();
+      while (iter != this->callbacks.end())
+      {
+        if (!(*iter).first || (*iter).first.use_count() <= 1)
+          this->callbacks.erase(iter++);
+        else
+        {
+          (*iter).second(this->modelCache);
+          ++iter;
+        }
+      }*/
     }
     this->updateCacheCompleteCondition.notify_all();
   }
@@ -347,10 +368,22 @@ std::map<std::string, std::string> ModelDatabase::GetModels()
 }
 
 /////////////////////////////////////////////////
-void ModelDatabase::GetModels(
+/*boost::shared_ptr<bool> ModelDatabase::GetModels(
     boost::function<void (const std::map<std::string, std::string> &)> _func)
 {
-  this->callbacks.push_back(_func);
+  boost::mutex::scoped_lock lock(this->callbacksMutex);
+  boost::shared_ptr<bool> refCount(new bool());
+  this->callbacks.push_back(std::make_pair(refCount, _func));
+  this->updateCacheCondition.notify_one();
+
+  return refCount;
+}*/
+
+/////////////////////////////////////////////////
+ConnectionPtr ModelDatabase::GetModels(
+    boost::function<void (const std::map<std::string, std::string> &)> _func)
+{
+  return modelDBUpdated.Connect(_func);
   this->updateCacheCondition.notify_one();
 }
 
