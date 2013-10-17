@@ -136,6 +136,17 @@ if (PKG_CONFIG_FOUND)
   endif()
 
   #################################################
+  # Find DART
+  find_package(DART)
+  if (DART_FOUND)
+    message (STATUS "Looking for DART, found")
+    set (HAVE_DART TRUE)
+  else()
+    message (STATUS "Looking for DART, not found")
+    set (HAVE_DART FALSE)
+  endif()
+
+  #################################################
   # Find tinyxml. Only debian distributions package tinyxml with a pkg-config
   find_path (tinyxml_include_dir tinyxml.h ${tinyxml_include_dirs} ENV CPATH)
   if (NOT tinyxml_include_dir)
