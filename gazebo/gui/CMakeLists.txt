@@ -1,4 +1,5 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
+
 include ( ${QT_USE_FILE} )
 
 link_directories(
@@ -32,6 +33,7 @@ set (sources
   KeyEventHandler.cc
   LightMaker.cc
   MainWindow.cc
+  ModelManipulator.cc
   MeshMaker.cc
   ModelEditWidget.cc
   ModelListWidget.cc
@@ -71,6 +73,7 @@ set (headers
   GuiEvents.hh
   KeyEventHandler.hh
   LightMaker.hh
+  ModelManipulator.hh
   MeshMaker.hh
   MouseEventHandler.hh
   ModelMaker.hh
@@ -90,9 +93,13 @@ set (headers
 
 set (qt_tests
   DataLogger_TEST.cc
-  MainWindow_TEST.cc
   TimePanel_TEST.cc
 )
+
+# MainWindow is using screen rendering
+if (ENABLE_SCREEN_TESTS)
+  set (qt_tests   ${qt_tests} MainWindow_TEST.cc)
+endif()
 
 # Generate executables for each of the QT unit tests
 gz_build_qt_tests(${qt_tests})
@@ -154,6 +161,3 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/gui.hh.in ${CMAKE_CURRENT_BINARY_DIR
 gz_install_library(gazebo_gui)
 gz_install_includes("gui" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/gui.hh)
 gz_install_executable(gzclient)
-
-# Deprecated Gui.hh
-gz_issue_775("Gui")

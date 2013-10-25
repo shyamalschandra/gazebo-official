@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ void GpuRaySensor::Init()
     this->scene = rendering::get_scene(worldName);
 
     if (!this->scene)
-      this->scene = rendering::create_scene(worldName, false);
+      this->scene = rendering::create_scene(worldName, false, true);
 
     this->laserCam = this->scene->CreateGpuLaser(
         this->sdf->Get<std::string>("name"), false);
@@ -284,7 +284,7 @@ void GpuRaySensor::Init()
     this->laserCam->CreateRenderTexture(
         this->GetScopedName() + "_RttTex_Image");
     this->laserCam->SetWorldPose(this->pose);
-    this->laserCam->AttachToVisual(this->parentName, true);
+    this->laserCam->AttachToVisual(this->parentId, true);
 
     this->laserMsg.mutable_scan()->set_frame(this->parentName);
   }
