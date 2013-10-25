@@ -27,9 +27,11 @@
 #endif
 #include <FreeImage.h>
 #include <string>
+#include <vector>
 
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/common/Color.hh"
+#include "gazebo/common/HeightmapData.hh"
 
 namespace gazebo
 {
@@ -65,7 +67,7 @@ namespace gazebo
 
     /// \class Image Image.hh common/common.hh
     /// \brief Encapsulates an image
-    class Image
+    class Image : public HeightmapData
     {
       /// \brief Pixel formats enumeration
       public: enum PixelFormat
@@ -128,7 +130,7 @@ namespace gazebo
       /// \param[out] _data Pointer to a NULL array of char.
       /// \param[out] _count The resulting data array size
       public: void GetData(unsigned char **_data,
-                           unsigned int &_count) const;
+                            unsigned int &_count) const;
 
       /// \brief Get only the RGB data from the image. This will drop the
       /// alpha channel if one is present.
@@ -182,6 +184,17 @@ namespace gazebo
       /// \brief Returns whether this is a valid image
       /// \return true if image has a bitmap
       public: bool Valid() const;
+
+      /// \brief Create a lookup table of the terrain's height
+      /// \param[in] _subsampling
+      /// \param[in] _vertSize
+      /// \param[in] _size
+      /// \param[in] _scale
+      /// \param[in] _flipY
+      /// \param[out] _heights
+      public: void FillHeightMap(int _subSampling, unsigned int _vertSize,
+          const math::Vector3 &_size, const math::Vector3 &_scale, bool _flipY,
+          std::vector<float> &_heights);
 
       /// \brief Implementation of GetData
       private: void GetDataImpl(unsigned char **_data, unsigned int &_count,

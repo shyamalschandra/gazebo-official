@@ -4,11 +4,14 @@ if (HAVE_OPENAL)
   include_directories(${OPENAL_INCLUDE_DIR})
 endif()
 
-
 if (HAVE_GTS)
   include_directories(${gts_INCLUDE_DIRS})
   link_directories(${gts_LIBRARY_DIRS})
   add_definitions(${gts_CFLAGS})
+endif()
+
+if (HAVE_GDAL)
+  include_directories(${GDAL_INCLUDE_DIR})
 endif()
 
 set (sources
@@ -32,6 +35,7 @@ set (sources
   MeshManager.cc
   ModelDatabase.cc
   PID.cc
+  SDTS.cc
   SkeletonAnimation.cc
   Skeleton.cc
   SphericalCoordinates.cc
@@ -56,6 +60,7 @@ set (headers
   Event.hh
   Events.hh
   Exception.hh
+  HeightmapData.hh
   Image.hh
   KeyEvent.hh
   KeyFrame.hh
@@ -66,6 +71,7 @@ set (headers
   MouseEvent.hh
   PID.hh
   Plugin.hh
+  SDTS.hh
   SkeletonAnimation.hh
   Skeleton.hh
   SingletonT.hh
@@ -157,6 +163,10 @@ endif()
 
 if (HAVE_OPENAL)
   target_link_libraries(gazebo_common ${OPENAL_LIBRARY})
+endif()
+
+if (HAVE_GDAL)
+  target_link_libraries(gazebo_common ${GDAL_LIBRARY})
 endif()
 
 gz_install_library(gazebo_common)

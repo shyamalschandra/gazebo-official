@@ -19,6 +19,11 @@
  * Date: 8 May 2003
  */
 
+#include <gazebo/gazebo_config.h>
+
+#ifdef HAVE_GDAL
+# include <gdal/gdalwarper.h>
+#endif
 #include <string.h>
 #include <math.h>
 
@@ -43,11 +48,13 @@ HeightmapShape::HeightmapShape(CollisionPtr _parent)
 {
   this->vertSize = 0;
   this->AddType(Base::HEIGHTMAP_SHAPE);
+  this->fileFormat = "ANY_IMAGE";
 }
 
 //////////////////////////////////////////////////
 HeightmapShape::~HeightmapShape()
 {
+  // ToDo: Delete objects created
 }
 
 //////////////////////////////////////////////////
@@ -72,6 +79,49 @@ void HeightmapShape::OnRequest(ConstRequestPtr &_msg)
   }
 }
 
+#ifdef HAVE_GDAL
+void HeightmapShape::LoadTerrainFile(std::string _filename)
+{
+  // Register the GDAL drivers
+  GDALAllRegister();
+
+  GDALDataset *poDataset = reinterpret_cast<GDALDataset *>
+      (GDALOpen(_filename.c_str(), GA_ReadOnly));
+
+  if (!poDataset)
+    gzthrow("Unrecognized terrain format in file [" + _filename + "]\n");
+
+  this->fileFormat = poDataset->GetDriver()->GetDescription();
+  GDALClose(reinterpret_cast<GDALDataset *>(poDataset));
+
+  // Check if the heightmap file is an image
+  if (fileFormat == "JPEG" || fileFormat == "PNG")
+  {
+    // Load the terrain file as an image
+    this->img.Load(_filename);
+    this->heightmapData = static_cast<common::HeightmapData*>(&(this->img));
+    this->heigthmapSize = this->sdf->Get<math::Vector3>("size");
+  }
+  else
+  {
+    // Load the terrain file as a SDTS
+    this->sdts.Load(_filename);
+    this->heigthmapSize.x = sdts.GetWorldWidth();
+    this->heigthmapSize.y = sdts.GetWorldHeight();
+    this->heigthmapSize.z = 10.0;
+    this->heightmapData = static_cast<common::HeightmapData*>(&(this->sdts));
+  }
+}
+#else
+void HeightmapShape::LoadTerrainFile(std::string _filename)
+{
+  // Load the terrain file as an image
+  this->img.Load(_filename);
+  this->heightmapData = static_cast<common::HeightmapData*>(&(this->img));
+  this->heigthmapSize = this->sdf->Get<math::Vector3>("size");
+}
+#endif
+
 //////////////////////////////////////////////////
 void HeightmapShape::Load(sdf::ElementPtr _sdf)
 {
@@ -84,13 +134,13 @@ void HeightmapShape::Load(sdf::ElementPtr _sdf)
             this->sdf->Get<std::string>("uri") + "]\n");
   }
 
-  // Use the image to get the size of the heightmap
-  this->img.Load(filename);
+  LoadTerrainFile(filename);
 
-  if (this->img.GetWidth() != this->img.GetHeight() ||
-      !math::isPowerOfTwo(this->img.GetWidth()-1))
+  // Check if the geometry of the terrain data matches Ogre constrains
+  if (this->heightmapData->GetWidth() != this->heightmapData->GetHeight() ||
+      !math::isPowerOfTwo(this->heightmapData->GetWidth()-1))
   {
-    gzthrow("Heightmap image size must be square, with a size of 2^n+1\n");
+    gzthrow("Heightmap data size must be square, with a size of 2^n+1\n");
   }
 }
 
@@ -115,17 +165,18 @@ void HeightmapShape::Init()
   math::Vector3 terrainSize = this->GetSize();
 
   // sampling size along image width and height
-  this->vertSize = (this->img.GetWidth() * this->subSampling)-1;
+  this->vertSize = (this->heightmapData->GetWidth() * this->subSampling)-1;
   this->scale.x = terrainSize.x / this->vertSize;
   this->scale.y = terrainSize.y / this->vertSize;
 
-  if (math::equal(this->img.GetMaxColor().r, 0.0f))
+  if (math::equal(this->heightmapData->GetMaxColor().r, 0.0f))
     this->scale.z = fabs(terrainSize.z);
   else
-    this->scale.z = fabs(terrainSize.z) / this->img.GetMaxColor().r;
+    this->scale.z = fabs(terrainSize.z) / this->heightmapData->GetMaxColor().r;
 
   // Step 1: Construct the heightmap lookup table
-  this->FillHeightMap();
+  this->heightmapData->FillHeightMap(this->subSampling,
+    this->vertSize, this->GetSize(), this->scale, this->flipY, this->heights);
 }
 
 //////////////////////////////////////////////////
@@ -138,85 +189,6 @@ void HeightmapShape::SetScale(const math::Vector3 &_scale)
 }
 
 //////////////////////////////////////////////////
-void HeightmapShape::FillHeightMap()
-{
-  unsigned int x, y;
-  float h = 0;
-  float h1 = 0;
-  float h2 = 0;
-
-  // Resize the vector to match the size of the vertices.
-  this->heights.resize(this->vertSize * this->vertSize);
-
-  common::Color pixel;
-
-  int imgHeight = this->img.GetHeight();
-  int imgWidth = this->img.GetWidth();
-
-  GZ_ASSERT(imgWidth == imgHeight, "Heightmap image must be square");
-
-  // Bytes per row
-  unsigned int pitch = this->img.GetPitch();
-
-  // Bytes per pixel
-  unsigned int bpp = pitch / imgWidth;
-
-  unsigned char *data = NULL;
-  unsigned int count;
-  this->img.GetData(&data, count);
-
-  double yf, xf, dy, dx;
-  int y1, y2, x1, x2;
-  double px1, px2, px3, px4;
-
-  // Iterate over all the vertices
-  for (y = 0; y < this->vertSize; ++y)
-  {
-    // yf ranges between 0 and 4
-    yf = y / static_cast<double>(this->subSampling);
-    y1 = floor(yf);
-    y2 = ceil(yf);
-    if (y2 >= imgHeight)
-      y2 = imgHeight-1;
-    dy = yf - y1;
-
-    for (x = 0; x < this->vertSize; ++x)
-    {
-      xf = x / static_cast<double>(this->subSampling);
-      x1 = floor(xf);
-      x2 = ceil(xf);
-      if (x2 >= imgWidth)
-        x2 = imgWidth-1;
-      dx = xf - x1;
-
-      px1 = static_cast<int>(data[y1 * pitch + x1 * bpp]) / 255.0;
-      px2 = static_cast<int>(data[y1 * pitch + x2 * bpp]) / 255.0;
-      h1 = (px1 - ((px1 - px2) * dx));
-
-      px3 = static_cast<int>(data[y2 * pitch + x1 * bpp]) / 255.0;
-      px4 = static_cast<int>(data[y2 * pitch + x2 * bpp]) / 255.0;
-      h2 = (px3 - ((px3 - px4) * dx));
-
-      h = (h1 - ((h1 - h2) * dy)) * this->scale.z;
-
-      // invert pixel definition so 1=ground, 0=full height,
-      //   if the terrain size has a negative z component
-      //   this is mainly for backward compatibility
-      if (this->GetSize().z < 0)
-        h = 1.0 - h;
-
-      // Store the height for future use
-      if (!this->flipY)
-        this->heights[y * this->vertSize + x] = h;
-      else
-        this->heights[(this->vertSize - y - 1) * this->vertSize + x] = h;
-    }
-  }
-
-  delete [] data;
-}
-
-//////////////////////////////////////////////////
 std::string HeightmapShape::GetURI() const
 {
   return this->sdf->Get<std::string>("uri");
@@ -225,7 +197,7 @@ std::string HeightmapShape::GetURI() const
 //////////////////////////////////////////////////
 math::Vector3 HeightmapShape::GetSize() const
 {
-  return this->sdf->Get<math::Vector3>("size");
+  return this->heigthmapSize;
 }
 
 //////////////////////////////////////////////////
