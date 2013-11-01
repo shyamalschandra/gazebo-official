@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright 2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,49 +14,37 @@
  * limitations under the License.
  *
 */
+#include <boost/filesystem.hpp>
+#include <fstream>
 
 #include "ServerFixture.hh"
-#include "gazebo/math/Rand.hh"
 
-using namespace gazebo;
-
-class Issue876Test : public ServerFixture
+class OgreLog : public ServerFixture
 {
 };
 
-
 /////////////////////////////////////////////////
-// \brief Test for issue #876
-TEST_F(Issue876Test, Reset)
+TEST_F(OgreLog, PubSub)
 {
   Load("worlds/empty.world");
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
 
-  math::Rand::SetSeed(math::Rand::GetSeed());
+  boost::filesystem::path logPath =
+    common::SystemPaths::Instance()->GetLogPath();
+  logPath /= "ogre.log";
+  std::ifstream ogreLog(logPath.string().c_str(), std::ios::in);
+  ASSERT_TRUE(ogreLog.is_open());
 
-  int sampleCount = 500;
-
-  std::vector<int> num;
-  for (int i = 0; i < sampleCount; ++i)
-    num.push_back(math::Rand::GetIntUniform(-10, 10));
-
-  for (int j = 0; j < 1000; ++j)
+  while (!ogreLog.eof())
   {
-    world->Reset();
-
-    std::vector<int> numReset;
-    for (int i = 0; i < sampleCount; ++i)
-      numReset.push_back(math::Rand::GetIntUniform(-10, 10));
-
-    // Using ASSERT_EQ to prevent spamming of similar errors.
-    for (int i = 0; i < sampleCount; ++i)
-      ASSERT_EQ(num[i], numReset[i]);
+    std::string line;
+    std::getline(ogreLog, line);
+    EXPECT_EQ(line.find("Error"), std::string::npos);
+    EXPECT_EQ(line.find("error"), std::string::npos);
+    EXPECT_EQ(line.find("ERROR"), std::string::npos);
   }
 }
 
 /////////////////////////////////////////////////
-/// Main
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

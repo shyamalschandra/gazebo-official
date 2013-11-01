@@ -67,8 +67,10 @@ gz_build_display_tests(${display_tests})
 
 set(dri_tests
   camera_sensor.cc
+  multicamera_sensor.cc
   gpu_laser.cc
   heightmap.cc
+  ogre_log.cc
   pr2.cc
   projector.cc
   rendering_sensor.cc
