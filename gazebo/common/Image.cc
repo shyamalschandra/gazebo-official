@@ -19,18 +19,14 @@
  * Date: 14 July 2008
  */
 
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
-
-#include <iostream>
 #include <boost/filesystem.hpp>
+#include <string>
 
-#include "gazebo/math/Vector3.hh"
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Image.hh"
-#include "gazebo/common/SystemPaths.hh"
+#include "gazebo/math/Vector3.hh"
 
 using namespace gazebo;
 using namespace common;
@@ -270,7 +266,7 @@ unsigned int Image::GetBPP() const
 }
 
 //////////////////////////////////////////////////
-Color Image::GetPixel(unsigned int _x, unsigned int _y)
+Color Image::GetPixel(unsigned int _x, unsigned int _y) const
 {
   Color clr;
 
@@ -346,7 +342,7 @@ Color Image::GetAvgColor()
 }
 
 //////////////////////////////////////////////////
-Color Image::GetMaxColor()
+Color Image::GetMaxColor() const
 {
   unsigned int x, y;
   Color clr;
@@ -368,6 +364,12 @@ Color Image::GetMaxColor()
   }
 
   return maxClr;
+}
+
+//////////////////////////////////////////////////
+float Image::GetMaxElevation() const
+{
+  return this->GetMaxColor().r;
 }
 
 //////////////////////////////////////////////////
@@ -438,3 +440,83 @@ Image::PixelFormat Image::ConvertPixelFormat(const std::string &_format)
   return UNKNOWN_PIXEL_FORMAT;
 }
 
+//////////////////////////////////////////////////
+void Image::FillHeightMap(int _subSampling, unsigned int _vertSize,
+    const math::Vector3 &_size, const math::Vector3 &_scale, bool _flipY,
+    std::vector<float> &_heights)
+{
+  unsigned int x, y;
+  float h = 0;
+  float h1 = 0;
+  float h2 = 0;
+
+  // Resize the vector to match the size of the vertices.
+  _heights.resize(_vertSize * _vertSize);
+
+  common::Color pixel;
+
+  int imgHeight = this->GetHeight();
+  int imgWidth = this->GetWidth();
+
+  GZ_ASSERT(imgWidth == imgHeight, "Heightmap image must be square");
+
+  // Bytes per row
+  unsigned int pitch = this->GetPitch();
+
+  // Bytes per pixel
+  unsigned int bpp = pitch / imgWidth;
+
+  unsigned char *data = NULL;
+  unsigned int count;
+  this->GetData(&data, count);
+
+  double yf, xf, dy, dx;
+  int y1, y2, x1, x2;
+  double px1, px2, px3, px4;
+
+  // Iterate over all the vertices
+  for (y = 0; y < _vertSize; ++y)
+  {
+    // yf ranges between 0 and 4
+    yf = y / static_cast<double>(_subSampling);
+    y1 = floor(yf);
+    y2 = ceil(yf);
+    if (y2 >= imgHeight)
+      y2 = imgHeight-1;
+    dy = yf - y1;
+
+    for (x = 0; x < _vertSize; ++x)
+    {
+      xf = x / static_cast<double>(_subSampling);
+      x1 = floor(xf);
+      x2 = ceil(xf);
+      if (x2 >= imgWidth)
+        x2 = imgWidth-1;
+      dx = xf - x1;
+
+      px1 = static_cast<int>(data[y1 * pitch + x1 * bpp]) / 255.0;
+      px2 = static_cast<int>(data[y1 * pitch + x2 * bpp]) / 255.0;
+      h1 = (px1 - ((px1 - px2) * dx));
+
+      px3 = static_cast<int>(data[y2 * pitch + x1 * bpp]) / 255.0;
+      px4 = static_cast<int>(data[y2 * pitch + x2 * bpp]) / 255.0;
+      h2 = (px3 - ((px3 - px4) * dx));
+
+      h = (h1 - ((h1 - h2) * dy)) * _scale.z;
+
+      // invert pixel definition so 1=ground, 0=full height,
+      //   if the terrain size has a negative z component
+      //   this is mainly for backward compatibility
+      if (_size.z < 0)
+        h = 1.0 - h;
+
+      // Store the height for future use
+      if (!_flipY)
+        _heights[y * _vertSize + x] = h;
+      else
+        _heights[(_vertSize - y - 1) * _vertSize + x] = h;
+    }
+  }
+
+  delete [] data;
+}
