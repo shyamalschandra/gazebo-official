@@ -40,6 +40,7 @@ set(tests
   #state_log.cc
   surface_properties.cc
   transceiver.cc
+  world.cc
   )
 
 if (MANPAGES_SUPPORT)
@@ -69,6 +70,7 @@ set(dri_tests
   multicamera_sensor.cc
   gpu_laser.cc
   heightmap.cc
+  ogre_log.cc
   pr2.cc
   projector.cc
   rendering_sensor.cc
