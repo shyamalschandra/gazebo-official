@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <sstream>
 #include <boost/filesystem.hpp>
+#include <sdf/sdf.hh>
 
 // Moved to top to avoid osx compilation errors
 #include "gazebo/math/Rand.hh"
@@ -321,8 +322,8 @@ void Camera::Update()
     bool erase = false;
     if ((*iter).request() == "track_visual")
     {
-      this->TrackVisualImpl((*iter).data());
-      erase = true;
+      if (this->TrackVisualImpl((*iter).data()))
+        erase = true;
     }
     else if ((*iter).request() == "attach_visual")
     {
@@ -449,19 +450,11 @@ void Camera::RenderImpl()
   {
     // Render, but don't swap buffers.
     this->renderTarget->update(false);
-
-    this->lastRenderWallTime = common::Time::GetWallTime();
   }
 }
 
 //////////////////////////////////////////////////
-common::Time Camera::GetLastRenderWallTime()
-{
-  return this->lastRenderWallTime;
-}
-
-//////////////////////////////////////////////////
-void Camera::PostRender()
+void Camera::ReadPixelBuffer()
 {
   this->renderTarget->swapBuffers();
 
@@ -485,8 +478,68 @@ void Camera::PostRender()
         static_cast<Ogre::PixelFormat>(this->imageFormat),
         this->saveFrameBuffer);
 
-    this->viewport->getTarget()->copyContentsToMemory(box);
+#if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR < 8
+    // Case for UserCamera where there is no RenderTexture but
+    // a RenderTarget (RenderWindow) exists. We can not call SetRenderTarget
+    // because that overrides the this->renderTarget variable
+    if (this->renderTarget && !this->renderTexture)
+    {
+      // Create the render texture
+      this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
+        this->renderTarget->getName() + "_tex",
+        "General",
+        Ogre::TEX_TYPE_2D,
+        this->GetImageWidth(),
+        this->GetImageHeight(),
+        0,
+        (Ogre::PixelFormat)this->imageFormat,
+        Ogre::TU_RENDERTARGET)).getPointer();
+        Ogre::RenderTexture *rtt
+            = this->renderTexture->getBuffer()->getRenderTarget();
 
+      // Setup the viewport to use the texture
+      Ogre::Viewport *vp = rtt->addViewport(this->camera);
+      vp->setClearEveryFrame(true);
+      vp->setShadowsEnabled(true);
+      vp->setShadowsEnabled(true);
+      vp->setOverlaysEnabled(false);
+    }
+
+    // This update is only needed for client side data captures
+    if (this->renderTexture->getBuffer()->getRenderTarget()
+        != this->renderTarget)
+      this->renderTexture->getBuffer()->getRenderTarget()->update();
+
+    // The code below is equivalent to
+    // this->viewport->getTarget()->copyContentsToMemory(box);
+    // which causes problems on some machines if running ogre-1.7.4
+    Ogre::HardwarePixelBufferSharedPtr pixelBuffer;
+    pixelBuffer = this->renderTexture->getBuffer();
+    pixelBuffer->blitToMemory(box);
+#else
+    // There is a fix in ogre-1.8 for a buffer overrun problem in
+    // OgreGLXWindow.cpp's copyContentsToMemory(). It fixes reading
+    // pixels from buffer into memory.
+    this->viewport->getTarget()->copyContentsToMemory(box);
+#endif
+  }
+}
+
+//////////////////////////////////////////////////
+common::Time Camera::GetLastRenderWallTime()
+{
+  return this->lastRenderWallTime;
+}
+
+//////////////////////////////////////////////////
+void Camera::PostRender()
+{
+  this->ReadPixelBuffer();
+
+  this->lastRenderWallTime = common::Time::GetWallTime();
+
+  if (this->newData && (this->captureData || this->captureDataOnce))
+  {
     if (this->captureDataOnce)
     {
       this->SaveFrame(this->GetFrameFilename());
@@ -499,6 +552,8 @@ void Camera::PostRender()
       this->SaveFrame(this->GetFrameFilename());
     }
 
+    unsigned int width = this->GetImageWidth();
+    unsigned int height = this->GetImageHeight();
     const unsigned char *buffer = this->saveFrameBuffer;
 
     // do last minute conversion if Bayer pattern is requested, go from R8G8B8
@@ -518,7 +573,7 @@ void Camera::PostRender()
     }
 
     this->newImageFrame(buffer, width, height, this->GetImageDepth(),
-                    this->GetImageFormat());
+        this->GetImageFormat());
   }
 
   this->newData = false;
@@ -1215,19 +1270,14 @@ void Camera::CreateRenderTexture(const std::string &_textureName)
 {
   // Create the render texture
   this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
-      _textureName,
-      "General",
-      Ogre::TEX_TYPE_2D,
-      this->GetImageWidth(),
-      this->GetImageHeight(),
-      0,
-      (Ogre::PixelFormat)this->imageFormat,
-#if OGRE_VERSION_MAJR > 1 || OGRE_VERSION_MINOR >= 9
-      // This #if allows ogre to antialias offscreen rendering
-     Ogre::TU_RENDERTARGET, NULL, false, 4)).getPointer();
-#else
-     Ogre::TU_RENDERTARGET)).getPointer();
-#endif
+        _textureName,
+        "General",
+        Ogre::TEX_TYPE_2D,
+        this->GetImageWidth(),
+        this->GetImageHeight(),
+        0,
+        (Ogre::PixelFormat)this->imageFormat,
+        Ogre::TU_RENDERTARGET, NULL, false, 4)).getPointer();
 
   this->SetRenderTarget(this->renderTexture->getBuffer()->getRenderTarget());
 
@@ -1464,7 +1514,10 @@ bool Camera::TrackVisualImpl(const std::string &_name)
   if (visual)
     return this->TrackVisualImpl(visual);
   else
+  {
     this->trackedVisual.reset();
+    this->camera->setAutoTracking(false, NULL);
+  }
 
   return false;
 }
