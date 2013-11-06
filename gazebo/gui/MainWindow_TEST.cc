@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ void OnRequest(ConstRequestPtr &_msg)
 /////////////////////////////////////////////////
 void MainWindow_TEST::Wireframe()
 {
-  this->resMaxPercentChange = 4.0;
+  this->resMaxPercentChange = 5.0;
   this->shareMaxPercentChange = 2.0;
 
   this->Load("empty.world", false, false, true);
