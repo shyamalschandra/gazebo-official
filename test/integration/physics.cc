@@ -33,6 +33,7 @@ class PhysicsTest : public ServerFixture,
   public: void SpawnDropCoGOffset(const std::string &_physicsEngine);
   public: void RevoluteJoint(const std::string &_physicsEngine);
   public: void SimplePendulum(const std::string &_physicsEngine);
+  public: void SphereAtlasLargeError(const std::string &_physicsEngine);
   public: void CollisionFiltering(const std::string &_physicsEngine);
   public: void JointDampingTest(const std::string &_physicsEngine);
   public: void DropStuff(const std::string &_physicsEngine);
@@ -1562,6 +1563,67 @@ void PhysicsTest::SimplePendulum(const std::string &_physicsEngine)
 TEST_P(PhysicsTest, SimplePendulum)
 {
   SimplePendulum(GetParam());
+}
+
+////////////////////////////////////////////////////////////////////////
+// SphereAtlasLargeError:
+// Check algorithm's ability to re-converge after a large LCP error is
+// introduced.
+// In this test, a model with similar dynamics properties to Atlas V3
+// is pinned to the world by both feet.  Robot is moved by a large
+// distance, violating the joints between world and feet temporarily.
+// Robot is then allowed to settle.  Check to see that the LCP solution
+// does not become unstable.
+////////////////////////////////////////////////////////////////////////
+void PhysicsTest::SphereAtlasLargeError(const std::string &_physicsEngine)
+{
+  if (_physicsEngine != "ode")
+  {
+    gzerr << "skipping physics engine [" << _physicsEngine << "].\n";
+    return;
+  }
+
+  Load("worlds/sphere_atlas_demo.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  int i = 0;
+  while (!this->HasEntity("sphere_atlas") && i < 20)
+  {
+    common::Time::MSleep(100);
+    ++i;
+  }
+
+  if (i > 20)
+    gzthrow("Unable to get sphere_atlas");
+
+  physics::ModelPtr model = world->GetModel("sphere_atlas");
+  EXPECT_TRUE(model);
+  physics::LinkPtr head = model->GetLink("head");
+  EXPECT_TRUE(head);
+
+  // introduce a large error by moving the model
+  model->SetWorldPose(math::Pose(1000, 0, 0, 0, 0, 0));
+  world->StepWorld(1);
+
+  // let model settle
+  world->StepWorld(6000);
+
+  // check model stability
+  math::Vector3 headVel = head->GetWorldLinearVel();
+  EXPECT_LT(fabs(headVel.x), 0.01);
+  EXPECT_LT(fabs(headVel.y), 0.01);
+  EXPECT_LT(fabs(headVel.z), 0.01);
+  gzdbg << "final head velocity [" << headVel << "].\n";
+}
+
+TEST_P(PhysicsTest, SphereAtlasLargeError)
+{
+  SphereAtlasLargeError(GetParam());
 }
 
 ////////////////////////////////////////////////////////////////////////
