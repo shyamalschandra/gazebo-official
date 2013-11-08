@@ -318,7 +318,7 @@ int RaySensor::GetFiducial(int index)
 }
 
 //////////////////////////////////////////////////
-void RaySensor::UpdateImpl(bool /*_force*/)
+bool RaySensor::UpdateImpl(bool /*_force*/)
 {
   // do the collision checks
   // this eventually call OnNewScans, so move mutex lock behind it in case
@@ -379,6 +379,8 @@ void RaySensor::UpdateImpl(bool /*_force*/)
 
   if (this->scanPub && this->scanPub->HasConnections())
     this->scanPub->Publish(this->laserMsg);
+
+  return true;
 }
 
 //////////////////////////////////////////////////
