@@ -14,6 +14,11 @@
 
 ### Modifications
 
+1. **gazebo/common/ModelDatabase.hh** `API change`
+    + ***Removed:*** void ModelDatabase::GetModels(boost::function<void (const std::map<std::string, std::string> &)> _func)
+    + ***Replacement:*** event::ConnectionPtr ModelDatabase::GetModels(boost::function<void (const std::map<std::string, std::string> &)> _func)
+    + ***Note:*** The replacement function requires that the returned connection shared pointer remain valid in order to receive the GetModels callback. Reset the shared pointer to stop receiving GetModels callback.
+
 ### Additions
 
 1. **gazebo/physics/Joint.hh**
@@ -40,13 +45,13 @@
     + ***Replacement*** std::string CreateSensor(sdf::ElementPtr _elem, const std::string &_worldName, const std::string &_parentName, uint32_t _parentId)
 1. **gazebo/sensors/Collision.hh**
     + ***Deprecation*** void Collision::SetContactsEnabled(bool _enable)
-    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html)
+    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html).
     ---
     + ***Deprecation*** bool Colliion::GetContactsEnabled() const
-    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html)
+    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html).
     ---
     + ***Deprecation*** void AddContact(const Contact &_contact)
-    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html)
+    + ***Replacement*** Use [ContactManager](http://gazebosim.org/api/2.0.0/classgazebo_1_1physics_1_1ContactManager.html).
 
 ### Modifications
 
@@ -96,10 +101,10 @@
     + ***Replacement*** void Link::RemoveParentJoint(const std::string &_jointName)
 1. **gazebo/physics/MeshShape.hh**
     + ***Removed*** std::string MeshShape::GetFilename() const `API change`
-    + ***Replacement*** std::string MeshShape::GetURI() const;
+    + ***Replacement*** std::string MeshShape::GetURI() const
     ---
     + ***Removed*** void MeshShape::SetFilename() const `API change`
-    + ***Replacement*** std::string MeshShape::SetMesh(const std::string &_uri, const std::string &_submesh = "", bool _center = false) const;
+    + ***Replacement*** std::string MeshShape::SetMesh(const std::string &_uri, const std::string &_submesh = "", bool _center = false) const
 1. **gazebo/common/Time.hh**
     + ***Removed*** static Time::NSleep(Time _time) `API change`
     + ***Replacement*** static Time NSleep(unsigned int _ns)
