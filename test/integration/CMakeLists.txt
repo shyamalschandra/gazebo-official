@@ -28,6 +28,11 @@ set(tests
   factory.cc
   file_handling.cc
   gripper.cc
+  gz_joint.cc
+  gz_log.cc
+  gz_model.cc
+  gz_physics.cc
+  gz_world.cc
   imu.cc
   laser.cc
   nondefault_world.cc
@@ -35,6 +40,7 @@ set(tests
   physics_msgs.cc
   pioneer2dx.cc
   transport.cc
+  sensor_stress.cc
   server_fixture.cc
   speed.cc
   stress_spawn_models.cc
@@ -70,6 +76,7 @@ set(dri_tests
   camera_sensor.cc
   multicamera_sensor.cc
   gpu_laser.cc
+  gz_camera.cc
   heightmap.cc
   ogre_log.cc
   pr2.cc
