@@ -660,3 +660,9 @@ void Joint::SetProvideFeedback(bool _enable)
 {
   this->provideFeedback = _enable;
 }
+
+//////////////////////////////////////////////////
+math::Pose Joint::GetInitialAnchorPose()
+{
+  return this->anchorPose;
+}
