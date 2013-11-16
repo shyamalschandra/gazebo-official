@@ -503,8 +503,10 @@ class ServerFixture : public testing::Test
                  const std::string &_raySensorName,
                  const math::Vector3 &_pos, const math::Vector3 &_rpy,
                  double _hMinAngle = -2.0, double _hMaxAngle = 2.0,
+                 double _vMinAngle = -1.0, double _vMaxAngle = 1.0,
                  double _minRange = 0.08, double _maxRange = 10,
                  double _rangeResolution = 0.01, unsigned int _samples = 640,
+                 unsigned int _vSamples = 1,
                  const std::string &_noiseType = "", double _noiseMean = 0.0,
                  double _noiseStdDev = 0.0)
              {
@@ -534,6 +536,12 @@ class ServerFixture : public testing::Test
                  << "          <min_angle>" << _hMinAngle << "</min_angle>"
                  << "          <max_angle>" << _hMaxAngle << "</max_angle>"
                  << "        </horizontal>"
+                 << "        <vertical>"
+                 << "          <samples>" << _vSamples << "</samples>"
+                 << "          <resolution> 1 </resolution>"
+                 << "          <min_angle>" << _vMinAngle << "</min_angle>"
+                 << "          <max_angle>" << _vMaxAngle << "</max_angle>"
+                 << "        </vertical>"
                  << "      </scan>"
                  << "      <range>"
                  << "        <min>" << _minRange << "</min>"
@@ -549,6 +557,7 @@ class ServerFixture : public testing::Test
                  << "      </noise>";
 
                newModelStr << "    </ray>"
+                 << "    <visualize>true</visualize>"
                  << "  </sensor>"
                  << "</link>"
                  << "</model>"
@@ -943,7 +952,7 @@ class ServerFixture : public testing::Test
   /// \param[in] _name Model name
   /// \param[in] _sleepEach Number of milliseconds to sleep in each iteration
   /// \param[in] _retries Number of iterations until give up
-  private: void WaitUntilEntitySpawn(const std::string &_name,
+  protected: void WaitUntilEntitySpawn(const std::string &_name,
                                      unsigned int _sleepEach,
                                      int _retries)
              {
@@ -966,7 +975,7 @@ class ServerFixture : public testing::Test
   /// \param[in] _name Sensor name
   /// \param[in] _sleepEach Number of milliseconds to sleep in each iteration
   /// \param[in] _retries Number of iterations until give up
-  private: void WaitUntilSensorSpawn(const std::string &_name,
+  protected: void WaitUntilSensorSpawn(const std::string &_name,
                                      unsigned int _sleepEach,
                                      int _retries)
              {
