@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,14 +70,14 @@ void JointController::Update()
   // TODO: fix this when World::ResetTime is improved
   if (stepTime > 0)
   {
-    if (this->forces.size() > 0)
+    if (!this->forces.empty())
     {
       std::map<std::string, double>::iterator iter;
       for (iter = this->forces.begin(); iter != this->forces.end(); ++iter)
         this->joints[iter->first]->SetForce(0, iter->second);
     }
 
-    if (this->positions.size() > 0)
+    if (!this->positions.empty())
     {
       double cmd;
       std::map<std::string, double>::iterator iter;
@@ -92,7 +92,7 @@ void JointController::Update()
       }
     }
 
-    if (this->velocities.size() > 0)
+    if (!this->velocities.empty())
     {
       double cmd;
       std::map<std::string, double>::iterator iter;
@@ -309,7 +309,7 @@ void JointController::MoveLinks(JointPtr _joint, LinkPtr _link,
       /// \TODO: ideally we want to set this according to
       /// Joint Trajectory velocity and use time step since last update.
       /// double dt =
-      /// this->model->GetWorld()->GetPhysicsEngine()->GetStepTime();
+      /// this->model->GetWorld()->GetPhysicsEngine()->GetMaxStepTime();
       /// this->ComputeAndSetLinkTwist(_link, newWorldPose, newWorldPose, dt);
 
       this->updatedLinks.push_back(_link);
@@ -334,7 +334,7 @@ void JointController::MoveLinks(JointPtr _joint, LinkPtr _link,
       /// \TODO: ideally we want to set this according to Joint Trajectory
       /// velocity and use time step since last update.
       /// double dt = this->model->GetWorld()->GetPhysicsEngine()->
-      /// GetStepTime();
+      /// GetMaxStepTime();
       /// this->ComputeAndSetLinkTwist(_link, newWorldPose, newWorldPose, dt);
 
       this->updatedLinks.push_back(_link);

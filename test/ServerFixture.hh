@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,7 @@
 # include <mach/mach.h>
 #endif  // __MACH__
 
-// Remove the gazebo_config and ifdefs in Gazebo 2.0
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
 #include <sdf/sdf.hh>
-#endif
 
 #include <gtest/gtest.h>
 #include <boost/thread.hpp>
@@ -72,22 +68,22 @@ class ServerFixture : public testing::Test
 
                common::Console::Instance()->Init("test.log");
                common::SystemPaths::Instance()->AddGazeboPaths(
-                   TEST_REGRESSION_PATH);
+                   TEST_INTEGRATION_PATH);
 
                // Add local search paths
-               std::string path = TEST_REGRESSION_PATH;
+               std::string path = TEST_INTEGRATION_PATH;
                path += "/../..";
                gazebo::common::SystemPaths::Instance()->AddGazeboPaths(path);
 
-               path = TEST_REGRESSION_PATH;
+               path = TEST_INTEGRATION_PATH;
                path += "/../../sdf";
                gazebo::common::SystemPaths::Instance()->AddGazeboPaths(path);
 
-               path = TEST_REGRESSION_PATH;
+               path = TEST_INTEGRATION_PATH;
                path += "/../../gazebo";
                gazebo::common::SystemPaths::Instance()->AddGazeboPaths(path);
 
-               path = TEST_REGRESSION_PATH;
+               path = TEST_INTEGRATION_PATH;
                path += "/../../build/plugins";
                gazebo::common::SystemPaths::Instance()->AddPluginPaths(path);
 
@@ -136,11 +132,6 @@ class ServerFixture : public testing::Test
                delete this->server;
                this->server = NULL;
 
-               // We must set the findFile callback here,
-               // before the server loads the file (server->LoadFile).
-               sdf::setFindCallback(
-                   boost::bind(&gazebo::common::find_file, _1));
-
                // Create, load, and run the server in its own thread
                this->serverThread = new boost::thread(
                   boost::bind(&ServerFixture::RunServer, this, _worldFilename,
@@ -157,11 +148,14 @@ class ServerFixture : public testing::Test
                       << " seconds, timeout after "
                       << static_cast<double>(maxWaitCount)/100.0
                       << " seconds\n";
-               ASSERT_LT(waitCount, maxWaitCount);
+
+               if (waitCount >= maxWaitCount)
+                 this->launchTimeoutFailure(
+                     "while waiting for Load() function", waitCount);
 
                this->node = transport::NodePtr(new transport::Node());
                ASSERT_NO_THROW(this->node->Init());
-               this->poseSub = this->node->Subscribe("~/pose/info",
+               this->poseSub = this->node->Subscribe("~/pose/local/info",
                    &ServerFixture::OnPose, this, true);
                this->statsSub = this->node->Subscribe("~/world_stats",
                    &ServerFixture::OnStats, this);
@@ -197,17 +191,21 @@ class ServerFixture : public testing::Test
              {
                // Wait for the scene to get loaded.
                int i = 0;
-               while (rendering::get_scene(_sceneName) == NULL && i < 20)
+               int timeoutDS = 20;
+               while (rendering::get_scene(_sceneName) == NULL && i < timeoutDS)
                {
                  common::Time::MSleep(100);
                  ++i;
                }
 
-               if (i >= 20)
+               if (i >= timeoutDS)
+               {
                  gzerr << "Unable to load the rendering scene.\n"
-                   << "Test will fail";
+                       << "Test will fail";
+                 this->launchTimeoutFailure(
+                     "while waiting to load rendering scene", i);
+               }
 
-               EXPECT_LT(i, 20);
                return rendering::get_scene(_sceneName);
              }
 
@@ -215,6 +213,7 @@ class ServerFixture : public testing::Test
                             const std::string &_physics)
              {
                ASSERT_NO_THROW(this->server = new Server());
+               this->server->PreLoad();
                if (_physics.length())
                  ASSERT_NO_THROW(this->server->LoadFile(_worldFilename,
                                                         _physics));
@@ -226,7 +225,7 @@ class ServerFixture : public testing::Test
                      gazebo::physics::get_world()->GetName()))
                {
                  rendering::create_scene(
-                     gazebo::physics::get_world()->GetName(), false);
+                     gazebo::physics::get_world()->GetName(), false, true);
                }
 
                this->SetPause(_paused);
@@ -654,25 +653,36 @@ class ServerFixture : public testing::Test
                  << "    </cylinder>" << std::endl
                  << "  </geometry>" << std::endl
                  << "</collision>" << std::endl
-                 << "  <sensor name ='" << _imuSensorName << "' type ='imu'>" << std::endl
+                 << "  <sensor name ='" << _imuSensorName
+                 << "' type ='imu'>" << std::endl
                  << "    <imu>" << std::endl;
 
                if (_noiseType.size() > 0)
+               {
                  newModelStr << "      <noise>" << std::endl
                  << "        <type>" << _noiseType << "</type>" << std::endl
                  << "        <rate>" << std::endl
-                 << "          <mean>" << _rateNoiseMean << "</mean>" << std::endl
-                 << "          <stddev>" << _rateNoiseStdDev << "</stddev>" << std::endl
-                 << "          <bias_mean>" << _rateBiasMean << "</bias_mean>" << std::endl
-                 << "          <bias_stddev>" << _rateBiasStdDev << "</bias_stddev>" << std::endl
+                 << "          <mean>" << _rateNoiseMean
+                 << "</mean>" << std::endl
+                 << "          <stddev>" << _rateNoiseStdDev
+                 << "</stddev>" << std::endl
+                 << "          <bias_mean>" << _rateBiasMean
+                 << "</bias_mean>" << std::endl
+                 << "          <bias_stddev>" << _rateBiasStdDev
+                 << "</bias_stddev>" << std::endl
                  << "        </rate>" << std::endl
                  << "        <accel>" << std::endl
-                 << "          <mean>" << _accelNoiseMean << "</mean>" << std::endl
-                 << "          <stddev>" << _accelNoiseStdDev << "</stddev>" << std::endl
-                 << "          <bias_mean>" << _accelBiasMean << "</bias_mean>" << std::endl
-                 << "          <bias_stddev>" << _accelBiasStdDev << "</bias_stddev>" << std::endl
+                 << "          <mean>" << _accelNoiseMean << "</mean>"
+                 << std::endl
+                 << "          <stddev>" << _accelNoiseStdDev << "</stddev>"
+                 << std::endl
+                 << "          <bias_mean>" << _accelBiasMean
+                 << "</bias_mean>" << std::endl
+                 << "          <bias_stddev>" << _accelBiasStdDev
+                 << "</bias_stddev>" << std::endl
                  << "        </accel>" << std::endl
                  << "      </noise>" << std::endl;
+               }
 
                newModelStr << "    </imu>" << std::endl
                  << "  </sensor>" << std::endl
@@ -815,9 +825,123 @@ class ServerFixture : public testing::Test
                WaitUntilSensorSpawn(_sensorName, 100, 100);
              }
 
+  /// \brief generate a gtest failure from a timeout error and display a
+  /// log message about the problem.
+  /// \param[in] log_msg: error msg related to the timeout
+  /// \param[in] timeoutCS: failing period (in centiseconds)
+  private: void launchTimeoutFailure(const char *_logMsg, const int _timeoutCS)
+  {
+      FAIL() << "ServerFixture timeout (wait more than " << _timeoutCS / 100
+             << "s): " << _logMsg;
+  }
+
+  /// \brief Spawn an Wireless transmitter sensor on a link
+  /// \param[in] _name Model name
+  /// \param[in] _sensorName Sensor name
+  /// \param[in] _pos World position
+  /// \param[in] _rpy World rotation in Euler angles
+  /// \param[in] _essid Service set identifier (network name)
+  /// \param[in] _freq Frequency of transmission (MHz)
+  /// \param[in] _power Transmission power (dBm)
+  /// \param[in] _gain Antenna gain (dBi)
+  /// \param[in] _visualize Enable sensor visualization
+  protected: void SpawnWirelessTransmitterSensor(const std::string &_name,
+                 const std::string &_sensorName,
+                 const math::Vector3 &_pos,
+                 const math::Vector3 &_rpy,
+                 const std::string &_essid,
+                 double _freq,
+                 double _power,
+                 double _gain,
+                 bool _visualize = true)
+             {
+               msgs::Factory msg;
+               std::ostringstream newModelStr;
+
+               newModelStr << "<sdf version='" << SDF_VERSION << "'>"
+                 << "<model name ='" << _name << "'>"
+                 << "<static>true</static>"
+                 << "<pose>" << _pos << " " << _rpy << "</pose>"
+                 << "<link name ='link'>"
+                 << "  <sensor name='" << _sensorName
+                 <<         "' type='wireless_transmitter'>"
+                 << "    <always_on>1</always_on>"
+                 << "    <update_rate>1</update_rate>"
+                 << "    <visualize>" << _visualize << "</visualize>"
+                 << "    <transceiver>"
+                 << "      <essid>" << _essid << "</essid>"
+                 << "      <frequency>" << _freq << "</frequency>"
+                 << "      <power>" << _power << "</power>"
+                 << "      <gain>" << _gain << "</gain>"
+                 << "    </transceiver>"
+                 << "  </sensor>"
+                 << "</link>"
+                 << "</model>"
+                 << "</sdf>";
+
+               msg.set_sdf(newModelStr.str());
+               this->factoryPub->Publish(msg);
+
+               WaitUntilEntitySpawn(_name, 100, 100);
+               WaitUntilSensorSpawn(_sensorName, 100, 100);
+             }
+
+  /// \brief Spawn an Wireless receiver sensor on a link
+  /// \param[in] _name Model name
+  /// \param[in] _sensorName Sensor name
+  /// \param[in] _pos World position
+  /// \param[in] _rpy World rotation in Euler angles
+  /// \param[in] _minFreq Minimum frequency to be filtered (MHz)
+  /// \param[in] _maxFreq Maximum frequency to be filtered (MHz)
+  /// \param[in] _power Transmission power (dBm)
+  /// \param[in] _gain Antenna gain (dBi)
+  /// \param[in] _sensitivity Receiver sensitibity (dBm)
+  /// \param[in] _visualize Enable sensor visualization
+  protected: void SpawnWirelessReceiverSensor(const std::string &_name,
+                 const std::string &_sensorName,
+                 const math::Vector3 &_pos,
+                 const math::Vector3 &_rpy,
+                 double _minFreq,
+                 double _maxFreq,
+                 double _power,
+                 double _gain,
+                 double _sensitivity,
+                 bool _visualize = true)
+             {
+               msgs::Factory msg;
+               std::ostringstream newModelStr;
+
+               newModelStr << "<sdf version='" << SDF_VERSION << "'>"
+                 << "<model name ='" << _name << "'>"
+                 << "<static>true</static>"
+                 << "<pose>" << _pos << " " << _rpy << "</pose>"
+                 << "<link name ='link'>"
+                 << "  <sensor name='" << _sensorName
+                 <<         "' type='wireless_receiver'>"
+                 << "    <update_rate>1</update_rate>"
+                 << "    <visualize>" << _visualize << "</visualize>"
+                 << "    <transceiver>"
+                 << "      <min_frequency>" << _minFreq << "</min_frequency>"
+                 << "      <max_frequency>" << _maxFreq << "</max_frequency>"
+                 << "      <power>" << _power << "</power>"
+                 << "      <gain>" << _gain << "</gain>"
+                 << "      <sensitivity>" << _sensitivity << "</sensitivity>"
+                 << "    </transceiver>"
+                 << "  </sensor>"
+                 << "</link>"
+                 << "</model>"
+                 << "</sdf>";
+
+               msg.set_sdf(newModelStr.str());
+               this->factoryPub->Publish(msg);
+
+               WaitUntilEntitySpawn(_name, 100, 100);
+               WaitUntilSensorSpawn(_sensorName, 100, 100);
+             }
+
   /// \brief Wait for a number of ms. and attempts until the entity is spawned
   /// \param[in] _name Model name
-  /// \param[in] _sleep_each Number of milliseconds to sleep in each iteration
+  /// \param[in] _sleepEach Number of milliseconds to sleep in each iteration
   /// \param[in] _retries Number of iterations until give up
   private: void WaitUntilEntitySpawn(const std::string &_name,
                                      unsigned int _sleepEach,
@@ -840,7 +964,7 @@ class ServerFixture : public testing::Test
 
   /// \brief Wait for a number of ms. and attempts until the sensor is spawned
   /// \param[in] _name Sensor name
-  /// \param[in] _sleep_each Number of milliseconds to sleep in each iteration
+  /// \param[in] _sleepEach Number of milliseconds to sleep in each iteration
   /// \param[in] _retries Number of iterations until give up
   private: void WaitUntilSensorSpawn(const std::string &_name,
                                      unsigned int _sleepEach,
@@ -853,7 +977,6 @@ class ServerFixture : public testing::Test
                  common::Time::MSleep(_sleepEach);
                  ++i;
                }
-
                EXPECT_LT(i, _retries);
 
                if (i >= _retries)
