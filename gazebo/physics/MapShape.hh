@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@
 #include <deque>
 #include <string>
 
-#include "common/CommonTypes.hh"
+#include "gazebo/common/CommonTypes.hh"
 
-#include "physics/Collision.hh"
-#include "physics/Shape.hh"
+#include "gazebo/physics/Collision.hh"
+#include "gazebo/physics/Shape.hh"
 
 namespace gazebo
 {
@@ -74,9 +74,13 @@ namespace gazebo
       /// \return The image URI that was used to load the map.
       public: std::string GetURI() const;
 
+      /// \brief Set the scale of the map shape.
+      /// \param[in] _scale Scale to set the map shape to.
+      public: void SetScale(const math::Vector3 &_scale);
+
       /// \brief Returns scaling factor for this geometry.
       /// \return Scaling factor.
-      public: double GetScale() const;
+      public: virtual math::Vector3 GetScale() const;
 
       /// \brief Returns image threshold for this geometry.
       /// All regions in image with value larger than MapShape::scale
@@ -142,6 +146,7 @@ namespace gazebo
     };
 
 
+    /// \class QuadNode MapShape.hh physics/physics.hh
     /// \cond
     class QuadNode
     {
