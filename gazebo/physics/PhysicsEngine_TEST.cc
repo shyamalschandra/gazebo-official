@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,8 @@ void PhysicsEngineTest::PhysicsEngineParam(const std::string &_physicsEngine)
     type = msgs::Physics::ODE;
   else if (_physicsEngine == "bullet")
     type = msgs::Physics::BULLET;
+  else
+    type = msgs::Physics::ODE;
   physicsPubMsg.set_type(type);
   physicsPubMsg.set_max_step_size(0.01);
   physicsPubMsg.set_real_time_update_rate(500);
