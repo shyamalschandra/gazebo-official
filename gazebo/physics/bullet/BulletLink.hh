@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@
 #ifndef _BULLETLINK_HH_
 #define _BULLETLINK_HH_
 
-#include "physics/bullet/bullet_inc.h"
-#include "physics/bullet/BulletTypes.hh"
-#include "physics/Link.hh"
+#include "gazebo/physics/bullet/bullet_inc.h"
+#include "gazebo/physics/bullet/BulletTypes.hh"
+#include "gazebo/physics/Link.hh"
 
 class btRigidBody;
 
@@ -58,9 +58,6 @@ namespace gazebo
       public: virtual void Fini();
 
       // Documentation inherited.
-      public: virtual void Update();
-
-      // Documentation inherited.
       public: virtual void OnPoseChange();
 
       // Documentation inherited.
@@ -87,7 +84,8 @@ namespace gazebo
 
       // Documentation inherited
       public: virtual math::Vector3 GetWorldLinearVel(
-                  const math::Pose &_pose) const;
+                  const math::Vector3 &_offset,
+                  const math::Quaternion &_q) const;
 
       // Documentation inherited
       public: virtual math::Vector3 GetWorldCoGLinearVel() const;
@@ -113,6 +111,10 @@ namespace gazebo
       /// \brief Get the bullet rigid body.
       /// \return Pointer to bullet rigid body object.
       public: btRigidBody *GetBulletLink() const;
+
+      /// \internal
+      /// \brief Clear bullet collision cache needed when the body is resized.
+      public: void ClearCollisionCache();
 
       // Documentation inherited.
       public: virtual void SetLinearDamping(double _damping);
@@ -149,13 +151,16 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void SetAutoDisable(bool _disable);
 
+      // Documentation inherited
+      public: virtual void SetLinkStatic(bool _static);
+
       /// \brief Pointer to bullet compound shape, which is a container
       ///        for other child shapes.
       private: btCollisionShape *compoundShape;
 
       /// \brief Pointer to bullet motion state, which manages updates to the
       ///        world pose from bullet.
-      private: BulletMotionStatePtr motionState;
+      public: BulletMotionStatePtr motionState;
 
       /// \brief Pointer to the bullet rigid body object.
       private: btRigidBody *rigidLink;
