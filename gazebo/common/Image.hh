@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@
 #include <FreeImage.h>
 #include <string>
 
-#include "common/CommonTypes.hh"
-#include "common/Color.hh"
+#include "gazebo/common/CommonTypes.hh"
+#include "gazebo/common/Color.hh"
 
 namespace gazebo
 {
@@ -70,7 +70,7 @@ namespace gazebo
       /// \brief Pixel formats enumeration
       public: enum PixelFormat
               {
-                UNKNOWN_PIXEL_FORMAT,
+                UNKNOWN_PIXEL_FORMAT = 0,
                 L_INT8,
                 L_INT16,
                 RGB_INT8,
