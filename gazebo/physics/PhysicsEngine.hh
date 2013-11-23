@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,41 +42,6 @@ namespace gazebo
     /// \brief Base class for a physics engine.
     class PhysicsEngine
     {
-      /// \enum PhysicsParam
-      /// \brief Physics paramerter types.
-      public: enum PhysicsParam
-      {
-        /// \brief Solve type
-        SOLVER_TYPE,
-
-        /// \brief Constraint force mixing
-        GLOBAL_CFM,
-
-        /// \brief Error reduction parameter
-        GLOBAL_ERP,
-
-        /// \brief Number of iterations (ODE specific)
-        SOR_PRECON_ITERS,
-
-        /// \brief Number of iterations
-        SOR_ITERS,
-
-        /// \brief SOR over-relaxation parameter
-        SOR,
-
-        /// \brief Max correcting velocity (ODE specific)
-        CONTACT_MAX_CORRECTING_VEL,
-
-        /// \brief Surface layer depth
-        CONTACT_SURFACE_LAYER,
-
-        /// \brief Maximum number of contacts
-        MAX_CONTACTS,
-
-        /// \brief Minimum step size
-        MIN_STEP_SIZE
-      };
-
       /// \brief Default constructor.
       /// \param[in] _world Pointer to the world.
       public: explicit PhysicsEngine(WorldPtr _world);
@@ -103,7 +68,7 @@ namespace gazebo
       /// \brief Update the physics engine collision.
       public: virtual void UpdateCollision() = 0;
 
-      /// \brief Return the type of the physics engine (ode|bullet).
+      /// \brief Return the type of the physics engine (ode|bullet|simbody).
       /// \return Type of the physics engine.
       public: virtual std::string GetType() const = 0;
 
@@ -111,29 +76,9 @@ namespace gazebo
       /// \param[in] _seed The random number seed.
       public: virtual void SetSeed(uint32_t _seed) = 0;
 
-      /// \brief Set the simulation update rate.
-      /// This funciton is deprecated, use PhysicsEngine::SetRealTimeUpdateRate.
-      /// \param[in] _value Value of the update rate.
-      public: void SetUpdateRate(double _value) GAZEBO_DEPRECATED(1.5);
-
-      /// \brief Get the simulation update rate.
-      /// This funciton is deprecated, use PhysicsEngine::GetRealTimeUpdateRate.
-      /// \return Update rate.
-      public: double GetUpdateRate() GAZEBO_DEPRECATED(1.5);
-
       /// \brief Get the simulation update period.
       /// \return Simulation update period.
       public: double GetUpdatePeriod();
-
-      /// \brief Set the simulation step time.
-      /// This funciton is deprecated, use World::SetMaxStepSize.
-      /// \param[in] _value Value of the step time.
-      public: virtual void SetStepTime(double _value) GAZEBO_DEPRECATED(1.5);
-
-      /// \brief Get the simulation step time.
-      /// This funciton is deprecated, use World::GetMaxStepSize.
-      /// \return Simulation step time.
-      public: virtual double GetStepTime() GAZEBO_DEPRECATED(1.5);
 
       /// \brief Get target real time factor
       /// \return Target real time factor
@@ -162,6 +107,10 @@ namespace gazebo
       /// \brief Update the physics engine.
       public: virtual void UpdatePhysics() {}
 
+      /// \brief Create a new model.
+      /// \param[in] _base Boost shared pointer to a new model.
+      public: virtual ModelPtr CreateModel(BasePtr _base);
+
       /// \brief Create a new body.
       /// \param[in] _parent Parent model for the link.
       public: virtual LinkPtr CreateLink(ModelPtr _parent) = 0;
@@ -188,7 +137,7 @@ namespace gazebo
       /// \param[in] _type Type of joint to create.
       /// \param[in] _parent Model parent.
       public: virtual JointPtr CreateJoint(const std::string &_type,
-                                           ModelPtr _parent) = 0;
+                                           ModelPtr _parent = ModelPtr()) = 0;
 
       /// \brief Return the gavity vector.
       /// \return The gavity vector.
@@ -308,21 +257,10 @@ namespace gazebo
       public: virtual int GetMaxContacts() {return 0;}
 
       /// \brief Set a parameter of the physics engine
-      /// \param[in] _param A parameter listed in the PhysicsParam enum
-      /// \param[in] _value The value to set to
-      public: virtual void SetParam(PhysicsParam _param,
-                  const boost::any &_value);
-
-      /// \brief Set a parameter of the physics engine
       /// \param[in] _key String key
       /// \param[in] _value The value to set to
       public: virtual void SetParam(std::string _key,
                   const boost::any &_value);
-
-      /// \brief Get an parameter of the physics engine
-      /// \param[in] _attr A parameter listed in the PhysicsParam enum
-      /// \return The value of the parameter
-      public: virtual boost::any GetParam(PhysicsParam _param) const;
 
       /// \brief Get an parameter of the physics engine
       /// \param[in] _attr String key
