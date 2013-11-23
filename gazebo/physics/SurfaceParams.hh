@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@
 #ifndef _SURFACEPARAMS_HH_
 #define _SURFACEPARAMS_HH_
 
+#include <sdf/sdf.hh>
+
 #include "gazebo/msgs/msgs.hh"
-#include "gazebo/sdf/sdf.hh"
 
 namespace gazebo
 {
@@ -47,9 +48,6 @@ namespace gazebo
       /// \brief Load the contact params.
       /// \param[in] _sdf SDF values to load from.
       public: virtual void Load(sdf::ElementPtr _sdf);
-
-      /// \brief Deprecated.
-      public: void FillSurfaceMsg(msgs::Surface &_msg) GAZEBO_DEPRECATED;
 
       /// \brief Fill in a surface message.
       /// \param[in] _msg Message to fill with this object's values.
@@ -135,6 +133,13 @@ namespace gazebo
       ///        to the contact normal in the global y-z plane is used.
       /// \sa    http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
       public: math::Vector3 fdir1;
+
+      /// \brief Allow collision checking without generating a contact joint.
+      public: bool collideWithoutContact;
+
+      /// \brief Custom collision filtering used when collideWithoutContact is
+      /// true.
+      public: unsigned int collideWithoutContactBitmask;
     };
     /// \}
   }
