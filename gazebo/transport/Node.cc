@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 */
 
 #include <boost/algorithm/string.hpp>
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
 
 using namespace gazebo;
 using namespace transport;
 
 unsigned int Node::idCounter = 0;
+
+extern void dummy_callback_fn(uint32_t);
 
 /////////////////////////////////////////////////
 Node::Node()
@@ -43,6 +45,14 @@ void Node::Fini()
 {
   if (!this->initialized)
     return;
+
+  // Unadvertise all the publishers.
+  for (std::vector<PublisherPtr>::iterator iter = this->publishers.begin();
+       iter != this->publishers.end(); ++iter)
+  {
+    (*iter)->Fini();
+    TopicManager::Instance()->Unadvertise(*iter);
+  }
 
   this->initialized = false;
   TopicManager::Instance()->RemoveNode(this->id);
@@ -80,8 +90,8 @@ void Node::Init(const std::string &_space)
 
     if (namespaces.empty())
       gzerr << "No namespace found\n";
-
-    this->topicNamespace = namespaces.front();
+    else
+      this->topicNamespace = namespaces.front();
   }
   else
     TopicManager::Instance()->RegisterTopicNamespace(_space);
@@ -159,10 +169,11 @@ bool Node::HandleMessage(const std::string &_topic, MessagePtr _msg)
 /////////////////////////////////////////////////
 void Node::ProcessIncoming()
 {
-  if (!this->initialized)
-    return;
-
   boost::recursive_mutex::scoped_lock lock(this->processIncomingMutex);
+
+  if (!this->initialized ||
+      (this->incomingMsgs.empty() && this->incomingMsgsLocal.empty()))
+    return;
 
   Callback_M::iterator cbIter;
   Callback_L::iterator liter;
@@ -172,11 +183,10 @@ void Node::ProcessIncoming()
     std::list<std::string>::iterator msgIter;
     std::map<std::string, std::list<std::string> >::iterator inIter;
     std::map<std::string, std::list<std::string> >::iterator endIter;
-    {
-      boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-      inIter = this->incomingMsgs.begin();
-      endIter = this->incomingMsgs.end();
-    }
+
+    boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
+    inIter = this->incomingMsgs.begin();
+    endIter = this->incomingMsgs.end();
 
     for (; inIter != endIter; ++inIter)
     {
@@ -187,11 +197,8 @@ void Node::ProcessIncoming()
         std::list<std::string>::iterator msgInIter;
         std::list<std::string>::iterator msgEndIter;
 
-        {
-          boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-          msgInIter = inIter->second.begin();
-          msgEndIter = inIter->second.end();
-        }
+        msgInIter = inIter->second.begin();
+        msgEndIter = inIter->second.end();
 
         // For each message in the buffer
         for (msgIter = msgInIter; msgIter != msgEndIter; ++msgIter)
@@ -200,27 +207,24 @@ void Node::ProcessIncoming()
           for (liter = cbIter->second.begin();
               liter != cbIter->second.end(); ++liter)
           {
-            (*liter)->HandleData(*msgIter);
+            (*liter)->HandleData(*msgIter,
+                boost::bind(&dummy_callback_fn, _1), 0);
           }
-        }
-
-        {
-          boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-          inIter->second.erase(msgInIter, msgEndIter);
         }
       }
     }
+
+    this->incomingMsgs.clear();
   }
 
   {
     std::list<MessagePtr>::iterator msgIter;
     std::map<std::string, std::list<MessagePtr> >::iterator inIter;
     std::map<std::string, std::list<MessagePtr> >::iterator endIter;
-    {
-      boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-      inIter = this->incomingMsgsLocal.begin();
-      endIter = this->incomingMsgsLocal.end();
-    }
+
+    boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
+    inIter = this->incomingMsgsLocal.begin();
+    endIter = this->incomingMsgsLocal.end();
 
     for (; inIter != endIter; ++inIter)
     {
@@ -231,11 +235,8 @@ void Node::ProcessIncoming()
         std::list<MessagePtr>::iterator msgInIter;
         std::list<MessagePtr>::iterator msgEndIter;
 
-        {
-          boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-          msgInIter = inIter->second.begin();
-          msgEndIter = inIter->second.end();
-        }
+        msgInIter = inIter->second.begin();
+        msgEndIter = inIter->second.end();
 
         // For each message in the buffer
         for (msgIter = msgInIter; msgIter != msgEndIter; ++msgIter)
@@ -247,13 +248,10 @@ void Node::ProcessIncoming()
             (*liter)->HandleMessage(*msgIter);
           }
         }
-
-        {
-          boost::recursive_mutex::scoped_lock lock2(this->incomingMutex);
-          inIter->second.erase(msgInIter, msgEndIter);
-        }
       }
     }
+
+    this->incomingMsgsLocal.clear();
   }
 }
 
@@ -270,7 +268,10 @@ void Node::InsertLatchedMsg(const std::string &_topic, const std::string &_msg)
          liter != cbIter->second.end(); ++liter)
     {
       if ((*liter)->GetLatching())
-        (*liter)->HandleData(_msg);
+      {
+        (*liter)->HandleData(_msg, boost::bind(&dummy_callback_fn, _1), 0);
+        (*liter)->SetLatching(false);
+      }
     }
   }
 }
@@ -288,7 +289,10 @@ void Node::InsertLatchedMsg(const std::string &_topic, MessagePtr _msg)
          liter != cbIter->second.end(); ++liter)
     {
       if ((*liter)->GetLatching())
+      {
         (*liter)->HandleMessage(_msg);
+        (*liter)->SetLatching(false);
+      }
     }
   }
 }
