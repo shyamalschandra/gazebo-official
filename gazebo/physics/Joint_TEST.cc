@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -65,7 +65,7 @@ void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
   gzlog << "-------------------Test 1-------------------\n";
   for (unsigned int i = 0; i < 10; ++i)
   {
-    world->StepWorld(1);
+    world->Step(1);
     // test joint_01 wrench
     physics::JointWrench wrench_01 = joint_01->GetForceTorque(0u);
     EXPECT_DOUBLE_EQ(wrench_01.body1Force.x,    0.0);
@@ -173,7 +173,7 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -182,7 +182,7 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
   gzlog << "dt : " << dt << "\n";
 
   // verify that time moves forward
-  EXPECT_NEAR(t, dt, dt*1e-2);
+  EXPECT_DOUBLE_EQ(t, dt);
   gzlog << "t after one step : " << t << "\n";
 
   // get joint and get force torque
@@ -198,12 +198,12 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
   joint_01->SetAttribute("stop_erp", 0, 0.02);
   joint_12->SetAttribute("stop_erp", 0, 0.02);
   // wait for dynamics to stabilize
-  world->StepWorld(2000);
+  world->Step(2000);
   // check force torques in new system
   gzlog << "\n-------------------Test 2-------------------\n";
   for (unsigned int i = 0; i < 5; ++i)
   {
-    world->StepWorld(1);
+    world->Step(1);
     // Dbg joint_01 force torque :
     //   force1 [600 -200 999.99999600000001 / 600 -1000 -200]
     //   torque1 [749.999819 82.840868 -450.00009699999998 / 750 450 0]
@@ -242,6 +242,9 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
           << " / -750 -450 0"
           << "]\n";
 
+    gzlog << "joint angle1[" << std::setprecision(17) << joint_01->GetAngle(0)
+          << "] angle2[" << joint_12->GetAngle(0) << "]\n";
+
     // test joint_12 wrench
     physics::JointWrench wrench_12 = joint_12->GetForceTorque(0u);
     EXPECT_NEAR(wrench_12.body1Force.x,   300.0,  3.0);
@@ -274,7 +277,7 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
 
   // simulate a few steps
   int steps = 20;
-  world->StepWorld(steps);
+  world->Step(steps);
   t = world->GetSimTime().Double();
   EXPECT_GT(t, 0.99*dt*static_cast<double>(steps+1));
   gzdbg << "t after 20 steps : " << t << "\n";
@@ -293,8 +296,6 @@ TEST_F(Joint_TEST, ForceTorque2Simbody)
 #endif  // HAVE_SIMBODY
 
 #ifdef HAVE_BULLET
-
-/// bullet collision parameters needs tweaking?
 TEST_F(Joint_TEST, ForceTorque2Bullet)
 {
   // uncomment when bullet 2.82 is released
@@ -320,7 +321,7 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -354,7 +355,7 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
     joint_01->SetForce(0u, effort1);
     joint_12->SetForce(0u, effort2);
 
-    world->StepWorld(1);
+    world->Step(1);
     // test joint_01 wrench
     physics::JointWrench wrench_01 = joint_01->GetForceTorque(0u);
 
@@ -374,15 +375,15 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
       EXPECT_NEAR(wrench_01.body2Torque.y, -wrench_01.body1Torque.y, TOL_CONT);
       EXPECT_NEAR(wrench_01.body2Torque.z, -wrench_01.body1Torque.z, TOL_CONT);
 
-      // gzdbg << "joint_01 force torque : "
-      //       << "step [" << i
-      //       << "] GetForce [" << joint_01->GetForce(0u)
-      //       << "] command [" << effort1
-      //       << "] force1 [" << wrench_01.body1Force
-      //       << "] torque1 [" << wrench_01.body1Torque
-      //       << "] force2 [" << wrench_01.body2Force
-      //       << "] torque2 [" << wrench_01.body2Torque
-      //       << "]\n";
+      gzlog << "joint_01 force torque : "
+            << "step [" << i
+            << "] GetForce [" << joint_01->GetForce(0u)
+            << "] command [" << effort1
+            << "] force1 [" << wrench_01.body1Force
+            << "] torque1 [" << wrench_01.body1Torque
+            << "] force2 [" << wrench_01.body2Force
+            << "] torque2 [" << wrench_01.body2Torque
+            << "]\n";
     }
 
     // test joint_12 wrench
@@ -403,16 +404,19 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
       EXPECT_NEAR(wrench_12.body2Torque.y,    0.000, TOL_CONT);
       EXPECT_NEAR(wrench_12.body2Torque.z,   17.678, TOL_CONT);
 
-      // gzdbg << "joint_12 force torque : "
-      //       << "step [" << i
-      //       << "] GetForce [" << joint_12->GetForce(0u)
-      //       << "] command [" << effort2
-      //       << "] force1 [" << wrench_12.body1Force
-      //       << "] torque1 [" << wrench_12.body1Torque
-      //       << "] force2 [" << wrench_12.body2Force
-      //       << "] torque2 [" << wrench_12.body2Torque
-      //       << "]\n";
+      gzlog << "joint_12 force torque : "
+            << "step [" << i
+            << "] GetForce [" << joint_12->GetForce(0u)
+            << "] command [" << effort2
+            << "] force1 [" << wrench_12.body1Force
+            << "] torque1 [" << wrench_12.body1Torque
+            << "] force2 [" << wrench_12.body2Force
+            << "] torque2 [" << wrench_12.body2Torque
+            << "]\n";
     }
+    gzlog << "angles[" << i << "] 1[" << joint_01->GetAngle(0)
+          << "] 2[" << joint_12->GetAngle(0)
+          << "]\n";
   }
 }
 
@@ -451,6 +455,14 @@ class Joint_TEST_RotationalWorld : public Joint_TEST {};
 void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine,
                                  const std::string &_jointType)
 {
+  /// \TODO: simbody not complete for this test
+  if (_physicsEngine == "simbody")  // &&
+  //    _jointType != "revolute" && _jointType != "prismatic")
+  {
+    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
+    return;
+  }
+
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -461,18 +473,46 @@ void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine,
   ASSERT_TRUE(physics != NULL);
   EXPECT_EQ(physics->GetType(), _physicsEngine);
 
-  physics::JointPtr joint;
-  gzdbg << "SpawnJoint " << _jointType << " child parent" << std::endl;
-  joint = SpawnJoint(_jointType, false, false);
-  EXPECT_TRUE(joint != NULL);
+  {
+    gzdbg << "SpawnJoint " << _jointType << " child parent" << std::endl;
+    physics::JointPtr joint = SpawnJoint(_jointType, false, false);
+    ASSERT_TRUE(joint != NULL);
+    // Check child and parent links
+    physics::LinkPtr child = joint->GetChild();
+    physics::LinkPtr parent = joint->GetParent();
+    ASSERT_TRUE(child != NULL);
+    EXPECT_EQ(child->GetParentJoints().size(), 1u);
+    EXPECT_EQ(child->GetChildJoints().size(), 0u);
+    ASSERT_TRUE(parent != NULL);
+    EXPECT_EQ(parent->GetChildJoints().size(), 1u);
+    EXPECT_EQ(parent->GetParentJoints().size(), 0u);
+  }
 
-  gzdbg << "SpawnJoint " << _jointType << " child world" << std::endl;
-  joint = SpawnJoint(_jointType, false, true);
-  EXPECT_TRUE(joint != NULL);
+  {
+    gzdbg << "SpawnJoint " << _jointType << " child world" << std::endl;
+    physics::JointPtr joint = SpawnJoint(_jointType, false, true);
+    ASSERT_TRUE(joint != NULL);
+    // Check child link
+    physics::LinkPtr child = joint->GetChild();
+    physics::LinkPtr parent = joint->GetParent();
+    ASSERT_TRUE(child != NULL);
+    EXPECT_EQ(child->GetParentJoints().size(), 1u);
+    EXPECT_EQ(child->GetChildJoints().size(), 0u);
+    EXPECT_TRUE(parent == NULL);
+  }
 
-  gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
-  joint = SpawnJoint(_jointType, true, false);
-  EXPECT_TRUE(joint != NULL);
+  {
+    gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
+    physics::JointPtr joint = SpawnJoint(_jointType, true, false);
+    ASSERT_TRUE(joint != NULL);
+    // Check parent link
+    physics::LinkPtr child = joint->GetChild();
+    physics::LinkPtr parent = joint->GetParent();
+    EXPECT_TRUE(child == NULL);
+    ASSERT_TRUE(parent != NULL);
+    EXPECT_EQ(parent->GetChildJoints().size(), 1u);
+    EXPECT_EQ(parent->GetParentJoints().size(), 0u);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -481,6 +521,13 @@ void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine,
 void Joint_TEST::SpawnJointRotational(const std::string &_physicsEngine,
                                       const std::string &_jointType)
 {
+  /// \TODO: simbody not complete for this test
+  if (_physicsEngine == "simbody" && _jointType != "revolute")
+  {
+    gzerr << "Aborting test for Simbody, see issue #859.\n";
+    return;
+  }
+
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -493,13 +540,13 @@ void Joint_TEST::SpawnJointRotational(const std::string &_physicsEngine,
 
   gzdbg << "SpawnJoint " << _jointType << std::endl;
   physics::JointPtr joint = SpawnJoint(_jointType);
-  EXPECT_TRUE(joint != NULL);
+  ASSERT_TRUE(joint != NULL);
 
   physics::LinkPtr parent, child;
   child = joint->GetChild();
   parent = joint->GetParent();
-  EXPECT_TRUE(child != NULL);
-  EXPECT_TRUE(parent != NULL);
+  ASSERT_TRUE(child != NULL);
+  ASSERT_TRUE(parent != NULL);
 
   math::Vector3 pos(10, 10, 10);
   math::Vector3 vel(10, 10, 10);
@@ -507,9 +554,9 @@ void Joint_TEST::SpawnJointRotational(const std::string &_physicsEngine,
   for (unsigned int i = 0; i < 10; ++i)
   {
     parent->SetLinearVel(vel);
-    world->StepWorld(10);
+    world->Step(10);
   }
-  world->StepWorld(50);
+  world->Step(50);
   math::Pose childPose = child->GetWorldPose();
   math::Pose parentPose = parent->GetWorldPose();
   EXPECT_TRUE(parentPose.pos != pos);
@@ -524,6 +571,13 @@ void Joint_TEST::SpawnJointRotational(const std::string &_physicsEngine,
 void Joint_TEST::SpawnJointRotationalWorld(const std::string &_physicsEngine,
                                            const std::string &_jointType)
 {
+  /// \TODO: simbody not complete for this test
+  if (_physicsEngine == "simbody")  // && _jointType != "revolute")
+  {
+    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
+    return;
+  }
+
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -555,7 +609,7 @@ void Joint_TEST::SpawnJointRotationalWorld(const std::string &_physicsEngine,
     EXPECT_TRUE(link != NULL);
 
     math::Pose initialPose = link->GetWorldPose();
-    world->StepWorld(100);
+    world->Step(100);
     math::Pose afterPose = link->GetWorldPose();
     EXPECT_TRUE(initialPose.pos == afterPose.pos);
   }
@@ -615,43 +669,15 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
   // Verify physics engine type
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), "ode");
-
-  // create some fake links
-  physics::ModelPtr model = world->GetModel("model_1");
-  ASSERT_TRUE(model != NULL);
-  physics::LinkPtr link = model->GetLink("link_1");
-  ASSERT_TRUE(link != NULL);
-
-  physics::LinkPtr parentLink;
-  physics::LinkPtr childLink(link);
-  physics::JointPtr joint;
-  math::Pose anchor;
-  double upper = M_PI;
-  double lower = -M_PI;
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
 
   {
-    // create a joint
-    {
-      joint = world->GetPhysicsEngine()->CreateJoint(
-        "revolute", model);
-      joint->Attach(parentLink, childLink);
-      // load adds the joint to a vector of shared pointers kept
-      // in parent and child links, preventing joint from being destroyed.
-      joint->Load(parentLink, childLink, anchor);
-      // joint->SetAnchor(0, anchor);
-      joint->SetAxis(0, math::Vector3(1, 0, 0));
-      joint->SetHighStop(0, upper);
-      joint->SetLowStop(0, lower);
-
-      if (parentLink)
-        joint->SetName(parentLink->GetName() + std::string("_") +
-                       childLink->GetName() + std::string("_joint"));
-      else
-        joint->SetName(std::string("world_") +
-                       childLink->GetName() + std::string("_joint"));
-      joint->Init();
-    }
+    // get model
+    physics::ModelPtr model = world->GetModel("model_1");
+    ASSERT_TRUE(model != NULL);
+    physics::LinkPtr link = model->GetLink("link_1");
+    ASSERT_TRUE(link != NULL);
+    physics::JointPtr joint = model->GetJoint("joint_01");
 
     double lastV = 0;
     double dt = world->GetPhysicsEngine()->GetMaxStepSize();
@@ -659,57 +685,22 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
       lastV = curV;
       EXPECT_NEAR(accel, torque / link->GetInertial()->GetIXX(), TOL);
     }
-
-    // remove the joint
-    {
-      bool paused = world->IsPaused();
-      world->SetPaused(true);
-      if (joint)
-      {
-        // reenable collision between the link pair
-        physics::LinkPtr parent = joint->GetParent();
-        physics::LinkPtr child = joint->GetChild();
-        if (parent)
-          parent->SetCollideMode("all");
-        if (child)
-          child->SetCollideMode("all");
-
-        joint->Detach();
-        joint.reset();
-      }
-      world->SetPaused(paused);
-    }
   }
 
   {
-    // create a joint
-    {
-      joint = world->GetPhysicsEngine()->CreateJoint(
-        "revolute", model);
-      joint->Attach(parentLink, childLink);
-      // load adds the joint to a vector of shared pointers kept
-      // in parent and child links, preventing joint from being destroyed.
-      joint->Load(parentLink, childLink, anchor);
-      // joint->SetAnchor(0, anchor);
-      joint->SetAxis(0, math::Vector3(0, 0, 1));
-      joint->SetHighStop(0, upper);
-      joint->SetLowStop(0, lower);
-
-      if (parentLink)
-        joint->SetName(parentLink->GetName() + std::string("_") +
-                       childLink->GetName() + std::string("_joint"));
-      else
-        joint->SetName(std::string("world_") +
-                       childLink->GetName() + std::string("_joint"));
-      joint->Init();
-    }
+    // get model
+    physics::ModelPtr model = world->GetModel("model_2");
+    ASSERT_TRUE(model != NULL);
+    physics::LinkPtr link = model->GetLink("link_1");
+    ASSERT_TRUE(link != NULL);
+    physics::JointPtr joint = model->GetJoint("joint_01");
 
     double lastV = 0;
     double dt = world->GetPhysicsEngine()->GetMaxStepSize();
@@ -717,60 +708,37 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
       lastV = curV;
       EXPECT_NEAR(accel, torque / link->GetInertial()->GetIZZ(), TOL);
     }
-
-    // remove the joint
-    {
-      bool paused = world->IsPaused();
-      world->SetPaused(true);
-      if (joint)
-      {
-        // reenable collision between the link pair
-        physics::LinkPtr parent = joint->GetParent();
-        physics::LinkPtr child = joint->GetChild();
-        if (parent)
-          parent->SetCollideMode("all");
-        if (child)
-          child->SetCollideMode("all");
-
-        joint->Detach();
-        joint.reset();
-      }
-      world->SetPaused(paused);
-    }
   }
 }
 
-TEST_F(Joint_TEST, JointTorqueTestODE)
+TEST_P(Joint_TEST, JointTorqueTest)
 {
-  JointTorqueTest("ode");
+  JointTorqueTest(this->physicsEngine);
 }
-
-#ifdef HAVE_SIMBODY
-TEST_F(Joint_TEST, JointTorqueTestSimbody)
-{
-  JointTorqueTest("simbody");
-}
-#endif  // HAVE_SIMBODY
-
-#ifdef HAVE_BULLET
-/// bullet collision parameters needs tweaking
-TEST_F(Joint_TEST, JointTorqueTestBullet)
-{
-  gzerr << "JointTorqueTestBullet fails because dynamic joint manipulation "
-        << "is not yet working\n";
-  // JointTorqueTest("bullet");
-}
-#endif  // HAVE_BULLET
 
 void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
 {
+  /// \TODO: Disable for now until functionality is implemented
+  /// bullet collision parameters needs tweaking
+  if (_physicsEngine == "bullet")
+  {
+    gzerr << "Aborting test for bullet, see issue #590.\n";
+    return;
+  }
+  /// \TODO: simbody not complete for this test
+  if (_physicsEngine == "simbody")
+  {
+    gzerr << "Aborting test for Simbody, see issue #862.\n";
+    return;
+  }
+
   // Load our inertial test world
   Load("worlds/joint_test.world", true, _physicsEngine);
 
@@ -781,7 +749,7 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
   // Verify physics engine type
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), "ode");
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
 
   // create some fake links
   physics::ModelPtr model = world->GetModel("model_1");
@@ -829,6 +797,7 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
       joint->Init();
       joint->SetAxis(0, axis);
     }
+
     // remove the joint
     {
       bool paused = world->IsPaused();
@@ -849,10 +818,12 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
       world->SetPaused(paused);
     }
 
-    gazebo::common::Time::MSleep(10);
+    world->Step(200);
 
     this->GetMemInfo(residentCur, shareCur);
-    if (i > cyclesStabilize)  // give it quite a few cycles to stabilize
+
+    // give it 2 cycles to stabilize
+    if (i > cyclesStabilize)
     {
       EXPECT_LE(residentCur, residentLast);
       EXPECT_LE(shareCur, shareLast);
@@ -867,25 +838,161 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
   }
 }
 
-TEST_F(Joint_TEST, JointCreationDestructionTestODE)
+TEST_P(Joint_TEST, JointCreationDestructionTest)
 {
-  JointCreationDestructionTest("ode");
+  JointCreationDestructionTest(this->physicsEngine);
+}
+
+//////////////////////////////////////////////////
+void Joint_TEST::SpringDamperTest(const std::string &_physicsEngine)
+{
+  // Load our inertial test world
+  Load("worlds/spring_damper_test.world", true, _physicsEngine);
+
+  // Get a pointer to the world, make sure world loads
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // Verify physics engine type
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  // All models should oscillate with the same frequency
+  physics::ModelPtr modelPrismatic = world->GetModel("model_3_prismatic");
+  physics::ModelPtr modelRevolute = world->GetModel("model_3_revolute");
+  physics::ModelPtr modelPlugin = world->GetModel("model_4_prismatic_plugin");
+  physics::ModelPtr modelContact = world->GetModel("model_5_soft_contact");
+
+  ASSERT_TRUE(modelPrismatic != NULL);
+  ASSERT_TRUE(modelRevolute != NULL);
+  ASSERT_TRUE(modelPlugin != NULL);
+  ASSERT_TRUE(modelContact != NULL);
+
+  physics::LinkPtr linkPrismatic = modelPrismatic->GetLink("link_1");
+  physics::LinkPtr linkRevolute = modelRevolute->GetLink("link_1");
+  physics::LinkPtr linkPluginExplicit = modelPlugin->GetLink("link_1");
+  physics::LinkPtr linkPluginImplicit = modelPlugin->GetLink("link_2");
+  physics::LinkPtr linkContact = modelContact->GetLink("link_1");
+
+  ASSERT_TRUE(linkPrismatic != NULL);
+  ASSERT_TRUE(linkRevolute != NULL);
+  ASSERT_TRUE(linkPluginExplicit != NULL);
+  ASSERT_TRUE(linkPluginImplicit != NULL);
+  ASSERT_TRUE(linkContact != NULL);
+
+  int cyclesPrismatic = 0;
+  int cyclesRevolute = 0;
+  int cyclesPluginExplicit = 0;
+  int cyclesPluginImplicit = 0;
+  int cyclesContact = 0;
+
+  double velPrismatic = 1.0;
+  double velRevolute = 1.0;
+  double velPluginExplicit = 1.0;
+  double velPluginImplicit = 1.0;
+  double velContact = 1.0;
+  const double vT = 0.01;
+
+  // check number of oscillations for each of the setup.  They should all
+  // be the same.
+  // run 5000 steps, at which point, contact is the first one to damp out
+  // and lose it's oscillatory behavior due to larger dissipation in
+  // contact behavior.
+  for (int i = 0; i < 5000; ++i)
+  {
+    world->Step(1);
+
+    // count up and down cycles
+    if (linkPrismatic->GetWorldLinearVel().z > vT && velPrismatic < -vT)
+    {
+      cyclesPrismatic++;
+      velPrismatic = 1.0;
+    }
+    else if (linkPrismatic->GetWorldLinearVel().z < -vT && velPrismatic > vT)
+    {
+      cyclesPrismatic++;
+      velPrismatic = -1.0;
+    }
+    if (-linkRevolute->GetRelativeAngularVel().y > vT && velRevolute < -vT)
+    {
+      cyclesRevolute++;
+      velRevolute = 1.0;
+    }
+    else if (-linkRevolute->GetRelativeAngularVel().y < -vT && velRevolute > vT)
+    {
+      cyclesRevolute++;
+      velRevolute = -1.0;
+    }
+    if (linkPluginExplicit->GetWorldLinearVel().z > vT &&
+        velPluginExplicit < -vT)
+    {
+      cyclesPluginExplicit++;
+      velPluginExplicit = 1.0;
+    }
+    else if (linkPluginExplicit->GetWorldLinearVel().z < -vT &&
+             velPluginExplicit > vT)
+    {
+      cyclesPluginExplicit++;
+      velPluginExplicit = -1.0;
+    }
+    if (linkPluginImplicit->GetWorldLinearVel().z > vT &&
+             velPluginImplicit < -vT)
+    {
+      cyclesPluginImplicit++;
+      velPluginImplicit = 1.0;
+    }
+    else if (linkPluginImplicit->GetWorldLinearVel().z < -vT &&
+             velPluginImplicit > vT)
+    {
+      cyclesPluginImplicit++;
+      velPluginImplicit = -1.0;
+    }
+    if (linkContact->GetWorldLinearVel().z > vT && velContact < -vT)
+    {
+      cyclesContact++;
+      velContact = 1.0;
+    }
+    else if (linkContact->GetWorldLinearVel().z < -vT && velContact > vT)
+    {
+      cyclesContact++;
+      velContact = -1.0;
+    }
+
+    // gzdbg << i << "\n";
+    // gzdbg << cyclesPrismatic << " : "
+    //       << linkPrismatic->GetWorldLinearVel() << "\n";
+    // gzdbg << cyclesRevolute << " : "
+    //       << linkRevolute->GetRelativeAngularVel() << "\n";
+    // gzdbg << cyclesContact << " : "
+    //       << linkContact->GetWorldLinearVel() << "\n";
+  }
+  EXPECT_EQ(cyclesPrismatic,      17);
+  EXPECT_EQ(cyclesRevolute,       17);
+  EXPECT_EQ(cyclesPluginExplicit, 17);
+  EXPECT_EQ(cyclesPluginImplicit, 17);
+  EXPECT_EQ(cyclesContact,        17);
+}
+
+TEST_F(Joint_TEST, SpringDamperTestODE)
+{
+  SpringDamperTest("ode");
 }
 
 #ifdef HAVE_SIMBODY
-TEST_F(Joint_TEST, JointCreationDestructionTestSimbody)
+TEST_F(Joint_TEST, SpringDamperTestSimbody)
 {
-  JointCreationDestructionTest("simbody");
+  gzerr << "SpringDampe unimplemented for Simbody, see issue #886.\n";
+  // SpringDamperTest("simbody");
 }
 #endif  // HAVE_SIMBODY
 
 #ifdef HAVE_BULLET
 /// bullet collision parameters needs tweaking
-TEST_F(Joint_TEST, JointCreationDestructionTestBullet)
+TEST_F(Joint_TEST, SpringDamperTestBullet)
 {
-  /// \TODO: Disable for now until functionality is implemented
-  // JointCreationDestructionTest("bullet");
-  gzwarn << "JointCreationDestructionTest is disabled for Bullet\n";
+  gzerr << "SpringDamper unimplemented for Bullet, see issue #887.\n";
+  // SpringDamperTest("bullet");
 }
 #endif  // HAVE_BULLET
 
@@ -929,6 +1036,10 @@ TEST_F(Joint_TEST, joint_SDF14)
   EXPECT_EQ(parent->GetName(), "body2");
   EXPECT_EQ(child->GetName(), "body1");
 }
+
+INSTANTIATE_TEST_CASE_P(PhysicsEngines, Joint_TEST,
+  ::testing::Combine(PHYSICS_ENGINE_VALUES,
+  ::testing::Values("")));
 
 int main(int argc, char **argv)
 {
