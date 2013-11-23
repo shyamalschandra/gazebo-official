@@ -575,9 +575,15 @@ void World::Step()
 //////////////////////////////////////////////////
 void World::StepWorld(int _steps)
 {
+  this->Step(_steps);
+}
+
+//////////////////////////////////////////////////
+void World::Step(unsigned int _steps)
+{
   if (!this->IsPaused())
   {
-    gzwarn << "Calling World::StepWorld(steps) while world is not paused\n";
+    gzwarn << "Calling World::Step(steps) while world is not paused\n";
     this->SetPaused(true);
   }
 
@@ -1775,7 +1781,8 @@ void World::UpdateStateSDF()
   sdf::ElementPtr stateElem = this->sdf->GetElement("state");
   stateElem->ClearElements();
 
-  this->prevStates[(this->stateToggle + 1) % 2].FillSDF(stateElem);
+  WorldState currentState(shared_from_this());
+  currentState.FillSDF(stateElem);
 }
 
 //////////////////////////////////////////////////
@@ -1972,6 +1979,12 @@ void World::LogWorker()
 
   // Make sure nothing is blocked by this thread.
   this->logContinueCondition.notify_all();
+}
+
+/////////////////////////////////////////////////
+uint32_t World::GetIterations() const
+{
+  return this->iterations;
 }
 
 //////////////////////////////////////////////////
