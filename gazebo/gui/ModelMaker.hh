@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  *
 */
-#ifndef _MODELMAKER_HH_
-#define _MODELMAKER_HH_
+#ifndef _MODEL_MAKER_HH_
+#define _MODEL_MAKER_HH_
 
 #include <list>
 #include <string>
+#include <sdf/sdf.hh>
 
-#include "sdf/sdf.hh"
-#include "gui/EntityMaker.hh"
+#include "gazebo/gui/EntityMaker.hh"
 
 namespace gazebo
 {
@@ -37,7 +37,7 @@ namespace gazebo
       public: ModelMaker();
       public: virtual ~ModelMaker();
 
-      public: bool InitFromModel(const std::string &_modelName);
+      // public: bool InitFromModel(const std::string &_modelName);
       public: bool InitFromSDFString(const std::string &_data);
       public: bool InitFromFile(const std::string &_filename);
 
