@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,64 +14,90 @@
  * limitations under the License.
  *
  */
-/*
- * Desc: Gazebo Console messages
- * Author: Nathan Koenig
- * Date: 09 June 2007
- */
-
 #include <string.h>
+#include <boost/filesystem.hpp>
 #include <sstream>
 
-#include "common/Exception.hh"
-#include "common/Console.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/common/Console.hh"
 
 using namespace gazebo;
 using namespace common;
 
-Console *Console::myself = NULL;
-
 //////////////////////////////////////////////////
 Console::Console()
 {
-  this->msgStream = &std::cout;
+  this->msgStream = &std::cerr;
   this->errStream = &std::cerr;
+  this->logStream = NULL;
+  this->quiet = false;
 }
 
 //////////////////////////////////////////////////
 Console::~Console()
 {
+  if (this->logStream)
+    this->logStream->close();
 }
 
 //////////////////////////////////////////////////
-Console *Console::Instance()
+void Console::Init(const std::string &_logFilename)
 {
-  if (myself == NULL)
-    myself = new Console();
+  if (!getenv("HOME"))
+    gzthrow("Missing HOME environment variable");
 
-  return myself;
+  boost::filesystem::path logPath(getenv("HOME"));
+  logPath = logPath / ".gazebo/" / _logFilename;
+
+  if (this->logStream)
+  {
+    this->logStream->close();
+    delete this->logStream;
+  }
+
+  this->logStream = new std::ofstream(logPath.string().c_str(), std::ios::out);
 }
 
 //////////////////////////////////////////////////
-void Console::Load()
+bool Console::IsInitialized() const
 {
+  return this->logStream != NULL;
 }
 
 //////////////////////////////////////////////////
-void Console::SetQuiet(bool)
+void Console::SetQuiet(bool _quiet)
 {
+  this->quiet = _quiet;
 }
 
 //////////////////////////////////////////////////
-std::ostream &Console::ColorMsg(const std::string &lbl, int color)
+bool Console::GetQuiet() const
 {
-  // if (**this->quietP)
-  // return this->nullStream;
-  // else
-  // {
-  *this->msgStream << "\033[1;" << color << "m" << lbl << "\033[0m ";
-  return *this->msgStream;
-  // }
+  return this->quiet;
+}
+
+//////////////////////////////////////////////////
+std::ostream &Console::ColorMsg(const std::string &_lbl, int _color)
+{
+  if (this->quiet)
+    return this->nullStream;
+  else
+  {
+    *this->msgStream << "\033[1;" << _color << "m" << _lbl << "\033[0m ";
+    return *this->msgStream;
+  }
+}
+
+//////////////////////////////////////////////////
+std::ofstream &Console::Log()
+{
+  if (!this->logStream)
+    this->logStream = new std::ofstream("/dev/null", std::ios::out);
+
+  *this->logStream << "[" << common::Time::GetWallTime() << "] ";
+  this->logStream->flush();
+  return *this->logStream;
 }
 
 //////////////////////////////////////////////////
