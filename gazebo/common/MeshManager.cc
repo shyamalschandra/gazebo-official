@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@
 #include "gazebo/math/Matrix3.hh"
 #include "gazebo/math/Matrix4.hh"
 
-#include "gazebo/common/Common.hh"
+#include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Mesh.hh"
 #include "gazebo/common/ColladaLoader.hh"
 #include "gazebo/common/STLLoader.hh"
-#include "gazebo_config.h"
+#include "gazebo/gazebo_config.h"
 
 #ifdef HAVE_GTS
   #include "gazebo/common/MeshCSG.hh"
@@ -206,7 +206,6 @@ const Mesh *MeshManager::GetMesh(const std::string &_name) const
   if (iter != this->meshes.end())
     return iter->second;
 
-  gzerr << "Unable to find mesh with name[" << _name << "]\n";
   return NULL;
 }
 
@@ -399,7 +398,7 @@ void MeshManager::CreateBox(const std::string &name, const math::Vector3 &sides,
   };
 
   // Texture coords
-  float t[4][2] =
+  double t[4][2] =
   {
     {uvCoords.x, 0}, {0, 0}, {0, uvCoords.y}, {uvCoords.x, uvCoords.y}
   };
