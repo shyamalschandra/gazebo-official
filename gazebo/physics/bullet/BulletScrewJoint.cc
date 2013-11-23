@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,10 @@ using namespace physics;
 
 //////////////////////////////////////////////////
 BulletScrewJoint::BulletScrewJoint(btDynamicsWorld *_world, BasePtr _parent)
-    : ScrewJoint<BulletJoint>(_parent)
+    : ScrewJoint<BulletJoint>(_parent), bulletScrew(NULL)
 {
   GZ_ASSERT(_world, "bullet world pointer is NULL");
   this->bulletWorld = _world;
-  this->bulletScrew = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -53,16 +52,16 @@ void BulletScrewJoint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-void BulletScrewJoint::Attach(LinkPtr _one, LinkPtr _two)
+void BulletScrewJoint::Init()
 {
+  ScrewJoint<BulletJoint>::Init();
+
   gzwarn << "Screw joint constraints are currently not enforced" << "\n";
 
-  ScrewJoint<BulletJoint>::Attach(_one, _two);
-
   BulletLinkPtr bulletChildLink =
-    boost::shared_static_cast<BulletLink>(this->childLink);
+    boost::static_pointer_cast<BulletLink>(this->childLink);
   BulletLinkPtr bulletParentLink =
-    boost::shared_static_cast<BulletLink>(this->parentLink);
+    boost::static_pointer_cast<BulletLink>(this->parentLink);
 
 
   btTransform frame1, frame2;
@@ -137,6 +136,9 @@ void BulletScrewJoint::Attach(LinkPtr _one, LinkPtr _two)
 
   // Allows access to impulse
   this->constraint->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 //////////////////////////////////////////////////
@@ -162,13 +164,6 @@ void BulletScrewJoint::SetAxis(int /*_index*/, const math::Vector3 &/*_axis*/)
 }
 
 //////////////////////////////////////////////////
-void BulletScrewJoint::SetDamping(int /*index*/, double _damping)
-{
-  if (this->bulletScrew)
-    this->bulletScrew->setDampingDirLin(_damping);
-}
-
-//////////////////////////////////////////////////
 void BulletScrewJoint::SetThreadPitch(int /*_index*/, double /*_threadPitch*/)
 {
   gzerr << "Not implemented\n";
@@ -182,9 +177,9 @@ double BulletScrewJoint::GetThreadPitch(unsigned int /*_index*/)
 }
 
 //////////////////////////////////////////////////
-void BulletScrewJoint::SetForce(int /*_index*/, double /*_force*/)
+void BulletScrewJoint::SetForceImpl(int /*_index*/, double /*_force*/)
 {
-  gzerr << "Not implemented\n";
+  gzlog << "Not implemented\n";
 }
 
 //////////////////////////////////////////////////
