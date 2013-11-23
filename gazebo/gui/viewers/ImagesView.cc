@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
  */
 
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/Publisher.hh"
 
@@ -33,7 +33,6 @@ GZ_REGISTER_STATIC_VIEWER("gazebo.msgs.ImagesStamped", ImagesView)
 ImagesView::ImagesView(QWidget *_parent)
 : TopicView(_parent, "gazebo.msgs.ImagesStamped", "images", 33)
 {
-  printf("1\n");
   this->setWindowTitle(tr("Gazebo: Images View"));
 
   // Create the layout and frame for images
@@ -48,7 +47,6 @@ ImagesView::ImagesView(QWidget *_parent)
   // }
 
   this->clearImages = false;
-  printf("2\n");
 }
 
 /////////////////////////////////////////////////
@@ -90,7 +88,7 @@ void ImagesView::UpdateImpl()
   }
 
   // Update the images if there are sizes
-  if (this->images.size() > 0)
+  if (!this->images.empty())
   {
     // Update the image output
     for (; labelIter != this->imageLabels.end(); ++labelIter, ++imageIter)
