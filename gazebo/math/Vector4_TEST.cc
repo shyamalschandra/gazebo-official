@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,8 +130,8 @@ TEST(Vector4Test, Vector4)
 
   // ::operator[]
   v.Set(1, 2, 3, 4);
-  EXPECT_EQ(v[0], 1);
-  EXPECT_EQ(v[1], 2);
-  EXPECT_EQ(v[2], 3);
-  EXPECT_EQ(v[3], 4);
+  EXPECT_DOUBLE_EQ(v[0], 1);
+  EXPECT_DOUBLE_EQ(v[1], 2);
+  EXPECT_DOUBLE_EQ(v[2], 3);
+  EXPECT_DOUBLE_EQ(v[3], 4);
 }
