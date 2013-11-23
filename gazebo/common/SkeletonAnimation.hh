@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
  * limitations under the License.
  *
 */
-#ifndef SKELETONANIMATION_HH
-#define SKELETONANIMATION_HH
-
-#include <math/Matrix4.hh>
-#include <math/Pose.hh>
+#ifndef _SKELETONANIMATION_HH_
+#define _SKELETONANIMATION_HH_
 
 #include <map>
 #include <utility>
 #include <string>
+
+#include "gazebo/math/Matrix4.hh"
+#include "gazebo/math/Pose.hh"
 
 namespace gazebo
 {
@@ -31,6 +31,7 @@ namespace gazebo
     /// \addtogroup gazebo_common Common Animation
     /// \{
 
+    /// \class NodeAnimation SkeletonAnimation.hh common/common.hh
     /// \brief Node animation
     class NodeAnimation
     {
@@ -122,7 +123,8 @@ namespace gazebo
       /// \param[in] _name the name of the animation
       public: SkeletonAnimation(const std::string& _name);
 
-      /// \brief The destructor. Clears the list without destroying the animations
+      /// \brief The destructor. Clears the list without destroying
+      /// the animations
       public: ~SkeletonAnimation();
 
       /// \brief Changes the name
