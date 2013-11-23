@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ boost::filesystem::path DiagnosticManager::GetLogPath() const
 //////////////////////////////////////////////////
 void DiagnosticManager::Update(const common::UpdateInfo &_info)
 {
-  if (_info.realTime > 0)
+  if (_info.realTime > common::Time::Zero)
     this->msg.set_real_time_factor((_info.simTime / _info.realTime).Double());
   else
     this->msg.set_real_time_factor(0.0);
@@ -88,7 +88,7 @@ void DiagnosticManager::Update(const common::UpdateInfo &_info)
   msgs::Set(this->msg.mutable_real_time(), _info.realTime);
   msgs::Set(this->msg.mutable_sim_time(), _info.simTime);
 
-  if (this->pub)
+  if (this->pub && this->pub->HasConnections())
     this->pub->Publish(this->msg);
 
   this->msg.clear_time();
