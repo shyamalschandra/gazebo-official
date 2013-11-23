@@ -103,13 +103,14 @@ set (headers
 )
 
 set (gtest_sources
-  Heightmap_TEST.cc
 )
 
 gz_build_tests(${gtest_sources})
 
 set (gtest_sources_dri
-  GpuLaser_TEST.cc)
+  GpuLaser_TEST.cc
+  Heightmap_TEST.cc
+)
 
 gz_build_dri_tests(${gtest_sources_dri})
 
@@ -129,8 +130,10 @@ gz_add_library(gazebo_rendering ${sources})
 
 target_link_libraries( gazebo_rendering
   gazebo_common
+  gazebo_msgs
   gazebo_skyx
   gazebo_selection_buffer
+  gazebo_transport
   ${ogre_libraries}
   ${OPENGL_LIBRARIES}
   ${CEGUI_LIBRARIES}
