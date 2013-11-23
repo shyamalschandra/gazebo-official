@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "gazebo/common/CommonTypes.hh"
+#include "gazebo/math/Helpers.hh"
 
 namespace gazebo
 {
@@ -43,6 +43,18 @@ namespace gazebo
     {
       /// \brief math::Vector3(0, 0, 0)
       public: static const Vector3 Zero;
+
+      /// \brief math::Vector3(1, 1, 1)
+      public: static const Vector3 One;
+
+      /// \brief math::Vector3(1, 0, 0)
+      public: static const Vector3 UnitX;
+
+      /// \brief math::Vector3(0, 1, 0)
+      public: static const Vector3 UnitY;
+
+      /// \brief math::Vector3(0, 0, 1)
+      public: static const Vector3 UnitZ;
 
       /// \brief Constructor
       public: Vector3();
@@ -174,6 +186,13 @@ namespace gazebo
       /// \param[in] _v vector to add
       public: const Vector3 &operator+=(const Vector3 &_v);
 
+      /// \brief Negation operator
+      /// \return negative of this vector
+      public: inline Vector3 operator-() const
+              {
+                return Vector3(-this->x, -this->y, -this->z);
+              }
+
       /// \brief Subtraction operators
       /// \param[in] _pt a vector to substract
       /// \return a vector
@@ -220,6 +239,14 @@ namespace gazebo
       /// \param[in] _v a vector
       /// \return this
       public: const Vector3 &operator*=(const Vector3 &_v);
+
+      /// \brief Multiplication operators
+      /// \param[in] _s the scaling factor
+      /// \param[in] _v input vector
+      /// \return a scaled vector
+      public: friend inline Vector3 operator*(double _s,
+                                              const Vector3 &_v)
+      { return Vector3(_v.x * _s, _v.y * _s, _v.z * _s); }
 
       /// \brief Multiplication operators
       /// \param[in] _v the scaling factor
@@ -286,7 +313,8 @@ namespace gazebo
       public: friend std::ostream &operator<<(std::ostream &_out,
                                               const gazebo::math::Vector3 &_pt)
       {
-        _out << _pt.x << " " << _pt.y << " " << _pt.z;
+        _out << precision(_pt.x, 6) << " " << precision(_pt.y, 6) << " "
+             << precision(_pt.z, 6);
         return _out;
       }
 
@@ -307,4 +335,3 @@ namespace gazebo
   }
 }
 #endif
-
