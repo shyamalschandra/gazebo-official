@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,21 +43,58 @@ namespace gazebo
   namespace physics
   {
     /// \brief Data structure for contact feedbacks
-    class ContactFeedback
+    class ODEJointFeedback
     {
+      public: ODEJointFeedback() : contact(NULL), count(0) {}
+
       /// \brief Contact information.
-      public: Contact contact;
+      public: Contact *contact;
+
+      /// \brief Number of elements in feedbacks array.
+      public: int count;
 
       /// \brief Contact joint feedback information.
       public: dJointFeedback feedbacks[MAX_CONTACT_JOINTS];
-
-      /// \brief Number of elements in feedbacks array.
-      public: int feedbackCount;
     };
 
     /// \brief ODE physics engine.
     class ODEPhysics : public PhysicsEngine
     {
+      /// \enum ODEParam
+      /// \brief ODE Physics parameter types.
+      public: enum ODEParam
+      {
+        /// \brief Solve type
+        SOLVER_TYPE,
+
+        /// \brief Constraint force mixing
+        GLOBAL_CFM,
+
+        /// \brief Error reduction parameter
+        GLOBAL_ERP,
+
+        /// \brief Number of iterations
+        SOR_PRECON_ITERS,
+
+        /// \brief Number of iterations
+        PGS_ITERS,
+
+        /// \brief SOR over-relaxation parameter
+        SOR,
+
+        /// \brief Max correcting velocity
+        CONTACT_MAX_CORRECTING_VEL,
+
+        /// \brief Surface layer depth
+        CONTACT_SURFACE_LAYER,
+
+        /// \brief Maximum number of contacts
+        MAX_CONTACTS,
+
+        /// \brief Minimum step size
+        MIN_STEP_SIZE
+      };
+
       /// \brief Constructor.
       /// \param[in] _world The World that uses this physics engine.
       public: ODEPhysics(WorldPtr _world);
@@ -87,10 +124,8 @@ namespace gazebo
       public: virtual void Fini();
 
       // Documentation inherited
-      public: virtual void SetStepTime(double _value);
-
-      // Documentation inherited
-      public: virtual double GetStepTime();
+      public: virtual std::string GetType() const
+                      { return "ode"; }
 
       // Documentation inherited
       public: virtual LinkPtr CreateLink(ModelPtr _parent);
@@ -158,7 +193,29 @@ namespace gazebo
       // Documentation inherited
       public: virtual int GetMaxContacts();
 
+      // Documentation inherited
       public: virtual void DebugPrint() const;
+
+      // Documentation inherited
+      public: virtual void SetSeed(uint32_t _seed);
+
+      /// \brief Set a parameter of the bullet physics engine
+      /// \param[in] _param A parameter listed in the ODEParam enum
+      /// \param[in] _value The value to set to
+      public: virtual void SetParam(ODEParam _param,
+                  const boost::any &_value);
+
+      /// Documentation inherited
+      public: virtual void SetParam(const std::string &_key,
+                  const boost::any &_value);
+
+      /// Documentation inherited
+      public: virtual boost::any GetParam(const std::string &_key) const;
+
+      /// \brief Get an parameter of the physics engine
+      /// \param[in] _param A parameter listed in the ODEParam enum
+      /// \return The value of the parameter
+      public: virtual boost::any GetParam(ODEParam _param) const;
 
       /// \brief Return the world space id.
       /// \return The space id for the world.
@@ -195,11 +252,9 @@ namespace gazebo
       public: void Collide(ODECollision *_collision1, ODECollision *_collision2,
                            dContactGeom *_contactCollisions);
 
-      /// \brief process contact feedbacks into physics::ContactFeedback
-      /// \param[in,out] _feedback Contact feedback information.
-      /// \param[out] _msg Message to add contact information to.
-      public: void ProcessContactFeedback(ContactFeedback *_feedback,
-                                          msgs::Contact *_msg);
+      /// \brief process joint feedbacks.
+      /// \param[in] _feedback ODE Joint Contact feedback information.
+      public: void ProcessJointFeedback(ODEJointFeedback *_feedback);
 
       protected: virtual void OnRequest(ConstRequestPtr &_msg);
 
@@ -234,17 +289,14 @@ namespace gazebo
       /// \brief Collision attributes
       private: dJointGroupID contactGroup;
 
-      /// \brief Store the value of the stepTime parameter to improve efficiency
-      private: double stepTimeDouble;
-
       /// \brief The type of the solver.
       private: std::string stepType;
 
       /// \brief Buffer of contact feedback information.
-      private: std::vector<ContactFeedback*> contactFeedbacks;
+      private: std::vector<ODEJointFeedback*> jointFeedbacks;
 
       /// \brief Current index into the contactFeedbacks buffer
-      private: unsigned int contactFeedbackIndex;
+      private: unsigned int jointFeedbackIndex;
 
       /// \brief All the collsiion spaces.
       private: std::map<std::string, dSpaceID> spaces;
@@ -270,6 +322,9 @@ namespace gazebo
 
       /// \brief Indices used during creation of contact joints.
       private: int indices[MAX_CONTACT_JOINTS];
+
+      /// \brief Maximum number of contact points per collision pair.
+      private: int maxContacts;
     };
   }
 }
