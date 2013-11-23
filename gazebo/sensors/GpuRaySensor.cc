@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,19 @@
 */
 
 #include "gazebo/physics/World.hh"
+#include "gazebo/physics/Entity.hh"
+#include "gazebo/physics/Model.hh"
 
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Events.hh"
 
+#include "gazebo/math/Rand.hh"
+
 #include "gazebo/transport/transport.hh"
 
 #include "gazebo/rendering/Scene.hh"
-#include "gazebo/rendering/Rendering.hh"
+#include "gazebo/rendering/RenderingIface.hh"
+#include "gazebo/rendering/RenderEngine.hh"
 
 #include "gazebo/sensors/SensorFactory.hh"
 #include "gazebo/sensors/GpuRaySensor.hh"
@@ -51,6 +56,16 @@ GpuRaySensor::~GpuRaySensor()
 }
 
 //////////////////////////////////////////////////
+std::string GpuRaySensor::GetTopic() const
+{
+  std::string topicName = "~/";
+  topicName += this->parentName + "/" + this->GetName() + "/scan";
+  boost::replace_all(topicName, "::", "/");
+
+  return topicName;
+}
+
+//////////////////////////////////////////////////
 void GpuRaySensor::Load(const std::string &_worldName, sdf::ElementPtr &_sdf)
 {
   Sensor::Load(_worldName, _sdf);
@@ -60,6 +75,9 @@ void GpuRaySensor::Load(const std::string &_worldName, sdf::ElementPtr &_sdf)
 void GpuRaySensor::Load(const std::string &_worldName)
 {
   Sensor::Load(_worldName);
+
+  this->scanPub = this->node->Advertise<msgs::LaserScanStamped>(
+      this->GetTopic(), 50);
 
   sdf::ElementPtr rayElem = this->sdf->GetElement("ray");
   this->scanElem = rayElem->GetElement("scan");
@@ -79,11 +97,43 @@ void GpuRaySensor::Load(const std::string &_worldName)
 
   this->horzRangeCount = this->GetRangeCount();
   this->vertRangeCount = this->GetVerticalRangeCount();
+
+  // Handle noise model settings.
+  this->noiseActive = false;
+  if (rayElem->HasElement("noise"))
+  {
+    sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
+    std::string type = noiseElem->Get<std::string>("type");
+    if (type == "gaussian")
+    {
+      this->noiseType = GAUSSIAN;
+      this->noiseMean = noiseElem->Get<double>("mean");
+      this->noiseStdDev = noiseElem->Get<double>("stddev");
+      this->noiseActive = true;
+      gzlog << "applying Gaussian noise model with mean " << this->noiseMean <<
+        " and stddev " << this->noiseStdDev << std::endl;
+    }
+    else
+      gzwarn << "ignoring unknown noise model type \"" << type << "\"" <<
+        std::endl;
+  }
+
+  this->parentEntity = this->world->GetEntity(this->parentName);
+
+  GZ_ASSERT(this->parentEntity != NULL,
+      "Unable to get the parent entity.");
 }
 
 //////////////////////////////////////////////////
 void GpuRaySensor::Init()
 {
+  if (rendering::RenderEngine::Instance()->GetRenderPathType() ==
+      rendering::RenderEngine::NONE)
+  {
+    gzerr << "Unable to create GpuRaySensor. Rendering is disabled.\n";
+    return;
+  }
+
   std::string worldName = this->world->GetName();
 
   if (!worldName.empty())
@@ -91,10 +141,10 @@ void GpuRaySensor::Init()
     this->scene = rendering::get_scene(worldName);
 
     if (!this->scene)
-      this->scene = rendering::create_scene(worldName, false);
+      this->scene = rendering::create_scene(worldName, false, true);
 
     this->laserCam = this->scene->CreateGpuLaser(
-        this->sdf->GetValueString("name"), false);
+        this->sdf->Get<std::string>("name"), false);
 
     if (!this->laserCam)
     {
@@ -229,13 +279,23 @@ void GpuRaySensor::Init()
     this->laserCam->Init();
     this->laserCam->SetRangeCount(this->horzRangeCount, this->vertRangeCount);
     this->laserCam->SetClipDist(this->GetRangeMin(), this->GetRangeMax());
-    this->laserCam->CreateLaserTexture(this->GetName() + "_RttTex_Laser");
-    this->laserCam->CreateRenderTexture(this->GetName() + "_RttTex_Image");
+    this->laserCam->CreateLaserTexture(
+        this->GetScopedName() + "_RttTex_Laser");
+    this->laserCam->CreateRenderTexture(
+        this->GetScopedName() + "_RttTex_Image");
     this->laserCam->SetWorldPose(this->pose);
-    this->laserCam->AttachToVisual(this->parentName, true);
+    this->laserCam->AttachToVisual(this->parentId, true);
+
+    this->laserMsg.mutable_scan()->set_frame(this->parentName);
   }
   else
     gzerr << "No world name\n";
+
+  // Disable clouds and moon on server side until fixed and also to improve
+  // performance
+  this->scene->SetSkyXMode(rendering::Scene::GZ_SKYX_ALL &
+      ~rendering::Scene::GZ_SKYX_CLOUDS &
+      ~rendering::Scene::GZ_SKYX_MOON);
 
   Sensor::Init();
 }
@@ -244,7 +304,7 @@ void GpuRaySensor::Init()
 void GpuRaySensor::Fini()
 {
   Sensor::Fini();
-  this->laserCam->Fini();
+  this->scene->RemoveCamera(this->laserCam->GetName());
   this->laserCam.reset();
   this->scene.reset();
 }
@@ -276,21 +336,9 @@ bool GpuRaySensor::IsHorizontal() const
 }
 
 //////////////////////////////////////////////////
-double GpuRaySensor::GetHAngle() const
-{
-  return this->laserCam->GetHorzHalfAngle();
-}
-
-//////////////////////////////////////////////////
 double GpuRaySensor::GetHorzHalfAngle() const
 {
   return this->laserCam->GetHorzHalfAngle();
-}
-
-//////////////////////////////////////////////////
-double GpuRaySensor::GetVAngle() const
-{
-  return this->laserCam->GetVertHalfAngle();
 }
 
 //////////////////////////////////////////////////
@@ -300,21 +348,9 @@ double GpuRaySensor::GetVertHalfAngle() const
 }
 
 //////////////////////////////////////////////////
-double GpuRaySensor::GetHFOV() const
-{
-  return this->laserCam->GetHorzFOV();
-}
-
-//////////////////////////////////////////////////
 double GpuRaySensor::GetHorzFOV() const
 {
   return this->laserCam->GetHorzFOV();
-}
-
-//////////////////////////////////////////////////
-double GpuRaySensor::GetCHFOV() const
-{
-  return this->GetCosHorzFOV();
 }
 
 //////////////////////////////////////////////////
@@ -324,21 +360,9 @@ double GpuRaySensor::GetCosHorzFOV() const
 }
 
 //////////////////////////////////////////////////
-double GpuRaySensor::GetVFOV() const
-{
-  return this->GetVertFOV();
-}
-
-//////////////////////////////////////////////////
 double GpuRaySensor::GetVertFOV() const
 {
   return this->laserCam->GetVertFOV();
-}
-
-//////////////////////////////////////////////////
-double GpuRaySensor::GetCVFOV() const
-{
-  return this->GetCosVertFOV();
 }
 
 //////////////////////////////////////////////////
@@ -348,21 +372,9 @@ double GpuRaySensor::GetCosVertFOV() const
 }
 
 //////////////////////////////////////////////////
-double GpuRaySensor::Get1stRatio() const
-{
-  return this->GetRayCountRatio();
-}
-
-//////////////////////////////////////////////////
 double GpuRaySensor::GetRayCountRatio() const
 {
   return this->laserCam->GetRayCountRatio();
-}
-
-//////////////////////////////////////////////////
-double GpuRaySensor::Get2ndRatio() const
-{
-  return this->GetRangeCountRatio();
 }
 
 //////////////////////////////////////////////////
@@ -374,7 +386,7 @@ double GpuRaySensor::GetRangeCountRatio() const
 //////////////////////////////////////////////////
 math::Angle GpuRaySensor::GetAngleMin() const
 {
-  return this->horzElem->GetValueDouble("min_angle");
+  return this->horzElem->Get<double>("min_angle");
 }
 
 //////////////////////////////////////////////////
@@ -386,7 +398,7 @@ void GpuRaySensor::SetAngleMin(double _angle)
 //////////////////////////////////////////////////
 math::Angle GpuRaySensor::GetAngleMax() const
 {
-  return this->horzElem->GetValueDouble("max_angle");
+  return this->horzElem->Get<double>("max_angle");
 }
 
 //////////////////////////////////////////////////
@@ -398,13 +410,13 @@ void GpuRaySensor::SetAngleMax(double _angle)
 //////////////////////////////////////////////////
 double GpuRaySensor::GetRangeMin() const
 {
-  return this->rangeElem->GetValueDouble("min");
+  return this->rangeElem->Get<double>("min");
 }
 
 //////////////////////////////////////////////////
 double GpuRaySensor::GetRangeMax() const
 {
-  return this->rangeElem->GetValueDouble("max");
+  return this->rangeElem->Get<double>("max");
 }
 
 /////////////////////////////////////////////////
@@ -417,27 +429,27 @@ double GpuRaySensor::GetAngleResolution() const
 //////////////////////////////////////////////////
 double GpuRaySensor::GetRangeResolution() const
 {
-  return this->rangeElem->GetValueDouble("resolution");
+  return this->rangeElem->Get<double>("resolution");
 }
 
 //////////////////////////////////////////////////
 int GpuRaySensor::GetRayCount() const
 {
-  return this->horzElem->GetValueUInt("samples");
+  return this->horzElem->Get<unsigned int>("samples");
 }
 
 //////////////////////////////////////////////////
 int GpuRaySensor::GetRangeCount() const
 {
   return this->GetRayCount() *
-        this->horzElem->GetValueDouble("resolution");
+        this->horzElem->Get<double>("resolution");
 }
 
 //////////////////////////////////////////////////
 int GpuRaySensor::GetVerticalRayCount() const
 {
   if (this->scanElem->HasElement("vertical"))
-    return this->vertElem->GetValueUInt("samples");
+    return this->vertElem->Get<unsigned int>("samples");
   else
     return 1;
 }
@@ -448,7 +460,7 @@ int GpuRaySensor::GetVerticalRangeCount() const
   if (this->scanElem->HasElement("vertical"))
   {
     int rows =  (this->GetVerticalRayCount() *
-          this->vertElem->GetValueDouble("resolution"));
+          this->vertElem->Get<double>("resolution"));
     if (rows > 1)
       return rows;
     else
@@ -462,7 +474,7 @@ int GpuRaySensor::GetVerticalRangeCount() const
 math::Angle GpuRaySensor::GetVerticalAngleMin() const
 {
   if (this->scanElem->HasElement("vertical"))
-    return this->vertElem->GetValueDouble("min_angle");
+    return this->vertElem->Get<double>("min_angle");
   else
     return math::Angle(0);
 }
@@ -478,9 +490,16 @@ void GpuRaySensor::SetVerticalAngleMin(double _angle)
 math::Angle GpuRaySensor::GetVerticalAngleMax() const
 {
   if (this->scanElem->HasElement("vertical"))
-    return this->vertElem->GetValueDouble("max_angle");
+    return this->vertElem->Get<double>("max_angle");
   else
     return math::Angle(0);
+}
+
+//////////////////////////////////////////////////
+double GpuRaySensor::GetVerticalAngleResolution() const
+{
+  return (this->GetVerticalAngleMax() - this->GetVerticalAngleMin()).Radian() /
+    (this->GetVerticalRangeCount()-1);
 }
 
 //////////////////////////////////////////////////
@@ -491,25 +510,31 @@ void GpuRaySensor::SetVerticalAngleMax(double _angle)
 }
 
 //////////////////////////////////////////////////
-void GpuRaySensor::GetRanges(std::vector<double> &/*_ranges*/) const
+void GpuRaySensor::GetRanges(std::vector<double> &_ranges)
 {
-  /*boost::mutex::scoped_lock(this->mutex);
-  _ranges.resize(this->laserMsg.ranges_size());
-  memcpy(&_ranges[0], this->laserMsg.ranges().data(),
-         sizeof(_ranges[0]) * this->laserMsg.ranges_size());*/
+  boost::mutex::scoped_lock lock(this->mutex);
+
+  _ranges.resize(this->laserMsg.scan().ranges_size());
+  memcpy(&_ranges[0], this->laserMsg.scan().ranges().data(),
+         sizeof(_ranges[0]) * this->laserMsg.scan().ranges_size());
 }
 
 //////////////////////////////////////////////////
 double GpuRaySensor::GetRange(int _index)
 {
-  if (_index < 0 || _index > this->laserMsg.ranges_size())
+  boost::mutex::scoped_lock lock(this->mutex);
+  if (this->laserMsg.scan().ranges_size() == 0)
+  {
+    gzwarn << "ranges not constructed yet (zero sized)\n";
+    return 0.0;
+  }
+  if (_index < 0 || _index > this->laserMsg.scan().ranges_size())
   {
     gzerr << "Invalid range index[" << _index << "]\n";
     return 0.0;
   }
 
-  boost::mutex::scoped_lock lock(this->mutex);
-  return this->laserMsg.ranges(_index);
+  return this->laserMsg.scan().ranges(_index);
 }
 
 //////////////////////////////////////////////////
@@ -521,7 +546,7 @@ double GpuRaySensor::GetRetro(int /*_index*/) const
 //////////////////////////////////////////////////
 int GpuRaySensor::GetFiducial(int /*_index*/) const
 {
-  return 0;
+  return -1;
 }
 
 //////////////////////////////////////////////////
@@ -531,6 +556,72 @@ void GpuRaySensor::UpdateImpl(bool /*_force*/)
   {
     this->laserCam->Render();
     this->laserCam->PostRender();
-    this->lastMeasurementTime = this->world->GetSimTime();
+    this->lastMeasurementTime = this->scene->GetSimTime();
+
+    boost::mutex::scoped_lock lock(this->mutex);
+
+    msgs::Set(this->laserMsg.mutable_time(), this->lastMeasurementTime);
+
+    msgs::LaserScan *scan = this->laserMsg.mutable_scan();
+
+    // Store the latest laser scans into laserMsg
+    msgs::Set(scan->mutable_world_pose(),
+              this->pose + this->parentEntity->GetWorldPose());
+    scan->set_angle_min(this->GetAngleMin().Radian());
+    scan->set_angle_max(this->GetAngleMax().Radian());
+    scan->set_angle_step(this->GetAngleResolution());
+    scan->set_count(this->GetRayCount());
+
+    scan->set_vertical_angle_min(this->GetVerticalAngleMin().Radian());
+    scan->set_vertical_angle_max(this->GetVerticalAngleMax().Radian());
+    scan->set_vertical_angle_step(this->GetVerticalAngleResolution());
+    scan->set_vertical_count(this->GetVerticalRayCount());
+
+    scan->set_range_min(this->GetRangeMin());
+    scan->set_range_max(this->GetRangeMax());
+
+    scan->clear_ranges();
+    scan->clear_intensities();
+
+    // todo: add loop for vertical range count
+    for (int j = 0; j < this->GetVerticalRayCount(); ++j)
+    {
+      for (int i = 0; i < this->GetRayCount(); ++i)
+      {
+        double range = this->laserCam->GetLaserData()[
+          (j * this->GetRayCount() + i) * 3];
+
+        if (this->noiseActive)
+        {
+          switch (this->noiseType)
+          {
+            case GAUSSIAN:
+              // Add independent (uncorrelated) Gaussian noise to each beam.
+              range += math::Rand::GetDblNormal(this->noiseMean,
+                  this->noiseStdDev);
+              // No real laser would return a range outside its stated limits.
+              range = math::clamp(range, this->GetRangeMin(),
+                  this->GetRangeMax());
+              break;
+            default:
+              GZ_ASSERT(false, "Invalid noise model type");
+          }
+        }
+
+        scan->add_ranges(range);
+        scan->add_intensities(this->laserCam->GetLaserData()[
+            (j * this->GetRayCount() + i) * 3 + 1]);
+      }
+    }
+
+    if (this->scanPub && this->scanPub->HasConnections())
+      this->scanPub->Publish(this->laserMsg);
   }
+}
+
+//////////////////////////////////////////////////
+bool GpuRaySensor::IsActive()
+{
+  return Sensor::IsActive() ||
+    (this->scanPub && this->scanPub->HasConnections());
 }

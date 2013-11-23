@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@
 
 #include <math.h>
 #include <iostream>
-
-#include "gazebo/common/CommonTypes.hh"
 
 /// \brief Macro that converts radians to degrees
 /// \param[in] radians
@@ -56,6 +54,18 @@ namespace gazebo
   /// \brief An angle and related functions.
   class Angle
   {
+    /// \brief math::Angle(0)
+    public: static const Angle Zero;
+
+    /// \brief math::Angle(M_PI)
+    public: static const Angle Pi;
+
+    /// \brief math::Angle(M_PI * 0.5)
+    public: static const Angle HalfPi;
+
+    /// \brief math::Angle(M_PI * 2)
+    public: static const Angle TwoPi;
+
     /// \brief Constructor
     public: Angle();
 
@@ -81,11 +91,6 @@ namespace gazebo
     /// \brief Get the angle in radians
     /// \return double containing the angle's radian value
     public: double Radian() const;
-
-    /// \brief Get the angle in radians, deprecated by Radian
-    /// \return double containing the angle's radian value
-    public: double GetAsRadian() const GAZEBO_DEPRECATED
-      { return this->Radian(); }
 
     /// \brief Get the angle in degrees
     /// \return double containing the angle's degree value

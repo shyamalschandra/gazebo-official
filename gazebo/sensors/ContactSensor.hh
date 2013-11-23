@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,6 @@
 #include <map>
 #include <list>
 #include <string>
-
-#include "gazebo/common/CommonTypes.hh"
 
 #include "gazebo/msgs/msgs.hh"
 
@@ -153,12 +151,6 @@ namespace gazebo
 
       /// \brief Mutex to protect reads and writes.
       private: mutable boost::mutex mutex;
-
-      /// \brief returns a pointer to the mutex for locking while reading
-      ///        internally kept map of map of collision names and contacts
-      /// \return The mutex for the sensor
-      public: boost::mutex* GetUpdateMutex() GAZEBO_DEPRECATED
-              {return &(this->mutex);}
 
       /// \brief Contacts message used to output sensor data.
       private: msgs::Contacts contactsMsg;
