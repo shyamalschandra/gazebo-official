@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,19 +122,24 @@ namespace gazebo
       /// \sa LogRecord::SetPaused
       public: bool GetPaused() const;
 
+      /// \brief Get whether the logger is ready to start, which implies
+      /// that any previous runs have finished.
+      // \return True if logger is ready to start.
+      public: bool IsReadyToStart() const;
+
       /// \brief Get whether logging is running.
       /// \return True if logging has been started.
       public: bool GetRunning() const;
 
       /// \brief Start the logger.
-      /// \param[in] _encoding The type of encoding (txt, or bz2).
+      /// \param[in] _encoding The type of encoding (txt, zlib, or bz2).
       /// \param[in] _path Path in which to store log files.
-      public: bool Start(const std::string &_encoding="bz2",
+      public: bool Start(const std::string &_encoding="zlib",
                   const std::string &_path="");
 
       /// \brief Get the encoding used.
-      /// \return Either [txt, or bz2], where txt is plain txt and bz2 is
-      /// bzip2 compressed data with Base64 encoding.
+      /// \return Either [txt, zlib, or bz2], where txt is plain txt and bz2
+      /// and zlib are compressed data with Base64 encoding.
       public: const std::string &GetEncoding() const;
 
       /// \brief Get the filename for a log object.
@@ -169,6 +174,10 @@ namespace gazebo
       /// \brief Write all logs.
       /// \param[in] _force True to skip waiting on dataAvailableCondition.
       public: void Write(bool _force = false);
+
+      /// \brief Get the size of the buffer.
+      /// \return Size of the buffer, in bytes.
+      public: unsigned int GetBufferSize() const;
 
       /// \brief Update the log files
       ///
@@ -279,6 +288,9 @@ namespace gazebo
       /// \brief Convenience iterator to the end of the log objects map.
       private: Log_M::iterator logsEnd;
 
+      /// \brief Condition used to start threads
+      private: boost::condition_variable startThreadCondition;
+
       /// \brief Condition used to trigger an update
       private: boost::condition_variable updateCondition;
 
@@ -361,6 +373,10 @@ namespace gazebo
 
       /// \brief This is a singleton
       private: friend class SingletonT<LogRecord>;
+
+      /// \brief True if the logger is ready to start, and the previous run
+      /// has finished.
+      private: bool readyToStart;
     };
     /// \}
   }
