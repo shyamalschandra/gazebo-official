@@ -696,6 +696,8 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = @CMAKE_SOURCE_DIR@/gazebo/gui \
+                         @CMAKE_SOURCE_DIR@/gazebo/physics/ode \
+                         @CMAKE_SOURCE_DIR@/gazebo/physics/bullet \
                          @CMAKE_SOURCE_DIR@/gazebo/rendering/ogretest \
                          @CMAKE_SOURCE_DIR@/gazebo/rendering/skyx \
                          @CMAKE_SOURCE_DIR@/gazebo/rendering/selection_buffer \
@@ -759,7 +761,7 @@ IMAGE_PATH             =
 # If FILTER_PATTERNS is specified, this tag will be
 # ignored.
 
-INPUT_FILTER           = "sed 's/boost::shared_ptr<\(.*\)>/\1*/'"
+INPUT_FILTER           = ""
 
 # The FILTER_PATTERNS tag can be used to specify filters on a per file pattern
 # basis.
