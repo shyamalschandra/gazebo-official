@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,9 +75,9 @@ void SonarSensor::Load(const std::string &_worldName)
     return;
   }
 
-  this->rangeMin = sonarElem->GetValueDouble("min");
-  this->rangeMax = sonarElem->GetValueDouble("max");
-  this->radius = sonarElem->GetValueDouble("radius");
+  this->rangeMin = sonarElem->Get<double>("min");
+  this->rangeMax = sonarElem->Get<double>("max");
+  this->radius = sonarElem->Get<double>("radius");
   double range = this->rangeMax - this->rangeMin;
 
   if (this->radius < 0)
