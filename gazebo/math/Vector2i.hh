@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,16 +26,6 @@
 #include <iostream>
 #include <fstream>
 
-/*
-// Remove in gazebo 2.0
-#include <gazebo/gazebo_config.h>
-#if HAVE_SDF
-#include <sdf/sdf.hh>
-#endif
-*/
-
-#include "gazebo/gazebo_config.h"
-
 namespace gazebo
 {
   namespace math
@@ -58,16 +48,6 @@ namespace gazebo
       /// \brief Copy onstructor
       /// \param[in] _pt a point
       public: Vector2i(const Vector2i &_pt);
-
-              /*
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Vector2i(const sdf::Vector2i &_pt) __attribute__((deprecated));
-
-      /// Deprecated
-      public: Vector2i &operator =(const sdf::Vector2i &_v)
-              __attribute__((deprecated));
-#endif*/
 
       /// \brief Destructor
       public: virtual ~Vector2i();

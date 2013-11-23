@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -205,21 +205,4 @@ int Vector2i::operator[](unsigned int index) const
   }
 }
 
-/*
-#ifdef HAVE_SDF
-//////////////////////////////////////////////////
-Vector2i::Vector2i(const sdf::Vector2i &_pt)
-  : x(_pt.x), y(_pt.y)
-{
-}
 
-//////////////////////////////////////////////////
-Vector2i &Vector2i::operator =(const sdf::Vector2i &_pt)
-{
-  this->x = _pt.x;
-  this->y = _pt.y;
-
-  return *this;
-}
-#endif
-*/

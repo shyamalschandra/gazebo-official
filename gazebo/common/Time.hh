@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,6 @@
 #include <time.h>
 #include <iostream>
 
-// Remove in gazebo 2.0
-/*#include <gazebo/gazebo_config.h>
-#if HAVE_SDF
-#include <sdf/sdf.hh>
-#endif
-*/
-
 #include "gazebo/common/CommonTypes.hh"
 
 namespace gazebo
@@ -57,16 +50,6 @@ namespace gazebo
       /// \brief Copy constructor
       /// \param[in] time Time to copy
       public: Time(const Time &_time);
-
-              /*
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Time(const sdf::Time &_time) GAZEBO_DEPRECATED(1.9);
-
-      /// Deprecated
-      public: Time &operator =(const sdf::Time &_time) GAZEBO_DEPRECATED(1.9);
-#endif
-*/
 
       /// \brief Constructor
       /// \param[in] _tv Time to initialize to
@@ -130,11 +113,6 @@ namespace gazebo
       /// \param[in] _ns nanoseconds
       /// \return Time actually slept
       public: static Time NSleep(unsigned int _ns);
-
-      /// \brief Nano sleep
-      /// \param[in] _time is a Time
-      /// \return Time actually slept
-      public: static Time NSleep(Time _time) GAZEBO_DEPRECATED(1.5);
 
       /// \brief Assignment operator
       /// \param[in] _tv the new time

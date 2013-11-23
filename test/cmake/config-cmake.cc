@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ TEST(Cmake, Config)
 {
   char cmd[1024];
 
-  snprintf(cmd, sizeof(cmd), "cd %s/..; cmake %s", SOURCE_DIR, SOURCE_DIR);
+  snprintf(cmd, sizeof(cmd), "cmake %s", SOURCE_DIR);
   ASSERT_EQ(system(cmd), 0);
-  snprintf(cmd, sizeof(cmd), "cd %s/..; make", SOURCE_DIR);
+  snprintf(cmd, sizeof(cmd), "make");
   ASSERT_EQ(system(cmd), 0);
 }
 

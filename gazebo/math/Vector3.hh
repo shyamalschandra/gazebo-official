@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,6 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
-
-/*
-#include <gazebo/gazebo_config.h>
-#if HAVE_SDF
-#include <sdf/sdf.hh>
-#endif
-*/
 
 #include "gazebo/math/Helpers.hh"
 
@@ -75,21 +68,6 @@ namespace gazebo
       /// \brief Copy constructor
       /// \param[in] _v a vector
       public: Vector3(const Vector3 &_v);
-
-              /*
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Vector3(const sdf::Vector3 &_v) __attribute__((deprecated));
-
-      /// Deprecated
-      public: Vector3 &operator =(const sdf::Vector3 &_v)
-              __attribute__((deprecated));
-
-      /// Deprecated
-      public: bool operator!=(const sdf::Vector3 &_v) const
-              __attribute__((deprecated));
-#endif
-*/
 
       /// \brief Destructor
       public: virtual ~Vector3();
@@ -292,7 +270,6 @@ namespace gazebo
       /// default tolerence (1e-6), false otherwise
       public: bool operator!=(const Vector3 &_v) const;
 
-
       /// \brief See if a point is finite (e.g., not nan)
       public: bool IsFinite() const;
 
@@ -358,4 +335,3 @@ namespace gazebo
   }
 }
 #endif
-
