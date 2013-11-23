@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/Publisher.hh"
 
@@ -30,7 +30,7 @@ GZ_REGISTER_STATIC_VIEWER("gazebo.msgs.ImageStamped", ImageView)
 
 /////////////////////////////////////////////////
 ImageView::ImageView(QWidget *_parent)
-: TopicView(_parent, "gazebo.msgs.ImageStamped", "image")
+: TopicView(_parent, "gazebo.msgs.ImageStamped", "image", 33)
 {
   this->setWindowTitle(tr("Gazebo: Image View"));
 
@@ -72,7 +72,6 @@ void ImageView::SetTopic(const std::string &_topicName)
   TopicView::SetTopic(_topicName);
 
   // Subscribe to the new topic.
-  this->sub.reset();
   this->sub = this->node->Subscribe(_topicName, &ImageView::OnImage, this);
 }
 
