@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
  * Date: 15 July 2003
  */
 
-#ifndef DEPTHCAMERASENSOR_HH
-#define DEPTHCAMERASENSOR_HH
+#ifndef _DEPTHCAMERASENSOR_HH_
+#define _DEPTHCAMERASENSOR_HH_
 
 #include <string>
 
-#include "sensors/Sensor.hh"
-#include "msgs/MessageTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/sensors/Sensor.hh"
+#include "gazebo/msgs/MessageTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 namespace gazebo
 {
@@ -34,9 +34,10 @@ namespace gazebo
   /// \brief Sensors namespace
   namespace sensors
   {
+    /// \class DepthCameraSensor DepthCameraSensor.hh sensors/sensors.hh
     /// \addtogroup gazebo_sensors Sensors
+    /// \brief A set of sensor classes, functions, and definitions
     /// \{
-
     /// \brief Depth camera sensor
     /// This sensor is used for simulating standard monocular cameras
     class DepthCameraSensor : public Sensor
@@ -47,37 +48,39 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~DepthCameraSensor();
 
-      /// \brief Set the parent of the sensor
-      public: virtual void SetParent(const std::string &_name);
-
-      /// \brief Load the camera using parameter from an SDF element
-      /// \param _sdf The SDF parameters
+      /// \brief Load the sensor with SDF parameters
+      /// \param[in] _sdf SDF Sensor parameters
+      /// \param[in] _worldName Name of world to load from
       protected: virtual void Load(const std::string &_worldName,
                                    sdf::ElementPtr &_sdf);
 
-      /// \brief Load the camera using default parameters
+      /// \brief Load the sensor with default parameters
+      /// \param[in] _worldName Name of world to load from
       protected: virtual void Load(const std::string &_worldName);
 
       /// \brief Initialize the camera
       protected: virtual void Init();
 
       /// \brief Update the sensor information
+      /// \param[in] _force True if update is forced, false if not
       protected: virtual void UpdateImpl(bool _force);
 
       /// Finalize the camera
       protected: virtual void Fini();
 
       /// \brief Set whether the sensor is active or not
-      public: virtual void SetActive(bool value);
+      /// \param[in] _value True if active, false if not
+      public: virtual void SetActive(bool _value);
 
       /// \brief Returns a pointer to the rendering::DepthCamera
+      /// \return Depth Camera pointer
       public: rendering::DepthCameraPtr GetDepthCamera() const
               {return this->camera;}
 
-      /// \brief save the image frame to file named _filename.
+      /// \brief Saves an image frame of depth camera sensor to file
+      /// \param[in] Name of file to save as
+      /// \return True if saved, false if not
       public: bool SaveFrame(const std::string &_filename);
-
-      private: void OnPose(ConstPosePtr &_msg);
 
       private: rendering::DepthCameraPtr camera;
 
