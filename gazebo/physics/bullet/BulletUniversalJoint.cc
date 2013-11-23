@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,6 +88,9 @@ void BulletUniversalJoint::Init()
 
   // Allows access to impulse
   this->bulletUniversal->enableFeedback(true);
+
+  // Setup Joint force and torque feedback
+  this->SetupJointFeedback();
 }
 
 //////////////////////////////////////////////////
@@ -133,7 +136,7 @@ void BulletUniversalJoint::SetVelocity(int /*_index*/, double /*_angle*/)
 }
 
 //////////////////////////////////////////////////
-void BulletUniversalJoint::SetForce(int /*_index*/, double /*_torque*/)
+void BulletUniversalJoint::SetForceImpl(int /*_index*/, double /*_torque*/)
 {
   gzerr << "Not implemented\n";
 }
