@@ -55,6 +55,8 @@ set (gtest_sources
   RaySensor_TEST.cc
   Sensor_TEST.cc
   SonarSensor_TEST.cc
+  WirelessReceiver_TEST.cc
+  WirelessTransmitter_TEST.cc
 )
 
 gz_build_tests(${gtest_sources})
@@ -87,6 +89,3 @@ target_link_libraries(gazebo_sensors
 
 gz_install_library(gazebo_sensors)
 gz_install_includes("sensors" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/sensors.hh)
-
-# Deprecated Sensors.hh
-gz_issue_775("Sensors")
