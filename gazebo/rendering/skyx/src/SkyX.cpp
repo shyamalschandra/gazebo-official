@@ -32,6 +32,8 @@ namespace SkyX
   SkyX::SkyX(Ogre::SceneManager* sm, Controller* c)
     : Ogre::FrameListener()
       , Ogre::RenderTargetListener()
+      , mStarfield(true)
+      , mLightingMode(LM_LDR)
       , mSceneManager(sm)
       , mController(c)
       , mCamera(0)
@@ -48,8 +50,6 @@ namespace SkyX
       , mLastCameraFarClipDistance(-1)
       , mInfiniteCameraFarClipDistance(100000)
       , mVisible(true)
-      , mLightingMode(LM_LDR)
-      , mStarfield(true)
       , mTimeMultiplier(0.1f)
       , mTimeOffset(0.0f)
       , mMoonEnabled(true)
@@ -185,7 +185,7 @@ namespace SkyX
 
   void SkyX::notifyCameraRender(Ogre::Camera* c)
   {
-    if (!mCreated || !this->mEnabled)
+    if (!mCreated || !this->mEnabled || !c)
     {
       return;
     }

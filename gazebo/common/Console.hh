@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,6 +84,10 @@ namespace gazebo
       /// \brief Set quiet output
       /// \param[in] q True to prevent warning
       public: void SetQuiet(bool _q);
+
+      /// \brief Get whether quiet output is set
+      /// \return True to if quiet output is set
+      public: bool GetQuiet() const;
 
       /// \brief Use this to output a colored message to the terminal
       /// \param[in] _lbl Text label
