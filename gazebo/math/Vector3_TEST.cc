@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,8 @@ TEST(Vector3Test, Vector3)
 
   // ::GetDistToLine
   v.Set(0, 0, 0);
-  EXPECT_EQ(1.0, v.GetDistToLine(math::Vector3(1, -1, 0),
-                                 math::Vector3(1, 1, 0)));
+  EXPECT_DOUBLE_EQ(1.0, v.GetDistToLine(math::Vector3(1, -1, 0),
+        math::Vector3(1, 1, 0)));
 
   // ::operator= double
   v = 4.0;
@@ -62,9 +62,9 @@ TEST(Vector3Test, Vector3)
   EXPECT_TRUE(v == math::Vector3(4, 3, 2));
 
   // ::operator[]
-  EXPECT_EQ(v[0], 4);
-  EXPECT_EQ(v[1], 3);
-  EXPECT_EQ(v[2], 2);
+  EXPECT_DOUBLE_EQ(v[0], 4);
+  EXPECT_DOUBLE_EQ(v[1], 3);
+  EXPECT_DOUBLE_EQ(v[2], 2);
 
   v.Set(1.23, 2.35, 3.654321);
   v.Round(1);
@@ -83,4 +83,11 @@ TEST(Vector3Test, Vector3)
   v.Set(1, 2, 4);
   v *= math::Vector3(2, .5, .1);
   EXPECT_TRUE(v.Equal(math::Vector3(2, 1, .4)));
+
+  // Test the static defines.
+  EXPECT_TRUE(math::Vector3::Zero == math::Vector3(0, 0, 0));
+  EXPECT_TRUE(math::Vector3::One == math::Vector3(1, 1, 1));
+  EXPECT_TRUE(math::Vector3::UnitX == math::Vector3(1, 0, 0));
+  EXPECT_TRUE(math::Vector3::UnitY == math::Vector3(0, 1, 0));
+  EXPECT_TRUE(math::Vector3::UnitZ == math::Vector3(0, 0, 1));
 }
