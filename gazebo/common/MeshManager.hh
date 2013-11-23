@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,19 @@
  * limitations under the License.
  *
 */
-#ifndef MESHMANAGER_HH
-#define MESHMANAGER_HH
+#ifndef _MESHMANAGER_HH_
+#define _MESHMANAGER_HH_
 
 #include <map>
 #include <string>
 #include <vector>
 #include <boost/thread/mutex.hpp>
 
-#include "math/Vector3.hh"
-#include "math/Vector2d.hh"
-#include "math/Plane.hh"
-#include "common/SingletonT.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Vector2d.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Plane.hh"
+#include "gazebo/common/SingletonT.hh"
 
 namespace gazebo
 {
@@ -40,6 +41,7 @@ namespace gazebo
     /// \addtogroup gazebo_common Common
     /// \{
 
+    /// \class MeshManager MeshManager.hh common/common.hh
     /// \brief Maintains and manages all meshes
     class MeshManager : public SingletonT<MeshManager>
     {
@@ -66,7 +68,7 @@ namespace gazebo
       /// \param[out] _min_xyz the bounding box minimum
       /// \param[out] _max_xyz the bounding box maximum
       public: void GetMeshAABB(const Mesh *_mesh,
-    		  	  	  	  	   math::Vector3 &_center,
+                               math::Vector3 &_center,
                                math::Vector3 &_min_xyz,
                                math::Vector3 &_max_xyz);
 
@@ -114,7 +116,7 @@ namespace gazebo
       /// \param[in] _rings the number of circles along the height
       /// \param[in] _segments the number of segment per circle
       public: void CreateCylinder(const std::string &_name,
-    		  	  	  	  	  	  float _radius,
+                              float _radius,
                                   float _height,
                                   int _rings,
                                   int _segments);
@@ -126,7 +128,7 @@ namespace gazebo
       /// \param[in] _rings the number of circles along the height
       /// \param[in] _segments the number of segment per circle
       public: void CreateCone(const std::string &_name,
-    		  	  	  	  	  float _radius,
+                          float _radius,
                               float _height,
                               int _rings,
                               int _segments);
@@ -142,7 +144,7 @@ namespace gazebo
       /// \param[in] _rings the number of circles along the height
       /// \param[in] _segments the number of segment per circle
       public: void CreateTube(const std::string &_name,
-    		  	  	  	  	  float _innerRadius,
+                              float _innerRadius,
                               float _outterRadius,
                               float _height,
                               int _rings,
@@ -180,14 +182,26 @@ namespace gazebo
       /// \param[in] _meshHeight the mesh height
       /// \param[in] _doubleSided flag to specify single or double sided
       private: void Tesselate2DMesh(SubMesh *_sm,
-    		  	  	  	  	  	    int _meshWidth,
-    		  	  	  	  	  	    int _meshHeight,
+                                    int _meshWidth,
+                                    int _meshHeight,
                                     bool _doubleSided);
 
       /// \brief Create a Camera mesh
       /// \param[in] _name name of the new mesh
       /// \param[in] _scale scaling factor for the camera
       public: void CreateCamera(const std::string &_name, float _scale);
+
+#ifdef HAVE_GTS
+      /// \brief Create a boolean mesh from two meshes
+      /// \param[in] _name the name of the new mesh
+      /// \param[in] _m1 the parent mesh in the boolean operation
+      /// \param[in] _m2 the child mesh in the boolean operation
+      /// \param[in] _operation the boolean operation applied to the two meshes
+      /// \param[in] _offset _m2's pose offset from _m1
+      public: void CreateBoolean(const std::string &_name, const Mesh *_m1,
+          const Mesh *_m2, const int _operation,
+          const math::Pose &_offset = math::Pose::Zero);
+#endif
 
       /// \brief 3D mesh loader for COLLADA files
       private: ColladaLoader *colladaLoader;
@@ -210,5 +224,3 @@ namespace gazebo
   }
 }
 #endif
-
-
