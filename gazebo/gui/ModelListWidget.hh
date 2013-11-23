@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@
 #include <list>
 #include <vector>
 #include <deque>
+#include <sdf/sdf.hh>
 
-#include "gui/qt.h"
-#include "sdf/sdf.hh"
-#include "msgs/msgs.hh"
-#include "transport/TransportTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/gui/qt.h"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -61,7 +61,8 @@ namespace gazebo
       private slots: void OnPropertyChanged(QtProperty *_item);
       private slots: void OnCustomContextMenu(const QPoint &_pt);
       private slots: void OnCurrentPropertyChanged(QtBrowserItem *_item);
-      private: void OnSetSelectedEntity(const std::string &_name);
+      private: void OnSetSelectedEntity(const std::string &_name,
+                                        const std::string &_mode);
       private: void OnResponse(ConstResponsePtr &_msg);
 
       private: void OnModelUpdate(const msgs::Model &_msg);
@@ -232,6 +233,9 @@ namespace gazebo
       private: std::deque<std::string> fillTypes;
 
       private: msgs::Light::LightType lightType;
+
+      /// \brief Type of physics engine.
+      private: msgs::Physics_Type physicsType;
     };
 
     class ModelListSheetDelegate: public QItemDelegate
