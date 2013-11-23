@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,10 @@ namespace gazebo
 
       /// \brief Destructor.
       public: virtual ~WrenchVisual();
+
+      /// \brief Load the visual based on a message
+      /// \param[in] _msg Joint message
+      public: void Load(ConstJointPtr &_msg);
 
       /// \brief Set to true to enable wrench visualization.
       /// \param[in] _enabled True to show wrenches, false to hide.

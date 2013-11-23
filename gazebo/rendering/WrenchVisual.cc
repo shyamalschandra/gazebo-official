@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,6 +107,14 @@ WrenchVisual::~WrenchVisual()
 
   delete this->forceNode;
   this->forceNode = NULL;
+}
+
+/////////////////////////////////////////////////
+void WrenchVisual::Load(ConstJointPtr &_msg)
+{
+  Visual::Load();
+  this->SetPosition(msgs::Convert(_msg->pose().position()));
+  this->SetRotation(msgs::Convert(_msg->pose().orientation()));
 }
 
 /////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,10 @@ std::string ModelDatabase::GetURI()
   if (uriStr)
     result = uriStr;
   else
-    gzwarn << "GAZEBO_MODEL_DATABASE_URI not set\n";
+  {
+    // No env var.  Take compile-time default.
+    result = GAZEBO_MODEL_DATABASE_URI;
+  }
 
   if (result[result.size()-1] != '/')
     result += '/';
@@ -132,9 +135,13 @@ bool ModelDatabase::HasModel(const std::string &_modelURI)
 
   // Make sure there is a URI separator
   if (uriSeparator == std::string::npos)
+  {
+    gzerr << "No URI separator \"://\" in [" << _modelURI << "]\n";
     return false;
+  }
 
   boost::replace_first(uri, "model://", ModelDatabase::GetURI());
+  uri = uri.substr(0, uri.find("/", ModelDatabase::GetURI().size()));
 
   std::map<std::string, std::string> models = ModelDatabase::GetModels();
 
@@ -144,6 +151,7 @@ bool ModelDatabase::HasModel(const std::string &_modelURI)
     if (iter->first == uri)
       return true;
   }
+
   return false;
 }
 
@@ -177,12 +185,6 @@ std::string ModelDatabase::GetModelConfig(const std::string &_uri)
   }
 
   return xmlString;
-}
-
-/////////////////////////////////////////////////
-std::string ModelDatabase::GetManifest(const std::string &_uri)
-{
-  return this->GetModelConfig(_uri);
 }
 
 /////////////////////////////////////////////////
@@ -426,9 +428,10 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri,
     size_t modelNameLen = endIndex == std::string::npos ? std::string::npos :
       endIndex - startIndex;
 
-    modelName = modelName.substr(startIndex, modelNameLen);
     if (endIndex != std::string::npos)
-      suffix = _uri.substr(endIndex, std::string::npos);
+      suffix = modelName.substr(endIndex, std::string::npos);
+
+    modelName = modelName.substr(startIndex, modelNameLen);
 
     // Store downloaded .tar.gz and intermediate .tar files in temp location
     boost::filesystem::path tmppath = boost::filesystem::temp_directory_path();
@@ -538,17 +541,13 @@ void ModelDatabase::DownloadDependencies(const std::string &_path)
 {
   boost::filesystem::path manifestPath = _path;
 
-  // First try to get the GZ_MODEL_MANIFEST_FILENAME. If that file doesn't
-  // exist, try to get the deprecated version.
+  // Get the GZ_MODEL_MANIFEST_FILENAME.
   if (boost::filesystem::exists(manifestPath / GZ_MODEL_MANIFEST_FILENAME))
     manifestPath /= GZ_MODEL_MANIFEST_FILENAME;
   else
   {
-    gzwarn << "The manifest.xml for a Gazebo model is deprecated. "
-      << "Please rename manifest.xml to " << GZ_MODEL_MANIFEST_FILENAME
+    gzerr << "Missing " << GZ_MODEL_MANIFEST_FILENAME
       << " for model " << _path << "\n";
-
-    manifestPath /= "manifest.xml";
   }
 
   TiXmlDocument xmlDoc;
@@ -595,17 +594,13 @@ std::string ModelDatabase::GetModelFile(const std::string &_uri)
 
   boost::filesystem::path manifestPath = path;
 
-  // First try to get the GZ_MODEL_MANIFEST_FILENAME. If that file doesn't
-  // exist, try to get the deprecated version.
+  // Get the GZ_MODEL_MANIFEST_FILENAME.
   if (boost::filesystem::exists(manifestPath / GZ_MODEL_MANIFEST_FILENAME))
     manifestPath /= GZ_MODEL_MANIFEST_FILENAME;
   else
   {
-    gzwarn << "The manifest.xml for a Gazebo model is deprecated. "
-      << "Please rename manifest.xml to " << GZ_MODEL_MANIFEST_FILENAME
+    gzerr << "Missing " << GZ_MODEL_MANIFEST_FILENAME
       << " for model " << manifestPath << "\n";
-
-    manifestPath /= "manifest.xml";
   }
 
   TiXmlDocument xmlDoc;
@@ -615,13 +610,6 @@ std::string ModelDatabase::GetModelFile(const std::string &_uri)
     if (modelXML)
     {
       TiXmlElement *sdfXML = modelXML->FirstChildElement("sdf");
-      bool sdf = false;
-      if (!sdfXML)
-      {
-        sdfXML = modelXML->FirstChildElement("sdf");
-        sdf = true;
-      }
-
       TiXmlElement *sdfSearch = sdfXML;
 
       // Find the SDF element that matches our current SDF version.
@@ -634,10 +622,7 @@ std::string ModelDatabase::GetModelFile(const std::string &_uri)
           break;
         }
 
-        if (sdf)
-          sdfSearch = sdfSearch->NextSiblingElement("sdf");
-        else
-          sdfSearch = sdfSearch->NextSiblingElement("sdf");
+        sdfSearch = sdfSearch->NextSiblingElement("sdf");
       }
 
       if (sdfXML)
