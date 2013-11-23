@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ Console::Console()
   this->msgStream = &std::cerr;
   this->errStream = &std::cerr;
   this->logStream = NULL;
+  this->quiet = false;
 }
 
 //////////////////////////////////////////////////
@@ -49,6 +50,12 @@ void Console::Init(const std::string &_logFilename)
   boost::filesystem::path logPath(getenv("HOME"));
   logPath = logPath / ".gazebo/" / _logFilename;
 
+  if (this->logStream)
+  {
+    this->logStream->close();
+    delete this->logStream;
+  }
+
   this->logStream = new std::ofstream(logPath.string().c_str(), std::ios::out);
 }
 
@@ -59,20 +66,27 @@ bool Console::IsInitialized() const
 }
 
 //////////////////////////////////////////////////
-void Console::SetQuiet(bool)
+void Console::SetQuiet(bool _quiet)
 {
+  this->quiet = _quiet;
+}
+
+//////////////////////////////////////////////////
+bool Console::GetQuiet() const
+{
+  return this->quiet;
 }
 
 //////////////////////////////////////////////////
 std::ostream &Console::ColorMsg(const std::string &_lbl, int _color)
 {
-  // if (**this->quietP)
-  // return this->nullStream;
-  // else
-  // {
-  *this->msgStream << "\033[1;" << _color << "m" << _lbl << "\033[0m ";
-  return *this->msgStream;
-  // }
+  if (this->quiet)
+    return this->nullStream;
+  else
+  {
+    *this->msgStream << "\033[1;" << _color << "m" << _lbl << "\033[0m ";
+    return *this->msgStream;
+  }
 }
 
 //////////////////////////////////////////////////
