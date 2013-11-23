@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ void MudPlugin::Load(physics::ModelPtr _model,
   GZ_ASSERT(_sdf, "MudPlugin _sdf pointer is NULL");
   if (_sdf->HasElement("contact_sensor_name"))
   {
-    this->contactSensorName = _sdf->GetValueString("contact_sensor_name");
+    this->contactSensorName = _sdf->Get<std::string>("contact_sensor_name");
   }
   else
   {
@@ -65,15 +65,15 @@ void MudPlugin::Load(physics::ModelPtr _model,
   }
 
   if (_sdf->HasElement("stiffness"))
-    this->stiffness = _sdf->GetValueDouble("stiffness");
+    this->stiffness = _sdf->Get<double>("stiffness");
 
   if (_sdf->HasElement("damping"))
-    this->damping = _sdf->GetValueDouble("damping");
+    this->damping = _sdf->Get<double>("damping");
 
   if (_sdf->HasElement("contact_surface_bitmask"))
   {
     this->contactSurfaceBitmask =
-        _sdf->GetValueUInt("contact_surface_bitmask");
+        _sdf->Get<unsigned int>("contact_surface_bitmask");
   }
 
   if (_sdf->HasElement("link_name"))
@@ -81,7 +81,7 @@ void MudPlugin::Load(physics::ModelPtr _model,
     sdf::ElementPtr elem = _sdf->GetElement("link_name");
     while (elem)
     {
-      allowedLinks.push_back(elem->GetValueString());
+      allowedLinks.push_back(elem->Get<std::string>());
       links.push_back(physics::LinkPtr());
       joints.push_back(physics::JointPtr());
       elem = elem->GetNextElement("link_name");
@@ -118,17 +118,24 @@ void MudPlugin::Init()
       sensors::ContactSensorPtr sensor =
           boost::dynamic_pointer_cast<sensors::ContactSensor>
           (mgr->GetSensor(name));
-      for (unsigned int i = 0; i < sensor->GetCollisionCount(); ++i)
+      if (sensor)
       {
-        std::string colName = sensor->GetCollisionName(i);
-        physics::CollisionPtr colPtr =
-            boost::dynamic_pointer_cast<physics::Collision>(
-            this->world->GetEntity(colName));
-        if (colPtr)
+        for (unsigned int i = 0; i < sensor->GetCollisionCount(); ++i)
         {
-          this->contactSurfaceBitmask |=
-              colPtr->GetSurface()->collideWithoutContactBitmask;
+          std::string colName = sensor->GetCollisionName(i);
+          physics::CollisionPtr colPtr =
+              boost::dynamic_pointer_cast<physics::Collision>(
+              this->world->GetEntity(colName));
+          if (colPtr)
+          {
+            this->contactSurfaceBitmask |=
+                colPtr->GetSurface()->collideWithoutContactBitmask;
+          }
         }
+      }
+      else
+      {
+        gzerr << "Unable to GetSensor, ignoring contact_surface_bitmask\n";
       }
     }
   }
