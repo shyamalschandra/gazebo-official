@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,11 @@
 #include "gazebo/gui/qtpropertybrowser/qttreepropertybrowser.h"
 #include "gazebo/gui/qtpropertybrowser/qtvariantproperty.h"
 #include "gazebo/gui/ModelListWidget.hh"
+
+// avoid collision from Mac OS X's ConditionalMacros.h
+#ifdef __MACH__
+#undef TYPE_BOOL
+#endif
 
 using namespace gazebo;
 using namespace gui;
