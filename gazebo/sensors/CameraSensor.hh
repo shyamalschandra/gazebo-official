@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,15 @@
  * Date: 15 July 2003
  */
 
-#ifndef CAMERASENSOR_HH
-#define CAMERASENSOR_HH
+#ifndef _CAMERASENSOR_HH_
+#define _CAMERASENSOR_HH_
 
 #include <string>
 
-#include "sensors/Sensor.hh"
-#include "msgs/MessageTypes.hh"
-#include "transport/TransportTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/sensors/Sensor.hh"
+#include "gazebo/msgs/MessageTypes.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 namespace gazebo
 {
@@ -47,10 +47,6 @@ namespace gazebo
 
       /// \brief Destructor
       public: virtual ~CameraSensor();
-
-      /// \brief Set the parent of the sensor
-      /// \param _name The name of the parent
-      public: virtual void SetParent(const std::string &_name);
 
       /// \brief Load the sensor with SDF parameters
       /// \param[in] _sdf SDF Sensor parameters
@@ -98,6 +94,9 @@ namespace gazebo
       /// \param[in] _filename The name of the file to be saved.
       /// \return True if successful, false if unsuccessful.
       public: bool SaveFrame(const std::string &_filename);
+
+      // Documentation inherited
+      public: virtual bool IsActive();
 
       private: rendering::CameraPtr camera;
       private: rendering::ScenePtr scene;
