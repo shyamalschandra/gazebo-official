@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #ifndef _BALLJOINT_HH_
 #define _BALLJOINT_HH_
 
-#include "Joint.hh"
+#include "gazebo/physics/Joint.hh"
 
 namespace gazebo
 {
@@ -40,7 +40,7 @@ namespace gazebo
     {
       /// \brief Constructor
       /// \param[in] _parent Pointer to the parent link.
-      public: BallJoint(BasePtr _parent) : T(_parent)
+      public: explicit BallJoint(BasePtr _parent) : T(_parent)
               {
                 this->AddType(Base::BALL_JOINT);
               }
@@ -52,8 +52,8 @@ namespace gazebo
 
       /// \brief Template to ::Load the BallJoint.
       /// \param[in] _sdf SDF to load the joint from.
-      protected: void Load(sdf::ElementPtr _sdf)
-                 {T::Load(_sdf);}
+      public: void Load(sdf::ElementPtr _sdf)
+              {T::Load(_sdf);}
 
       /// \internal
       /// \brief Set the axis of rotation. This is not used for ball joints.
@@ -78,6 +78,10 @@ namespace gazebo
       /// \brief Get the low stop of an axis(index).
       public: virtual math::Angle GetLowStop(int /*_index*/)
               {return math::Angle();}
+
+      /// \internal
+      public: virtual unsigned int GetAngleCount() const
+              {return 0;}
     };
     /// \}
   }
