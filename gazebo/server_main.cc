@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,44 @@
  * limitations under the License.
  *
 */
-#include "gazebo/common/LogRecord.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/util/LogRecord.hh"
+#include "gazebo/common/Console.hh"
 #include "gazebo/Server.hh"
 
 //////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-  gazebo::common::LogRecord::Instance()->Init("server");
+  gazebo::Server *server = NULL;
 
-  gazebo::Server *server = new gazebo::Server();
-  if (!server->ParseArgs(argc, argv))
-    return -1;
+  try
+  {
+    // Initialize the informational logger. This will log warnings, and
+    // errors.
+    gazebo::common::Console::Instance()->Init("gzserver.log");
 
-  server->Run();
-  server->Fini();
+    // Initialize the data logger. This will log state information.
+    gazebo::util::LogRecord::Instance()->Init("gzserver");
 
-  delete server;
+    // Output the version of Gazebo.
+    gzlog << GAZEBO_VERSION_HEADER << std::endl;
+
+    server = new gazebo::Server();
+    if (!server->ParseArgs(argc, argv))
+      return -1;
+
+    server->Run();
+    server->Fini();
+
+    delete server;
+  }
+  catch(gazebo::common::Exception &_e)
+  {
+    _e.Print();
+
+    server->Fini();
+    delete server;
+  }
+
   return 0;
 }
