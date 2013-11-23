@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,12 @@ namespace gazebo
 
     /// \brief Dynamically created joint for simulating mud forces.
     private: std::vector<physics::JointPtr> joints;
+
+    /// \brief Custom bitmask associated to collision surface of allowed links
+    private: unsigned int contactSurfaceBitmask;
+
+    /// \brief SDF for this plugin;
+    private: sdf::ElementPtr sdf;
   };
 }
 #endif  // ifndef _MUD_PLUGIN_HH_
