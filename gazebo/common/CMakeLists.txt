@@ -93,8 +93,10 @@ set (gtest_sources
   Animation_TEST.cc
   ColladaLoader_TEST.cc
   Color_TEST.cc
+  CommonIface_TEST.cc
   Console_TEST.cc
   Exception_TEST.cc
+  Event_TEST.cc
   Material_TEST.cc
   Mesh_TEST.cc
   Image_TEST.cc
@@ -160,6 +162,3 @@ endif()
 
 gz_install_library(gazebo_common)
 gz_install_includes("common" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/common.hh)
-
-# Deprecated Common.hh
-gz_issue_775("Common")
