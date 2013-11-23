@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,14 +76,14 @@ namespace gazebo
       /// \brief Set the low stop of an axis(index).
       public: virtual void SetLowStop(int _index, const math::Angle &_angle);
 
-      /// \brief Get the angle of rotation of an axis(index)
-      public: virtual math::Angle GetAngle(int _index) const;
+      // Documentation inherited.
+      public: virtual math::Angle GetAngleImpl(int _index) const;
 
-      /// \brief Get the axis of rotation
+      // Documentation inherited.
       public: virtual math::Vector3 GetGlobalAxis(int _index) const;
 
-      /// \brief Get the angle of rotation
-      public: virtual math::Angle GetAngleImpl(int _index) const;
+      // Documentation inherited.
+      protected: virtual void SetForceImpl(int _index, double _torque);
 
       /// \brief Pointer to Bullet ball constraint
       private: btPoint2PointConstraint *bulletBall;
