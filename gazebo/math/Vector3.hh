@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@
 #include <fstream>
 
 #include "gazebo/math/Helpers.hh"
-#include "gazebo/common/CommonTypes.hh"
 
 namespace gazebo
 {
@@ -242,7 +241,8 @@ namespace gazebo
       public: const Vector3 &operator*=(const Vector3 &_v);
 
       /// \brief Multiplication operators
-      /// \param[in] _v the scaling factor
+      /// \param[in] _s the scaling factor
+      /// \param[in] _v input vector
       /// \return a scaled vector
       public: friend inline Vector3 operator*(double _s,
                                               const Vector3 &_v)
@@ -335,4 +335,3 @@ namespace gazebo
   }
 }
 #endif
-
