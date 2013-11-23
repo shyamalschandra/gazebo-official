@@ -66,6 +66,9 @@
 using namespace gazebo;
 using namespace physics;
 
+/// \brief Flag used to say if/when to clear all models.
+/// This will be replaced with a class member variable in Gazebo 3.0
+bool g_clearModels;
 
 class ModelUpdate_TBB
 {
@@ -84,7 +87,7 @@ class ModelUpdate_TBB
 //////////////////////////////////////////////////
 World::World(const std::string &_name)
 {
-  this->clearModels = false;
+  g_clearModels = false;
   this->sdf.reset(new sdf::Element);
   sdf::initFile("world.sdf", this->sdf);
 
@@ -565,16 +568,22 @@ void World::Step()
 
   DIAG_TIMER_STOP("World::Step");
 
-  if (this->clearModels)
+  if (g_clearModels)
     this->ClearModels();
 }
 
 //////////////////////////////////////////////////
 void World::StepWorld(int _steps)
 {
+  this->Step(_steps);
+}
+
+//////////////////////////////////////////////////
+void World::Step(unsigned int _steps)
+{
   if (!this->IsPaused())
   {
-    gzwarn << "Calling World::StepWorld(steps) while world is not paused\n";
+    gzwarn << "Calling World::Step(steps) while world is not paused\n";
     this->SetPaused(true);
   }
 
@@ -714,13 +723,13 @@ void World::Fini()
 //////////////////////////////////////////////////
 void World::Clear()
 {
-  this->clearModels = true;
+  g_clearModels = true;
 }
 
 //////////////////////////////////////////////////
 void World::ClearModels()
 {
-  this->clearModels = false;
+  g_clearModels = false;
   bool pauseState = this->IsPaused();
   this->SetPaused(true);
 
@@ -1772,7 +1781,8 @@ void World::UpdateStateSDF()
   sdf::ElementPtr stateElem = this->sdf->GetElement("state");
   stateElem->ClearElements();
 
-  this->prevStates[(this->stateToggle + 1) % 2].FillSDF(stateElem);
+  WorldState currentState(shared_from_this());
+  currentState.FillSDF(stateElem);
 }
 
 //////////////////////////////////////////////////
@@ -1969,6 +1979,12 @@ void World::LogWorker()
 
   // Make sure nothing is blocked by this thread.
   this->logContinueCondition.notify_all();
+}
+
+/////////////////////////////////////////////////
+uint32_t World::GetIterations() const
+{
+  return this->iterations;
 }
 
 //////////////////////////////////////////////////
