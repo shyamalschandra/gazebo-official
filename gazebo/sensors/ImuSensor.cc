@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,11 +61,11 @@ void ImuSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
 
   if (this->sdf->HasElement("imu") &&
       this->sdf->GetElement("imu")->HasElement("topic") &&
-      this->sdf->GetElement("imu")->GetValueString("topic")
+      this->sdf->GetElement("imu")->Get<std::string>("topic")
       != "__default_topic__")
   {
     this->pub = this->node->Advertise<msgs::IMU>(
-        this->sdf->GetElement("imu")->GetValueString("topic"));
+        this->sdf->GetElement("imu")->Get<std::string>("topic"), 500);
   }
   else
   {
@@ -73,7 +73,7 @@ void ImuSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
     topicName += this->parentName + "/" + this->GetName() + "/imu";
     boost::replace_all(topicName, "::", "/");
 
-    this->pub = this->node->Advertise<msgs::IMU>(topicName);
+    this->pub = this->node->Advertise<msgs::IMU>(topicName, 500);
   }
 
   // Handle noise model settings.
@@ -82,7 +82,7 @@ void ImuSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
   if (imuElem->HasElement("noise"))
   {
     sdf::ElementPtr noiseElem = imuElem->GetElement("noise");
-    std::string type = noiseElem->GetValueString("type");
+    std::string type = noiseElem->Get<std::string>("type");
     if (type == "gaussian")
     {
       this->noiseActive = true;
@@ -96,10 +96,10 @@ void ImuSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
       if (noiseElem->HasElement("rate"))
       {
         sdf::ElementPtr rateElem = noiseElem->GetElement("rate");
-        this->rateNoiseMean = rateElem->GetValueDouble("mean");
-        this->rateNoiseStdDev = rateElem->GetValueDouble("stddev");
-        double rateBiasMean = rateElem->GetValueDouble("bias_mean");
-        double rateBiasStddev = rateElem->GetValueDouble("bias_stddev");
+        this->rateNoiseMean = rateElem->Get<double>("mean");
+        this->rateNoiseStdDev = rateElem->Get<double>("stddev");
+        double rateBiasMean = rateElem->Get<double>("bias_mean");
+        double rateBiasStddev = rateElem->Get<double>("bias_stddev");
         // Sample the bias that we'll use later
         this->rateBias = math::Rand::GetDblNormal(rateBiasMean, rateBiasStddev);
         // With equal probability, we pick a negative bias (by convention,
@@ -114,10 +114,10 @@ void ImuSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
       if (noiseElem->HasElement("accel"))
       {
         sdf::ElementPtr accelElem = noiseElem->GetElement("accel");
-        this->accelNoiseMean = accelElem->GetValueDouble("mean");
-        this->accelNoiseStdDev = accelElem->GetValueDouble("stddev");
-        double accelBiasMean = accelElem->GetValueDouble("bias_mean");
-        double accelBiasStddev = accelElem->GetValueDouble("bias_stddev");
+        this->accelNoiseMean = accelElem->Get<double>("mean");
+        this->accelNoiseStdDev = accelElem->Get<double>("stddev");
+        double accelBiasMean = accelElem->Get<double>("bias_mean");
+        double accelBiasStddev = accelElem->Get<double>("bias_stddev");
         // Sample the bias that we'll use later
         this->accelBias = math::Rand::GetDblNormal(accelBiasMean,
                                                    accelBiasStddev);
@@ -171,6 +171,8 @@ void ImuSensor::Init()
 void ImuSensor::Fini()
 {
   this->parentEntity->SetPublishData(false);
+  this->pub.reset();
+  Sensor::Fini();
 }
 
 //////////////////////////////////////////////////
@@ -254,26 +256,26 @@ void ImuSensor::UpdateImpl(bool /*_force*/)
     math::Pose parentEntityPose = this->parentEntity->GetWorldPose();
     math::Pose imuPose = this->pose + parentEntityPose;
 
+    // Set the IMU angular velocity
+    math::Vector3 imuWorldAngularVel
+        = msgs::Convert(msg.angular_velocity());
+
+    msgs::Set(this->imuMsg.mutable_angular_velocity(),
+              imuPose.rot.GetInverse().RotateVector(
+              imuWorldAngularVel));
+
     // Compute and set the IMU linear acceleration
     math::Vector3 imuWorldLinearVel
         = msgs::Convert(msg.linear_velocity());
+    // Get the correct vel for imu's that are at an offset from parent link
+    imuWorldLinearVel +=
+        imuWorldAngularVel.Cross(parentEntityPose.pos - imuPose.pos);
     this->linearAcc = imuPose.rot.GetInverse().RotateVector(
       (imuWorldLinearVel - this->lastLinearVel) / dt);
 
     // Add contribution from gravity
     this->linearAcc -= imuPose.rot.GetInverse().RotateVector(this->gravity);
     msgs::Set(this->imuMsg.mutable_linear_acceleration(), this->linearAcc);
-
-    // Set the IMU angular velocity
-    math::Vector3 imuWorldAngularVel
-        = msgs::Convert(msg.angular_velocity());
-
-    // Get the correct vel for imu's that are at an offset from parent link
-    imuWorldLinearVel +=
-        imuWorldAngularVel.Cross(parentEntityPose.pos - imuPose.pos);
-    msgs::Set(this->imuMsg.mutable_angular_velocity(),
-              imuPose.rot.GetInverse().RotateVector(
-              imuWorldAngularVel));
 
     // Set the IMU orientation
     msgs::Set(this->imuMsg.mutable_orientation(),
