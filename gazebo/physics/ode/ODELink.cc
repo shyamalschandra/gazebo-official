@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,8 +87,8 @@ void ODELink::Init()
   }
 
   GZ_ASSERT(this->sdf != NULL, "Unable to initialize link, SDF is NULL");
-  this->SetKinematic(this->sdf->GetValueBool("kinematic"));
-  this->SetGravityMode(this->sdf->GetValueBool("gravity"));
+  this->SetKinematic(this->sdf->Get<bool>("kinematic"));
+  this->SetGravityMode(this->sdf->Get<bool>("gravity"));
 
   this->SetLinearDamping(this->GetLinearDamping());
   this->SetAngularDamping(this->GetAngularDamping());
@@ -201,12 +201,6 @@ void ODELink::Fini()
   this->linkId = NULL;
 
   this->odePhysics.reset();
-}
-
-//////////////////////////////////////////////////
-void ODELink::Update()
-{
-  Link::Update();
 }
 
 //////////////////////////////////////////////////
@@ -362,8 +356,11 @@ void ODELink::UpdateMass()
   math::Vector3 cog(0, 0, 0);
 
   GZ_ASSERT(this->inertial != NULL, "Inertial pointer is NULL");
-  math::Vector3 principals = this->inertial->GetPrincipalMoments();
-  math::Vector3 products = this->inertial->GetProductsofInertia();
+  // give ODE un-rotated inertia
+  math::Matrix3 moi = this->inertial->GetMOI(
+    math::Pose(this->inertial->GetCoG(), math::Quaternion()));
+  math::Vector3 principals(moi[0][0], moi[1][1], moi[2][2]);
+  math::Vector3 products(moi[0][1], moi[0][2], moi[1][2]);
 
   dMassSetParameters(&odeMass, this->inertial->GetMass(),
       cog.x, cog.y, cog.z,
@@ -408,7 +405,6 @@ math::Vector3 ODELink::GetWorldLinearVel(const math::Vector3 &_offset) const
           << " does not exist, GetWorldLinearVel returns default of "
           << vel << std::endl;
   }
-
   return vel;
 }
 
@@ -698,9 +694,9 @@ void ODELink::SetKinematic(const bool &_state)
   this->sdf->GetElement("kinematic")->Set(_state);
   if (this->linkId)
   {
-    if (_state)
+    if (_state && !dBodyIsKinematic(this->linkId))
       dBodySetKinematic(this->linkId);
-    else
+    else if (dBodyIsKinematic(this->linkId))
       dBodySetDynamic(this->linkId);
   }
   else
@@ -737,4 +733,10 @@ void ODELink::SetAutoDisable(bool _disable)
           << " does not exist, unable to SetAutoDisable" << std::endl;
   else
     gzlog << "ODE model has joints, unable to SetAutoDisable" << std::endl;
+}
+
+//////////////////////////////////////////////////
+void ODELink::SetLinkStatic(bool /*_static*/)
+{
+  gzlog << "To be implemented\n";
 }
