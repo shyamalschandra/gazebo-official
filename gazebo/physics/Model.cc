@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ void Model::Init()
     this->jointPub->Publish(msg);
   }
 
-  for (std::vector<Gripper*>::iterator iter = this->grippers.begin();
+  for (std::vector<GripperPtr>::iterator iter = this->grippers.begin();
        iter != this->grippers.end(); ++iter)
   {
     (*iter)->Init();
@@ -628,7 +628,11 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint = this->GetWorld()->GetPhysicsEngine()->CreateJoint(stype,
      boost::static_pointer_cast<Model>(shared_from_this()));
   if (!joint)
-    gzthrow("Unable to create joint of type[" + stype + "]\n");
+  {
+    gzerr << "Unable to create joint of type[" << stype << "]\n";
+    // gzthrow("Unable to create joint of type[" + stype + "]\n");
+    return;
+  }
 
   joint->SetModel(boost::static_pointer_cast<Model>(shared_from_this()));
 
@@ -636,7 +640,11 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
   joint->Load(_sdf);
 
   if (this->GetJoint(joint->GetScopedName()) != NULL)
-    gzthrow("can't have two joint with the same name");
+  {
+    gzerr << "can't have two joint with the same name\n";
+    gzthrow("can't have two joints with the same name ["+
+      joint->GetScopedName() + "]\n");
+  }
 
   this->joints.push_back(joint);
 
@@ -649,8 +657,8 @@ void Model::LoadJoint(sdf::ElementPtr _sdf)
 //////////////////////////////////////////////////
 void Model::LoadGripper(sdf::ElementPtr _sdf)
 {
-  Gripper *gripper = new Gripper(
-      boost::static_pointer_cast<Model>(shared_from_this()));
+  GripperPtr gripper(new Gripper(
+      boost::static_pointer_cast<Model>(shared_from_this())));
   gripper->Load(_sdf);
   this->grippers.push_back(gripper);
 }
@@ -820,7 +828,7 @@ void Model::FillMsg(msgs::Model &_msg)
 //////////////////////////////////////////////////
 void Model::ProcessMsg(const msgs::Model &_msg)
 {
-  if (!(_msg.has_id() && _msg.id() == this->GetId()))
+  if (_msg.has_id() && _msg.id() != this->GetId())
   {
     gzerr << "Incorrect ID[" << _msg.id() << " != " << this->GetId() << "]\n";
     return;
@@ -1024,4 +1032,24 @@ void Model::RemoveLink(const std::string &_name)
       break;
     }
   }
+}
+/////////////////////////////////////////////////
+JointControllerPtr Model::GetJointController()
+{
+  return this->jointController;
+}
+
+/////////////////////////////////////////////////
+GripperPtr Model::GetGripper(size_t _index) const
+{
+  if (_index < this->grippers.size())
+    return this->grippers[_index];
+  else
+    return GripperPtr();
+}
+
+/////////////////////////////////////////////////
+size_t Model::GetGripperCount() const
+{
+  return this->grippers.size();
 }
