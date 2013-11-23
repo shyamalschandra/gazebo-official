@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #ifndef _UNIVERSALJOINT_HH_
 #define _UNIVERSALJOINT_HH_
 
+#include "gazebo/math/Vector3.hh"
 #include "gazebo/physics/Joint.hh"
 
 namespace gazebo
@@ -43,7 +44,11 @@ namespace gazebo
 
       /// \brief Destuctor.
       public: virtual ~UniversalJoint()
-              {}
+              { }
+
+      // Documentation inherited.
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
 
       /// \brief Load a UniversalJoint.
       /// \param[in] _sdf SDF values to load from.
@@ -51,10 +56,12 @@ namespace gazebo
               {
                 T::Load(_sdf);
 
+                /*
                 this->SetAxis(0,
-                    this->sdf->GetElement("axis")->GetValueVector3("xyz"));
+                    this->sdf->GetElement("axis")->Get<math::Vector3("xyz"));
                 this->SetAxis(1,
-                    this->sdf->GetElement("axis2")->GetValueVector3("xyz"));
+                    this->sdf->GetElement("axis2")->Get<math::Vector3>("xyz"));
+                    */
               }
     };
     /// \}
