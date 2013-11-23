@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ TEST(PlaneTest, Plane)
     EXPECT_TRUE(plane.normal == math::Vector3(0, 0, 1));
     EXPECT_TRUE(plane.size == math::Vector2d(2, 3));
 
-    EXPECT_EQ(-1, plane.Distance(math::Vector3(0, 0, 1),
-                                 math::Vector3(0, 0, -1)));
+    EXPECT_DOUBLE_EQ(-1, plane.Distance(math::Vector3(0, 0, 1),
+          math::Vector3(0, 0, -1)));
 
     plane.Set(math::Vector3(1, 0, 0), math::Vector2d(1, 1), 1.0);
     EXPECT_TRUE(math::equal(plane.d, 1.0));
