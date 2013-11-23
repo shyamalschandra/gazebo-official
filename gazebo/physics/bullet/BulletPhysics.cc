@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 #include "gazebo/physics/bullet/BulletMultiRayShape.hh"
 #include "gazebo/physics/bullet/BulletBoxShape.hh"
 #include "gazebo/physics/bullet/BulletCylinderShape.hh"
-#include "gazebo/physics/bullet/BulletTrimeshShape.hh"
+#include "gazebo/physics/bullet/BulletMeshShape.hh"
 #include "gazebo/physics/bullet/BulletRayShape.hh"
 
 #include "gazebo/physics/bullet/BulletHingeJoint.hh"
@@ -49,6 +49,7 @@
 #include "gazebo/physics/SurfaceParams.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/MapShape.hh"
+#include "gazebo/physics/ContactManager.hh"
 
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
@@ -82,12 +83,12 @@ struct CollisionFilter : public btOverlapFilterCallback
           & _proxy0->m_collisionFilterMask);
 
       btRigidBody *rb0 = btRigidBody::upcast(
-              static_cast<btCollisionObject*>(_proxy0->m_clientObject));
+              static_cast<btCollisionObject *>(_proxy0->m_clientObject));
       if (!rb0)
         return collide;
 
       btRigidBody *rb1 = btRigidBody::upcast(
-              static_cast<btCollisionObject*>(_proxy1->m_clientObject));
+              static_cast<btCollisionObject *>(_proxy1->m_clientObject));
       if (!rb1)
          return collide;
 
@@ -109,11 +110,114 @@ struct CollisionFilter : public btOverlapFilterCallback
 };
 
 //////////////////////////////////////////////////
-bool ContactCallback(btManifoldPoint &/*_cp*/,
-    const btCollisionObjectWrapper * /*_obj0*/, int /*_partId0*/,
-    int /*_index0*/, const btCollisionObjectWrapper * /*_obj1*/,
-    int /*_partId1*/, int /*_index1*/)
+void InternalTickCallback(btDynamicsWorld *_world, btScalar _timeStep)
 {
+  int numManifolds = _world->getDispatcher()->getNumManifolds();
+  for (int i = 0; i < numManifolds; ++i)
+  {
+    btPersistentManifold *contactManifold =
+        _world->getDispatcher()->getManifoldByIndexInternal(i);
+    const btCollisionObject *obA =
+        static_cast<const btCollisionObject *>(contactManifold->getBody0());
+    const btCollisionObject *obB =
+        static_cast<const btCollisionObject *>(contactManifold->getBody1());
+
+    const btRigidBody *rbA = btRigidBody::upcast(obA);
+    const btRigidBody *rbB = btRigidBody::upcast(obB);
+
+    BulletLink *link1 = static_cast<BulletLink *>(
+        obA->getUserPointer());
+    GZ_ASSERT(link1 != NULL, "Link1 in collision pair is NULL");
+
+    BulletLink *link2 = static_cast<BulletLink *>(
+        obB->getUserPointer());
+    GZ_ASSERT(link2 != NULL, "Link2 in collision pair is NULL");
+
+    unsigned int colIndex = 0;
+    CollisionPtr collisionPtr1 = link1->GetCollision(colIndex);
+    CollisionPtr collisionPtr2 = link2->GetCollision(colIndex);
+
+    if (!collisionPtr1 || !collisionPtr2)
+      continue;
+
+    PhysicsEnginePtr engine = collisionPtr1->GetWorld()->GetPhysicsEngine();
+    BulletPhysicsPtr bulletPhysics =
+          boost::static_pointer_cast<BulletPhysics>(engine);
+
+    // Add a new contact to the manager. This will return NULL if no one is
+    // listening for contact information.
+    Contact *contactFeedback = bulletPhysics->GetContactManager()->NewContact(
+        collisionPtr1.get(), collisionPtr2.get(),
+        collisionPtr1->GetWorld()->GetSimTime());
+
+    if (!contactFeedback)
+      continue;
+
+    math::Pose body1Pose = link1->GetWorldPose();
+    math::Pose body2Pose = link2->GetWorldPose();
+    math::Vector3 cg1Pos = link1->GetInertial()->GetPose().pos;
+    math::Vector3 cg2Pos = link2->GetInertial()->GetPose().pos;
+    math::Vector3 localForce1;
+    math::Vector3 localForce2;
+    math::Vector3 localTorque1;
+    math::Vector3 localTorque2;
+
+    int numContacts = contactManifold->getNumContacts();
+    for (int j = 0; j < numContacts; ++j)
+    {
+      btManifoldPoint &pt = contactManifold->getContactPoint(j);
+      if (pt.getDistance() < 0.f)
+      {
+        const btVector3 &ptB = pt.getPositionWorldOnB();
+        const btVector3 &normalOnB = pt.m_normalWorldOnB;
+        btVector3 impulse = pt.m_appliedImpulse * normalOnB;
+
+        // calculate force in world frame
+        btVector3 force = impulse/_timeStep;
+
+        // calculate torque in world frame
+        btVector3 torqueA = (ptB-rbA->getCenterOfMassPosition()).cross(force);
+        btVector3 torqueB = (ptB-rbB->getCenterOfMassPosition()).cross(-force);
+
+        // Convert from world to link frame
+        localForce1 = body1Pose.rot.RotateVectorReverse(
+            BulletTypes::ConvertVector3(force));
+        localForce2 = body2Pose.rot.RotateVectorReverse(
+            BulletTypes::ConvertVector3(-force));
+        localTorque1 = body1Pose.rot.RotateVectorReverse(
+            BulletTypes::ConvertVector3(torqueA));
+        localTorque2 = body2Pose.rot.RotateVectorReverse(
+            BulletTypes::ConvertVector3(torqueB));
+
+        contactFeedback->positions[j] = BulletTypes::ConvertVector3(ptB);
+        contactFeedback->normals[j] = BulletTypes::ConvertVector3(normalOnB);
+        contactFeedback->depths[j] = -pt.getDistance();
+        if (!link1->IsStatic())
+        {
+          contactFeedback->wrench[j].body1Force = localForce1;
+          contactFeedback->wrench[j].body1Torque = localTorque1;
+        }
+        if (!link2->IsStatic())
+        {
+          contactFeedback->wrench[j].body2Force = localForce2;
+          contactFeedback->wrench[j].body2Torque = localTorque2;
+        }
+        contactFeedback->count++;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+bool ContactCallback(btManifoldPoint &_cp,
+    const btCollisionObjectWrapper *_obj0, int /*_partId0*/, int /*_index0*/,
+    const btCollisionObjectWrapper *_obj1, int /*_partId1*/, int /*_index1*/)
+{
+  _cp.m_combinedFriction = std::min(_obj1->m_collisionObject->getFriction(),
+    _obj0->m_collisionObject->getFriction());
+
+  // this return value is currently ignored, but to be on the safe side:
+  //  return false if you don't calculate friction
   return true;
 }
 
@@ -168,6 +272,9 @@ BulletPhysics::BulletPhysics(WorldPtr _world)
   gContactAddedCallback = ContactCallback;
   gContactProcessedCallback = ContactProcessed;
 
+  this->dynamicsWorld->setInternalTickCallback(
+      InternalTickCallback, static_cast<void *>(this));
+
   // Set random seed for physics engine based on gazebo's random seed.
   // Note: this was moved from physics::PhysicsEngine constructor.
   this->SetSeed(math::Rand::GetSeed());
@@ -197,7 +304,7 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
 
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
 
-  math::Vector3 g = this->sdf->GetValueVector3("gravity");
+  math::Vector3 g = this->sdf->Get<math::Vector3>("gravity");
   // ODEPhysics checks this, so we will too.
   if (g == math::Vector3(0, 0, 0))
     gzwarn << "Gravity vector is (0, 0, 0). Objects will float.\n";
@@ -207,8 +314,8 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
 
   // Split impulse feature. This reduces large bounces from deep penetrations,
   // but can lead to improper stacking of objects, see
-  // http://bulletphysics.org/mediawiki-1.5.8/index.php/BtContactSolverInfo ...
-  // ... #Split_Impulse
+  // http://web.archive.org/web/20120430155635/http://bulletphysics.org/
+  //     mediawiki-1.5.8/index.php/BtContactSolverInfo#Split_Impulse
   info.m_splitImpulse = 1;
   info.m_splitImpulsePenetrationThreshold = -0.02;
 
@@ -216,24 +323,34 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
   // This is important for rolling without slip (see issue #480)
   info.m_solverMode |= SOLVER_USE_2_FRICTION_DIRECTIONS;
 
-  if (bulletElem->HasElement("constraints"))
-  {
-    // the following are undocumented members of btContactSolverInfo, see
-    // bulletphysics.org/mediawiki-1.5.8/index.php/BtContactSolverInfo ...
-    // ... #Undocumented_members_of_btContactSolverInfo
-    // m_globalCfm: constraint force mixing
-    info.m_globalCfm =
-      bulletElem->GetElement("constraints")->GetValueDouble("cfm");
-    // m_erp: Baumgarte factor
-    info.m_erp = bulletElem->GetElement("constraints")->GetValueDouble("erp");
-  }
-  else
-    info.m_erp = 0.2;
+  // the following are undocumented members of btContactSolverInfo
+  // m_globalCfm: constraint force mixing
+  info.m_globalCfm =
+    bulletElem->GetElement("constraints")->Get<double>("cfm");
+  // m_erp: Baumgarte factor
+  info.m_erp = bulletElem->GetElement("constraints")->Get<double>("erp");
 
   info.m_numIterations =
-      boost::any_cast<int>(this->GetParam(SOR_ITERS));
+      boost::any_cast<int>(this->GetParam(PGS_ITERS));
   info.m_sor =
       boost::any_cast<double>(this->GetParam(SOR));
+
+  gzlog << " debug physics: "
+        << " iters[" << info.m_numIterations
+        << "] sor[" << info.m_sor
+        << "] erp[" << info.m_erp
+        << "] cfm[" << info.m_globalCfm
+        << "] split[" << info.m_splitImpulse
+        << "] split tol[" << info.m_splitImpulsePenetrationThreshold
+        << "]\n";
+
+  // debugging
+  // info.m_numIterations = 1000;
+  // info.m_sor = 1.0;
+  // info.m_erp = 0.2;
+  // info.m_globalCfm = 0.0;
+  // info.m_splitImpulse = 0;
+  // info.m_splitImpulsePenetrationThreshold = 0.0;
 }
 
 //////////////////////////////////////////////////
@@ -259,15 +376,12 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
   {
     msgs::Physics physicsMsg;
     physicsMsg.set_type(msgs::Physics::BULLET);
-    // update_rate is deprecated
-//    physicsMsg.set_update_rate(this->GetUpdateRate());
     physicsMsg.set_solver_type(this->solverType);
-    // dt is deprecated
-//    physicsMsg.set_dt(this->GetStepTime());
+    // min_step_size is defined but not yet used
     physicsMsg.set_min_step_size(
         boost::any_cast<double>(this->GetParam(MIN_STEP_SIZE)));
     physicsMsg.set_iters(
-        boost::any_cast<int>(this->GetParam(SOR_ITERS)));
+        boost::any_cast<int>(this->GetParam(PGS_ITERS)));
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
     physicsMsg.set_sor(
         boost::any_cast<double>(this->GetParam(SOR)));
@@ -278,6 +392,9 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     physicsMsg.set_contact_surface_layer(
         boost::any_cast<double>(this->GetParam(CONTACT_SURFACE_LAYER)));
     physicsMsg.mutable_gravity()->CopyFrom(msgs::Convert(this->GetGravity()));
+    physicsMsg.set_real_time_update_rate(this->realTimeUpdateRate);
+    physicsMsg.set_real_time_factor(this->targetRealTimeFactor);
+    physicsMsg.set_max_step_size(this->maxStepSize);
 
     response.set_type(physicsMsg.GetTypeName());
     physicsMsg.SerializeToString(serializedData);
@@ -288,22 +405,14 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
 /////////////////////////////////////////////////
 void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
-  // deprecated
-  if (_msg->has_dt())
-    this->SetStepTime(_msg->dt());
-
   if (_msg->has_min_step_size())
     this->SetParam(MIN_STEP_SIZE, _msg->min_step_size());
-
-  // deprecated
-  if (_msg->has_update_rate())
-    this->SetUpdateRate(_msg->update_rate());
 
   if (_msg->has_solver_type())
     this->SetParam(SOLVER_TYPE, _msg->solver_type());
 
   if (_msg->has_iters())
-    this->SetParam(SOR_ITERS, _msg->iters());
+    this->SetParam(PGS_ITERS, _msg->iters());
 
   if (_msg->has_sor())
     this->SetParam(SOR, _msg->sor());
@@ -323,6 +432,19 @@ void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
   if (_msg->has_gravity())
     this->SetGravity(msgs::Convert(_msg->gravity()));
 
+  if (_msg->has_real_time_factor())
+    this->SetTargetRealTimeFactor(_msg->real_time_factor());
+
+  if (_msg->has_real_time_update_rate())
+  {
+    this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
+  }
+
+  if (_msg->has_max_step_size())
+  {
+    this->SetMaxStepSize(_msg->max_step_size());
+  }
+
   /// Make sure all models get at least one update cycle.
   this->world->EnableAllModels();
 }
@@ -330,6 +452,7 @@ void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 //////////////////////////////////////////////////
 void BulletPhysics::UpdateCollision()
 {
+  this->contactManager->ResetCount();
 }
 
 //////////////////////////////////////////////////
@@ -338,11 +461,8 @@ void BulletPhysics::UpdatePhysics()
   // need to lock, otherwise might conflict with world resetting
   boost::recursive_mutex::scoped_lock lock(*this->physicsUpdateMutex);
 
-  // common::Time currTime =  this->world->GetRealTime();
-
   this->dynamicsWorld->stepSimulation(
-      this->GetStepTime(), 1, this->GetStepTime());
-  // this->lastUpdateTime = currTime;
+    this->maxStepSize, 1, this->maxStepSize);
 }
 
 //////////////////////////////////////////////////
@@ -362,18 +482,21 @@ void BulletPhysics::Reset()
 
 //////////////////////////////////////////////////
 
-// //////////////////////////////////////////////////
-// void BulletPhysics::SetSORPGSIters(unsigned int _iters)
-// {
-//   // TODO: set SDF parameter
-//   btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
-//   // Line below commented out because it wasn't helping pendulum test.
-//   // info.m_numIterations = _iters;
-// }
+//////////////////////////////////////////////////
+void BulletPhysics::SetSORPGSIters(unsigned int _iters)
+{
+  // TODO: set SDF parameter
+  btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
+  // Line below commented out because it wasn't helping pendulum test.
+  info.m_numIterations = _iters;
+
+  this->sdf->GetElement("bullet")->GetElement(
+      "solver")->GetElement("iters")->Set(_iters);
+}
 
 
 //////////////////////////////////////////////////
-void BulletPhysics::SetParam(PhysicsParam _param, const boost::any &_value)
+void BulletPhysics::SetParam(BulletParam _param, const boost::any &_value)
 {
   if (!this->dynamicsWorld)
     return;
@@ -387,7 +510,16 @@ void BulletPhysics::SetParam(PhysicsParam _param, const boost::any &_value)
   {
     case SOLVER_TYPE:
     {
-      std::string value = boost::any_cast<std::string>(_value);
+      std::string value;
+      try
+      {
+        value = boost::any_cast<std::string>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       if (value == "sequential_impulse")
       {
         bulletElem->GetElement("solver")->GetElement("type")->Set(value);
@@ -400,26 +532,44 @@ void BulletPhysics::SetParam(PhysicsParam _param, const boost::any &_value)
     }
     case GLOBAL_CFM:
     {
-      double value = boost::any_cast<double>(_value);
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       bulletElem->GetElement("constraints")->GetElement("cfm")->Set(value);
       info.m_globalCfm = value;
       break;
     }
     case GLOBAL_ERP:
     {
-      double value = boost::any_cast<double>(_value);
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       bulletElem->GetElement("constraints")->GetElement("erp")->Set(value);
       info.m_erp = value;
       break;
     }
-    case SOR_ITERS:
+    case PGS_ITERS:
     {
       int value;
       try
       {
         value = boost::any_cast<int>(_value);
       }
-      catch (boost::bad_any_cast &e)
+      catch(boost::bad_any_cast &e)
       {
         value = boost::any_cast<unsigned int>(_value);
       }
@@ -429,41 +579,68 @@ void BulletPhysics::SetParam(PhysicsParam _param, const boost::any &_value)
     }
     case SOR:
     {
-      double value = boost::any_cast<double>(_value);
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       bulletElem->GetElement("solver")->GetElement("sor")->Set(value);
       info.m_sor = value;
       break;
     }
     case CONTACT_SURFACE_LAYER:
     {
-      double value = boost::any_cast<double>(_value);
+      /// TODO: Implement contact surface layer param
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       bulletElem->GetElement("constraints")->GetElement(
           "contact_surface_layer")->Set(value);
-      //gzwarn << "Not yet implemented in bullet" << std::endl;
       break;
     }
     case MAX_CONTACTS:
     {
+      /// TODO: Implement max contacts param
       int value;
       try
       {
         value = boost::any_cast<int>(_value);
       }
-      catch (boost::bad_any_cast &e)
+      catch(boost::bad_any_cast &e)
       {
         value = boost::any_cast<unsigned int>(_value);
       }
       bulletElem->GetElement("max_contacts")->GetValue()->Set(value);
-      //gzwarn << "Not yet implemented in bullet" << std::endl;
       break;
     }
     case MIN_STEP_SIZE:
     {
-      double value = boost::any_cast<double>(_value);
+      /// TODO: Implement min step size param
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
       bulletElem->GetElement("solver")->GetElement("min_step_size")->Set(value);
       break;
     }
-
     default:
     {
       gzwarn << "Param not supported in bullet" << std::endl;
@@ -475,7 +652,7 @@ void BulletPhysics::SetParam(PhysicsParam _param, const boost::any &_value)
 //////////////////////////////////////////////////
 void BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 {
-  PhysicsParam param;
+  BulletParam param;
 
   if (_key == "type")
     param = SOLVER_TYPE;
@@ -484,7 +661,7 @@ void BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
   else if (_key == "erp")
     param = GLOBAL_ERP;
   else if (_key == "iters")
-    param = SOR_ITERS;
+    param = PGS_ITERS;
   else if (_key == "sor")
     param = SOR;
   else if (_key == "contact_surface_layer")
@@ -503,7 +680,7 @@ void BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 }
 
 //////////////////////////////////////////////////
-boost::any BulletPhysics::GetParam(PhysicsParam _param) const
+boost::any BulletPhysics::GetParam(BulletParam _param) const
 {
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
   GZ_ASSERT(bulletElem != NULL, "Bullet SDF element does not exist");
@@ -513,43 +690,43 @@ boost::any BulletPhysics::GetParam(PhysicsParam _param) const
   {
     case SOLVER_TYPE:
     {
-      value = bulletElem->GetElement("solver")->GetValueString("type");
+      value = bulletElem->GetElement("solver")->Get<std::string>("type");
       break;
     }
     case GLOBAL_CFM:
     {
-      value = bulletElem->GetElement("constraints")->GetValueDouble("cfm");
+      value = bulletElem->GetElement("constraints")->Get<double>("cfm");
       break;
     }
     case GLOBAL_ERP:
     {
-      value = bulletElem->GetElement("constraints")->GetValueDouble("erp");
+      value = bulletElem->GetElement("constraints")->Get<double>("erp");
       break;
     }
-    case SOR_ITERS:
+    case PGS_ITERS:
     {
-      value = bulletElem->GetElement("solver")->GetValueInt("iters");
+      value = bulletElem->GetElement("solver")->Get<int>("iters");
       break;
     }
     case SOR:
     {
-      value = bulletElem->GetElement("solver")->GetValueDouble("sor");
+      value = bulletElem->GetElement("solver")->Get<double>("sor");
       break;
     }
     case CONTACT_SURFACE_LAYER:
     {
-      value = bulletElem->GetElement("constraints")->GetValueDouble(
+      value = bulletElem->GetElement("constraints")->Get<double>(
           "contact_surface_layer");
       break;
     }
     case MAX_CONTACTS:
     {
-      value = bulletElem->GetElement("max_contacts")->GetValueInt();
+      value = bulletElem->GetElement("max_contacts")->Get<int>();
       break;
     }
     case MIN_STEP_SIZE:
     {
-      value = bulletElem->GetElement("solver")->GetValueDouble("min_step_size");
+      value = bulletElem->GetElement("solver")->Get<double>("min_step_size");
       break;
     }
     default:
@@ -564,7 +741,7 @@ boost::any BulletPhysics::GetParam(PhysicsParam _param) const
 //////////////////////////////////////////////////
 boost::any BulletPhysics::GetParam(const std::string &_key) const
 {
-  PhysicsParam param;
+  BulletParam param;
 
   if (_key == "type")
     param = SOLVER_TYPE;
@@ -573,7 +750,7 @@ boost::any BulletPhysics::GetParam(const std::string &_key) const
   else if (_key == "erp")
     param = GLOBAL_ERP;
   else if (_key == "iters")
-    param = SOR_ITERS;
+    param = PGS_ITERS;
   else if (_key == "sor")
     param = SOR;
   else if (_key == "contact_surface_layer")
@@ -619,7 +796,7 @@ ShapePtr BulletPhysics::CreateShape(const std::string &_type,
 {
   ShapePtr shape;
   BulletCollisionPtr collision =
-    boost::shared_dynamic_cast<BulletCollision>(_collision);
+    boost::dynamic_pointer_cast<BulletCollision>(_collision);
 
   if (_type == "plane")
     shape.reset(new BulletPlaneShape(collision));
@@ -630,7 +807,7 @@ ShapePtr BulletPhysics::CreateShape(const std::string &_type,
   else if (_type == "cylinder")
     shape.reset(new BulletCylinderShape(collision));
   else if (_type == "mesh" || _type == "trimesh")
-    shape.reset(new BulletTrimeshShape(collision));
+    shape.reset(new BulletMeshShape(collision));
   else if (_type == "heightmap")
     shape.reset(new BulletHeightmapShape(collision));
   else if (_type == "multiray")
@@ -690,7 +867,7 @@ double BulletPhysics::GetWorldCFM()
 {
   sdf::ElementPtr elem = this->sdf->GetElement("bullet");
   elem = elem->GetElement("constraints");
-  return elem->GetValueDouble("cfm");
+  return elem->Get<double>("cfm");
 }
 
 //////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/bullet/BulletTypes.hh"
+#include "gazebo/msgs/msgs.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -28,7 +29,14 @@ using namespace physics;
 
 class BulletPhysics_TEST : public ServerFixture
 {
+  public: void PhysicsMsgParam();
+  public: void OnPhysicsMsgResponse(ConstResponsePtr &_msg);
+  public: static msgs::Physics physicsPubMsg;
+  public: static msgs::Physics physicsResponseMsg;
 };
+
+msgs::Physics BulletPhysics_TEST::physicsPubMsg;
+msgs::Physics BulletPhysics_TEST::physicsResponseMsg;
 
 /////////////////////////////////////////////////
 /// Test setting and getting bullet physics params
@@ -44,7 +52,7 @@ TEST_F(BulletPhysics_TEST, PhysicsParam)
   EXPECT_EQ(physics->GetType(), physicsEngineStr);
 
   BulletPhysicsPtr bulletPhysics
-      = boost::shared_static_cast<BulletPhysics>(physics);
+      = boost::static_pointer_cast<BulletPhysics>(physics);
   ASSERT_TRUE(bulletPhysics != NULL);
 
   std::string type = "sequential_impulse";
@@ -55,31 +63,31 @@ TEST_F(BulletPhysics_TEST, PhysicsParam)
   double contactSurfaceLayer = 0.02;
 
   // test setting/getting physics engine params
-  bulletPhysics->SetParam(PhysicsEngine::SOLVER_TYPE, type);
-  bulletPhysics->SetParam(PhysicsEngine::SOR_ITERS, iters);
-  bulletPhysics->SetParam(PhysicsEngine::SOR, sor);
-  bulletPhysics->SetParam(PhysicsEngine::GLOBAL_CFM, cfm);
-  bulletPhysics->SetParam(PhysicsEngine::GLOBAL_ERP, erp);
-  bulletPhysics->SetParam(PhysicsEngine::CONTACT_SURFACE_LAYER,
+  bulletPhysics->SetParam(BulletPhysics::SOLVER_TYPE, type);
+  bulletPhysics->SetParam(BulletPhysics::PGS_ITERS, iters);
+  bulletPhysics->SetParam(BulletPhysics::SOR, sor);
+  bulletPhysics->SetParam(BulletPhysics::GLOBAL_CFM, cfm);
+  bulletPhysics->SetParam(BulletPhysics::GLOBAL_ERP, erp);
+  bulletPhysics->SetParam(BulletPhysics::CONTACT_SURFACE_LAYER,
       contactSurfaceLayer);
 
   boost::any value;
-  value = bulletPhysics->GetParam(PhysicsEngine::SOLVER_TYPE);
+  value = bulletPhysics->GetParam(BulletPhysics::SOLVER_TYPE);
   std::string typeRet = boost::any_cast<std::string>(value);
   EXPECT_EQ(type, typeRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::SOR_ITERS);
+  value = bulletPhysics->GetParam(BulletPhysics::PGS_ITERS);
   int itersRet = boost::any_cast<int>(value);
   EXPECT_EQ(iters, itersRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::SOR);
+  value = bulletPhysics->GetParam(BulletPhysics::SOR);
   double sorRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(sor, sorRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::GLOBAL_CFM);
+  value = bulletPhysics->GetParam(BulletPhysics::GLOBAL_CFM);
   double cfmRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(cfm, cfmRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::GLOBAL_ERP);
+  value = bulletPhysics->GetParam(BulletPhysics::GLOBAL_ERP);
   double erpRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(erp, erpRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::CONTACT_SURFACE_LAYER);
+  value = bulletPhysics->GetParam(BulletPhysics::CONTACT_SURFACE_LAYER);
   double contactSurfaceLayerRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(contactSurfaceLayer, contactSurfaceLayerRet);
 
@@ -91,32 +99,112 @@ TEST_F(BulletPhysics_TEST, PhysicsParam)
   erp = 0.22;
   contactSurfaceLayer = 0.03;
 
-  bulletPhysics->SetParam(PhysicsEngine::SOLVER_TYPE, type);
-  bulletPhysics->SetParam(PhysicsEngine::SOR_ITERS, iters);
-  bulletPhysics->SetParam(PhysicsEngine::SOR, sor);
-  bulletPhysics->SetParam(PhysicsEngine::GLOBAL_CFM, cfm);
-  bulletPhysics->SetParam(PhysicsEngine::GLOBAL_ERP, erp);
-  bulletPhysics->SetParam(PhysicsEngine::CONTACT_SURFACE_LAYER,
+  bulletPhysics->SetParam("type", type);
+  bulletPhysics->SetParam("iters", iters);
+  bulletPhysics->SetParam("sor", sor);
+  bulletPhysics->SetParam("cfm", cfm);
+  bulletPhysics->SetParam("erp", erp);
+  bulletPhysics->SetParam("contact_surface_layer",
       contactSurfaceLayer);
 
-  value = bulletPhysics->GetParam(PhysicsEngine::SOLVER_TYPE);
+  value = bulletPhysics->GetParam("type");
   typeRet = boost::any_cast<std::string>(value);
   EXPECT_EQ(type, typeRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::SOR_ITERS);
+  value = bulletPhysics->GetParam("iters");
   itersRet = boost::any_cast<int>(value);
   EXPECT_EQ(iters, itersRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::SOR);
+  value = bulletPhysics->GetParam("sor");
   sorRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(sor, sorRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::GLOBAL_CFM);
+  value = bulletPhysics->GetParam("cfm");
   cfmRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(cfm, cfmRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::GLOBAL_ERP);
+  value = bulletPhysics->GetParam("erp");
   erpRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(erp, erpRet);
-  value = bulletPhysics->GetParam(PhysicsEngine::CONTACT_SURFACE_LAYER);
+  value = bulletPhysics->GetParam("contact_surface_layer");
   contactSurfaceLayerRet = boost::any_cast<double>(value);
   EXPECT_DOUBLE_EQ(contactSurfaceLayer, contactSurfaceLayerRet);
+}
+
+/////////////////////////////////////////////////
+void BulletPhysics_TEST::OnPhysicsMsgResponse(ConstResponsePtr &_msg)
+{
+  if (_msg->type() == physicsPubMsg.GetTypeName())
+    physicsResponseMsg.ParseFromString(_msg->serialized_data());
+}
+
+/////////////////////////////////////////////////
+void BulletPhysics_TEST::PhysicsMsgParam()
+{
+  physicsPubMsg.Clear();
+  physicsResponseMsg.Clear();
+
+  std::string physicsEngineStr = "bullet";
+  Load("worlds/empty.world", false, physicsEngineStr);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  physics::PhysicsEnginePtr engine = world->GetPhysicsEngine();
+  ASSERT_TRUE(engine != NULL);
+
+  transport::NodePtr phyNode;
+  phyNode = transport::NodePtr(new transport::Node());
+  phyNode->Init();
+
+  transport::PublisherPtr physicsPub
+       = phyNode->Advertise<msgs::Physics>("~/physics");
+  transport::PublisherPtr requestPub
+      = phyNode->Advertise<msgs::Request>("~/request");
+  transport::SubscriberPtr responsePub = phyNode->Subscribe("~/response",
+      &BulletPhysics_TEST::OnPhysicsMsgResponse, this);
+
+  physicsPubMsg.set_enable_physics(true);
+  physicsPubMsg.set_max_step_size(0.002);
+  physicsPubMsg.set_real_time_update_rate(700);
+  physicsPubMsg.set_real_time_factor(1.3);
+  physicsPubMsg.set_iters(555);
+  physicsPubMsg.set_sor(1.4);
+  physicsPubMsg.set_cfm(0.12);
+  physicsPubMsg.set_erp(0.23);
+  physicsPubMsg.set_contact_max_correcting_vel(10);
+  physicsPubMsg.set_contact_surface_layer(0.01);
+  physicsPubMsg.set_type(msgs::Physics::BULLET);
+  physicsPubMsg.set_solver_type("sequential_impulse");
+  physicsPub->Publish(physicsPubMsg);
+
+  msgs::Request *requestMsg = msgs::CreateRequest("physics_info", "");
+  requestPub->Publish(*requestMsg);
+
+  int waitCount = 0, maxWaitCount = 3000;
+  while (physicsResponseMsg.ByteSize() == 0 && ++waitCount < maxWaitCount)
+    common::Time::MSleep(10);
+  ASSERT_LT(waitCount, maxWaitCount);
+
+  EXPECT_DOUBLE_EQ(physicsResponseMsg.max_step_size(),
+      physicsPubMsg.max_step_size());
+  EXPECT_DOUBLE_EQ(physicsResponseMsg.real_time_update_rate(),
+      physicsPubMsg.real_time_update_rate());
+  EXPECT_DOUBLE_EQ(physicsResponseMsg.real_time_factor(),
+      physicsPubMsg.real_time_factor());
+  EXPECT_EQ(physicsResponseMsg.solver_type(),
+      physicsPubMsg.solver_type());
+  EXPECT_EQ(physicsResponseMsg.enable_physics(),
+      physicsPubMsg.enable_physics());
+  EXPECT_EQ(physicsResponseMsg.iters(),
+      physicsPubMsg.iters());
+  EXPECT_DOUBLE_EQ(physicsResponseMsg.sor(),
+      physicsPubMsg.sor());
+  EXPECT_DOUBLE_EQ(physicsResponseMsg.cfm(),
+      physicsPubMsg.cfm());
+
+  phyNode->Fini();
+}
+
+/////////////////////////////////////////////////
+TEST_F(BulletPhysics_TEST, PhysicsMsgParam)
+{
+  PhysicsMsgParam();
 }
 
 /////////////////////////////////////////////////
