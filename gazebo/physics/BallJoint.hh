@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #ifndef _BALLJOINT_HH_
 #define _BALLJOINT_HH_
 
-#include "Joint.hh"
+#include "gazebo/physics/Joint.hh"
 
 namespace gazebo
 {
@@ -78,6 +78,10 @@ namespace gazebo
       /// \brief Get the low stop of an axis(index).
       public: virtual math::Angle GetLowStop(int /*_index*/)
               {return math::Angle();}
+
+      /// \internal
+      public: virtual unsigned int GetAngleCount() const
+              {return 0;}
     };
     /// \}
   }
