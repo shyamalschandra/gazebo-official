@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,8 +80,8 @@ void ContactVisual::Update()
   double magScale = 100;
   double vMax = 0.5;
   double vMin = 0.1;
-  double vRange = vMax - vMin; // 0.4
-  double offset = vRange - vMin; // 0.3
+  double vRange = vMax - vMin;
+  double offset = vRange - vMin;
 
   unsigned int c = 0;
   for (int i = 0; i < this->contactsMsg->contact_size(); i++)
@@ -95,7 +95,7 @@ void ContactVisual::Update()
       double depth = this->contactsMsg->contact(i).depth(j);
 
       math::Vector3 force = msgs::Convert(
-          this->contactsMsg->contact(i).wrench(j).body_1_force());
+          this->contactsMsg->contact(i).wrench(j).body_1_wrench().force());
 
       // Scaling factor for the normal line.
       // Eq in the family of Y = 1/(1+exp(-(x^2)))
@@ -183,6 +183,11 @@ void ContactVisual::CreateNewPoint()
 
   cp->depth->AddPoint(math::Vector3(0, 0, 0));
   cp->depth->AddPoint(math::Vector3(0, 0, -1));
+
+  obj->setVisibilityFlags(GZ_VISIBILITY_GUI);
+  cp->depth->setVisibilityFlags(GZ_VISIBILITY_GUI);
+  cp->normal->setVisibilityFlags(GZ_VISIBILITY_GUI);
+
   cp->sceneNode->attachObject(cp->depth);
   cp->sceneNode->attachObject(cp->normal);
   cp->sceneNode->setVisible(false);
