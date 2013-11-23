@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@
 
 #include <string>
 #include <map>
-#include "msgs/msgs.hh"
-#include "gui/qt.h"
-#include "transport/TransportTypes.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/gui/qt.h"
+#include "gazebo/transport/TransportTypes.hh"
 
 namespace gazebo
 {
@@ -136,9 +136,6 @@ namespace gazebo
 
       /// \brief Publisher for joint messages.
       private: transport::PublisherPtr jointPub;
-
-      /// \brief Holds out request for model information.
-      private: msgs::Request *requestMsg;
 
       /// \brief Sliders for force control
       private: std::map<std::string, JointForceControl*> sliders;
