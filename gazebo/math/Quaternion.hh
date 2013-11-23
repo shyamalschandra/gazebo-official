@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,6 @@
 #include <math.h>
 #include <iostream>
 #include <cmath>
-
-/*
-// Remove the gazebo_confif and ifdefs in Gazebo 1.8
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
-#include "sdf/sdf.hh"
-#endif
-*/
 
 #include "gazebo/math/Helpers.hh"
 #include "gazebo/math/Angle.hh"
@@ -81,16 +73,6 @@ namespace gazebo
     /// \brief Copy constructor
     /// \param qt Quaternion to copy
     public: Quaternion(const Quaternion &_qt);
-
-            /*
-#ifdef HAVE_SDF
-    /// Deprecated
-    public: Quaternion(const sdf::Quaternion &_qt) __attribute__((deprecated));
-
-    /// Deprecated
-    public: Quaternion &operator =(const sdf::Quaternion &_qt);
-#endif
-*/
 
     /// \brief Destructor
     public: ~Quaternion();
@@ -164,7 +146,8 @@ namespace gazebo
     /// \param[in] _z z
     public: void Set(double _u, double _x, double _y, double _z);
 
-    /// \brief Set the quaternion from Euler angles
+    /// \brief Set the quaternion from Euler angles. The order of operations
+    /// are roll, pitch, yaw.
     /// \param[in] vec  Euler angle
     public: void SetFromEuler(const Vector3 &_vec);
 
@@ -395,13 +378,13 @@ namespace gazebo
     public: friend std::istream &operator>>(std::istream &_in,
                                              gazebo::math::Quaternion &_q)
     {
-      Angle r, p, y;
+      Angle roll, pitch, yaw;
 
       // Skip white spaces
       _in.setf(std::ios_base::skipws);
-      _in >> r >> p >> y;
+      _in >> roll >> pitch >> yaw;
 
-      _q.SetFromEuler(Vector3(*r, *p, *y));
+      _q.SetFromEuler(Vector3(*roll, *pitch, *yaw));
 
       return _in;
     }

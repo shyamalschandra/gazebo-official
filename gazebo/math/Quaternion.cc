@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,14 +68,10 @@ Quaternion::Quaternion(const Quaternion &_qt)
   this->z = _qt.z;
 }
 
-
-
 //////////////////////////////////////////////////
 Quaternion::~Quaternion()
 {
 }
-
-
 
 //////////////////////////////////////////////////
 Quaternion &Quaternion::operator =(const Quaternion &qt)
@@ -162,7 +158,7 @@ Quaternion Quaternion::GetExp() const
 void Quaternion::Invert()
 {
   this->Normalize();
-  this->w = this->w;
+  // this->w = this->w;
   this->x = -this->x;
   this->y = -this->y;
   this->z = -this->z;
@@ -602,27 +598,3 @@ Quaternion Quaternion::Slerp(double _fT, const Quaternion &_rkP,
     return t;
   }
 }
-
-/*
-#ifdef HAVE_SDF
-//////////////////////////////////////////////////
-Quaternion::Quaternion(const sdf::Quaternion &_qt)
-{
-  this->w = _qt.w;
-  this->x = _qt.x;
-  this->y = _qt.y;
-  this->z = _qt.z;
-}
-
-//////////////////////////////////////////////////
-Quaternion &Quaternion::operator =(const sdf::Quaternion &_qt)
-{
-  this->w = _qt.w;
-  this->x = _qt.x;
-  this->y = _qt.y;
-  this->z = _qt.z;
-
-  return *this;
-}
-#endif
-*/

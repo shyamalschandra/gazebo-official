@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 #ifndef _MATRIX4_HH_
 #define _MATRIX4_HH_
 
-#include <iostream>
 #include <assert.h>
+#include <iostream>
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Matrix3.hh"
