@@ -26,6 +26,8 @@
 #include <vector>
 
 #include "gazebo/common/Image.hh"
+#include "gazebo/common/HeightmapData.hh"
+#include "gazebo/common/Dem.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
@@ -111,8 +113,22 @@ namespace gazebo
       /// and black pixels the lowest.
       public: common::Image GetImage() const;
 
-      /// \brief Create a lookup table of the terrain's height.
-      private: void FillHeightMap();
+      /// \brief Load a terrain file specified by _filename. The terrain file
+      /// format might be an image or a DEM file. libgdal is required to enable
+      /// DEM support. For a list of all raster formats supported you can type
+      /// the command "gdalinfo --formats".
+      /// \param[in] _filename The path to the terrain file.
+      private: void LoadTerrainFile(const std::string &_filename);
+
+      #ifdef HAVE_GDAL
+      /// \brief Load a DEM specified by _filename as a terrain file.
+      /// \param[in] _filename The path to the terrain file.
+      private: void LoadDEMAsTerrain(const std::string &_filename);
+      #endif
+
+      /// \brief Load an image specified by _filename as a terrain file.
+      /// \param[in] _filename The path to the terrain file.
+      private: void LoadImageAsTerrain(const std::string &_filename);
 
       /// \brief Handle request messages.
       /// \param[in] _msg The request message.
@@ -123,6 +139,9 @@ namespace gazebo
 
       /// \brief Image used to generate the heights.
       protected: common::Image img;
+
+      /// \brief HeightmapData used to generate the heights.
+      protected: common::HeightmapData *heightmapData;
 
       /// \brief Size of the height lookup table.
       protected: unsigned int vertSize;
@@ -141,6 +160,17 @@ namespace gazebo
 
       /// \brief Publisher for request response messages.
       private: transport::PublisherPtr responsePub;
+
+      /// \brief File format of the heightmap
+      private: std::string fileFormat;
+
+      /// \brief Terrain size
+      private: math::Vector3 heightmapSize;
+
+      #ifdef HAVE_GDAL
+      /// \brief DEM used to generate the heights.
+      private: common::Dem dem;
+      #endif
     };
     /// \}
   }

@@ -27,9 +27,10 @@
 #endif
 #include <FreeImage.h>
 #include <string>
+#include <vector>
 
-#include "gazebo/common/CommonTypes.hh"
 #include "gazebo/common/Color.hh"
+#include "gazebo/common/HeightmapData.hh"
 
 namespace gazebo
 {
@@ -65,7 +66,7 @@ namespace gazebo
 
     /// \class Image Image.hh common/common.hh
     /// \brief Encapsulates an image
-    class Image
+    class Image : public HeightmapData
     {
       /// \brief Pixel formats enumeration
       public: enum PixelFormat
@@ -108,6 +109,7 @@ namespace gazebo
 
       /// \brief Load an image. Return 0 on success
       /// \param[in] _filename the path to the image file
+      /// \return 0 when the operation succeeds to open a file or -1 when fails.
       public: int Load(const std::string &_filename);
 
       /// \brief Save the image in PNG format
@@ -164,7 +166,8 @@ namespace gazebo
       /// \brief Get a pixel color value
       /// \param[in] _x Column location in the image
       /// \param[in] _y Row location in the image
-      public: Color GetPixel(unsigned int _x, unsigned int _y);
+      /// \return The color of the given pixel
+      public: Color GetPixel(unsigned int _x, unsigned int _y) const;
 
       /// \brief Get the average color
       /// \return The average color
@@ -172,7 +175,11 @@ namespace gazebo
 
       /// \brief Get the max color
       /// \return The max color
-      public: Color GetMaxColor();
+      public: Color GetMaxColor() const;
+
+      /// \brief Get the maximum elevation of one image using one component
+      /// \return The elevation of the image using one image component
+      public: float GetMaxElevation() const;
 
       /// \brief Rescale the image
       /// \param[in] _width New image width
@@ -183,9 +190,23 @@ namespace gazebo
       /// \return true if image has a bitmap
       public: bool Valid() const;
 
+      /// \brief Create a lookup table of the terrain's height
+      /// \param[in] _subsampling Multiplier used to increase the resolution.
+      /// Ex: A subsampling of 2 in a terrain of 129x129 means that the height
+      /// vector will be 257 * 257.
+      /// \param[in] _vertSize Number of points per row.
+      /// \param[in] _size Real dimmensions of the terrain.
+      /// \param[in] _scale Vector3 used to scale the height.
+      /// \param[in] _flipY If true, it inverts the order in which the vector
+      /// is filled.
+      /// \param[out] _heights Vector containing the terrain heights.
+      public: void FillHeightMap(int _subSampling, unsigned int _vertSize,
+          const math::Vector3 &_size, const math::Vector3 &_scale, bool _flipY,
+          std::vector<float> &_heights);
+
       /// \brief Implementation of GetData
       private: void GetDataImpl(unsigned char **_data, unsigned int &_count,
-                        FIBITMAP *_img) const;
+          FIBITMAP *_img) const;
 
       /// \brief Count the number of images created. Used for initialising
       /// free image
