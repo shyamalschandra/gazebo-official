@@ -282,6 +282,18 @@ math::Vector3 Joint::GetLocalAxis(int _index) const
 }
 
 //////////////////////////////////////////////////
+void Joint::SetEffortLimit(unsigned int _index, double _effort)
+{
+  if (_index < this->GetAngleCount())
+  {
+    this->effortLimit[_index] = _effort;
+    return;
+  }
+
+  gzerr << "SetEffortLimit index[" << _index << "] out of range" << std::endl;
+}
+
+//////////////////////////////////////////////////
 double Joint::GetEffortLimit(int _index)
 {
   if (_index >= 0 && static_cast<unsigned int>(_index) < this->GetAngleCount())
@@ -659,4 +671,10 @@ math::Angle Joint::GetUpperLimit(unsigned int _index) const
 void Joint::SetProvideFeedback(bool _enable)
 {
   this->provideFeedback = _enable;
+}
+
+//////////////////////////////////////////////////
+math::Pose Joint::GetInitialAnchorPose()
+{
+  return this->anchorPose;
 }
