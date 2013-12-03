@@ -62,6 +62,10 @@ class Joint_TEST : public ServerFixture,
   /// \param[in] _physicsEngine Type of physics engine to use.
   public: void JointTorqueTest(const std::string &_physicsEngine);
 
+  /// \brief Test spring dampers
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void SpringDamperTest(const std::string &_physicsEngine);
+
   /// \brief Create and destroy joints repeatedly, monitors memory usage.
   /// \param[in] _physicsEngine Type of physics engine to use.
   public: void JointCreationDestructionTest(const std::string &_physicsEngine);
@@ -73,7 +77,8 @@ class Joint_TEST : public ServerFixture,
             if (test_info->value_param())
             {
               gzdbg << "Params: " << test_info->value_param() << std::endl;
-              std::tr1::tie(this->physicsEngine, this->jointType) = GetParam();
+              this->physicsEngine = std::tr1::get<0>(GetParam());
+              this->jointType = std::tr1::get<1>(GetParam());
             }
           }
 
