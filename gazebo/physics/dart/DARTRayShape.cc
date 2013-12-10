@@ -67,7 +67,8 @@ void DARTRayShape::GetIntersection(double& _dist, std::string& _entity)
   {
   }
 
-  // Not implemented yet, please see issue #911
+  gzerr << "Not implemented yet."
+        << "Please see issue #911.\n";
 }
 
 //////////////////////////////////////////////////
