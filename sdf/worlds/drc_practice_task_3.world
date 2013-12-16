@@ -380,7 +380,7 @@
         </axis>
       </joint>
     </model>
-
+    
     <include>
       <uri>model://construction_cone</uri>
       <name>cone1</name>
