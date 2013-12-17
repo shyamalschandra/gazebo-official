@@ -25,14 +25,17 @@ endif()
 set(tests
   bandwidth.cc
   contact_sensor.cc
+  dem.cc
   factory.cc
   file_handling.cc
   gripper.cc
   imu.cc
   laser.cc
+  model_database.cc
   nondefault_world.cc
   physics.cc
   physics_msgs.cc
+  physics_thread_safe.cc
   pioneer2dx.cc
   transport.cc
   server_fixture.cc
@@ -66,6 +69,7 @@ set(dri_tests
   camera_sensor.cc
   multicamera_sensor.cc
   gpu_laser.cc
+  camera_follow.cc
   heightmap.cc
   ogre_log.cc
   pr2.cc
