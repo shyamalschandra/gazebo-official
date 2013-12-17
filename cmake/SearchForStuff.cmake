@@ -319,7 +319,6 @@ if (PKG_CONFIG_FOUND)
   if (NOT BULLET_FOUND)
      pkg_check_modules(BULLET bullet2.82>=2.82)
   endif()
-
   if (BULLET_FOUND)
     set (HAVE_BULLET TRUE)
     add_definitions( -DLIBBULLET_VERSION=${BULLET_VERSION} )
@@ -433,6 +432,18 @@ if (libdl_library AND libdl_include_dir)
   SET (HAVE_DL TRUE)
 else (libdl_library AND libdl_include_dir)
   SET (HAVE_DL FALSE)
+endif ()
+
+########################################
+# Find gdal
+include (FindGDAL)
+if (NOT GDAL_FOUND)
+  message (STATUS "Looking for libgdal - not found")
+  BUILD_WARNING ("GDAL not found, Digital elevation terrains support will be disabled.")
+  set (HAVE_GDAL OFF CACHE BOOL "HAVE GDAL" FORCE)
+else ()
+  message (STATUS "Looking for libgdal - found")
+  set (HAVE_GDAL ON CACHE BOOL "HAVE GDAL" FORCE)
 endif ()
 
 ########################################
