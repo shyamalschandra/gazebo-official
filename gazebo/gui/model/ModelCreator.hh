@@ -32,6 +32,7 @@
 
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/model/JointMaker.hh"
+#include "gazebo/gui/model/PartInspector.hh"
 
 namespace gazebo
 {
@@ -326,7 +327,15 @@ namespace gazebo
 
       /// \brief Sensor data
       public: SensorData *sensorData;
+
+      /// \brief Inspector for configuring part properties.
+      public: PartInspector *inspector; 
+      
+      /// \brief Qt Callback when part inspector configurations are to be
+      /// applied.
+      private slots: void OnApply(); 
     };
   }
 }
+
 #endif
