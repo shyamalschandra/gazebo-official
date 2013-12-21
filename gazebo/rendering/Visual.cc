@@ -1240,6 +1240,11 @@ void Visual::SetHighlighted(bool _highlighted)
   }
   else if (this->boundingBox)
   {
+    math::Box box = this->GetBoundingBox();
+    if (!(box == this->boundingBox->GetBox()))
+    {
+      this->boundingBox->Init(box);
+    }
     this->boundingBox->SetVisible(false);
   }
 }

@@ -62,6 +62,9 @@ namespace gazebo
 
       /// \brief The visual which this box is attached to.
       private: VisualPtr parent;
+
+      /// \brief Dimension of the box being drawn.
+      private: math::Box box;
     };
     /// \}
   }
