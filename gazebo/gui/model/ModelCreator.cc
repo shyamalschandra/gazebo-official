@@ -39,6 +39,9 @@
 #include "gazebo/gui/GuiIface.hh"
 #include "gazebo/gui/ModelManipulator.hh"
 
+#include "gazebo/gui/model/PartGeneralTab.hh"
+#include "gazebo/gui/model/PartVisualTab.hh"
+#include "gazebo/gui/model/PartInspector.hh"
 #include "gazebo/gui/model/JointMaker.hh"
 #include "gazebo/gui/model/ModelCreator.hh"
 
@@ -290,6 +293,11 @@ void ModelCreator::CreatePart(const rendering::VisualPtr &_visual)
   part->selfCollide = false;
   part->kinematic = false;
 
+  part->inspector = new PartInspector;
+  part->inspector->setModal(false);
+  connect(part->inspector, SIGNAL(Applied()),
+      part, SLOT(OnApply()));
+
   part->inertial = new physics::Inertial;
   part->sensorData = new SensorData;
 
@@ -322,6 +330,7 @@ void ModelCreator::RemovePart(const std::string &_partName)
       scene->RemoveVisual(visParent);
   }
 
+  delete part->inspector;
   delete part->inertial;
   delete part->sensorData;
 
@@ -616,16 +625,30 @@ bool ModelCreator::OnMouseMovePart(const common::MouseEvent &_event)
 /////////////////////////////////////////////////
 bool ModelCreator::OnMouseDoubleClickPart(const common::MouseEvent &_event)
 {
-  rendering::VisualPtr vis = gui::get_active_camera()->GetVisual(_event.pos);
+ rendering::VisualPtr vis = gui::get_active_camera()->GetVisual(_event.pos);
   if (vis)
   {
-    if (this->allParts.find(vis->GetName()) != this->allParts.end())
+    if (this->allParts.find(vis->GetName()) !=
+        this->allParts.end())
     {
-      // TODO part inspector code goes here
+      PartData *part = this->allParts[vis->GetName()];
+      PartGeneralTab *general = part->inspector->GetGeneral();
+      general->SetGravity(part->gravity);
+      general->SetSelfCollide(part->selfCollide);
+      general->SetKinematic(part->kinematic);
+      general->SetPose(part->visuals[0]->GetParent()->GetWorldPose());
+      general->SetMass(part->inertial->GetMass());
+      general->SetInertialPose(part->inertial->GetPose());
+      general->SetInertia(part->inertial->GetIXX(), part->inertial->GetIYY(),
+          part->inertial->GetIZZ(), part->inertial->GetIXY(),
+          part->inertial->GetIXZ(), part->inertial->GetIYZ());
+
+      part->inspector->show();
       return true;
     }
   }
   return false;
+
 }
 
 /////////////////////////////////////////////////
@@ -763,4 +786,22 @@ void ModelCreator::GenerateSDF()
   // Model settings
   modelElem->GetElement("static")->Set(this->isStatic);
   modelElem->GetElement("allow_auto_disable")->Set(this->autoDisable);
+}
+
+/////////////////////////////////////////////////
+void PartData::OnApply()
+{
+  PartGeneralTab *general = this->inspector->GetGeneral();
+  this->gravity = general->GetGravity();
+  this->selfCollide = general->GetSelfCollide();
+  this->kinematic = general->GetKinematic();
+
+  this->inertial->SetMass(general->GetMass());
+  this->inertial->SetCoG(general->GetInertialPose());
+  this->inertial->SetInertiaMatrix(
+      general->GetInertiaIXX(), general->GetInertiaIYY(),
+      general->GetInertiaIZZ(), general->GetInertiaIXY(),
+      general->GetInertiaIXZ(), general->GetInertiaIYZ());
+  this->pose = general->GetPose();
+  this->visuals[0]->GetParent()->SetWorldPose(this->pose);
 }
