@@ -64,6 +64,7 @@ namespace gazebo
     class ViewController;
     class Scene;
     class GaussianNoiseCompositorListener;
+    class LensDistortionCompositorListener;
     class CameraPrivate;
 
     /// \addtogroup gazebo_rendering Rendering

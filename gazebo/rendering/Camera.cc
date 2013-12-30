@@ -77,14 +77,14 @@ class GaussianNoiseCompositorListener
     //    fragment_program Gazebo/GaussianCameraNoiseFS
     // 2. media/materials/scripts/camera_noise_gaussian_fs.glsl
     _mat->getTechnique(0)->getPass(_pass_id)->
-      getFragmentProgramParameters()->
-      setNamedConstant("offsets", offsets);
+        getFragmentProgramParameters()->
+        setNamedConstant("offsets", offsets);
     _mat->getTechnique(0)->getPass(_pass_id)->
-      getFragmentProgramParameters()->
-      setNamedConstant("mean", (Ogre::Real)this->mean);
+        getFragmentProgramParameters()->
+        setNamedConstant("mean", static_cast<Ogre::Real>(this->mean));
     _mat->getTechnique(0)->getPass(_pass_id)->
-      getFragmentProgramParameters()->
-      setNamedConstant("stddev", (Ogre::Real)this->stddev);
+        getFragmentProgramParameters()->
+        setNamedConstant("stddev", static_cast<Ogre::Real>(this->stddev));
   }
 
   /// \brief Mean that we'll pass down to the GLSL fragment shader.
@@ -93,6 +93,58 @@ class GaussianNoiseCompositorListener
   /// shader.
   private: double stddev;
 };
+
+// We'll create an instance of this class for each camera, to be used to inject
+// random values on each render call.
+class LensDistortionCompositorListener
+  : public Ogre::CompositorInstance::Listener
+{
+  /// \brief Constructor, setting mean and standard deviation.
+  public: LensDistortionCompositorListener()
+  {
+  }
+
+  /// \brief Callback that OGRE will invoke for us on each render call
+  public: virtual void notifyMaterialRender(unsigned int _pass_id,
+                                            Ogre::MaterialPtr & _mat)
+  {
+    // These calls are setting parameters that are declared in two places:
+    // 1. media/materials/scripts/gazebo.material, in
+    //    fragment_program Gazebo/CameraDistortionFS
+    // 2. media/materials/scripts/camera_distortion_fs.glsl
+    _mat->getTechnique(0)->getPass(_pass_id)->
+        getFragmentProgramParameters()->setNamedConstant("k1",
+        static_cast<Ogre::Real>(this->k1));
+    _mat->getTechnique(0)->getPass(_pass_id)->
+        getFragmentProgramParameters()->setNamedConstant("k2",
+        static_cast<Ogre::Real>(this->k2));
+    _mat->getTechnique(0)->getPass(_pass_id)->
+        getFragmentProgramParameters()->setNamedConstant("k3",
+        static_cast<Ogre::Real>(this->k3));
+    _mat->getTechnique(0)->getPass(_pass_id)->
+        getFragmentProgramParameters()->setNamedConstant("p1",
+        static_cast<Ogre::Real>(this->p1));
+    _mat->getTechnique(0)->getPass(_pass_id)->
+        getFragmentProgramParameters()->setNamedConstant("p2",
+        static_cast<Ogre::Real>(this->p2));
+  }
+
+  /// \brief Distortion coefficient k1.
+  private: double k1;
+
+  /// \brief Distortion coefficient k2.
+  private: double k2;
+
+  /// \brief Distortion coefficient k3.
+  private: double k3;
+
+  /// \brief Distortion coefficient p1.
+  private: double p1;
+
+  /// \brief Distortion coefficient p2.
+  private: double p2;
+};
+
 }  // namespace rendering
 }  // namespace gazebo
 
@@ -154,6 +206,8 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
 
   // Set default render rate to unlimited
   this->SetRenderRate(0.0);
+
+  this->dataPtr->distortionActive = false;
 
   this->dataPtr->node = transport::NodePtr(new transport::Node());
   this->dataPtr->node->Init();
@@ -263,6 +317,16 @@ void Camera::Load()
     this->dataPtr->cmdSub = this->dataPtr->node->Subscribe(
         "~/" + this->GetName() + "/cmd", &Camera::OnCmdMsg, this, true);
   }
+
+
+  if (this->sdf->HasElement("distortion"))
+  {
+    sdf::ElementPtr distortionElem = this->sdf->GetElement("distortion");
+
+    this->dataPtr->distortionActive = true;
+    this->dataPtr->lensDistortionCompositorListener.reset(new
+      LensDistortionCompositorListener());
+  }
 }
 
 //////////////////////////////////////////////////
@@ -301,6 +365,12 @@ void Camera::Fini()
   {
     this->dataPtr->gaussianNoiseInstance->removeListener(
       this->dataPtr->gaussianNoiseCompositorListener.get());
+  }
+
+  if (this->dataPtr->lensDistortionCompositorListener)
+  {
+    this->dataPtr->lensDistortionInstance->removeListener(
+      this->dataPtr->lensDistortionCompositorListener.get());
   }
 
   RTShaderSystem::DetachViewport(this->viewport, this->scene);
@@ -1434,7 +1504,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
       {
         case CameraPrivate::GAUSSIAN:
           this->dataPtr->gaussianNoiseInstance =
-            Ogre::CompositorManager::getSingleton().addCompositor(
+              Ogre::CompositorManager::getSingleton().addCompositor(
               this->viewport, "CameraNoise/Gaussian");
           this->dataPtr->gaussianNoiseInstance->setEnabled(true);
           // gaussianNoiseCompositorListener was allocated in Load()
@@ -1444,6 +1514,17 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
         default:
           GZ_ASSERT(false, "Invalid noise model type");
       }
+    }
+
+    // Distortion
+    if (this->dataPtr->distortionActive)
+    {
+      this->dataPtr->lensDistortionInstance =
+          Ogre::CompositorManager::getSingleton().addCompositor(
+          this->viewport, "CameraDistortion/Default");
+      this->dataPtr->lensDistortionInstance->setEnabled(true);
+      this->dataPtr->lensDistortionInstance->addListener(
+          this->dataPtr->lensDistortionCompositorListener.get());
     }
 
     if (this->GetScene()->skyx != NULL)
