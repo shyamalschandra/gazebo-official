@@ -23,8 +23,10 @@ set (plugins
   ForceTorquePlugin
   GpuRayPlugin
   JointTrajectoryPlugin
+  LiftDragPlugin
   ModelPropShop
   ModelTrajectoryTestPlugin
+  MotorDemoPlugin
   MudPlugin
   PressurePlugin
   RayPlugin
