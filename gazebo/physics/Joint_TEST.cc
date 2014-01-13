@@ -783,7 +783,6 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
       joint->Init();
       joint->SetAxis(0, axis);
     }
-
     // remove the joint
     {
       bool paused = world->IsPaused();
@@ -827,6 +826,12 @@ void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
 //////////////////////////////////////////////////
 void Joint_TEST::SpringDamperTest(const std::string &_physicsEngine)
 {
+  /// SpringDamper implemented not yet released for dart
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Aborting test for dart, see issue #975.\n";
+    return;
+  }
   /// SpringDamper unimplemented for simbody
   if (_physicsEngine == "simbody")
   {
