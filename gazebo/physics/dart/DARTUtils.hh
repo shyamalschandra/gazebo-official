@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright 2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- */
+*/
 
-#include <gazebo/gazebo.hh>
+#ifndef _GAZEBO_DARTUTILS_HH_
+#define _GAZEBO_DARTUTILS_HH_
+
+#include "gazebo/math/Pose.hh"
+#include "gazebo/physics/dart/dart_inc.h"
 
 namespace gazebo
 {
-  class WorldPluginTutorial : public WorldPlugin
+  namespace physics
   {
-    public: WorldPluginTutorial() : WorldPlugin()
-            {
-              printf("Hello World!\n");
-            }
+    /// \ingroup gazebo_physics
+    /// \addtogroup gazebo_physics_dart DART Physics
+    /// \brief dart utilities
+    /// \{
 
-    public: void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
-            {
-            }
-  };
-  GZ_REGISTER_WORLD_PLUGIN(WorldPluginTutorial)
+    /// \brief DART Utils class
+    class DARTUtils
+    {
+    };
+    /// \}
+  }
 }
+#endif
