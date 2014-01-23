@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,47 +14,41 @@
  * limitations under the License.
  *
 */
-#ifndef _IMAGEVIEW_HH_
-#define _IMAGEVIEW_HH_
-
-#include <string>
-
-#include "gazebo/common/Time.hh"
-#include "gazebo/msgs/msgs.hh"
-
-#include "gazebo/transport/TransportTypes.hh"
+#ifndef _IMAGEFRAME_HH_
+#define _IMAGEFRAME_HH_
 
 #include "gazebo/gui/qt.h"
-#include "gazebo/gui/viewers/ImageFrame.hh"
-#include "gazebo/gui/viewers/TopicView.hh"
+#include "gazebo/msgs/msgs.hh"
 
 namespace gazebo
 {
   namespace gui
   {
-    class ImageViewPrivate;
+    class ImageFramePrivate;
 
-    class ImageView : public TopicView
+    /// \brief Frame that draws an image when a paintevent is received.
+    class ImageFrame : public QFrame
     {
       Q_OBJECT
 
       /// \brief Constructor
-      /// \param[in] _parent Pointer to the parent widget.
-      public: ImageView(QWidget *_parent = NULL);
+      public: ImageFrame(QWidget *_parent);
 
       /// \brief Destructor
-      public: virtual ~ImageView();
-
-      // Documentation inherited
-      public: virtual void SetTopic(const std::string &_topicName);
+      public: virtual ~ImageFrame();
 
       /// \brief Receives incoming image messages.
       /// \param[in] _msg New image message.
-      public: void OnImage(ConstImageStampedPtr &_msg);
+      public: void OnImage(const msgs::Image &_msg);
 
-      /// \brief Private data.
-      private: ImageViewPrivate *dataPtr;
+      /// \brief Event used to paint the image.
+      /// \param[in] _event Pointer to the event information.
+      protected: void paintEvent(QPaintEvent *_event);
+
+      /// \brief Pointer to private data
+      private: ImageFramePrivate *dataPtr;
     };
   }
 }
+
 #endif
