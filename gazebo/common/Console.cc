@@ -152,6 +152,20 @@ void FileLogger::Init(const std::string &_filename)
   boost::filesystem::path logPath(getenv("HOME"));
   logPath = logPath / ".gazebo/" / _filename;
 
+  // If the logPath is a directory, just renamed it.
+  if (boost::filesystem::is_directory(logPath))
+  {
+    std::string newPath = logPath.string() + ".old";
+    boost::system::error_code ec;
+    boost::filesystem::rename(logPath, newPath, ec);
+    if (ec == 0)
+      std::cout << "Deprecated log directory [" << logPath
+                << "] renamed to [" << newPath << "]" << std::endl;
+    else
+      gzerr << "Unable to rename deprecated log directory [" << logPath
+            << "] to [" << newPath << "]. Reason: " << ec.message();
+  }
+
   buf->stream = new std::ofstream(logPath.string().c_str(), std::ios::out);
   if (!buf->stream->is_open())
     std::cerr << "Error opening log file: " << logPath << std::endl;
