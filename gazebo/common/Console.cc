@@ -152,7 +152,7 @@ void FileLogger::Init(const std::string &_filename)
   boost::filesystem::path logPath(getenv("HOME"));
   logPath = logPath / ".gazebo/" / _filename;
 
-  // If the logPath is a directory, just renamed it.
+  // If the logPath is a directory, just rename it.
   if (boost::filesystem::is_directory(logPath))
   {
     std::string newPath = logPath.string() + ".old";
