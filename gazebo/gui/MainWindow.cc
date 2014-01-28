@@ -20,6 +20,7 @@
 
 #include "gazebo/gui/TopicSelector.hh"
 #include "gazebo/gui/DataLogger.hh"
+#include "gazebo/gui/OculusWindow.hh"
 #include "gazebo/gui/viewers/ViewFactory.hh"
 #include "gazebo/gui/viewers/TopicView.hh"
 #include "gazebo/gui/viewers/ImageView.hh"
@@ -113,6 +114,7 @@ MainWindow::MainWindow()
   splitter->addWidget(this->leftColumn);
   splitter->addWidget(this->renderWidget);
   splitter->addWidget(this->toolsWidget);
+  splitter->setContentsMargins(0, 0, 0, 0);
 
   QList<int> sizes;
   sizes.push_back(MINIMUM_TAB_WIDTH);
@@ -134,7 +136,6 @@ MainWindow::MainWindow()
   mainLayout->addLayout(centerLayout, 1);
   mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
                         Qt::AlignBottom | Qt::AlignRight);
-
   mainWidget->setLayout(mainLayout);
 
   this->setWindowIcon(QIcon(":/images/gazebo.svg"));
@@ -186,6 +187,9 @@ MainWindow::~MainWindow()
 void MainWindow::Load()
 {
   this->guiSub = this->node->Subscribe("~/gui", &MainWindow::OnGUI, this, true);
+
+  gui::OculusWindow *oculusWindow = new gui::OculusWindow();
+  oculusWindow->show();
 }
 
 /////////////////////////////////////////////////
@@ -656,18 +660,19 @@ void MainWindow::OnFullScreen(bool _value)
   if (_value)
   {
     this->showFullScreen();
-    this->renderWidget->showFullScreen();
     this->leftColumn->hide();
     this->toolsWidget->hide();
     this->menuBar->hide();
+    this->setContentsMargins(0, 0, 0, 0);
+    this->centralWidget()->layout()->setContentsMargins(0, 0, 0, 0);
   }
   else
   {
     this->showNormal();
-    this->renderWidget->showNormal();
     this->leftColumn->show();
     this->toolsWidget->show();
     this->menuBar->show();
+    this->centralWidget()->layout()->setContentsMargins(10, 10, 10, 10);
   }
 }
 
@@ -777,6 +782,13 @@ void MainWindow::FPS()
 void MainWindow::Orbit()
 {
   gui::Events::orbit();
+}
+
+/////////////////////////////////////////////////
+void MainWindow::ViewOculus()
+{
+  gui::OculusWindow *oculusWindow = new gui::OculusWindow();
+  oculusWindow->show();
 }
 
 /////////////////////////////////////////////////
@@ -1052,6 +1064,10 @@ void MainWindow::CreateActions()
   g_orbitAct->setStatusTip(tr("Orbit View Style"));
   connect(g_orbitAct, SIGNAL(triggered()), this, SLOT(Orbit()));
 
+  g_viewOculusAct = new QAction(tr("Oculus Rift"), this);
+  g_viewOculusAct->setStatusTip(tr("Oculus Rift Render Window"));
+  connect(g_viewOculusAct, SIGNAL(triggered()), this, SLOT(ViewOculus()));
+
   g_dataLoggerAct = new QAction(tr("&Log Data"), this);
   g_dataLoggerAct->setShortcut(tr("Ctrl+D"));
   g_dataLoggerAct->setStatusTip(tr("Data Logging Utility"));
@@ -1143,11 +1159,13 @@ void MainWindow::CreateMenuBar()
   viewMenu->addSeparator();
   // viewMenu->addAction(g_fpsAct);
   viewMenu->addAction(g_orbitAct);
+  viewMenu->addSeparator();
 
   QMenu *windowMenu = this->menuBar->addMenu(tr("&Window"));
   windowMenu->addAction(g_topicVisAct);
   windowMenu->addSeparator();
   windowMenu->addAction(g_dataLoggerAct);
+  windowMenu->addAction(g_viewOculusAct);
 
 #ifdef HAVE_QWT
   // windowMenu->addAction(g_diagnosticsAct);

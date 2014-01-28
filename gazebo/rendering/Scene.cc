@@ -41,6 +41,7 @@
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/RenderEngine.hh"
 #include "gazebo/rendering/UserCamera.hh"
+#include "gazebo/rendering/OculusCamera.hh"
 #include "gazebo/rendering/Camera.hh"
 #include "gazebo/rendering/DepthCamera.hh"
 #include "gazebo/rendering/GpuLaser.hh"
@@ -549,6 +550,17 @@ CameraPtr Scene::GetCamera(const std::string &_name) const
   }
 
   return result;
+}
+
+//////////////////////////////////////////////////
+OculusCameraPtr Scene::CreateOculusCamera(const std::string &_name)
+{
+  OculusCameraPtr camera(new OculusCamera(_name, shared_from_this()));
+  camera->Load();
+  camera->Init();
+  this->oculusCameras.push_back(camera);
+
+  return camera;
 }
 
 //////////////////////////////////////////////////
