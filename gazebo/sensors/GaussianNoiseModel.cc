@@ -89,6 +89,7 @@ GaussianNoiseModel::GaussianNoiseModel()
     precision(0.0),
     quantized(false)
 {
+  this->type = Noise::GAUSSIAN;
 }
 
 //////////////////////////////////////////////////
