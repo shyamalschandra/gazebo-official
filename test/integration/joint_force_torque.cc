@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2013 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include "gazebo/physics/physics.hh"
 #include "gazebo/physics/Joint.hh"
-#include "gazebo/physics/Joint_TEST.hh"
+#include "test/ServerFixture.hh"
 #include "test/integration/helper_physics_generator.hh"
 
 #define TOL 1e-6
@@ -26,7 +26,37 @@
 
 using namespace gazebo;
 
-void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
+class JointForceTorqueTest : public ServerFixture,
+                             public testing::WithParamInterface<const char*>
+{
+  /// \brief Load example world with a few joints
+  /// Measure / verify static force torques against analytical answers.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void ForceTorque1(const std::string &_physicsEngine);
+
+  /// \brief Load example world with a few joints
+  /// Measure / verify static force torques against analytical answers.
+  /// Change gravity to tip over the joints.
+  /// Wait until joint stops are hit and joint motion settles,
+  /// then check force torques values against analytical values.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void ForceTorque2(const std::string &_physicsEngine);
+
+  /// \brief Load example world with a few joints.
+  /// Servo the joints to a fixed target position using simple PID controller.
+  /// Measure / verify static force torques against analytical answers.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void GetForceTorqueWithAppliedForce(
+    const std::string &_physicsEngine);
+
+  /// \brief Create a hinge joint between link and world.
+  /// Apply force and check acceleration against analytical solution.
+  /// \param[in] _physicsEngine Type of physics engine to use.
+  public: void JointTorqueTest(const std::string &_physicsEngine);
+};
+
+/////////////////////////////////////////////////
+void JointForceTorqueTest::ForceTorque1(const std::string &_physicsEngine)
 {
   // Load our force torque test world
   Load("worlds/force_torque_test.world", true, _physicsEngine);
@@ -43,7 +73,7 @@ void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -65,7 +95,7 @@ void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
   gzlog << "-------------------Test 1-------------------\n";
   for (unsigned int i = 0; i < 10; ++i)
   {
-    world->StepWorld(1);
+    world->Step(1);
     // test joint_01 wrench
     physics::JointWrench wrench_01 = joint_01->GetForceTorque(0u);
     EXPECT_DOUBLE_EQ(wrench_01.body1Force.x,    0.0);
@@ -134,36 +164,8 @@ void Joint_TEST::ForceTorque1(const std::string &_physicsEngine)
   }
 }
 
-TEST_F(Joint_TEST, ForceTorque1ODE)
-{
-  ForceTorque1("ode");
-}
-
-#ifdef HAVE_SIMBODY
-TEST_F(Joint_TEST, ForceTorque1Simbody)
-{
-  ForceTorque1("simbody");
-}
-#endif  // HAVE_SIMBODY
-
-#ifdef HAVE_BULLET
-
-/// bullet collision parameters needs tweaking?
-TEST_F(Joint_TEST, ForceTorque1Bullet)
-{
-  // uncomment when bullet 2.82 is released
-  // ForceTorque1("bullet");
-}
-#endif  // HAVE_BULLET
-
-#ifdef HAVE_DART
-TEST_F(Joint_TEST, ForceTorque1DART)
-{
-  ForceTorque1("dart");
-}
-#endif  // HAVE_DART
-
-void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
+/////////////////////////////////////////////////
+void JointForceTorqueTest::ForceTorque2(const std::string &_physicsEngine)
 {
   // Load our force torque test world
   Load("worlds/force_torque_test.world", true, _physicsEngine);
@@ -180,7 +182,7 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -205,12 +207,12 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
   joint_01->SetAttribute("stop_erp", 0, 0.02);
   joint_12->SetAttribute("stop_erp", 0, 0.02);
   // wait for dynamics to stabilize
-  world->StepWorld(2000);
+  world->Step(2000);
   // check force torques in new system
   gzlog << "\n-------------------Test 2-------------------\n";
   for (unsigned int i = 0; i < 5; ++i)
   {
-    world->StepWorld(1);
+    world->Step(1);
     // Dbg joint_01 force torque :
     //   force1 [600 -200 999.99999600000001 / 600 -1000 -200]
     //   torque1 [749.999819 82.840868 -450.00009699999998 / 750 450 0]
@@ -302,42 +304,23 @@ void Joint_TEST::ForceTorque2(const std::string &_physicsEngine)
 
   // simulate a few steps
   int steps = 20;
-  world->StepWorld(steps);
+  world->Step(steps);
   t = world->GetSimTime().Double();
   EXPECT_GT(t, 0.99*dt*static_cast<double>(steps+1));
   gzdbg << "t after 20 steps : " << t << "\n";
 }
 
-TEST_F(Joint_TEST, ForceTorque2ODE)
-{
-  ForceTorque2("ode");
-}
-
-#ifdef HAVE_SIMBODY
-TEST_F(Joint_TEST, ForceTorque2Simbody)
-{
-  ForceTorque2("simbody");
-}
-#endif  // HAVE_SIMBODY
-
-#ifdef HAVE_BULLET
-TEST_F(Joint_TEST, ForceTorque2Bullet)
-{
-  // uncomment when bullet 2.82 is released
-  // ForceTorque2("bullet");
-}
-#endif  // HAVE_BULLET
-
-#ifdef HAVE_DART
-TEST_F(Joint_TEST, ForceTorque2DART)
-{
-  ForceTorque2("dart");
-}
-#endif  // HAVE_DART
-
-void Joint_TEST::GetForceTorqueWithAppliedForce(
+/////////////////////////////////////////////////
+void JointForceTorqueTest::GetForceTorqueWithAppliedForce(
   const std::string &_physicsEngine)
 {
+  // Explicit joint damping in bullet is causing this test to fail.
+  if (_physicsEngine == "bullet")
+  {
+    gzerr << "Aborting test for bullet, see issue #619.\n";
+    return;
+  }
+
   // Load our force torque test world
   Load("worlds/force_torque_test2.world", true, _physicsEngine);
 
@@ -353,7 +336,7 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
   physics->SetGravity(math::Vector3(0, 0, -50));
 
   // simulate 1 step
-  world->StepWorld(1);
+  world->Step(1);
   double t = world->GetSimTime().Double();
 
   // get time step size
@@ -387,7 +370,7 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
     joint_01->SetForce(0u, effort1);
     joint_12->SetForce(0u, effort2);
 
-    world->StepWorld(1);
+    world->Step(1);
     // test joint_01 wrench
     physics::JointWrench wrench_01 = joint_01->GetForceTorque(0u);
 
@@ -452,274 +435,11 @@ void Joint_TEST::GetForceTorqueWithAppliedForce(
   }
 }
 
-TEST_F(Joint_TEST, GetForceTorqueWithAppliedForceODE)
-{
-  GetForceTorqueWithAppliedForce("ode");
-}
-
-#ifdef HAVE_SIMBODY
-TEST_F(Joint_TEST, GetForceTorqueWithAppliedForceSimbody)
-{
-  GetForceTorqueWithAppliedForce("simbody");
-}
-#endif  // HAVE_SIMBODY
-
-#ifdef HAVE_BULLET
-/// bullet collision parameters needs tweaking
-TEST_F(Joint_TEST, GetForceTorqueWithAppliedForceBullet)
-{
-  // uncomment when bullet 2.82 is released
-  // GetForceTorqueWithAppliedForce("bullet");
-}
-#endif  // HAVE_BULLET
-
-#ifdef HAVE_DART
-TEST_F(Joint_TEST, GetForceTorqueWithAppliedForceDART)
-{
-  GetForceTorqueWithAppliedForce("dart");
-}
-#endif  // HAVE_DART
-
-// Fixture for testing all joint types.
-class Joint_TEST_All : public Joint_TEST {};
-
-// Fixture for testing rotational joints.
-class Joint_TEST_Rotational : public Joint_TEST {};
-
-// Fixture for testing rotational joints that can be attached to world.
-class Joint_TEST_RotationalWorld : public Joint_TEST {};
-
-////////////////////////////////////////////////////////////////////////
-// Test for spawning each joint type
-void Joint_TEST::SpawnJointTypes(const std::string &_physicsEngine,
-                                 const std::string &_jointType)
-{
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")  // &&
-  //    _jointType != "revolute" && _jointType != "prismatic")
-  {
-    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
-    return;
-  }
-
-  // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
-  {
-    gzdbg << "SpawnJoint " << _jointType << " child parent" << std::endl;
-    physics::JointPtr joint = SpawnJoint(_jointType, false, false);
-    ASSERT_TRUE(joint != NULL);
-    // Check child and parent links
-    physics::LinkPtr child = joint->GetChild();
-    physics::LinkPtr parent = joint->GetParent();
-    ASSERT_TRUE(child != NULL);
-    EXPECT_EQ(child->GetParentJoints().size(), 1u);
-    EXPECT_EQ(child->GetChildJoints().size(), 0u);
-    ASSERT_TRUE(parent != NULL);
-    EXPECT_EQ(parent->GetChildJoints().size(), 1u);
-    EXPECT_EQ(parent->GetParentJoints().size(), 0u);
-  }
-
-  {
-    gzdbg << "SpawnJoint " << _jointType << " child world" << std::endl;
-    physics::JointPtr joint = SpawnJoint(_jointType, false, true);
-    ASSERT_TRUE(joint != NULL);
-    // Check child link
-    physics::LinkPtr child = joint->GetChild();
-    physics::LinkPtr parent = joint->GetParent();
-    ASSERT_TRUE(child != NULL);
-    EXPECT_EQ(child->GetParentJoints().size(), 1u);
-    EXPECT_EQ(child->GetChildJoints().size(), 0u);
-    EXPECT_TRUE(parent == NULL);
-  }
-
-  if (_physicsEngine == "dart")
-  {
-    // DART assumes that: (i) every link has its parent joint (ii) root link
-    // is the only link that doesn't have parent link.
-    // Child world link breaks dart for now. Do we need to support it?
-    gzerr << "Skip tests for child world link cases "
-          << "since DART does not allow joint with world as child. "
-          << "Please see issue #914. "
-          << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-    return;
-  }
-
-  {
-    gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
-    physics::JointPtr joint = SpawnJoint(_jointType, true, false);
-    ASSERT_TRUE(joint != NULL);
-    // Check parent link
-    physics::LinkPtr child = joint->GetChild();
-    physics::LinkPtr parent = joint->GetParent();
-    EXPECT_TRUE(child == NULL);
-    ASSERT_TRUE(parent != NULL);
-    EXPECT_EQ(parent->GetChildJoints().size(), 1u);
-    EXPECT_EQ(parent->GetParentJoints().size(), 0u);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////
-// Test for non-translational joints.
-// Set velocity to parent and make sure child follows.
-void Joint_TEST::SpawnJointRotational(const std::string &_physicsEngine,
-                                      const std::string &_jointType)
-{
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody" && _jointType != "revolute")
-  {
-    gzerr << "Aborting test for Simbody, see issue #859.\n";
-    return;
-  }
-
-  // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
-  gzdbg << "SpawnJoint " << _jointType << std::endl;
-  physics::JointPtr joint = SpawnJoint(_jointType);
-  ASSERT_TRUE(joint != NULL);
-
-  physics::LinkPtr parent, child;
-  child = joint->GetChild();
-  parent = joint->GetParent();
-  ASSERT_TRUE(child != NULL);
-  ASSERT_TRUE(parent != NULL);
-
-  math::Vector3 pos(10, 10, 10);
-  math::Vector3 vel(10, 10, 10);
-  parent->SetWorldPose(math::Pose(pos, math::Quaternion()));
-  for (unsigned int i = 0; i < 10; ++i)
-  {
-    parent->SetLinearVel(vel);
-    world->StepWorld(10);
-  }
-  world->StepWorld(50);
-  math::Pose childPose = child->GetWorldPose();
-  math::Pose parentPose = parent->GetWorldPose();
-  EXPECT_TRUE(parentPose.pos != pos);
-  EXPECT_TRUE(parentPose.pos != math::Vector3::Zero);
-  EXPECT_TRUE(childPose.pos != math::Vector3::Zero);
-  EXPECT_TRUE(childPose.pos == parentPose.pos);
-}
-
-////////////////////////////////////////////////////////////////////////
-// Test for non-translational joints that can attach to world.
-// Attach to world and see if it doesn't fall.
-void Joint_TEST::SpawnJointRotationalWorld(const std::string &_physicsEngine,
-                                           const std::string &_jointType)
-{
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")  // && _jointType != "revolute")
-  {
-    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
-    return;
-  }
-
-  // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
-  physics::JointPtr joint;
-  for (unsigned int i = 0; i < 2; ++i)
-  {
-    if (_physicsEngine == "dart" && i == 0)
-    {
-      // DART assumes that: (i) every link has its parent joint (ii) root link
-      // is the only link that doesn't have parent link.
-      // Child world link breaks dart for now. Do we need to support it?
-      gzerr << "Skip tests for child world link cases "
-            << "since DART does not allow joint with world as child. "
-            << "Please see issue #914. "
-            << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-      return;
-    }
-    bool worldChild = (i == 0);
-    bool worldParent = (i == 1);
-    std::string child = worldChild ? "world" : "child";
-    std::string parent = worldParent ? "world" : "parent";
-    gzdbg << "SpawnJoint " << _jointType << " "
-          << child << " "
-          << parent << std::endl;
-    joint = SpawnJoint(_jointType, worldChild, worldParent);
-    EXPECT_TRUE(joint != NULL);
-
-    physics::LinkPtr link;
-    if (!worldChild)
-      link = joint->GetChild();
-    else if (!worldParent)
-      link = joint->GetParent();
-    EXPECT_TRUE(link != NULL);
-
-    math::Pose initialPose = link->GetWorldPose();
-    world->StepWorld(100);
-    math::Pose afterPose = link->GetWorldPose();
-    EXPECT_TRUE(initialPose.pos == afterPose.pos);
-  }
-}
-
-TEST_P(Joint_TEST_All, SpawnJointTypes)
-{
-  SpawnJointTypes(this->physicsEngine, this->jointType);
-}
-
-TEST_P(Joint_TEST_Rotational, SpawnJointRotational)
-{
-  SpawnJointRotational(this->physicsEngine, this->jointType);
-}
-
-TEST_P(Joint_TEST_RotationalWorld, SpawnJointRotationalWorld)
-{
-  SpawnJointRotationalWorld(this->physicsEngine, this->jointType);
-}
-
-INSTANTIATE_TEST_CASE_P(TestRuns, Joint_TEST_All,
-  ::testing::Combine(PHYSICS_ENGINE_VALUES,
-  ::testing::Values("revolute"
-                  , "prismatic"
-                  , "screw"
-                  , "universal"
-                  , "ball"
-                  , "revolute2")));
-
-// Skip prismatic, screw, and revolute2 because they allow translation
-INSTANTIATE_TEST_CASE_P(TestRuns, Joint_TEST_Rotational,
-  ::testing::Combine(PHYSICS_ENGINE_VALUES,
-  ::testing::Values("revolute"
-                  , "universal"
-                  , "ball")));
-
-// Skip prismatic, screw, and revolute2 because they allow translation
-// Skip universal because it can't be connected to world in bullet.
-INSTANTIATE_TEST_CASE_P(TestRuns, Joint_TEST_RotationalWorld,
-  ::testing::Combine(PHYSICS_ENGINE_VALUES,
-  ::testing::Values("revolute"
-                  , "ball")));
-
 ////////////////////////////////////////////////////////////////////////
 // Create a joint between link and world
 // Apply force and check acceleration for correctness
 ////////////////////////////////////////////////////////////////////////
-void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
+void JointForceTorqueTest::JointTorqueTest(const std::string &_physicsEngine)
 {
   // Load our inertial test world
   Load("worlds/joint_test.world", true, _physicsEngine);
@@ -747,7 +467,7 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
@@ -770,7 +490,7 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
     {
       double torque = 1.3;
       joint->SetForce(0, torque);
-      world->StepWorld(1);
+      world->Step(1);
       double curV = joint->GetVelocity(0);
       double accel = (curV - lastV) / dt;
       gzdbg << i << " : " << curV << " : " << (curV - lastV) / dt << "\n";
@@ -780,180 +500,28 @@ void Joint_TEST::JointTorqueTest(const std::string &_physicsEngine)
   }
 }
 
-TEST_P(Joint_TEST, JointTorqueTest)
+TEST_P(JointForceTorqueTest, ForceTorque1)
 {
-  JointTorqueTest(this->physicsEngine);
+  ForceTorque1(GetParam());
 }
 
-void Joint_TEST::JointCreationDestructionTest(const std::string &_physicsEngine)
+TEST_P(JointForceTorqueTest, ForceTorque2)
 {
-  /// \TODO: Disable for now until functionality is implemented
-  /// bullet collision parameters needs tweaking
-  if (_physicsEngine == "bullet")
-  {
-    gzerr << "Aborting test for bullet, see issue #590.\n";
-    return;
-  }
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "Aborting test for Simbody, see issue #862.\n";
-    return;
-  }
-  /// \TODO: dart not complete for this test
-  if (_physicsEngine == "dart")
-  {
-    gzerr << "Aborting test for DART, see issue #903.\n";
-    return;
-  }
-
-  // Load our inertial test world
-  Load("worlds/joint_test.world", true, _physicsEngine);
-
-  // Get a pointer to the world, make sure world loads
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
-  // create some fake links
-  physics::ModelPtr model = world->GetModel("model_1");
-  ASSERT_TRUE(model != NULL);
-  physics::LinkPtr link = model->GetLink("link_1");
-  ASSERT_TRUE(link != NULL);
-
-  physics::LinkPtr parentLink;
-  physics::LinkPtr childLink(link);
-  physics::JointPtr joint;
-  math::Pose anchor;
-  math::Vector3 axis(1, 0, 0);
-  double upper = M_PI;
-  double lower = -M_PI;
-
-  double residentLast = 0, shareLast = 0;
-  double residentCur = 0, shareCur = 0;
-
-  // The memory footprint on osx can take around 190 cycles to stabilize.
-  // So this test gives 250 cycles to stabilize and then verifies stability
-  // for another 250.
-  unsigned int cyclesMax = 500;
-  unsigned int cyclesStabilize = cyclesMax / 2;
-  for (unsigned int i = 0; i < cyclesMax; ++i)
-  {
-    // try creating a joint
-    {
-      joint = world->GetPhysicsEngine()->CreateJoint(
-        "revolute", model);
-      joint->Attach(parentLink, childLink);
-      // load adds the joint to a vector of shared pointers kept
-      // in parent and child links, preventing joint from being destroyed.
-      joint->Load(parentLink, childLink, anchor);
-      // joint->SetAnchor(0, anchor);
-      joint->SetAxis(0, axis);
-      joint->SetHighStop(0, upper);
-      joint->SetLowStop(0, lower);
-
-      if (parentLink)
-        joint->SetName(parentLink->GetName() + std::string("_") +
-                       childLink->GetName() + std::string("_joint"));
-      else
-        joint->SetName(std::string("world_") +
-                       childLink->GetName() + std::string("_joint"));
-      joint->Init();
-      joint->SetAxis(0, axis);
-    }
-    // remove the joint
-    {
-      bool paused = world->IsPaused();
-      world->SetPaused(true);
-      if (joint)
-      {
-        // reenable collision between the link pair
-        physics::LinkPtr parent = joint->GetParent();
-        physics::LinkPtr child = joint->GetChild();
-        if (parent)
-          parent->SetCollideMode("all");
-        if (child)
-          child->SetCollideMode("all");
-
-        joint->Detach();
-        joint.reset();
-      }
-      world->SetPaused(paused);
-    }
-
-    world->StepWorld(200);
-
-    this->GetMemInfo(residentCur, shareCur);
-
-    // give it 2 cycles to stabilize
-    if (i > cyclesStabilize)
-    {
-      EXPECT_LE(residentCur, residentLast);
-      EXPECT_LE(shareCur, shareLast);
-    }
-    // gzdbg << "memory res[" << residentCur
-    //       << "] shr[" << shareCur
-    //       << "] res[" << residentLast
-    //       << "] shr[" << shareLast
-    //       << "]\n";
-    residentLast = residentCur;
-    shareLast = shareCur;
-  }
+  ForceTorque2(GetParam());
 }
 
-TEST_P(Joint_TEST, JointCreationDestructionTest)
+TEST_P(JointForceTorqueTest, GetForceTorqueWithAppliedForce)
 {
-  JointCreationDestructionTest(this->physicsEngine);
+  GetForceTorqueWithAppliedForce(GetParam());
 }
 
-TEST_F(Joint_TEST, joint_SDF14)
+TEST_P(JointForceTorqueTest, JointTorqueTest)
 {
-  Load("worlds/SDF_1_4.world");
-
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-
-  int i = 0;
-  while (!this->HasEntity("joint14_model") && i < 20)
-  {
-    common::Time::MSleep(100);
-    ++i;
-  }
-
-  if (i > 20)
-    gzthrow("Unable to get joint14_model");
-
-  physics::PhysicsEnginePtr physicsEngine = world->GetPhysicsEngine();
-  EXPECT_TRUE(physicsEngine);
-  physics::ModelPtr model = world->GetModel("joint14_model");
-  EXPECT_TRUE(model);
-  physics::LinkPtr link1 = model->GetLink("body1");
-  EXPECT_TRUE(link1);
-  physics::LinkPtr link2 = model->GetLink("body2");
-  EXPECT_TRUE(link2);
-
-  EXPECT_EQ(model->GetJointCount(), 1u);
-  physics::JointPtr joint = model->GetJoint("joint14_revolute_joint");
-  EXPECT_TRUE(joint);
-
-  physics::LinkPtr parent = joint->GetParent();
-  EXPECT_TRUE(parent);
-  physics::LinkPtr child = joint->GetChild();
-  EXPECT_TRUE(child);
-  EXPECT_EQ(parent->GetName(), "body2");
-  EXPECT_EQ(child->GetName(), "body1");
+  JointTorqueTest(GetParam());
 }
 
-INSTANTIATE_TEST_CASE_P(PhysicsEngines, Joint_TEST,
-  ::testing::Combine(PHYSICS_ENGINE_VALUES,
-  ::testing::Values("")));
+INSTANTIATE_TEST_CASE_P(PhysicsEngines, JointForceTorqueTest,
+                        PHYSICS_ENGINE_VALUES);
 
 int main(int argc, char **argv)
 {
