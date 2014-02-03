@@ -13,22 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- */
+*/
 
-#include <gazebo/gazebo.hh>
+#ifndef _GUIIFACE_TEST_HH_
+#define _GUIIFACE_TEST_HH_
 
-namespace gazebo
+#include "gazebo/gui/QTestFixture.hh"
+
+/// \brief A test class for the DataLogger widget.
+class GuiIface_TEST : public QTestFixture
 {
-  class WorldPluginTutorial : public WorldPlugin
-  {
-    public: WorldPluginTutorial() : WorldPlugin()
-            {
-              printf("Hello World!\n");
-            }
+  Q_OBJECT
 
-    public: void Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
-            {
-            }
-  };
-  GZ_REGISTER_WORLD_PLUGIN(WorldPluginTutorial)
-}
+  /// \brief Test reading an INI file that doesn't exist.
+  private slots: void noINIFile();
+
+  /// \brief Test setting configuration properties.
+  private slots: void setINIProperties();
+
+  /// \brief Test savign configuration properties.
+  private slots: void saveINIProperties();
+};
+
+#endif

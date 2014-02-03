@@ -21,6 +21,7 @@
 
 #include <boost/thread.hpp>
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
 
@@ -164,29 +165,27 @@ void SimbodyLink::OnPoseChange()
   if (!this->simbodyPhysics->simbodyPhysicsInitialized)
     return;
 
-  /// \TODO: limited functionality for now.
-  /// Setting 6 dof pose of a link works in simbody only if
-  /// the inboard joint is a free joint to the ground for now.
-
   if (this->masterMobod.isEmptyHandle())
     return;
 
+  /// Limited functionality for now:
+  /// Setting 6 dof pose of a link works in simbody only if
+  /// the inboard joint is a free joint to the ground for now.
+  /// If the inboard joint is not free, simbody tries to project
+  /// target pose into available DOF's.
+
+  /// Only change pose if parent is ground, otherwise do nothing
   if (!this->masterMobod.isGround() &&
       this->masterMobod.getParentMobilizedBody().isGround())
   {
     this->masterMobod.setQToFitTransform(
        this->simbodyPhysics->integ->updAdvancedState(),
        SimbodyPhysics::Pose2Transform(this->GetWorldPose()));
+
+    // realize system after updating Q's
+    this->simbodyPhysics->system.realize(
+      this->simbodyPhysics->integ->getState(), SimTK::Stage::Position);
   }
-  // else
-  //   gzdbg << "Joint [" << this->GetScopedName()
-  //         << "] P[" << this->GetWorldPose() << "]\n";
-
-
-  /*
-  math::Pose pose = this->GetWorldPose();
-
-  */
 }
 
 //////////////////////////////////////////////////
@@ -392,18 +391,35 @@ void SimbodyLink::SetForce(const math::Vector3 &_force)
 //////////////////////////////////////////////////
 math::Vector3 SimbodyLink::GetWorldForce() const
 {
-  return math::Vector3();
+  SimTK::SpatialVec sv = this->simbodyPhysics->discreteForces.getOneBodyForce(
+    this->simbodyPhysics->integ->getState(), this->masterMobod);
+
+  // get translational component
+  SimTK::Vec3 f = sv[1];
+
+  return SimbodyPhysics::Vec3ToVector3(f);
 }
 
 //////////////////////////////////////////////////
-void SimbodyLink::SetTorque(const math::Vector3 &/*_torque*/)
+void SimbodyLink::SetTorque(const math::Vector3 &_torque)
 {
+  SimTK::Vec3 t(SimbodyPhysics::Vector3ToVec3(_torque));
+
+  this->simbodyPhysics->discreteForces.setOneBodyForce(
+    this->simbodyPhysics->integ->updAdvancedState(),
+    this->masterMobod, SimTK::SpatialVec(t, SimTK::Vec3(0)));
 }
 
 //////////////////////////////////////////////////
 math::Vector3 SimbodyLink::GetWorldTorque() const
 {
-  return math::Vector3();
+  SimTK::SpatialVec sv = this->simbodyPhysics->discreteForces.getOneBodyForce(
+    this->simbodyPhysics->integ->getState(), this->masterMobod);
+
+  // get rotational component
+  SimTK::Vec3 t = sv[0];
+
+  return SimbodyPhysics::Vec3ToVector3(t);
 }
 
 //////////////////////////////////////////////////
@@ -500,7 +516,8 @@ SimTK::MassProperties SimbodyLink::GetEffectiveMassProps(
   int _numFragments) const
 {
     SimTK::MassProperties massProps = this->GetMassProperties();
-    assert(_numFragments > 0);  // must be at least 1 for the master
+    GZ_ASSERT(_numFragments > 0,
+              "_numFragments must be at least 1 for the master");
     return SimTK::MassProperties(massProps.getMass()/_numFragments,
                           massProps.getMassCenter(),
                           massProps.getUnitInertia());
