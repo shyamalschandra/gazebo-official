@@ -144,7 +144,7 @@ namespace gazebo
     /// \param[in] _node Node for communication.
     /// \return True if the spawn message was sent.
     private: bool ProcessSpawn(boost::shared_ptr<sdf::SDF> _sdf,
-                 const std::string _name, const math::Pose &_pose,
+                 const std::string &_name, const math::Pose &_pose,
                  transport::NodePtr _node);
   };
 
@@ -228,7 +228,12 @@ namespace gazebo
     // Documentation inherited
     protected: virtual bool TransportRequired();
 
+    /// \brief Displays help message for specified command.
+    /// \param[in] _command Command to display help message.
     private: void Help(const std::string &_command);
+
+    // Prevent clang warning
+    using Command::Help;
   };
 
   /// \brief Debug command
