@@ -80,6 +80,7 @@ set(dri_tests
   camera_sensor.cc
   multicamera_sensor.cc
   gpu_laser.cc
+  gz_camera.cc
   camera_follow.cc
   heightmap.cc
   ogre_log.cc

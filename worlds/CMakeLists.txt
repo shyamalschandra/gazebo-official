@@ -33,6 +33,7 @@ set (files
   rubble.world
   shapes.world
   sphere_atlas_demo.world
+  simple_arm.world
   weshare2012.world
   willowgarage.world)
 
