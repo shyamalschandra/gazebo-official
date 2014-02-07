@@ -28,6 +28,7 @@ namespace gazebo
   {
     extern QAction *g_newAct;
     extern QAction *g_openAct;
+    extern QAction *g_openLogAct;
     extern QAction *g_importAct;
     extern QAction *g_saveAct;
     extern QAction *g_saveAsAct;
@@ -46,7 +47,8 @@ namespace gazebo
 
     extern QAction *g_playAct;
     extern QAction *g_pauseAct;
-    extern QAction *g_stepAct;
+    extern QAction *g_stepForwardAct;
+    extern QAction *g_stepBackwardAct;
 
     extern QAction *g_boxCreateAct;
     extern QAction *g_sphereCreateAct;

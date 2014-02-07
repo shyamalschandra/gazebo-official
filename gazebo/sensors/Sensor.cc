@@ -47,6 +47,7 @@ sdf::ElementPtr Sensor::sdfSensor;
 //////////////////////////////////////////////////
 Sensor::Sensor(SensorCategory _cat)
 {
+  this->initialized = false;
   if (!this->sdfSensor)
   {
     this->sdfSensor.reset(new sdf::Element);
@@ -103,6 +104,8 @@ void Sensor::Load(const std::string &_worldName)
 
   this->world = physics::get_world(_worldName);
 
+  GZ_ASSERT(this->world != NULL, "World pointer is NULL");
+
   if (this->category == IMAGE)
     this->scene = rendering::get_scene(_worldName);
 
@@ -131,7 +134,10 @@ void Sensor::Init()
 
   msgs::Sensor msg;
   this->FillMsg(msg);
-  this->sensorPub->Publish(msg);
+  if (this->sensorPub)
+    this->sensorPub->Publish(msg);
+
+  this->initialized = true;
 }
 
 //////////////////////////////////////////////////

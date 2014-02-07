@@ -111,6 +111,10 @@ namespace gazebo
     /// \param[in] _msg Message that is received.
     private: void OnControl(ConstServerControlPtr &_msg);
 
+    /// \brief Open a log file.
+    /// \param[in] _filename Name of the file to open.
+    private: bool OpenLog(const std::string &_filename);
+
     /// \brief Open a new world.
     /// \param[in] _filename Name and path of the world to open.
     /// \return True on success.
@@ -118,6 +122,8 @@ namespace gazebo
 
     /// \brief Handle all control messages.
     private: void ProcessControlMsgs();
+
+    private: bool IsStopped() const;
 
     /// \brief Boolean used to stop the server.
     private: static bool stop;
@@ -142,6 +148,9 @@ namespace gazebo
 
     /// \brief Command line params that are passed to various Gazebo objects.
     private: gazebo::common::StrStr_M params;
+
+    /// \brief Filename of a log to open.
+    private: std::string openLogFilename;
 
     /// \brief Boost program options variable map.
     private: boost::program_options::variables_map vm;

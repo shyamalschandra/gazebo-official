@@ -32,6 +32,7 @@
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/TransportIface.hh"
 
+#include "gazebo/rendering/Scene.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 
@@ -42,6 +43,7 @@
 #include "gazebo/gui/RenderWidget.hh"
 #include "gazebo/gui/ToolsWidget.hh"
 #include "gazebo/gui/GLWidget.hh"
+#include "gazebo/gui/LogPlayWidget.hh"
 #include "gazebo/gui/MainWindow.hh"
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/building/BuildingEditor.hh"
@@ -106,12 +108,19 @@ MainWindow::MainWindow()
   this->toolsWidget = new ToolsWidget();
 
   this->renderWidget = new RenderWidget(mainWidget);
+  this->logPlay = new LogPlayWidget(mainWidget);
 
-  QHBoxLayout *centerLayout = new QHBoxLayout;
+  QFrame *centerFrame = new QFrame();
+  QVBoxLayout *centerLayout = new QVBoxLayout;
+  centerLayout->addWidget(this->renderWidget);
+  centerLayout->addWidget(this->logPlay);
+  centerFrame->setLayout(centerLayout);
+
+  QHBoxLayout *mainContentLayout = new QHBoxLayout;
 
   QSplitter *splitter = new QSplitter(this);
   splitter->addWidget(this->leftColumn);
-  splitter->addWidget(this->renderWidget);
+  splitter->addWidget(centerFrame);
   splitter->addWidget(this->toolsWidget);
 
   QList<int> sizes;
@@ -126,14 +135,16 @@ MainWindow::MainWindow()
   splitter->setCollapsible(2, false);
   splitter->setHandleWidth(10);
 
-  centerLayout->addWidget(splitter);
-  centerLayout->setContentsMargins(0, 0, 0, 0);
-  centerLayout->setSpacing(0);
+  mainContentLayout->addWidget(splitter);
+  mainContentLayout->setContentsMargins(0, 0, 0, 0);
+  mainContentLayout->setSpacing(0);
 
   mainLayout->setSpacing(0);
-  mainLayout->addLayout(centerLayout, 1);
+  mainLayout->addLayout(mainContentLayout, 1);
   mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
                         Qt::AlignBottom | Qt::AlignRight);
+
+  this->logPlay->hide();
 
   mainWidget->setLayout(mainLayout);
 
@@ -296,6 +307,23 @@ void MainWindow::Open()
     msgs::ServerControl msg;
     msg.set_open_filename(filename);
     this->serverControlPub->Publish(msg);
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OpenLog()
+{
+  std::string filename = QFileDialog::getOpenFileName(this,
+      tr("Open log file"), "",
+      tr("SDF Files (*.log)")).toStdString();
+
+  if (!filename.empty())
+  {
+    msgs::ServerControl msg;
+    msg.set_open_log_filename(filename);
+    this->serverControlPub->Publish(msg);
+
+    this->logPlay->show();
   }
 }
 
@@ -505,10 +533,19 @@ void MainWindow::Pause()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::Step()
+void MainWindow::StepForward()
 {
   msgs::WorldControl msg;
   msg.set_multi_step(this->inputStepSize);
+
+  this->worldControlPub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::StepBackward()
+{
+  msgs::WorldControl msg;
+  msg.set_multi_step(-this->inputStepSize);
 
   this->worldControlPub->Publish(msg);
 }
@@ -813,6 +850,11 @@ void MainWindow::CreateActions()
   g_openAct->setStatusTip(tr("Open an world file"));
   connect(g_openAct, SIGNAL(triggered()), this, SLOT(Open()));
 
+  g_openLogAct = new QAction(tr("&Open Log"), this);
+  g_openLogAct->setShortcut(tr("Ctrl+L"));
+  g_openLogAct->setStatusTip(tr("Open an log file"));
+  connect(g_openLogAct, SIGNAL(triggered()), this, SLOT(OpenLog()));
+
   /*g_importAct = new QAction(tr("&Import Mesh"), this);
   g_importAct->setShortcut(tr("Ctrl+I"));
   g_importAct->setStatusTip(tr("Import a Collada mesh"));
@@ -878,10 +920,17 @@ void MainWindow::CreateActions()
   g_editModelAct->setCheckable(true);
   g_editModelAct->setChecked(false);
 
-  g_stepAct = new QAction(QIcon(":/images/end.png"), tr("Step"), this);
-  g_stepAct->setStatusTip(tr("Step the world"));
-  connect(g_stepAct, SIGNAL(triggered()), this, SLOT(Step()));
-  this->CreateDisabledIcon(":/images/end.png", g_stepAct);
+  g_stepForwardAct = new QAction(QIcon(":/images/step_forward.svg"),
+      tr("Step Forward"), this);
+  g_stepForwardAct->setStatusTip(tr("Step simulation forward"));
+  connect(g_stepForwardAct, SIGNAL(triggered()), this, SLOT(StepForward()));
+  this->CreateDisabledIcon(":/images/step_forward.svg", g_stepForwardAct);
+
+  g_stepBackwardAct = new QAction(QIcon(":/images/step_backward.svg"),
+      tr("Step Backward"), this);
+  g_stepBackwardAct->setStatusTip(tr("Step simulation backward"));
+  connect(g_stepBackwardAct, SIGNAL(triggered()), this, SLOT(StepBackward()));
+  this->CreateDisabledIcon(":/images/step_backward.svg", g_stepBackwardAct);
 
   g_playAct = new QAction(QIcon(":/images/play.png"), tr("Play"), this);
   g_playAct->setStatusTip(tr("Run the world"));
@@ -1104,6 +1153,7 @@ void MainWindow::CreateMenuBar()
   this->menuBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   QMenu *fileMenu = this->menuBar->addMenu(tr("&File"));
+  fileMenu->addAction(g_openLogAct);
   // fileMenu->addAction(g_openAct);
   // fileMenu->addAction(g_importAct);
   // fileMenu->addAction(g_newAct);
@@ -1177,7 +1227,7 @@ void MainWindow::CreateToolbars()
   this->playToolbar = this->addToolBar(tr("Play"));
   this->playToolbar->addAction(g_playAct);
   this->playToolbar->addAction(g_pauseAct);
-  this->playToolbar->addAction(g_stepAct);
+  this->playToolbar->addAction(g_stepForwardAct);
 }
 
 /////////////////////////////////////////////////
@@ -1386,13 +1436,13 @@ void MainWindow::OnPlayActionChanged()
 {
   if (g_playAct->isVisible())
   {
-    g_stepAct->setToolTip("Step the world");
-    g_stepAct->setEnabled(true);
+    g_stepForwardAct->setToolTip("Step the world");
+    g_stepForwardAct->setEnabled(true);
   }
   else
   {
-    g_stepAct->setToolTip("Pause the world before stepping");
-    g_stepAct->setEnabled(false);
+    g_stepForwardAct->setToolTip("Pause the world before stepping");
+    g_stepForwardAct->setEnabled(false);
   }
 }
 
@@ -1450,4 +1500,16 @@ void MainWindow::CreateDisabledIcon(const std::string &_pixmap, QAction *_act)
   p.fillRect(pixmap.rect(), QColor(0, 0, 0, 100));
   icon.addPixmap(pixmap, QIcon::Disabled);
   _act->setIcon(icon);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnServerStatus(ConstGzStringPtr &_msg)
+{
+  if (_msg->data() == "logfile_opened")
+  {
+    event::Events::pauseRender(true);
+    rendering::get_scene(gui::get_world())->Clear();
+    rendering::get_scene(gui::get_world())->Init();
+    event::Events::pauseRender(false);
+  }
 }
