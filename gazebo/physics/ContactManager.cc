@@ -56,6 +56,7 @@ ContactManager::~ContactManager()
     }
   }
   this->customContactPublishers.clear();
+  this->world.reset();
 }
 
 /////////////////////////////////////////////////

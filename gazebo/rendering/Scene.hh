@@ -54,11 +54,6 @@ namespace Ogre
   class Quaternion;
 }
 
-namespace boost
-{
-  class mutex;
-}
-
 namespace gazebo
 {
   namespace rendering
@@ -107,8 +102,11 @@ namespace gazebo
       /// \brief Load the scene with default parameters.
       public: void Load();
 
-      /// \brief Init rendering::Scene.
+      /// \brief Init the scene.
       public: void Init();
+
+      /// \brief Finalize the scene.
+      public: void Fini();
 
       /// \brief Process all received messages.
       public: void PreRender();
@@ -162,6 +160,16 @@ namespace gazebo
       public: CameraPtr CreateCamera(const std::string &_name,
                                      bool _autoRender = true);
 
+      /// \brief Remove a camera with a given name.
+      /// \param[in] _name Name of the camera to remove.
+      public: void RemoveCamera(const std::string &_name);
+
+      /// \brief Remove all non-user cameras.
+      public: void RemoveCameras();
+
+      /// \brief Remove all user cameras.
+      public: void RemoveUserCameras();
+
       /// \brief Create depth camera
       /// \param[in] _name Name of the new camera.
       /// \param[in] _autoRender True to allow Gazebo to automatically
@@ -210,10 +218,6 @@ namespace gazebo
       /// \return Pointer to the UserCamera, or NULL if the index was
       /// invalid.
       public: UserCameraPtr GetUserCamera(uint32_t _index) const;
-
-      /// \brief Remove a camera from the scene
-      /// \param[in] _name Name of the camera.
-      public: void RemoveCamera(const std::string &_name);
 
       /// \brief Get a light by name.
       /// \param[in] _name Name of the light to get.
@@ -355,7 +359,7 @@ namespace gazebo
 
       /// \brief Remove a visual from the scene.
       /// \param[in] _vis Visual to remove.
-      public: void RemoveVisual(VisualPtr _vis);
+      public: bool RemoveVisual(VisualPtr _vis);
 
       /// \brief Set the grid on or off
       /// \param[in] _enabled Set to true to turn on the grid
@@ -575,6 +579,9 @@ namespace gazebo
       private: void CreateCOMVisual(sdf::ElementPtr _elem,
                                     VisualPtr _linkVisual);
 
+      /// \brief Init communications.
+      private: void InitComms();
+
       /// \brief Name of the scene.
       private: std::string name;
 
@@ -691,7 +698,9 @@ namespace gazebo
       private: boost::shared_ptr<msgs::Selection const> selectionMsg;
 
       /// \brief Mutex to lock the various message buffers.
-      private: boost::mutex *receiveMutex;
+      private: mutable boost::mutex receiveMutex;
+      private: boost::mutex preRenderMutex;
+      private: boost::mutex renderMutex;
 
       /// \brief Mutex to lock the pose message buffers.
       private: boost::recursive_mutex poseMsgMutex;
@@ -814,6 +823,9 @@ namespace gazebo
 
       /// \brief Keep track of data of joints.
       private: JointMsgs_M joints;
+
+      /// \brief True if the scene is tied to the server.
+      private: bool isServer;
     };
     /// \}
   }

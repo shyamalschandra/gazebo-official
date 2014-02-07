@@ -21,6 +21,7 @@
 #include "gazebo/transport/transport.hh"
 #include "gazebo/common/common.hh"
 #include "gazebo/util/LogRecord.hh"
+#include "gazebo/util/LogPlay.hh"
 #include "gazebo/math/gzmath.hh"
 #include "gazebo/gazebo_config.h"
 #include "gazebo/gazebo.hh"
@@ -109,6 +110,7 @@ void gazebo::fini()
 {
   boost::mutex::scoped_lock lock(fini_mutex);
   util::LogRecord::Instance()->Fini();
+  util::LogPlay::Instance()->Fini();
   g_plugins.clear();
   gazebo::transport::fini();
 }

@@ -200,6 +200,10 @@ namespace gazebo
       /// \brief Reset the lastUpdateTime to zero.
       public: void ResetLastUpdateTime();
 
+      /// \brief Return true if initialized.
+      /// \return True if initialized.
+      public: bool IsInitialized() const;
+
       /// \brief Get the sensor's ID.
       /// \return The sensor's ID.
       public: uint32_t GetId() const;
@@ -283,6 +287,9 @@ namespace gazebo
 
       /// \brief The category of the sensor.
       private: SensorCategory category;
+
+      /// \brief True if initialized
+      private: bool initialized;
 
       /// \brief Keep track how much the update has been delayed.
       private: common::Time updateDelay;

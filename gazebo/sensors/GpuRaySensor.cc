@@ -113,8 +113,7 @@ void GpuRaySensor::Load(const std::string &_worldName)
 
   this->parentEntity = this->world->GetEntity(this->parentName);
 
-  GZ_ASSERT(this->parentEntity != NULL,
-      "Unable to get the parent entity.");
+  GZ_ASSERT(this->parentEntity != NULL, "Unable to get the parent entity.");
 }
 
 //////////////////////////////////////////////////
