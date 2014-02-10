@@ -53,6 +53,7 @@
 //#define PENETRATION_JVERROR_CORRECTION
 //#define POST_UPDATE_CONSTRAINT_VIOLATION_CORRECTION
 
+#define CHECK_VELOCITY_OBEYS_CONSTRAINT
 
 
 #ifdef USE_TPROW
@@ -69,12 +70,10 @@ typedef dReal *dRealMutablePtr;
 // configuration
 
 // for the SOR and CG methods:
-// uncomment the following line to use warm starting. this definitely
-// help for motor-driven joints. unfortunately it appears to hurt
-// with high-friction contacts using the SOR method. use with care
-
-#define WARM_STARTING 1
-
+// warm starting:
+// this definitely help for motor-driven joints.
+// unfortunately it appears to hurt with high-friction contacts
+// using the SOR method. use with care
 
 // for the SOR method:
 // uncomment the following line to determine a new constraint-solving
@@ -95,7 +94,6 @@ typedef dReal *dRealMutablePtr;
 /// scale SOR for contact to reduce overshoot in solution for contacts
 /// \TODO: make this a parameter
 #define CONTACT_SOR_SCALE 0.25
-#define SMOOTH 0.01
 
 // structure for passing variable pointers in SOR_LCP
 struct dxSORLCPParameters {
@@ -206,8 +204,8 @@ static void compute_invM_JT (int m, dRealPtr J, dRealMutablePtr iMJ, int *jb,
   }
 }
 
+// warm starting
 // compute out = inv(M)*J'*in.
-#ifdef WARM_STARTING
 static void multiply_invM_JT (int m, int nb, dRealMutablePtr iMJ, int *jb,
   dRealPtr in, dRealMutablePtr out)
 {
@@ -227,7 +225,6 @@ static void multiply_invM_JT (int m, int nb, dRealMutablePtr iMJ, int *jb,
     iMJ_ptr += 6;
   }
 }
-#endif
 
 // compute out = J*in.
 
@@ -255,7 +252,7 @@ static void multiply_J (int m, dRealPtr J, int *jb,
 // compute out = (J*inv(M)*J' + cfm)*in.
 // use z as an nb*6 temporary.
 /* not used
-#ifdef WARM_STARTING
+// warm starting
 static void multiply_J_invM_JT (int m, int nb, dRealMutablePtr J, dRealMutablePtr iMJ, int *jb,
   dRealPtr cfm, dRealMutablePtr z, dRealMutablePtr in, dRealMutablePtr out)
 {
@@ -265,7 +262,6 @@ static void multiply_J_invM_JT (int m, int nb, dRealMutablePtr J, dRealMutablePt
   // add cfm
   for (int i=0; i<m; i++) out[i] += cfm[i] * in[i];
 }
-#endif
 */
 
 //***************************************************************************
@@ -324,14 +320,18 @@ static void CG_LCP (dxWorldProcessContext *context,
     Ad[i] = REAL(1.0) / (sum + cfm[i]);
   }
 
-#ifdef WARM_STARTING
-  // compute residual r = rhs - A*lambda
-  multiply_J_invM_JT (m,nb,J,iMJ,jb,cfm,cforce,lambda,r);
-  for (int k=0; k<m; k++) r[k] = rhs[k] - r[k];
-#else
-  dSetZero (lambda,m);
-  memcpy (r,rhs,m*sizeof(dReal));    // residual r = rhs - A*lambda
-#endif
+  if (qs->warm_start > 0)
+  {
+    // warm start
+    // compute residual r = rhs - A*lambda
+    multiply_J_invM_JT (m,nb,J,iMJ,jb,cfm,cforce,lambda,r);
+    for (int k=0; k<m; k++) r[k] = rhs[k] - r[k];
+  }
+  else
+  {
+    dSetZero (lambda,m);
+    memcpy (r,rhs,m*sizeof(dReal));    // residual r = rhs - A*lambda
+  }
 
   for (int iteration=0; iteration < num_iterations; iteration++) {
     for (int i=0; i<m; i++) z[i] = r[i]*Ad[i];  // z = inv(M)*r
@@ -597,6 +597,8 @@ static void ComputeRows(
   int num_iterations = qs->num_iterations;
   int precon_iterations = qs->precon_iterations;
   double sor_lcp_tolerance = qs->sor_lcp_tolerance;
+  int friction_iterations = qs->friction_iterations;
+  dReal smooth_contacts = qs->smooth_contacts;
 
 
   // FIME: preconditioning can be defined insdie iterations loop now, becareful to match last iteration with
@@ -619,7 +621,6 @@ static void ComputeRows(
 #ifdef PENETRATION_JVERROR_CORRECTION
   dReal Jvnew_final = 0;
 #endif
-  int friction_iterations = 10;
   dRealMutablePtr caccel_ptr1;
   dRealMutablePtr caccel_ptr2;
   dRealMutablePtr caccel_erp_ptr1;
@@ -940,9 +941,11 @@ static void ComputeRows(
             if (normal_index != -1)
             {
               // extra residual smoothing for contact constraints
-              lambda[index] = (1.0 - SMOOTH)*lambda[index] + SMOOTH*old_lambda;
+              lambda[index] = (1.0 - smooth_contacts)*lambda[index]
+                + smooth_contacts*old_lambda;
               // is filtering lambda_erp necessary?
-              // lambda_erp[index] = (1.0 - SMOOTH)*lambda_erp[index] + SMOOTH*old_lambda_erp;
+              // lambda_erp[index] = (1.0 - smooth_contacts)*lambda_erp[index]
+              //   + smooth_contacts*old_lambda_erp;
             }
           }
 #endif
@@ -1146,25 +1149,26 @@ static void SOR_LCP (dxWorldProcessContext *context,
   dReal *iMJ = context->AllocateArray<dReal> (m*12);
   compute_invM_JT (m,J,iMJ,jb,body,invMOI);
 
-#ifdef WARM_STARTING
-  // compute cforce=(inv(M)*J')*lambda
-  if (qs->precon_iterations > 0)
-    multiply_invM_JT (m,nb,J,jb,lambda,cforce);
-
-  if (1)
+  if (qs->warm_start > 0)
   {
+    // warm starting
+    // compute cforce=(inv(M)*J')*lambda
+    if (qs->precon_iterations > 0)
+      multiply_invM_JT (m,nb,J,jb,lambda,cforce);
+
     // re-compute caccel=(inv(M)*J')*lambda with new iMJ
     // seems much better than using stored caccel's
     multiply_invM_JT (m,nb,iMJ,jb,lambda,caccel);
     multiply_invM_JT (m,nb,iMJ,jb,lambda_erp,caccel_erp);
   }
-#else
-  // no warm starting
-  if (qs->precon_iterations > 0)
-    dSetZero (cforce,nb*6);
-  dSetZero (caccel,nb*6);
-  dSetZero (caccel_erp,nb*6);
-#endif
+  else
+  {
+    // no warm starting
+    if (qs->precon_iterations > 0)
+      dSetZero (cforce,nb*6);
+    dSetZero (caccel,nb*6);
+    dSetZero (caccel_erp,nb*6);
+  }
 
   dReal *Ad = context->AllocateArray<dReal> (m);
 
@@ -1273,6 +1277,7 @@ static void SOR_LCP (dxWorldProcessContext *context,
   dReal *delta_error = context->AllocateArray<dReal> (m);
 
 #ifndef REORDER_CONSTRAINTS
+  if (qs->row_reorder1)
   {
     // -1 in front, followed by -2, lastly all the >0
     // Fill the array from both ends
@@ -1307,6 +1312,23 @@ static void SOR_LCP (dxWorldProcessContext *context,
       }
     }
     dIASSERT (back - front==1);
+  }
+  else
+  {
+    // make sure constraints with findex < 0 come first.
+    IndexError *orderhead = order, *ordertail = order + (m - 1);
+
+    // Fill the array from both ends
+    for (int i=0; i<m; i++) {
+      if (findex[i] < 0) {
+        orderhead->index = i; // Place them at the front
+        ++orderhead;
+      } else {
+        ordertail->index = i; // Place them at the end
+        --ordertail;
+      }
+    }
+    dIASSERT (orderhead-ordertail==1);
   }
 #endif
 
@@ -2030,7 +2052,8 @@ void dxQuickStepper (dxWorldProcessContext *context,
           }
 
           // Modify inertia to keep simulation stable
-          DYNAMIC_INERTIA(infom, Jinfo, b1, b2, jicurr, invMOI, MOI);
+          if (world->qs.dynamic_inertia_reduction)
+            DYNAMIC_INERTIA(infom, Jinfo, b1, b2, jicurr, invMOI, MOI);
 
           // update index for next joint
           ofsi += infom;
@@ -2130,8 +2153,10 @@ void dxQuickStepper (dxWorldProcessContext *context,
     dReal *lambda = context->AllocateArray<dReal> (m);
     dReal *lambda_erp = context->AllocateArray<dReal> (m);
 
-#ifdef WARM_STARTING
+    // initialize lambda and lambda_erp
+    if (world->qs.warm_start > 0)
     {
+      // warm starting
       dReal *lambdacurr = lambda;
       dReal *lambda_erpcurr = lambda_erp;
       const dJointWithInfo1 *jicurr = jointiinfos;
@@ -2143,24 +2168,20 @@ void dxQuickStepper (dxWorldProcessContext *context,
         memcpy (lambda_erpcurr, jicurr->joint->lambda_erp, infom * sizeof(dReal));
         lambda_erpcurr += infom;
       }
-    }
 
-    if (1)
-    {
       // for warm starting, this seems to be necessary to prevent
       // jerkiness in motor-driven joints. i have no idea why this works.
       // also necessary if J condition numbers are high (maybe the same thing).
       for (int i=0; i<m; i++) {
-        lambda[i] *= 0.5;
-        lambda_erp[i] *= 0.5;
+        lambda[i] *= world->qs.warm_start;
+        lambda_erp[i] *= world->qs.warm_start;
       }
-
     }
-#else
-    // no warm starting
-    dSetZero (lambda,m);
-    dSetZero (lambda_erp,m);
-#endif
+    else
+    {
+      dSetZero (lambda,m);
+      dSetZero (lambda_erp,m);
+    }
 
     BEGIN_STATE_SAVE(context, lcpstate) {
       IFTIMING (dTimerNow ("solving LCP problem"));
@@ -2178,8 +2199,9 @@ void dxQuickStepper (dxWorldProcessContext *context,
 
     } END_STATE_SAVE(context, lcpstate);
 
-#ifdef WARM_STARTING
+    if (world->qs.warm_start > 0)
     {
+      // warm starting
       // save lambda for the next iteration
       //@@@ note that this doesn't work for contact joints yet, as they are
       // recreated every iteration
@@ -2191,11 +2213,11 @@ void dxQuickStepper (dxWorldProcessContext *context,
         int infom = jicurr->info.m;
         memcpy (jicurr->joint->lambda, lambdacurr, infom * sizeof(dReal));
         lambdacurr += infom;
-        memcpy (jicurr->joint->lambda_erp, lambda_erpcurr, infom * sizeof(dReal));
+        memcpy (jicurr->joint->lambda_erp, lambda_erpcurr,
+          infom * sizeof(dReal));
         lambda_erpcurr += infom;
       }
     }
-#endif
 
     // note that the SOR method overwrites rhs and J at this point, so
     // they should not be used again.
@@ -2264,7 +2286,6 @@ void dxQuickStepper (dxWorldProcessContext *context,
         lambdacurr += infom;
       }
     }
-  }
 
   {
     IFTIMING (dTimerNow ("compute velocity update"));
@@ -2300,7 +2321,7 @@ void dxQuickStepper (dxWorldProcessContext *context,
       //  (this check needs unmodified J)
       //  put residual into tmp
       dRealMutablePtr velcurr = vel;
-      //dxBody* const* bodyend = body + nb;
+      dxBody* const* bodyend = body + nb;
       for (dxBody* const* bodycurr = body; bodycurr != bodyend; velcurr += 6, bodycurr++) {
         dxBody *b_ptr = *bodycurr;
         for (int j=0; j<3; j++) {
@@ -2311,12 +2332,37 @@ void dxQuickStepper (dxWorldProcessContext *context,
       dReal *tmp = context->AllocateArray<dReal> (m);
       multiply_J (m,J,jb,vel,tmp);
 
+      dReal bilateral_error = 0;
+      dReal contact_error = 0;
       dReal error = 0;
-      for (int i=0; i<m; i++) error += dFabs(tmp[i]);
-      printf ("velocity error = %10.6e\n",error);
+      int contacts = 0;
+      for (int i=0; i<m; i++)
+      {
+        error += dFabs(tmp[i])*dFabs(tmp[i]);
+        if (findex[i] == -1)
+          bilateral_error += dFabs(tmp[i])*dFabs(tmp[i]);
+        else if (findex[i] == -2)
+        {
+          // contact error includes joint limits
+          contact_error += dFabs(tmp[i])*dFabs(tmp[i]);
+          contacts++;
+        }
+        else if (findex[i] >= 0)
+          contact_error += dFabs(tmp[i])*dFabs(tmp[i]);
+
+        // Note: This is not a good measure of constraint error
+        // for soft contact, as Jv is not necessarily zero here.
+        // Better measure is compute the residual.  \\\ TODO
+      }
+      // printf ("error = %10.6e %10.6e %10.6e\n",error, bilateral_error, contact_error);
+      world->qs.constraint_residual = sqrt(error/(double)m);
+      world->qs.bilateral_residual = sqrt(bilateral_error/(double)m);
+      world->qs.contact_residual = sqrt(contact_error/(double)m);
+      world->qs.num_contacts = contacts;
     }
   }
 #endif
+  } // keep "compute velocity update and check velocity obeys constraint
 
   {
     // update the position and orientation from the new linear/angular velocity

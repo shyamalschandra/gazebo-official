@@ -1255,3 +1255,27 @@ std::string SimbodyPhysics::GetTypeString(unsigned int _type)
 {
   return GetTypeString(physics::Base::EntityType(_type));
 }
+
+//////////////////////////////////////////////////
+boost::any SimbodyPhysics::GetParam(const std::string &_key) const
+{
+  if (_key == "type")
+    return this->GetType();
+  // else if (_key == "rms_error")
+  //   return dWorldGetQuickStepRMSError(this->worldId);
+  // else if (_key == "constraint_residual")
+  //   return dWorldGetQuickStepConstraintResidual(this->worldId);
+  // else if (_key == "bilateral_residual")
+  //   return dWorldGetQuickStepBilateralResidual(this->worldId);
+  // else if (_key == "contact_residual")
+  //   return dWorldGetQuickStepContactResidual(this->worldId);
+  // else if (_key == "num_contacts")
+  //   return dWorldGetQuickStepNumContacts(this->worldId);
+  else
+  {
+    gzwarn << "key [" << _key
+           << "] not supported, returning (int)0." << std::endl;
+    return 0;
+  }
+}
+
