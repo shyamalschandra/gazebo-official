@@ -60,7 +60,8 @@ class PhysicsFrictionTest : public ServerFixture,
                     boost::dynamic_pointer_cast<physics::ODESurfaceParams>(
                     (*iter)->GetSurface());
                   // Average the mu1 and mu2 values
-                  this->friction = (surface->mu1 + surface->mu2) / 2.0;
+                  this->friction = (surface->frictionPyramid.GetMu(0)
+                                  + surface->frictionPyramid.GetMu(1)) / 2.0;
                 }
 #ifdef HAVE_BULLET
                 else if (physics->GetType() == "bullet")
@@ -69,7 +70,8 @@ class PhysicsFrictionTest : public ServerFixture,
                     boost::dynamic_pointer_cast<physics::BulletSurfaceParams>(
                     (*iter)->GetSurface());
                   // Average the mu1 and mu2 values
-                  this->friction = (surface->mu1 + surface->mu2) / 2.0;
+                  this->friction = (surface->frictionPyramid.GetMu(0)
+                                  + surface->frictionPyramid.GetMu(1)) / 2.0;
                 }
 #endif
               }
