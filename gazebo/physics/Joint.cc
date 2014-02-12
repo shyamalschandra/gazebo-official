@@ -50,15 +50,23 @@ Joint::Joint(BasePtr _parent)
   this->effortLimit[1] = -1;
   this->velocityLimit[0] = -1;
   this->velocityLimit[1] = -1;
-  this->useCFMDamping = false;
   this->lowerLimit[0] = -1e16;
   this->lowerLimit[1] = -1e16;
   this->upperLimit[0] =  1e16;
   this->upperLimit[1] =  1e16;
   this->inertiaRatio[0] = 0;
   this->inertiaRatio[1] = 0;
-  this->dampingCoefficient = 0;
+  this->dissipationCoefficient[0] = 0;
+  this->dissipationCoefficient[1] = 0;
+  this->stiffnessCoefficient[0] = 0;
+  this->stiffnessCoefficient[1] = 0;
+  this->springReferencePosition[0] = 0;
+  this->springReferencePosition[1] = 0;
   this->provideFeedback = false;
+  this->stopStiffness[0] = 1e8;
+  this->stopDissipation[0] = 1.0;
+  this->stopStiffness[1] = 1e8;
+  this->stopDissipation[1] = 1.0;
 
   if (!this->sdfJoint)
   {
@@ -116,6 +124,31 @@ void Joint::Load(sdf::ElementPtr _sdf)
     if (physicsElem->HasElement("provide_feedback"))
     {
       this->SetProvideFeedback(physicsElem->Get<bool>("provide_feedback"));
+    }
+  }
+
+  if (_sdf->HasElement("axis"))
+  {
+    sdf::ElementPtr axisElem = _sdf->GetElement("axis");
+    if (axisElem->HasElement("limit"))
+    {
+      sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+      // store joint stop stiffness and dissipation coefficients
+      this->stopStiffness[0] = limitElem->Get<double>("stiffness");
+      this->stopDissipation[0] = limitElem->Get<double>("dissipation");
+    }
+  }
+  if (_sdf->HasElement("axis2"))
+  {
+    sdf::ElementPtr axisElem = _sdf->GetElement("axis2");
+    if (axisElem->HasElement("limit"))
+    {
+      sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+      // store joint stop stiffness and dissipation coefficients
+      this->stopStiffness[1] = limitElem->Get<double>("stiffness");
+      this->stopDissipation[1] = limitElem->Get<double>("dissipation");
     }
   }
 
@@ -268,7 +301,7 @@ void Joint::Init()
 }
 
 //////////////////////////////////////////////////
-math::Vector3 Joint::GetLocalAxis(int _index) const
+math::Vector3 Joint::GetLocalAxis(unsigned int _index) const
 {
   math::Vector3 vec;
 
@@ -294,9 +327,9 @@ void Joint::SetEffortLimit(unsigned int _index, double _effort)
 }
 
 //////////////////////////////////////////////////
-double Joint::GetEffortLimit(int _index)
+double Joint::GetEffortLimit(unsigned int _index)
 {
-  if (_index >= 0 && static_cast<unsigned int>(_index) < this->GetAngleCount())
+  if (_index < this->GetAngleCount())
     return this->effortLimit[_index];
 
   gzerr << "GetEffortLimit index[" << _index << "] out of range\n";
@@ -304,9 +337,9 @@ double Joint::GetEffortLimit(int _index)
 }
 
 //////////////////////////////////////////////////
-double Joint::GetVelocityLimit(int _index)
+double Joint::GetVelocityLimit(unsigned int _index)
 {
-  if (_index >= 0 && static_cast<unsigned int>(_index) < this->GetAngleCount())
+  if (_index < this->GetAngleCount())
     return this->velocityLimit[_index];
 
   gzerr << "GetVelocityLimit index[" << _index << "] out of range\n";
@@ -401,6 +434,12 @@ void Joint::FillMsg(msgs::Joint &_msg)
     _msg.set_type(msgs::Joint::SCREW);
     _msg.add_angle(this->GetAngle(0).Radian());
   }
+  else if (this->HasType(Base::GEARBOX_JOINT))
+  {
+    _msg.set_type(msgs::Joint::GEARBOX);
+    _msg.add_angle(this->GetAngle(0).Radian());
+    _msg.add_angle(this->GetAngle(1).Radian());
+  }
   else if (this->HasType(Base::UNIVERSAL_JOINT))
   {
     _msg.set_type(msgs::Joint::UNIVERSAL);
@@ -455,7 +494,7 @@ void Joint::FillMsg(msgs::Joint &_msg)
 }
 
 //////////////////////////////////////////////////
-math::Angle Joint::GetAngle(int _index) const
+math::Angle Joint::GetAngle(unsigned int _index) const
 {
   if (this->model->IsStatic())
     return this->staticAngle;
@@ -464,7 +503,7 @@ math::Angle Joint::GetAngle(int _index) const
 }
 
 //////////////////////////////////////////////////
-void Joint::SetHighStop(int _index, const math::Angle &_angle)
+void Joint::SetHighStop(unsigned int _index, const math::Angle &_angle)
 {
   GZ_ASSERT(this->sdf != NULL, "Joint sdf member is NULL");
   if (_index == 0)
@@ -485,7 +524,7 @@ void Joint::SetHighStop(int _index, const math::Angle &_angle)
 }
 
 //////////////////////////////////////////////////
-void Joint::SetLowStop(int _index, const math::Angle &_angle)
+void Joint::SetLowStop(unsigned int _index, const math::Angle &_angle)
 {
   GZ_ASSERT(this->sdf != NULL, "Joint sdf member is NULL");
   if (_index == 0)
@@ -506,7 +545,7 @@ void Joint::SetLowStop(int _index, const math::Angle &_angle)
 }
 
 //////////////////////////////////////////////////
-void Joint::SetAngle(int _index, math::Angle _angle)
+void Joint::SetAngle(unsigned int _index, math::Angle _angle)
 {
   if (this->model->IsStatic())
     this->staticAngle = _angle;
@@ -525,9 +564,9 @@ void Joint::SetState(const JointState &_state)
 }
 
 //////////////////////////////////////////////////
-double Joint::CheckAndTruncateForce(int _index, double _effort)
+double Joint::CheckAndTruncateForce(unsigned int _index, double _effort)
 {
-  if (_index < 0 || static_cast<unsigned int>(_index) >= this->GetAngleCount())
+  if (_index >= this->GetAngleCount())
   {
     gzerr << "Calling Joint::SetForce with an index ["
           << _index << "] out of range\n";
@@ -562,13 +601,23 @@ double Joint::GetForce(unsigned int /*_index*/)
 //////////////////////////////////////////////////
 double Joint::GetDampingCoefficient() const
 {
-  return this->dampingCoefficient;
+  gzerr << "Joint::GetDampingCoefficient() is deprecated, please switch "
+        << "to Joint::GetDamping(index)\n";
+  return this->dissipationCoefficient[0];
 }
 
 //////////////////////////////////////////////////
 void Joint::ApplyDamping()
 {
-  gzerr << "Joint::ApplyDamping should be overloaded by physics engines.\n";
+  gzerr << "Joint::ApplyDamping deprecated by Joint::ApplyStiffnessDamping.\n";
+  this->ApplyStiffnessDamping();
+}
+
+//////////////////////////////////////////////////
+void Joint::ApplyStiffnessDamping()
+{
+  gzerr << "Joint::ApplyStiffnessDamping should be overloaded by "
+        << "physics engines.\n";
 }
 
 //////////////////////////////////////////////////
@@ -642,9 +691,33 @@ double Joint::GetInertiaRatio(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
-double Joint::GetDamping(int /*_index*/)
+double Joint::GetDamping(unsigned int _index)
 {
-  return this->dampingCoefficient;
+  if (_index < this->GetAngleCount())
+  {
+    return this->dissipationCoefficient[_index];
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get damping coefficient.\n";
+    return 0;
+  }
+}
+
+//////////////////////////////////////////////////
+double Joint::GetStiffness(unsigned int _index)
+{
+  if (static_cast<unsigned int>(_index) < this->GetAngleCount())
+  {
+    return this->stiffnessCoefficient[_index];
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get stiffness coefficient.\n";
+    return 0;
+  }
 }
 
 //////////////////////////////////////////////////
@@ -668,9 +741,141 @@ math::Angle Joint::GetUpperLimit(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
+void Joint::SetLowerLimit(unsigned int _index, math::Angle _limit)
+{
+  if (_index >= this->GetAngleCount())
+  {
+    gzerr << "SetLowerLimit for index [" << _index
+          << "] out of bounds [" << this->GetAngleCount()
+          << "]\n";
+    return;
+  }
+
+  if (_index == 0)
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
+    sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+    // store lower joint limits
+    this->lowerLimit[_index] = _limit;
+    limitElem->GetElement("lower")->Set(_limit.Radian());
+  }
+  else if (_index == 1)
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis2");
+    sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+    // store lower joint limits
+    this->lowerLimit[_index] = _limit;
+    limitElem->GetElement("lower")->Set(_limit.Radian());
+  }
+  else
+  {
+    gzwarn << "SetLowerLimit for joint [" << this->GetName()
+           << "] index [" << _index
+           << "] not supported\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void Joint::SetUpperLimit(unsigned int _index, math::Angle _limit)
+{
+  if (_index >= this->GetAngleCount())
+  {
+    gzerr << "SetUpperLimit for index [" << _index
+          << "] out of bounds [" << this->GetAngleCount()
+          << "]\n";
+    return;
+  }
+
+  if (_index == 0)
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
+    sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+    // store upper joint limits
+    this->upperLimit[_index] = _limit;
+    limitElem->GetElement("upper")->Set(_limit.Radian());
+  }
+  else if (_index == 1)
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis2");
+    sdf::ElementPtr limitElem = axisElem->GetElement("limit");
+
+    // store upper joint limits
+    this->upperLimit[_index] = _limit;
+    limitElem->GetElement("upper")->Set(_limit.Radian());
+  }
+  else
+  {
+    gzwarn << "SetUpperLimit for joint [" << this->GetName()
+           << "] index [" << _index
+           << "] not supported\n";
+  }
+}
+
+//////////////////////////////////////////////////
 void Joint::SetProvideFeedback(bool _enable)
 {
   this->provideFeedback = _enable;
+}
+
+//////////////////////////////////////////////////
+void Joint::SetStopStiffness(unsigned int _index, double _stiffness)
+{
+  if (_index < this->GetAngleCount())
+  {
+    this->stopStiffness[_index] = _stiffness;
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to set joint stop stiffness.\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void Joint::SetStopDissipation(unsigned int _index, double _dissipation)
+{
+  if (_index < this->GetAngleCount())
+  {
+    this->stopDissipation[_index] = _dissipation;
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to set joint stop dissipation.\n";
+  }
+}
+
+//////////////////////////////////////////////////
+double Joint::GetStopStiffness(unsigned int _index)
+{
+  if (_index < this->GetAngleCount())
+  {
+    return this->stopStiffness[_index];
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get joint stop stiffness.\n";
+    return 0;
+  }
+}
+
+//////////////////////////////////////////////////
+double Joint::GetStopDissipation(unsigned int _index)
+{
+  if (_index < this->GetAngleCount())
+  {
+    return this->stopDissipation[_index];
+  }
+  else
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get joint stop dissipation.\n";
+    return 0;
+  }
 }
 
 //////////////////////////////////////////////////
