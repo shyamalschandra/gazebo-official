@@ -171,14 +171,27 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find libtar.
-  find_path (libtar_include_dir libtar.h /usr/include /usr/local/include ENV CPATH)
-  if (NOT libtar_include_dir)
+  find_path (libtar_INCLUDE_DIRS libtar.h)
+  find_library(libtar_LIBRARIES tar)
+  set (LIBTAR_NOT_FOUND False)
+
+  if (NOT libtar_INCLUDE_DIRS)
     message (STATUS "Looking for libtar.h - not found")
-    BUILD_ERROR("Missing: libtar")
+    set (LIBTAR_NOT_FOUND True)
   else ()
     message (STATUS "Looking for libtar.h - found")
-    set (libtar_libraries "tar" CACHE INTERNAL "tinyxml libraries")
+    include_directories(${LIBTAR_INCLUDE_DIRS})
   endif ()
+  if (NOT libtar_LIBRARIES)
+    message (STATUS "Looking for libtar.so - not found")
+    set (LIBTAR_NOT_FOUND False)
+  else ()
+    message (STATUS "Looking for libtar.so - found")
+  endif ()
+
+  if (LIBTAR_NOT_FOUND)
+     BUILD_ERROR("Missing: libtar")
+  endif()
 
   #################################################
   # Use internal CCD (built as libgazebo_ccd.so)
