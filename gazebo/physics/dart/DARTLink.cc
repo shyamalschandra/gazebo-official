@@ -32,9 +32,11 @@ using namespace physics;
 //////////////////////////////////////////////////
 DARTLink::DARTLink(EntityPtr _parent)
   : Link(_parent),
-    dtBodyNode(new dart::dynamics::BodyNode)
+    dtBodyNode(NULL),
+    staticLink(false),
+    ballConst(NULL),
+    revConst(NULL)
 {
-  staticLink = false;
 }
 
 //////////////////////////////////////////////////
@@ -52,6 +54,144 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
 
   if (this->dartPhysics == NULL)
     gzthrow("Not using the dart physics engine");
+
+  // Check if soft_contact element is contained in this link. If so,
+  // SoftBodyNode will be created. Otherwise, BodyNode will be created.
+  sdf::ElementPtr dartElem;
+  sdf::ElementPtr softCollElem;
+  sdf::ElementPtr softGeomElem;
+
+  if (_sdf->HasElement("collision"))
+  {
+    sdf::ElementPtr collElem = _sdf->GetElement("collision");
+    while (collElem)
+    {
+      // Geometry
+      sdf::ElementPtr geomElem = collElem->GetElement("geometry");
+
+      // Surface
+      if (collElem->HasElement("surface"))
+      {
+        sdf::ElementPtr surfaceElem = collElem->GetElement("surface");
+
+        // Soft contact
+        if (surfaceElem->HasElement("soft_contact"))
+        {
+          sdf::ElementPtr softContactElem
+              = surfaceElem->GetElement("soft_contact");
+
+          if (softContactElem->HasElement("dart"))
+          {
+            if (dartElem != NULL)
+            {
+              gzerr << "DART supports only one deformable body in a link.\n";
+              break;
+            }
+
+            dartElem = softContactElem->GetElement("dart");
+            softCollElem = collElem;
+            softGeomElem = geomElem;
+
+            gzmsg << "This link is soft link.\n";
+          }
+        }
+      }
+
+      collElem = collElem->GetNextElement("collision");
+    }
+  }
+
+  if (dartElem != NULL)
+  {
+    std::cout << "dartElem: " << dartElem << std::endl;
+    std::cout << "SoftBodyNode!" << std::endl;
+
+    // Create DART SoftBodyNode
+    dart::dynamics::SoftBodyNode* dtSoftBodyNode
+        = new dart::dynamics::SoftBodyNode();
+
+    // Mass
+    double fleshMassFraction = dartElem->Get<double>("flesh_mass_fraction");
+
+    std::cout << "fleshMassFraction: " << fleshMassFraction << std::endl;
+
+    // bone_attachment (Kv)
+    if (dartElem->HasElement("bone_attachment"))
+    {
+      double kv = dartElem->Get<double>("bone_attachment");
+      dtSoftBodyNode->setVertexSpringStiffness(kv);
+
+      std::cout << "bone_attachment: " << kv << std::endl;
+    }
+
+    // stiffness (Ke)
+    if (dartElem->HasElement("stiffness"))
+    {
+      double ke = dartElem->Get<double>("stiffness");
+      dtSoftBodyNode->setEdgeSpringStiffness(ke);
+
+      std::cout << "stiffness: " << ke << std::endl;
+    }
+
+    // damping
+    if (dartElem->HasElement("damping"))
+    {
+      double damping = dartElem->Get<double>("damping");
+      dtSoftBodyNode->setDampingCoefficient(damping);
+
+      std::cout << "damping: " << damping << std::endl;
+    }
+
+    // pose
+    Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
+    std::cout << "pose" << T.matrix() << std::endl;
+    if (softCollElem->HasElement("pose"))
+    {
+      std::cout << "In pose!" << std::endl;
+      T = DARTTypes::ConvPose(softCollElem->Get<math::Pose>("pose"));
+
+      std::cout << "pose" << T.matrix() << std::endl;
+    }
+
+    // geometry
+    if (softGeomElem->HasElement("box"))
+    {
+      std::cout << "box" << std::endl;
+
+      sdf::ElementPtr boxEle = softGeomElem->GetElement("box");
+      Eigen::Vector3d size
+          = DARTTypes::ConvVec3(boxEle->Get<math::Vector3>("size"));
+      dart::dynamics::SoftBodyNodeHelper::setBox(
+            dtSoftBodyNode, size, T, fleshMassFraction);
+      dtSoftBodyNode->addCollisionShape(
+            new dart::dynamics::SoftMeshShape(dtSoftBodyNode));
+
+      std::cout << "box finished" << std::endl;
+    }
+//    else if (geomElem->HasElement("ellipsoid"))
+//    {
+//      sdf::ElementPtr ellipsoidEle = geomElem->GetElement("ellipsoid");
+//      Eigen::Vector3d size
+//          = DARTTypes::ConvVec3(ellipsoidEle->Get<math::Vector3>("size"));
+//      double nSlices = ellipsoidEle->Get<double>("num_slices");
+//      double nStacks = ellipsoidEle->Get<double>("num_stacks");
+//      dart::dynamics::SoftBodyNodeHelper::setEllipsoid(
+//            dtSoftBodyNode, size, nSlices, nStacks, fleshMassFraction);
+//      dtSoftBodyNode->addCollisionShape(
+//            new dart::dynamics::SoftMeshShape(dtSoftBodyNode));
+//    }
+    else
+    {
+      gzerr << "Unknown soft shape" << std::endl;
+    }
+
+    dtBodyNode = dtSoftBodyNode;
+  }
+  else
+  {
+    // Create DART BodyNode
+    dtBodyNode = new dart::dynamics::BodyNode();
+  }
 
   Link::Load(_sdf);
 }
@@ -314,7 +454,7 @@ void DARTLink::SetSelfCollide(bool _collide)
   if (dtBodyNode->getSkeleton() == NULL)
     return;
 
-  dart::simulation::World *dtWorld = this->dartPhysics->GetDARTWorld();
+  dart::simulation::SoftWorld *dtWorld = this->dartPhysics->GetDARTWorld();
   dart::dynamics::Skeleton *dtSkeleton = this->dtBodyNode->getSkeleton();
   dart::collision::CollisionDetector *dtCollDet =
       dtWorld->getConstraintHandler()->getCollisionDetector();
@@ -448,24 +588,38 @@ void DARTLink::SetAutoDisable(bool /*_disable*/)
 }
 
 //////////////////////////////////////////////////
-void DARTLink::SetLinkStatic(bool /*_static*/)
+void DARTLink::SetLinkStatic(bool _static)
 {
-//  if (_static == staticLink)
-//    return;
+  if (_static == staticLink)
+    return;
 
-//  if (_static)
-//  {
-//    // Store the original joint
-//    this->dtDynamicJoint = this->dtBodyNode->getParentJoint();
+  if (_static == true)
+  {
+    // DART still does not support weld joint contraint. We here do workaround
+    // that creating quasi-weld joint constraint by combining ball and revolute
+    // joint contratint.
 
-//    this->dtBodyNode->setParentJoint(this->dtStaticJoint);
-//  }
-//  else
-//  {
+    // Add ball joint constraint to DART
+    Eigen::Vector3d offset(0.0, 0.0, 0.0);
+    Eigen::Vector3d target = this->dtBodyNode->getWorldTransform() * offset;
+    this->ballConst = new dart::constraint::BallJointConstraint(
+          this->dtBodyNode, offset, target);
+    GetDARTWorld()->getConstraintHandler()->addConstraint(ballConst);
 
-//  }
-
-  gzwarn << "DART does not support DARTLink::SetLinkStatic() yet.\n";
+    // Add revolute joint constraint to DART
+    Eigen::Vector3d axis1(0.0, 1.0, 0.0);
+    Eigen::Vector3d globalAxis1
+        = this->dtBodyNode->getWorldTransform() * axis1 - target;
+    this->revConst = new dart::constraint::RevoluteJointConstraint(
+          this->dtBodyNode, axis1, globalAxis1);
+    GetDARTWorld()->getConstraintHandler()->addConstraint(revConst);
+  }
+  else
+  {
+    // Remove ball and revolute joint straints from DART
+    GetDARTWorld()->getConstraintHandler()->deleteConstraint(ballConst);
+    GetDARTWorld()->getConstraintHandler()->deleteConstraint(revConst);
+  }
 }
 
 //////////////////////////////////////////////////
@@ -492,7 +646,7 @@ DARTPhysicsPtr DARTLink::GetDARTPhysics(void) const
 }
 
 //////////////////////////////////////////////////
-dart::simulation::World *DARTLink::GetDARTWorld(void) const
+dart::simulation::SoftWorld *DARTLink::GetDARTWorld(void) const
 {
   return GetDARTPhysics()->GetDARTWorld();
 }
