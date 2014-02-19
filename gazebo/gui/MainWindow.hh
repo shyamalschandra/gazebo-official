@@ -35,6 +35,7 @@ namespace gazebo
     class ToolsWidget;
     class ModelListWidget;
     class Editor;
+    class LogPlayWidget;
 
     class MainWindow : public QMainWindow
     {
@@ -78,6 +79,10 @@ namespace gazebo
       private slots: void ItemSelected(QTreeWidgetItem *, int);
       private slots: void New();
       private slots: void Open();
+
+      /// \brief Open a log file
+      private slots: void OpenLog();
+
       private slots: void Import();
       private slots: void Save();
       private slots: void SaveAs();
@@ -86,7 +91,8 @@ namespace gazebo
       private slots: void SaveINI();
 
       private slots: void About();
-      private slots: void Step();
+      private slots: void StepForward();
+      private slots: void StepBackward();
       private slots: void NewModel();
       private slots: void Arrow();
 
@@ -136,6 +142,10 @@ namespace gazebo
 
       /// \brief Callback for diagnostics action.
       private slots: void Diagnostics();
+
+      /// \brief Receives status messages from the server.
+      /// \param[in] _msg Message pointer.
+      private: void OnServerStatus(ConstGzStringPtr &_msg);
 
       private: void OnFullScreen(bool _value);
       private: void OnMoveMode(bool _mode);
@@ -189,6 +199,7 @@ namespace gazebo
       private: RenderWidget *renderWidget;
       private: ToolsWidget *toolsWidget;
       private: ModelListWidget *modelListWidget;
+      private: LogPlayWidget *logPlay;
 
       private: transport::NodePtr node;
       private: transport::PublisherPtr worldControlPub;
@@ -196,6 +207,9 @@ namespace gazebo
       private: transport::PublisherPtr selectionPub;
       private: transport::PublisherPtr requestPub;
       private: transport::PublisherPtr scenePub;
+
+      /// \brief Receives status messages from the server
+      private: transport::SubscriberPtr serverControlSub;
       private: transport::SubscriberPtr responseSub;
       private: transport::SubscriberPtr guiSub;
       private: transport::SubscriberPtr newEntitySub, statsSub;

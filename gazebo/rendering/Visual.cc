@@ -143,6 +143,7 @@ void Visual::Init(const std::string &_name, VisualPtr _parent,
 
   std::string uniqueName = this->GetName();
   int index = 0;
+
   while (pnode->getCreator()->hasSceneNode(uniqueName))
     uniqueName = this->GetName() + "_" +
                  boost::lexical_cast<std::string>(index++);
@@ -186,6 +187,7 @@ Visual::~Visual()
   this->dataPtr->sdf.reset();
   this->dataPtr->parent.reset();
   this->dataPtr->children.clear();
+  this->dataPtr->scene.reset();
 
   delete this->dataPtr;
   this->dataPtr = 0;
@@ -207,7 +209,7 @@ void Visual::Fini()
   {
     this->dataPtr->sceneNode->removeChild((*iter)->GetSceneNode());
     (*iter)->dataPtr->parent.reset();
-    (*iter).reset();
+    (*iter)->Fini();
   }
 
   this->dataPtr->children.clear();
@@ -224,6 +226,7 @@ void Visual::Fini()
   }
 
   RTShaderSystem::Instance()->DetachEntity(this);
+  this->dataPtr->scene.reset();
 }
 
 /////////////////////////////////////////////////
@@ -262,7 +265,7 @@ void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode *_sceneNode)
     if (ent->getMovableType() != DynamicLines::GetMovableType())
       this->dataPtr->scene->GetManager()->destroyEntity(ent);
     else
-      delete ent;
+      this->dataPtr->sceneNode->detachObject(ent);
   }
 
   // Recurse to child SceneNodes
@@ -1733,6 +1736,9 @@ DynamicLines *Visual::CreateDynamicLine(RenderOpType _type)
 //////////////////////////////////////////////////
 void Visual::DeleteDynamicLine(DynamicLines *_line)
 {
+  if (this->dataPtr->sceneNode)
+    this->dataPtr->sceneNode->detachObject(_line);
+
   // delete instance from lines vector
   for (std::list<DynamicLines*>::iterator iter = this->dataPtr->lines.begin();
        iter != this->dataPtr->lines.end(); ++iter)

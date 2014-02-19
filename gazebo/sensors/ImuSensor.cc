@@ -170,7 +170,9 @@ void ImuSensor::Init()
 //////////////////////////////////////////////////
 void ImuSensor::Fini()
 {
+  boost::mutex::scoped_lock lock(this->mutex);
   this->parentEntity->SetPublishData(false);
+  this->linkDataSub.reset();
   this->pub.reset();
   Sensor::Fini();
 }

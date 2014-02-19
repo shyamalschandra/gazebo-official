@@ -84,6 +84,8 @@ class ModelUpdate_TBB
 //////////////////////////////////////////////////
 World::World(const std::string &_name)
 {
+  this->stepDelayMS = 0;
+
   g_clearModels = false;
   this->sdf.reset(new sdf::Element);
   sdf::initFile("world.sdf", this->sdf);
@@ -347,10 +349,11 @@ void World::Init()
 }
 
 //////////////////////////////////////////////////
-void World::Run(unsigned int _iterations)
+void World::Run(uint64_t _steps, uint64_t _stepDelayMS)
 {
   this->stop = false;
-  this->stopIterations = _iterations;
+  this->stopIterations = _steps;
+  this->stepDelayMS = _stepDelayMS;
 
   this->thread = new boost::thread(boost::bind(&World::RunLoop, this));
 }
@@ -408,6 +411,8 @@ void World::RunLoop()
         (!this->stopIterations || (this->iterations < this->stopIterations));)
     {
       this->Step();
+      if (this->stepDelayMS > 0)
+        gazebo::common::Time::MSleep(this->stepDelayMS);
     }
   }
   else
@@ -417,6 +422,8 @@ void World::RunLoop()
         (!this->stopIterations || (this->iterations < this->stopIterations));)
     {
       this->LogStep();
+      if (this->stepDelayMS > 0)
+        gazebo::common::Time::MSleep(this->stepDelayMS);
     }
   }
 
@@ -438,15 +445,28 @@ void World::RunLoop()
 //////////////////////////////////////////////////
 void World::LogStep()
 {
-  if (!this->IsPaused() || this->stepInc > 0)
+  if (util::LogPlay::Instance()->NeedsStep() || !this->IsPaused() ||
+      this->stepInc != 0)
   {
+    this->stepInc = this->stepInc == 0 ? 1 : this->stepInc;
     std::string data;
-    if (!util::LogPlay::Instance()->Step(data))
+    if (!util::LogPlay::Instance()->Step(data, this->stepInc))
     {
       this->SetPaused(true);
     }
-    else
+    else if (!data.empty())
     {
+
+      // The first element in a log file has the complete world. This if
+      // block handles that special case by removing the world contents.
+      if (data.find("<world ") != std::string::npos)
+      {
+        size_t worldStart = data.find("<world ");
+        size_t startStart = data.find("<state ");
+        data.erase(worldStart, startStart - worldStart);
+        data.erase(data.find("</world>"), 8);
+      }
+
       this->logPlayStateSDF->ClearElements();
       sdf::readString(data, this->logPlayStateSDF);
 
@@ -485,11 +505,14 @@ void World::LogStep()
 
       this->SetState(this->logPlayState);
       this->Update();
-      this->iterations++;
+
+      this->iterations = util::LogPlay::Instance()->GetCurrentStep();
     }
 
     if (this->stepInc > 0)
       this->stepInc--;
+    else if (this->stepInc < 0)
+      this->stepInc++;
   }
 
   this->PublishWorldStats();
@@ -1796,8 +1819,10 @@ void World::UpdateStateSDF()
 }
 
 //////////////////////////////////////////////////
-bool World::OnLog(std::ostringstream &_stream)
+bool World::OnLog(std::ostringstream &_stream, uint64_t &_segments)
 {
+  _segments = 0;
+
   int bufferIndex = this->currentStateBuffer;
   // Save the entire state when its the first call to OnLog.
   if (util::LogRecord::Instance()->GetFirstUpdate())
@@ -1808,6 +1833,7 @@ bool World::OnLog(std::ostringstream &_stream)
     _stream << "'>\n";
     _stream << this->sdf->ToString("");
     _stream << "</sdf>\n";
+    _segments++;
   }
   else if (this->states[bufferIndex].size() >= 1)
   {
@@ -1820,6 +1846,7 @@ bool World::OnLog(std::ostringstream &_stream)
         iter != this->states[bufferIndex].end(); ++iter)
     {
       _stream << "<sdf version='" << SDF_VERSION << "'>" << *iter << "</sdf>";
+      _segments++;
     }
 
     this->states[bufferIndex].clear();
@@ -1836,11 +1863,13 @@ bool World::OnLog(std::ostringstream &_stream)
     {
       _stream << "<sdf version='" << SDF_VERSION << "'>"
         << this->states[this->currentStateBuffer^1][i] << "</sdf>";
+      _segments++;
     }
     for (size_t i = 0; i < this->states[this->currentStateBuffer].size(); ++i)
     {
       _stream << "<sdf version='" << SDF_VERSION << "'>"
         << this->states[this->currentStateBuffer][i] << "</sdf>";
+      _segments++;
     }
 
     // Clear everything.

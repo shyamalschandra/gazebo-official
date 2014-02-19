@@ -237,7 +237,7 @@ bool Server::ParseArgs(int _argc, char **_argv)
 
     // Get the SDF world description from the log file
     std::string sdfString;
-    util::LogPlay::Instance()->Step(sdfString);
+    util::LogPlay::Instance()->Step(sdfString, 1);
 
     // Load the server
     if (!this->LoadString(sdfString))

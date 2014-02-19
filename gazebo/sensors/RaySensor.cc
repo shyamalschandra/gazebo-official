@@ -475,7 +475,7 @@ bool RaySensor::UpdateImpl(bool /*_force*/)
     }
   }
 
-  if (this->scanPub && this->scanPub->HasConnections())
+  if (this->scanPub && this->scanPub->HasConnections() && this->laserMsg.IsInitialized())
     this->scanPub->Publish(this->laserMsg);
 
   return true;

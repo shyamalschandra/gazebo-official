@@ -89,6 +89,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   // this contactVisId is unique.
   this->contactVisId = GZ_UINT32_MAX;
 
+  this->isServer = _isServer;
   this->initialized = false;
   this->showCOMs = false;
   this->showCollisions = false;
@@ -98,8 +99,6 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
 
   this->requestMsg = NULL;
   this->enableVisualizations = _enableVisualizations;
-  this->node = transport::NodePtr(new transport::Node());
-  this->node->Init(_name);
   this->id = idCounter++;
   this->idString = boost::lexical_cast<std::string>(this->id);
 
@@ -107,51 +106,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->manager = NULL;
   this->raySceneQuery = NULL;
   this->skyx = NULL;
-
-  this->receiveMutex = new boost::mutex();
-
-  this->connections.push_back(
-      event::Events::ConnectPreRender(boost::bind(&Scene::PreRender, this)));
-
-  this->sensorSub = this->node->Subscribe("~/sensor",
-                                          &Scene::OnSensorMsg, this, true);
-  this->visSub = this->node->Subscribe("~/visual", &Scene::OnVisualMsg, this);
-
-  this->lightPub = this->node->Advertise<msgs::Light>("~/light");
-
-  this->lightSub = this->node->Subscribe("~/light", &Scene::OnLightMsg, this);
-
-  if (_isServer)
-  {
-    this->poseSub = this->node->Subscribe("~/pose/local/info",
-        &Scene::OnPoseMsg, this);
-  }
-  else
-  {
-    this->poseSub = this->node->Subscribe("~/pose/info",
-        &Scene::OnPoseMsg, this);
-  }
-
-  this->jointSub = this->node->Subscribe("~/joint", &Scene::OnJointMsg, this);
-  this->skeletonPoseSub = this->node->Subscribe("~/skeleton_pose/info",
-          &Scene::OnSkeletonPoseMsg, this);
-  this->selectionSub = this->node->Subscribe("~/selection",
-      &Scene::OnSelectionMsg, this);
-  this->skySub = this->node->Subscribe("~/sky", &Scene::OnSkyMsg, this);
-  this->modelInfoSub = this->node->Subscribe("~/model/info",
-                                             &Scene::OnModelMsg, this);
-
-  this->requestPub = this->node->Advertise<msgs::Request>("~/request");
-
-  this->requestSub = this->node->Subscribe("~/request",
-      &Scene::OnRequest, this);
-
-  // \TODO: This causes the Scene to occasionally miss the response to
-  // scene_info
-  // this->responsePub = this->node->Advertise<msgs::Response>("~/response");
-  this->responseSub = this->node->Subscribe("~/response",
-      &Scene::OnResponse, this, true);
-  this->sceneSub = this->node->Subscribe("~/scene", &Scene::OnScene, this);
+  this->skyxController = NULL;
 
   this->sdf.reset(new sdf::Element);
   sdf::initFile("scene.sdf", this->sdf);
@@ -159,95 +114,16 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->terrain = NULL;
   this->selectedVis.reset();
 
+  this->connections.push_back(
+      event::Events::ConnectPreRender(boost::bind(&Scene::PreRender, this)));
+
   this->sceneSimTimePosesApplied = common::Time();
   this->sceneSimTimePosesReceived = common::Time();
 }
 
 //////////////////////////////////////////////////
-void Scene::Clear()
-{
-  this->node->Fini();
-  this->visualMsgs.clear();
-  this->lightMsgs.clear();
-  this->poseMsgs.clear();
-  this->sceneMsgs.clear();
-  this->jointMsgs.clear();
-  this->joints.clear();
-  this->linkMsgs.clear();
-  this->cameras.clear();
-  this->userCameras.clear();
-  this->lights.clear();
-
-  delete this->terrain;
-  this->terrain = NULL;
-
-  // Erase the world visual
-  this->visuals.erase(this->visuals.begin());
-
-  while (!this->visuals.empty())
-    if (this->visuals.begin()->second)
-      this->RemoveVisual(this->visuals.begin()->second);
-  this->visuals.clear();
-
-  for (uint32_t i = 0; i < this->grids.size(); i++)
-    delete this->grids[i];
-  this->grids.clear();
-
-  this->sensorMsgs.clear();
-  RTShaderSystem::Instance()->Clear();
-
-  this->initialized = false;
-}
-
-//////////////////////////////////////////////////
 Scene::~Scene()
 {
-  delete this->requestMsg;
-  delete this->receiveMutex;
-  delete this->raySceneQuery;
-
-  this->node->Fini();
-  this->node.reset();
-  this->visSub.reset();
-  this->lightSub.reset();
-  this->poseSub.reset();
-  this->jointSub.reset();
-  this->skeletonPoseSub.reset();
-  this->selectionSub.reset();
-
-  Visual_M::iterator iter;
-  this->visuals.clear();
-  this->jointMsgs.clear();
-  this->joints.clear();
-  this->linkMsgs.clear();
-  this->sceneMsgs.clear();
-  this->poseMsgs.clear();
-  this->lightMsgs.clear();
-  this->visualMsgs.clear();
-
-  this->worldVisual.reset();
-  this->selectionMsg.reset();
-  this->lights.clear();
-
-  // Remove a scene
-  RTShaderSystem::Instance()->RemoveScene(shared_from_this());
-
-  for (uint32_t i = 0; i < this->grids.size(); i++)
-    delete this->grids[i];
-  this->grids.clear();
-
-  this->cameras.clear();
-  this->userCameras.clear();
-
-  if (this->manager)
-  {
-    RenderEngine::Instance()->root->destroySceneManager(this->manager);
-    this->manager = NULL;
-  }
-  this->connections.clear();
-
-  this->sdf->Reset();
-  this->sdf.reset();
 }
 
 //////////////////////////////////////////////////
@@ -268,11 +144,6 @@ void Scene::Load()
 
   this->manager = root->createSceneManager(Ogre::ST_GENERIC);
   this->manager->setAmbientLight(Ogre::ColourValue(0.1, 0.1, 0.1, 0.1));
-
-#if OGRE_VERSION_MAJOR > 1 || OGRE_VERSION_MINOR >= 9
-  this->manager->addRenderQueueListener(
-      RenderEngine::Instance()->GetOverlaySystem());
-#endif
 }
 
 //////////////////////////////////////////////////
@@ -282,8 +153,62 @@ VisualPtr Scene::GetWorldVisual() const
 }
 
 //////////////////////////////////////////////////
+void Scene::Fini()
+{
+  this->initialized = false;
+  this->connections.clear();
+
+  this->Clear();
+
+  // boost::mutex::scoped_lock lock3(this->renderMutex);
+  boost::mutex::scoped_lock lock2(this->preRenderMutex);
+
+  this->selectionMsg.reset();
+
+  if (this->worldVisual)
+    this->worldVisual->Fini();
+  this->worldVisual.reset();
+
+  if (this->node)
+    this->node->Fini();
+
+  this->node.reset();
+  this->visSub.reset();
+  this->lightSub.reset();
+  this->poseSub.reset();
+  this->jointSub.reset();
+  this->skeletonPoseSub.reset();
+  this->selectionSub.reset();
+
+  // Remove a scene
+  RTShaderSystem::Instance()->RemoveScene(shared_from_this());
+
+  for (uint32_t i = 0; i < this->grids.size(); i++)
+    delete this->grids[i];
+  this->grids.clear();
+
+  if (this->manager)
+  {
+    RenderEngine::Instance()->root->destroySceneManager(this->manager);
+    this->manager = NULL;
+  }
+
+  this->sdf->Reset();
+  this->sdf.reset();
+
+  delete this->requestMsg;
+  delete this->raySceneQuery;
+  this->requestMsg = NULL;
+  this->raySceneQuery = NULL;
+}
+
+//////////////////////////////////////////////////
 void Scene::Init()
 {
+
+  this->InitComms();
+
+  this->initialized = false;
   this->worldVisual.reset(new Visual("__world_node__", shared_from_this()));
   this->worldVisual->SetId(0);
   this->visuals[0] = this->worldVisual;
@@ -506,6 +431,42 @@ CameraPtr Scene::CreateCamera(const std::string &_name, bool _autoRender)
 }
 
 //////////////////////////////////////////////////
+void Scene::RemoveCamera(const std::string &_name)
+{
+  std::vector<CameraPtr>::iterator iter;
+  for (iter = this->cameras.begin(); iter != this->cameras.end(); ++iter)
+  {
+    if ((*iter)->GetName() == _name)
+    {
+      (*iter)->Fini();
+      this->cameras.erase(iter);
+      break;
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+void Scene::RemoveCameras()
+{
+  std::vector<CameraPtr>::iterator iter;
+  for (iter = this->cameras.begin(); iter != this->cameras.end(); ++iter)
+    (*iter)->Fini();
+  this->cameras.clear();
+}
+
+//////////////////////////////////////////////////
+void Scene::RemoveUserCameras()
+{
+  std::vector<UserCameraPtr>::iterator iter;
+  for (iter = this->userCameras.begin(); iter != this->userCameras.end();
+       ++iter)
+  {
+    (*iter)->Fini();
+  }
+  this->userCameras.clear();
+}
+
+//////////////////////////////////////////////////
 DepthCameraPtr Scene::CreateDepthCamera(const std::string &_name,
                                         bool _autoRender)
 {
@@ -584,22 +545,6 @@ UserCameraPtr Scene::GetUserCamera(uint32_t index) const
     cam = this->userCameras[index];
 
   return cam;
-}
-
-//////////////////////////////////////////////////
-void Scene::RemoveCamera(const std::string &_name)
-{
-  std::vector<CameraPtr>::iterator iter;
-  for (iter = this->cameras.begin(); iter != this->cameras.end(); ++iter)
-  {
-    if ((*iter)->GetName() == _name)
-    {
-      (*iter)->Fini();
-      (*iter).reset();
-      this->cameras.erase(iter);
-      break;
-    }
-  }
 }
 
 //////////////////////////////////////////////////
@@ -1542,14 +1487,14 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
 //////////////////////////////////////////////////
 void Scene::OnSensorMsg(ConstSensorPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->sensorMsgs.push_back(_msg);
 }
 
 //////////////////////////////////////////////////
 void Scene::OnVisualMsg(ConstVisualPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->visualMsgs.push_back(_msg);
 }
 
@@ -1579,7 +1524,6 @@ void Scene::PreRender()
         Ogre::MultiRenderTarget *mtarget = dynamic_cast<Ogre::MultiRenderTarget*>(renderIter.current()->second);
         if (mtarget)
         {
-          // std::cout << renderIter.current()->first << "\n";
           mtarget->getBoundSurface(0)->writeContentsToFile(filename.str());
 
           mtarget->getBoundSurface(1)->writeContentsToFile(filename2.str());
@@ -1618,7 +1562,7 @@ void Scene::PreRender()
   LinkMsgs_L linkMsgsCopy;
 
   {
-    boost::mutex::scoped_lock lock(*this->receiveMutex);
+    boost::mutex::scoped_lock lock(this->receiveMutex);
 
     std::copy(this->sceneMsgs.begin(), this->sceneMsgs.end(),
               std::back_inserter(sceneMsgsCopy));
@@ -1728,7 +1672,7 @@ void Scene::PreRender()
 
 
   {
-    boost::mutex::scoped_lock lock(*this->receiveMutex);
+    boost::mutex::scoped_lock lock(this->receiveMutex);
 
     std::copy(sceneMsgsCopy.begin(), sceneMsgsCopy.end(),
         std::front_inserter(this->sceneMsgs));
@@ -1753,7 +1697,8 @@ void Scene::PreRender()
   }
 
   {
-    boost::recursive_mutex::scoped_lock lock(this->poseMsgMutex);
+    boost::mutex::scoped_lock lock(this->receiveMutex);
+    boost::recursive_mutex::scoped_lock lock1(this->poseMsgMutex);
 
     // Process all the model messages last. Remove pose message from the list
     // only when a corresponding visual exits. We may receive pose updates
@@ -1823,10 +1768,11 @@ void Scene::PreRender()
   }
 }
 
+
 /////////////////////////////////////////////////
 void Scene::OnJointMsg(ConstJointPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->jointMsgs.push_back(_msg);
 }
 
@@ -2042,13 +1988,14 @@ bool Scene::ProcessJointMsg(ConstJointPtr &_msg)
 /////////////////////////////////////////////////
 void Scene::OnScene(ConstScenePtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->sceneMsgs.push_back(_msg);
 }
 
 /////////////////////////////////////////////////
 void Scene::OnResponse(ConstResponsePtr &_msg)
 {
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   if (!this->requestMsg || _msg->id() != this->requestMsg->id())
     return;
 
@@ -2062,7 +2009,7 @@ void Scene::OnResponse(ConstResponsePtr &_msg)
 /////////////////////////////////////////////////
 void Scene::OnRequest(ConstRequestPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->requestMsgs.push_back(_msg);
 }
 
@@ -2275,7 +2222,7 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
       result = true;
     }
   }
-  else if (iter != this->visuals.end())
+  else if (iter != this->visuals.end() && iter->second)
   {
     iter->second->UpdateFromMsg(_msg);
     result = true;
@@ -2369,7 +2316,7 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
 /////////////////////////////////////////////////
 common::Time Scene::GetSimTime() const
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   return this->sceneSimTimePosesApplied;
 }
 
@@ -2388,13 +2335,16 @@ void Scene::OnPoseMsg(ConstPosesStampedPtr &_msg)
     else
       this->poseMsgs.insert(
           std::make_pair(_msg->pose(i).id(), _msg->pose(i)));
+
+    // this->poseMsgs[_msg->pose(i).id()].set_name(linkName);
+    // this->poseMsgs[_msg->pose(i).id()].set_id(_msg.link(j).id());
   }
 }
 
 /////////////////////////////////////////////////
 void Scene::OnSkeletonPoseMsg(ConstPoseAnimationPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   SkeletonPoseMsgs_L::iterator iter;
 
   // Find an old model message, and remove them
@@ -2415,7 +2365,7 @@ void Scene::OnSkeletonPoseMsg(ConstPoseAnimationPtr &_msg)
 /////////////////////////////////////////////////
 void Scene::OnLightMsg(ConstLightPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->lightMsgs.push_back(_msg);
 }
 
@@ -2451,7 +2401,7 @@ void Scene::OnSelectionMsg(ConstSelectionPtr &_msg)
 /////////////////////////////////////////////////
 void Scene::OnModelMsg(ConstModelPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->modelMsgs.push_back(_msg);
 }
 
@@ -2523,9 +2473,15 @@ void Scene::OnSkyMsg(ConstSkyPtr &_msg)
 void Scene::SetSky()
 {
   // Create SkyX
-  this->skyxController = new SkyX::BasicController();
-  this->skyx = new SkyX::SkyX(this->manager, this->skyxController);
-  this->skyx->create();
+  if (!this->skyxController)
+    this->skyxController = new SkyX::BasicController();
+
+  if (!this->skyx)
+  {
+    this->skyx = new SkyX::SkyX(this->manager, this->skyxController);
+    this->skyx->create();
+    Ogre::Root::getSingletonPtr()->addFrameListener(this->skyx);
+  }
 
   this->skyx->setTimeMultiplier(0);
 
@@ -2596,8 +2552,6 @@ void Scene::SetSky()
   // vclouds->getLightningManager()->setLightningTimeMultiplier(
   //    preset.vcLightningsTM);
 
-  Ogre::Root::getSingletonPtr()->addFrameListener(this->skyx);
-
   this->skyx->update(0);
   this->skyx->setVisible(false);
 }
@@ -2664,8 +2618,10 @@ void Scene::AddVisual(VisualPtr _vis)
 }
 
 /////////////////////////////////////////////////
-void Scene::RemoveVisual(VisualPtr _vis)
+bool Scene::RemoveVisual(VisualPtr _vis)
 {
+  bool result = false;
+
   if (_vis)
   {
     // Remove all projectors attached to the visual
@@ -2691,11 +2647,14 @@ void Scene::RemoveVisual(VisualPtr _vis)
     {
       iter->second->Fini();
       this->visuals.erase(iter);
+      result = true;
     }
 
     if (this->selectedVis && this->selectedVis->GetId() == _vis->GetId())
       this->selectedVis.reset();
   }
+
+  return result;
 }
 
 /////////////////////////////////////////////////
@@ -2732,7 +2691,7 @@ std::string Scene::StripSceneName(const std::string &_name) const
 //////////////////////////////////////////////////
 Heightmap *Scene::GetHeightmap() const
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   return this->terrain;
 }
 
@@ -2908,4 +2867,123 @@ void Scene::RemoveProjectors()
     delete iter->second;
   }
   this->projectors.clear();
+}
+
+/////////////////////////////////////////////////
+void Scene::InitComms()
+{
+  this->node = transport::NodePtr(new transport::Node());
+  this->node->Init(this->GetName());
+
+  this->sensorSub = this->node->Subscribe("~/sensor",
+                                          &Scene::OnSensorMsg, this, true);
+  this->visSub = this->node->Subscribe("~/visual", &Scene::OnVisualMsg, this);
+
+  this->lightPub = this->node->Advertise<msgs::Light>("~/light");
+
+  this->lightSub = this->node->Subscribe("~/light", &Scene::OnLightMsg, this);
+
+  if (this->isServer)
+  {
+    this->poseSub = this->node->Subscribe("~/pose/local/info",
+        &Scene::OnPoseMsg, this);
+  }
+  else
+  {
+    this->poseSub = this->node->Subscribe("~/pose/info",
+        &Scene::OnPoseMsg, this);
+  }
+
+  this->jointSub = this->node->Subscribe("~/joint", &Scene::OnJointMsg, this);
+  this->skeletonPoseSub = this->node->Subscribe("~/skeleton_pose/info",
+          &Scene::OnSkeletonPoseMsg, this);
+  this->selectionSub = this->node->Subscribe("~/selection",
+      &Scene::OnSelectionMsg, this);
+  this->skySub = this->node->Subscribe("~/sky", &Scene::OnSkyMsg, this);
+  this->modelInfoSub = this->node->Subscribe("~/model/info",
+                                             &Scene::OnModelMsg, this);
+
+  this->requestPub = this->node->Advertise<msgs::Request>("~/request");
+
+  this->requestSub = this->node->Subscribe("~/request",
+      &Scene::OnRequest, this);
+
+  // \TODO: This causes the Scene to occasionally miss the response to
+  // scene_info
+  // this->responsePub = this->node->Advertise<msgs::Response>("~/response");
+  this->responseSub = this->node->Subscribe("~/response",
+      &Scene::OnResponse, this, true);
+  this->sceneSub = this->node->Subscribe("~/scene", &Scene::OnScene, this);
+}
+
+//////////////////////////////////////////////////
+void Scene::Clear()
+{
+  boost::recursive_mutex::scoped_lock lock1(this->poseMsgMutex);
+  boost::mutex::scoped_lock lock2(this->preRenderMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
+
+  RTShaderSystem::Instance()->Clear();
+
+  this->RemoveCameras();
+  this->RemoveUserCameras();
+
+  this->visualMsgs.clear();
+  this->lightMsgs.clear();
+  this->poseMsgs.clear();
+  this->sceneMsgs.clear();
+  this->jointMsgs.clear();
+  this->linkMsgs.clear();
+
+  delete this->terrain;
+  this->terrain = NULL;
+
+  while (this->visuals.size() > 0)
+  {
+    if (!this->RemoveVisual(this->visuals.begin()->second))
+    {
+      if (this->visuals.begin()->second)
+        this->visuals.begin()->second->Fini();
+      this->visuals.erase(this->visuals.begin());
+    }
+  }
+  this->visuals.clear();
+
+  // Delete all projectors
+  for (std::map<std::string, Projector *>::iterator iter =
+      this->projectors.begin(); iter != this->projectors.end(); ++iter)
+  {
+    GZ_ASSERT(iter->second, "NULL Projector pointer");
+    delete iter->second;
+  }
+  this->projectors.clear();
+
+  // Delete all lights
+  this->lights.clear();
+
+  for (uint32_t i = 0; i < this->grids.size(); i++)
+    delete this->grids[i];
+  this->grids.clear();
+
+  this->sensorMsgs.clear();
+  this->joints.clear();
+
+  delete this->skyx;
+  this->skyx = NULL;
+
+  // SkyX does major no-no. It take a pointer, and then delets it.
+  // delete this->skyxController;
+  // this->skyxController = NULL;
+
+  this->manager->destroyAllLights();
+  this->manager->destroyAllEntities();
+  this->manager->destroyAllManualObjects();
+  this->manager->destroyAllBillboardChains();
+  this->manager->destroyAllRibbonTrails();
+  this->manager->destroyAllParticleSystems();
+  this->manager->destroyAllAnimations();
+  this->manager->destroyAllAnimationStates();
+  this->manager->destroyAllStaticGeometry();
+  this->manager->destroyAllInstancedGeometry();
+  this->manager->destroyAllMovableObjects();
 }
