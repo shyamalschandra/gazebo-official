@@ -17,6 +17,8 @@
 
 #include <sstream>
 
+#include "gazebo/common/Assert.hh"
+
 #include "gazebo/rendering/ogre_gazebo.h"
 
 #include "gazebo/rendering/Conversions.hh"

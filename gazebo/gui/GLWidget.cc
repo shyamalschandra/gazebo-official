@@ -245,6 +245,15 @@ void GLWidget::keyPressEvent(QKeyEvent *_event)
 
   this->keyEvent.key = _event->key();
 
+  // Toggle the play/pause state when the space bar is pressed.
+  if (_event->key() == Qt::Key_Space)
+  {
+    if (g_pauseAct->isVisible())
+      g_pauseAct->trigger();
+    else
+      g_playAct->trigger();
+  }
+
   // Toggle full screen
   if (_event->key() == Qt::Key_F11)
   {

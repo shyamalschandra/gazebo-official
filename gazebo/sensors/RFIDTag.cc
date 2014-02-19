@@ -118,7 +118,6 @@ bool RFIDTag::UpdateImpl(bool /*_force*/)
     // }
 
     this->scanPub->Publish(msg);
-    // std::cout << "update impl for rfidtag called" << std::endl;
   }
 
   return true;
