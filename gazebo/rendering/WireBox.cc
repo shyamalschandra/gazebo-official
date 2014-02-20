@@ -34,6 +34,7 @@ WireBox::WireBox(VisualPtr _parent, const math::Box &_box)
   this->dataPtr->parent->AttachObject(this->dataPtr->lines);
   this->dataPtr->lines->setVisibilityFlags(GZ_VISIBILITY_GUI);
 
+  this->dataPtr->box = _box;
   this->Init(_box);
 }
 
@@ -102,6 +103,12 @@ void WireBox::Init(const math::Box &_box)
   this->dataPtr->lines->AddPoint(max.x, min.y, max.z);
 
   this->dataPtr->lines->Update();
+}
+
+/////////////////////////////////////////////////
+math::Box WireBox::GetBox() const
+{
+  return this->dataPtr->box;
 }
 
 /////////////////////////////////////////////////
