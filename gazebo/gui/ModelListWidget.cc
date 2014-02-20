@@ -595,6 +595,16 @@ void ModelListWidget::PhysicsPropertyChanged(QtProperty * /*_item*/)
       msg.set_enable_physics(this->variantManager->value((*iter)).toBool());
     else if ((*iter)->propertyName().toStdString() == "solver")
     {
+      msg.set_irr(this->variantManager->value(
+            this->GetChildItem((*iter), "inertia ratio reduction")).toBool());
+      msg.set_friction_iters(this->variantManager->value(
+            this->GetChildItem((*iter), "extra friction iters")).toInt());
+      msg.set_warm_start_factor(this->variantManager->value(
+            this->GetChildItem((*iter), "warm start factor")).toDouble());
+      msg.set_reorder(this->variantManager->value(
+            this->GetChildItem((*iter), "pgs row reorder")).toBool());
+      msg.set_contact_residual_smoothing(this->variantManager->value(
+            this->GetChildItem((*iter), "contact smoothing")).toDouble());
       msg.set_iters(this->variantManager->value(
             this->GetChildItem((*iter), "iterations")).toInt());
       msg.set_sor(this->variantManager->value(
@@ -2290,6 +2300,42 @@ void ModelListWidget::FillPropertyTree(const msgs::Physics &_msg,
   QtProperty *solverItem = this->variantManager->addProperty(
       QtVariantPropertyManager::groupTypeId(), tr("solver"));
   this->propTreeBrowser->addProperty(solverItem);
+
+  item = this->variantManager->addProperty(QVariant::Bool,
+    tr("inertia ratio reduction"));
+  if (_msg.has_irr())
+    item->setValue(_msg.iters());
+  solverItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Int,
+    tr("extra friction iters"));
+  if (_msg.has_friction_iters())
+    item->setValue(_msg.friction_iters());
+  solverItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Double,
+    tr("warm start factor"));
+  static_cast<QtVariantPropertyManager*>
+    (this->variantFactory->propertyManager(item))->setAttribute(
+        item, "decimals", 6);
+  if (_msg.has_warm_start_factor())
+    item->setValue(_msg.warm_start_factor());
+  solverItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Bool,
+    tr("pgs row reorder"));
+  if (_msg.has_reorder())
+    item->setValue(_msg.iters());
+  solverItem->addSubProperty(item);
+
+  item = this->variantManager->addProperty(QVariant::Double,
+    tr("contact smoothing"));
+  static_cast<QtVariantPropertyManager*>
+    (this->variantFactory->propertyManager(item))->setAttribute(
+        item, "decimals", 6);
+  if (_msg.has_contact_residual_smoothing())
+    item->setValue(_msg.contact_residual_smoothing());
+  solverItem->addSubProperty(item);
 
   item = this->variantManager->addProperty(QVariant::Int, tr("iterations"));
   if (_msg.has_iters())
