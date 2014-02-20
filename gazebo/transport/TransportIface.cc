@@ -110,6 +110,27 @@ void transport::run()
   g_stopped = false;
   g_runThread = new boost::thread(&transport::ConnectionManager::Run,
                                 transport::ConnectionManager::Instance());
+
+  std::list<std::string> namespaces;
+
+  // This chunk of code just waits until we get a list of topic namespaces.
+  unsigned int trys = 0;
+  unsigned int limit = 50;
+  while (namespaces.empty() && trys < limit)
+  {
+    TopicManager::Instance()->GetTopicNamespaces(namespaces);
+
+    if (namespaces.empty())
+    {
+      // 25 seconds max wait time
+      common::Time::MSleep(500);
+    }
+
+    trys++;
+  }
+
+  if (trys >= limit)
+    gzerr << "Unable to get topic namespaces in [" << trys << "] tries.\n";
 }
 
 /////////////////////////////////////////////////
@@ -339,6 +360,47 @@ void transport::setMinimalComms(bool _enabled)
 bool transport::getMinimalComms()
 {
   return g_minimalComms;
+}
+
+/////////////////////////////////////////////////
+transport::ConnectionPtr transport::connectToMaster()
+{
+  std::string data, namespacesData, publishersData;
+  msgs::Packet packet;
+
+  std::string host;
+  unsigned int port;
+  transport::get_master_uri(host, port);
+
+  // Connect to the master
+  transport::ConnectionPtr connection(new transport::Connection());
+
+  if (connection->Connect(host, port))
+  {
+    try
+    {
+      // Read the verification message
+      connection->Read(data);
+      connection->Read(namespacesData);
+      connection->Read(publishersData);
+    }
+    catch(...)
+    {
+      gzerr << "Unable to read from master\n";
+      return transport::ConnectionPtr();
+    }
+
+    packet.ParseFromString(data);
+    if (packet.type() == "init")
+    {
+      msgs::GzString msg;
+      msg.ParseFromString(packet.serialized_data());
+      if (msg.data() != std::string("gazebo ") + GAZEBO_VERSION_FULL)
+        std::cerr << "Conflicting gazebo versions\n";
+    }
+  }
+
+  return connection;
 }
 
 /////////////////////////////////////////////////

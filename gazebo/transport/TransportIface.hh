@@ -150,6 +150,10 @@ namespace gazebo
     /// \return True if minimal comms is enabled.
     bool getMinimalComms();
 
+    /// \brief Create a connection to master.
+    /// \return Connection to the master.
+    transport::ConnectionPtr connectToMaster();
+
     /// \brief Blocks while waiting for topic namespaces from the Master.
     /// This function will wait a maximum of _maxWait.
     /// \return True if namespaces were found before _maxWait time.
