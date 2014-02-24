@@ -14,16 +14,53 @@
  * limitations under the License.
  *
 */
-/* Desc: common::Parameters for contact joints
- * Author: Nate Koenig
- * Date: 30 July 2003
- */
 
 #include "gazebo/common/Console.hh"
+#include "gazebo/math/Helpers.hh"
 #include "gazebo/physics/SurfaceParams.hh"
 
 using namespace gazebo;
 using namespace physics;
+
+//////////////////////////////////////////////////
+FrictionPyramid::FrictionPyramid()
+{
+  this->mu[0] = 1.0;
+  this->mu[1] = 1.0;
+}
+
+//////////////////////////////////////////////////
+FrictionPyramid::~FrictionPyramid()
+{
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::GetMu(unsigned int _index)
+{
+  if (_index >= 2)
+  {
+    gzerr << "Invalid index [" << _index << "]: should be "
+          << "0 or 1 for FrictionPyramid::GetMu."
+          << std::endl;
+    return -1;
+  }
+  return this->mu[_index];
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetMu(unsigned int _index, double _mu)
+{
+  if (_index >= 2)
+  {
+    gzerr << "Invalid index [" << _index << "]: should be "
+          << "0 or 1 for FrictionPyramid::SetMu."
+          << std::endl;
+    return;
+  }
+  this->mu[_index] = _mu;
+  if (_mu < 0)
+    this->mu[_index] = GZ_FLT_MAX;
+}
 
 //////////////////////////////////////////////////
 SurfaceParams::SurfaceParams()
