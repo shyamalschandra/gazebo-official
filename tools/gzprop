@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+
+require 'tmpdir'
+
+#################################################
+# Display help information
+def help
+  puts "gzprop -- Create a model tarball for upload to thepropshop.org\n"
+  puts "\n"
+  puts "'gzprop' <model_file>\n"
+  puts "\n"
+  puts "Package an existing model directory into a tarball suitable"
+  puts "for upload to thepropshop.org. A working instanstance of"
+  puts "Gazebo >3.0 is required.\n"
+  puts "\n"
+end
+
+#################################################
+# Main
+
+# Make sure there are command line arguments.
+if ARGV.empty?
+  help()
+  abort("")
+end
+
+# Get the model directory
+modelFile = ARGV[0]
+
+modelParts = modelFile.split('/')
+modelDir = modelParts[0, modelParts.size()-1].join('/')
+
+# Make sure there is a model.sdf file in the model directory
+if !File.exists?(modelFile)
+  abort("Missing model file [#{modelFile}]")
+end
+
+# Get the name of the model (last part of the directory name)
+modelName = modelParts[-2]
+
+metaDir = File.join(modelDir, "meta")
+
+# Create the meta directory
+if RUBY_VERSION < "1.9"
+  if Dir[modelDir].empty?
+    Dir.mkdir(metaDir)
+  end
+else
+  if !Dir.exists?(metaDir)
+    Dir.mkdir(metaDir)
+  end
+end
+
+# Create a set of images
+`gzserver -s libModelPropShop.so worlds/blank.world --propshop-save "#{metaDir}" --propshop-model "#{modelFile}"`
+
+## Make a temporary directory
+Dir.mktmpdir { |dir|
+
+  # Copy the model information into a temp directory
+  `cp -r "#{modelDir}" #{dir}`
+
+  # Create a tarball for the model
+  `tar czvf #{modelName}.tar.gz -C #{dir} "#{modelName}"`
+}
+
+# Completion message
+puts "Propshop model created.\n"
+puts "Upload [#{modelName}.tar.gz] to thepropshop.org"
