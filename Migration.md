@@ -90,14 +90,23 @@
 1. **gazebo/physics/Link.hh**
     + bool initialized
 
+1. **gazebo/physics/SurfaceParams.hh**
+    + FrictionPyramid()
+    + ~FrictionPyramid()
+    + double GetMuPrimary()
+    + double GetMuSecondary()
+    + void SetMuPrimary(double _mu)
+    + void SetMuSecondary(double _mu)
+    + math::Vector3 direction1
+    + ***Note:*** Replaces mu, m2, fdir1 variables
+
 1. **gazebo/physics/bullet/BulletSurfaceParams.hh**
     + BulletSurfaceParams()
     + virtual ~BulletSurfaceParams()
     + virtual void Load(sdf::ElementPtr _sdf)
     + virtual void FillMsg(msgs::Surface &_msg)
     + virtual void ProcessMsg(msgs::Surface &_msg)
-    + double mu1
-    + double mu2
+    + FrictionPyramid frictionPyramid
 
 1. **gazebo/physics/ode/ODESurfaceParams.hh**
     + virtual void FillMsg(msgs::Surface &_msg)
@@ -111,11 +120,9 @@
     + double erp
     + double maxVel
     + double minDepth
-    + double mu1
-    + double mu2
+    + FrictionPyramid frictionPyramid
     + double slip1
     + double slip2
-    + math::Vector3 fdir1
 
 1. **gazebo/rendering/Light.hh**
     + bool GetVisible() const
@@ -134,6 +141,9 @@
 1. **gazebo/sensors/GaussianNoiseModel.hh**
 
 ### Deletions
+
+1. **Removed libtool**
+    + Libtool used to be an option for loading plugins. Now, only libdl is supported.
 
 1. **gazebo/physics/Base.hh**
     + Base_V::iterator childrenEnd
@@ -159,7 +169,8 @@
     + double slip1
     + double slip2
     + math::Vector3 fdir1
-    + ***Note:*** These parameters were moved to ODESurfaceParams and BulletSurfaceParams.
+    + ***Note:*** These parameters were moved to FrictionPyramid,
+      ODESurfaceParams, and BulletSurfaceParams.
 
 
 ## Gazebo 1.9 to 2.0
