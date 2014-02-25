@@ -21,6 +21,7 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/msgs/msgs.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -89,7 +90,7 @@ namespace gazebo
     /// \brief SurfaceParams defines various Surface contact parameters.
     /// These parameters defines the properties of a
     /// physics::Contact constraint.
-    class SurfaceParams
+    class GAZEBO_VISIBLE SurfaceParams
     {
       /// \brief Constructor.
       public: SurfaceParams();
