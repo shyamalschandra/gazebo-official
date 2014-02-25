@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <!-- Ground -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!-- Pioneer2dx model with a hokuyo laser and camera-->
+    <include>
+      <uri>model://pioneer2dx</uri>
+    </include>
+    <include>
+      <uri>model://hokuyo</uri>
+      <pose>0.2 0 0.3 0 0 0</pose>
+    </include>
+    <include>
+      <uri>model://camera</uri>
+      <pose>-0.12 0 0.25 0 0 3.1416</pose>
+    </include>
+  </world>
+</sdf>
