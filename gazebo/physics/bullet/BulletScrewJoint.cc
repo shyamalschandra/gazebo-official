@@ -172,10 +172,21 @@ void BulletScrewJoint::SetThreadPitch(unsigned int /*_index*/,
 }
 
 //////////////////////////////////////////////////
-double BulletScrewJoint::GetThreadPitch(unsigned int /*_index*/)
+void BulletScrewJoint::SetThreadPitch(double /*_threadPitch*/)
 {
   gzerr << "Not implemented\n";
-  return 0;
+}
+
+//////////////////////////////////////////////////
+double BulletScrewJoint::GetThreadPitch(unsigned int /*_index*/)
+{
+  return this->threadPitch;
+}
+
+//////////////////////////////////////////////////
+double BulletScrewJoint::GetThreadPitch()
+{
+  return this->threadPitch;
 }
 
 //////////////////////////////////////////////////
