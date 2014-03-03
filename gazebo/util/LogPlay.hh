@@ -25,7 +25,6 @@
 #include <fstream>
 
 #include "gazebo/common/SingletonT.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,7 +43,7 @@ namespace gazebo
     /// state information to a World.
     ///
     /// \sa LogRecord, State
-    class GAZEBO_VISIBLE LogPlay : public SingletonT<LogPlay>
+    class LogPlay : public SingletonT<LogPlay>
     {
       /// \brief Constructor
       private: LogPlay();

@@ -24,14 +24,13 @@
 
 #include "gazebo/physics/BallJoint.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief An ODEBallJoint
-    class GAZEBO_VISIBLE ODEBallJoint : public BallJoint<ODEJoint>
+    class ODEBallJoint : public BallJoint<ODEJoint>
     {
       /// \brief Constructor
       /// \param[in] _worldID ODE id of the world.

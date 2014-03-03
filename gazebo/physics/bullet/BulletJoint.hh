@@ -27,7 +27,6 @@
 
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/Joint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -38,7 +37,7 @@ namespace gazebo
     /// \{
 
     /// \brief Base class for all joints
-    class GAZEBO_VISIBLE BulletJoint : public Joint
+    class BulletJoint : public Joint
     {
       /// \brief Constructor
       public: BulletJoint(BasePtr _parent);

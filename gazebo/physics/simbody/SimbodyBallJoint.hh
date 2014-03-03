@@ -21,7 +21,6 @@
 #include "gazebo/physics/BallJoint.hh"
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -32,7 +31,7 @@ namespace gazebo
     /// \{
 
     /// \brief SimbodyBallJoint class models a ball joint in Simbody.
-    class GAZEBO_VISIBLE SimbodyBallJoint : public BallJoint<SimbodyJoint>
+    class SimbodyBallJoint : public BallJoint<SimbodyJoint>
     {
       /// \brief Simbody Ball Joint Constructor
       public: SimbodyBallJoint(SimTK::MultibodySystem *_world, BasePtr _parent);

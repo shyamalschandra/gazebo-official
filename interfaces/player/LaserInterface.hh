@@ -24,7 +24,6 @@
 
 #include <string>
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 #include "GazeboInterface.hh"
 
 /// \addtogroup player_iface Interfaces
@@ -34,7 +33,7 @@
 /// \{
 
 /// \brief Plugin Player interface for a Gazebo laser
-class GAZEBO_VISIBLE LaserInterface : public GazeboInterface
+class LaserInterface : public GazeboInterface
 {
   /// \brief Constructor
   /// \param addr Plaer device address

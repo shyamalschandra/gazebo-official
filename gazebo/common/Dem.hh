@@ -19,7 +19,6 @@
 #define _GAZEBO_DEM_HH_
 
 #include <gazebo/gazebo_config.h>
-#include <gazebo/util/system.hh>
 
 #ifdef HAVE_GDAL
 # include <gdal/gdal_priv.h>
@@ -39,7 +38,7 @@ namespace gazebo
 
     /// \class DEM DEM.hh common/common.hh
     /// \brief Encapsulates a DEM (Digital Elevation Model) file.
-    class GAZEBO_VISIBLE Dem : public HeightmapData
+    class Dem : public HeightmapData
     {
       /// \brief Constructor.
       public: Dem();

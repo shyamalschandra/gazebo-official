@@ -36,7 +36,6 @@
 #include "gazebo/physics/JointState.hh"
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/JointWrench.hh"
-#include "gazebo/util/system.hh"
 
 /// \brief maximum number of axis per joint anticipated.
 /// Currently, this is 2 as 3-axis joints (e.g. ball)
@@ -52,7 +51,7 @@ namespace gazebo
 
     /// \class Joint Joint.hh physics/physics.hh
     /// \brief Base class for all joints
-    class GAZEBO_VISIBLE Joint : public Base
+    class Joint : public Base
     {
       /// \enum Attribute
       /// \brief Joint attribute types.

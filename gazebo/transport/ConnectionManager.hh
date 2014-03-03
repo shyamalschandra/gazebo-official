@@ -29,7 +29,6 @@
 
 #include "gazebo/transport/Publisher.hh"
 #include "gazebo/transport/Connection.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,7 +39,7 @@ namespace gazebo
 
     /// \class ConnectionManager ConnectionManager.hh transport/transport.hh
     /// \brief Manager of connections
-    class GAZEBO_VISIBLE ConnectionManager : public SingletonT<ConnectionManager>
+    class ConnectionManager : public SingletonT<ConnectionManager>
     {
       /// \brief Constructor
       private: ConnectionManager();

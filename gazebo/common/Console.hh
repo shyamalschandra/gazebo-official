@@ -26,7 +26,6 @@
 #include <boost/thread.hpp>
 #include "gazebo/common/SingletonT.hh"
 #include "gazebo/common/CommonTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -57,7 +56,7 @@ namespace gazebo
 
     /// \class FileLogger FileLogger.hh common/common.hh
     /// \brief A logger that outputs messages to a file.
-    class GAZEBO_VISIBLE FileLogger : public std::ostream
+    class FileLogger : public std::ostream
     {
       /// \brief Constructor.
       /// \param[in] _filename Filename to write into. If empty,
@@ -107,7 +106,7 @@ namespace gazebo
 
     /// \class Logger Logger.hh common/common.hh
     /// \brief Terminal logger.
-    class GAZEBO_VISIBLE Logger : public std::ostream
+    class Logger : public std::ostream
     {
       /// \enum LogType.
       /// \brief Output destination type.
@@ -176,7 +175,7 @@ namespace gazebo
     /// \class Console Console.hh common/common.hh
     /// \brief Container for loggers, and global logging options
     /// (such as verbose vs. quiet output).
-    class GAZEBO_VISIBLE Console
+    class Console
     {
       /// \brief Set quiet output.
       /// \param[in] q True to prevent warning.

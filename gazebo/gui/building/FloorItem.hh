@@ -22,7 +22,6 @@
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/building/RectItem.hh"
 #include "gazebo/gui/building/BuildingItem.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,7 +35,7 @@ namespace gazebo
 
     /// \class FloorItem FloorItem.hh
     /// \brief 2D representation of a floor.
-    class GAZEBO_VISIBLE FloorItem : public RectItem, public BuildingItem
+    class FloorItem : public RectItem, public BuildingItem
     {
       Q_OBJECT
 

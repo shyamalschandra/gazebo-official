@@ -20,7 +20,6 @@
 
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/CylinderShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
     /// \{
 
     /// \brief Cylinder collision
-    class GAZEBO_VISIBLE SimbodyCylinderShape : public CylinderShape
+    class SimbodyCylinderShape : public CylinderShape
     {
       /// \brief Constructor
       public: SimbodyCylinderShape(CollisionPtr _parent)

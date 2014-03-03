@@ -22,7 +22,6 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
     /// \class Events Events.hh common/common.hh
     /// \brief An Event class to get notifications for simulator events
-    class GAZEBO_VISIBLE Events
+    class Events
     {
       //////////////////////////////////////////////////////////////////////////
       /// \brief Connect a boost::slot the the pause signal

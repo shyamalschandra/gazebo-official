@@ -22,7 +22,6 @@
 #include <string>
 
 #include "gazebo/math/Pose.hh"
-#include "gazebo/util/system.hh"
 
 #define X_POSITION 0
 #define Y_POSITION 1
@@ -42,7 +41,7 @@ namespace gazebo
 
     /// \class BVHLoader BVHLoader.hh common/common.hh
     /// \brief Handles loading BVH animation files
-    class GAZEBO_VISIBLE BVHLoader
+    class BVHLoader
     {
       /// \brief Constructor
       public: BVHLoader();

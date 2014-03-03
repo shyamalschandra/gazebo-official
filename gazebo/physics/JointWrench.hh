@@ -23,7 +23,6 @@
 #define _JOINT_WRENCH_HH_
 
 #include "gazebo/math/Vector3.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,7 +35,7 @@ namespace gazebo
     /// \brief Wrench information from a joint.  These are
     /// forces and torques on parent and child Links, relative to
     /// the Joint frame immediately after rotation.
-    class GAZEBO_VISIBLE JointWrench
+    class JointWrench
     {
       /// \brief Operator =
       /// \param[in] _wrench Joint wrench to set from.

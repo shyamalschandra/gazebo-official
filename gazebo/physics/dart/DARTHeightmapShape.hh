@@ -23,14 +23,13 @@
 #include "gazebo/physics/HeightmapShape.hh"
 #include "gazebo/physics/dart/DARTPhysics.hh"
 #include "gazebo/physics/Collision.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief DART Height map collision.
-    class GAZEBO_VISIBLE DARTHeightmapShape : public HeightmapShape
+    class DARTHeightmapShape : public HeightmapShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Collision parent.

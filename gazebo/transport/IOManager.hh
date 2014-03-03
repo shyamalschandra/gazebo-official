@@ -19,7 +19,6 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/asio.hpp>
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +29,7 @@ namespace gazebo
 
     /// \class IOManager IOManager.hh transport/transport.hh
     /// \brief Manages boost::asio IO
-    class GAZEBO_VISIBLE IOManager
+    class IOManager
     {
       /// \brief Constructor
       public: IOManager();

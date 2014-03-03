@@ -24,14 +24,13 @@
 
 #include "gazebo/physics/UniversalJoint.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief A universal joint.
-    class GAZEBO_VISIBLE ODEUniversalJoint : public UniversalJoint<ODEJoint>
+    class ODEUniversalJoint : public UniversalJoint<ODEJoint>
     {
       /// \brief Constructor.
       /// \param[in] _worldId ODE world id.

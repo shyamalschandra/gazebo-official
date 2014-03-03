@@ -19,13 +19,12 @@
 #define _GRABBER_HANDLE_HH_
 
 #include "gazebo/gui/qt.h"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace gui
   {
-    class GAZEBO_VISIBLE GrabberHandle : public QGraphicsItem
+    class GrabberHandle : public QGraphicsItem
     {
       /// \brief Constructor
       /// \param[in] _parent Parent graphics item

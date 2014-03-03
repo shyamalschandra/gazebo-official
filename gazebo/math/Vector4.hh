@@ -25,7 +25,6 @@
 #include <iostream>
 #include <fstream>
 #include "gazebo/math/Matrix4.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,7 +35,7 @@ namespace gazebo
 
     /// \class Vector4 Vector4.hh math/gzmath.hh
     /// \brief double Generic x, y, z, w vector
-    class GAZEBO_VISIBLE Vector4
+    class Vector4
     {
       /// \brief Constructor
       public: Vector4();

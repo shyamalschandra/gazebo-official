@@ -22,7 +22,6 @@
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Vector2d.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,7 +36,7 @@ namespace gazebo
 
     /// \class Mesh Mesh.hh common/common.hh
     /// \brief A 3D mesh
-    class GAZEBO_VISIBLE Mesh
+    class Mesh
     {
       /// \brief Constructor
       public: Mesh();
@@ -185,7 +184,7 @@ namespace gazebo
 
     /// \brief Vertex to node weighted assignement for skeleton animation
     /// visualization
-    class GAZEBO_VISIBLE NodeAssignment
+    class NodeAssignment
     {
       /// \brief Constructor.
       public: NodeAssignment();
@@ -201,7 +200,7 @@ namespace gazebo
     };
 
     /// \brief A child mesh
-    class GAZEBO_VISIBLE SubMesh
+    class SubMesh
     {
       /// \brief An enumeration of the geometric mesh primitives
       public: enum PrimitiveType {POINTS, LINES, LINESTRIPS, TRIANGLES,

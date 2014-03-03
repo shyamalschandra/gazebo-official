@@ -19,7 +19,6 @@
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Vector2d.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +29,7 @@ namespace gazebo
 
     /// \class Plane Plane.hh math/gzmath.hh
     /// \brief A plane and related functions.
-    class GAZEBO_VISIBLE Plane
+    class Plane
     {
       /// \brief Constructor
       public: Plane();

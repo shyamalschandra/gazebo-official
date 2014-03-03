@@ -29,14 +29,13 @@
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/ode/ODETypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief Base class for all ODE collisions.
-    class GAZEBO_VISIBLE ODECollision : public Collision
+    class ODECollision : public Collision
     {
       /// \brief Constructor.
       /// \param[in] _link Parent Link

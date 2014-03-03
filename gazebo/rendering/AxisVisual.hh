@@ -22,7 +22,6 @@
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
     /// \class AxisVisual AxisVisual.hh rendering/rendering.hh
     /// \brief Basic axis visualization
-    class GAZEBO_VISIBLE AxisVisual : public Visual
+    class AxisVisual : public Visual
     {
       /// \brief Constructor
       /// \param[in] _name Name of the AxisVisual

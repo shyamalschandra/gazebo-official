@@ -21,7 +21,6 @@
 
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/gui/EntityMaker.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -32,7 +31,7 @@ namespace gazebo
 
   namespace gui
   {
-    class GAZEBO_VISIBLE LightMaker : public EntityMaker
+    class LightMaker : public EntityMaker
     {
       public: LightMaker();
 
@@ -55,7 +54,7 @@ namespace gazebo
       private: rendering::Light *light;
     };
 
-    class GAZEBO_VISIBLE PointLightMaker : public LightMaker
+    class PointLightMaker : public LightMaker
     {
       public: PointLightMaker() : LightMaker()
               {
@@ -65,7 +64,7 @@ namespace gazebo
               }
     };
 
-    class GAZEBO_VISIBLE SpotLightMaker : public LightMaker
+    class SpotLightMaker : public LightMaker
     {
       public: SpotLightMaker() : LightMaker()
               {
@@ -81,7 +80,7 @@ namespace gazebo
               }
     };
 
-    class GAZEBO_VISIBLE DirectionalLightMaker : public LightMaker
+    class DirectionalLightMaker : public LightMaker
     {
       public: DirectionalLightMaker() : LightMaker()
               {

@@ -23,7 +23,6 @@
 #include <vector>
 #include "gazebo/gui/qt.h"
 #include "gazebo/common/Event.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -41,7 +40,7 @@ namespace gazebo
 
     /// \class Level EditorView.hh
     /// \brief A convenient structure for storing level information
-    class GAZEBO_VISIBLE Level
+    class Level
     {
       /// \brief Level number
       public: int level;
@@ -58,7 +57,7 @@ namespace gazebo
 
     /// \class EditorView EditorView.hh
     /// \brief Control the editor view and manage contents in the editor scene.
-    class GAZEBO_VISIBLE EditorView : public QGraphicsView
+    class EditorView : public QGraphicsView
     {
       Q_OBJECT
 

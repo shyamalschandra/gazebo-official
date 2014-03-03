@@ -21,7 +21,6 @@
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/math/Vector3.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -29,7 +28,7 @@ namespace gazebo
 
   namespace gui
   {
-    class GAZEBO_VISIBLE ModelBuilderWidget : public QWidget
+    class ModelBuilderWidget : public QWidget
     {
       Q_OBJECT
       public: ModelBuilderWidget(QWidget *_parent = 0);

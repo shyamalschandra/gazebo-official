@@ -23,7 +23,6 @@
 
 #include "gazebo/physics/State.hh"
 #include "gazebo/math/Pose.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -39,7 +38,7 @@ namespace gazebo
     /// specific time during a simulation run.
     ///
     /// State of a Collision is its Pose.
-    class GAZEBO_VISIBLE CollisionState : public State
+    class CollisionState : public State
     {
       /// \brief Default constructor
       public: CollisionState();

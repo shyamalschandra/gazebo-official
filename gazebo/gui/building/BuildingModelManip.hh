@@ -23,7 +23,6 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/rendering/RenderTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,7 +35,7 @@ namespace gazebo
 
     /// \class BuildingModelManip BuildingModelManip.hh
     /// \brief Manipulate a 3D visual associated to a 2D editor item.
-    class GAZEBO_VISIBLE BuildingModelManip : public QObject
+    class BuildingModelManip : public QObject
     {
       Q_OBJECT
 

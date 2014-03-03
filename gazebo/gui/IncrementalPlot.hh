@@ -27,7 +27,6 @@
 #include "gazebo/math/Vector2d.hh"
 
 #include "gazebo/gui/qt.h"
-#include "gazebo/util/system.hh"
 
 class QwtPlotCurve;
 class QwtPlotDirectPainter;
@@ -37,7 +36,7 @@ namespace gazebo
   namespace gui
   {
     /// \brief A plotting widget that handles incremental addition of data.
-    class GAZEBO_VISIBLE IncrementalPlot : public QwtPlot
+    class IncrementalPlot : public QwtPlot
     {
       Q_OBJECT
 
