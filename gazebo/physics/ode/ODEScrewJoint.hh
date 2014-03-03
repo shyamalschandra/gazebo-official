@@ -24,14 +24,13 @@
 
 #include "gazebo/physics/ScrewJoint.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief A screw joint.
-    class GAZEBO_VISIBLE ODEScrewJoint : public ScrewJoint<ODEJoint>
+    class ODEScrewJoint : public ScrewJoint<ODEJoint>
     {
       /// \brief Constructor.
       /// \param[in] _worldId ODE world id.

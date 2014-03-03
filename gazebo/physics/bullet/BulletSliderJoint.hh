@@ -26,7 +26,6 @@
 #include "gazebo/physics/bullet/BulletJoint.hh"
 #include "gazebo/physics/SliderJoint.hh"
 #include "gazebo/physics/bullet/BulletPhysics.hh"
-#include "gazebo/util/system.hh"
 
 class btSliderConstraint;
 
@@ -39,7 +38,7 @@ namespace gazebo
     /// \{
 
     /// \brief A slider joint
-    class GAZEBO_VISIBLE BulletSliderJoint : public SliderJoint<BulletJoint>
+    class BulletSliderJoint : public SliderJoint<BulletJoint>
     {
       /// \brief Constructor
       public: BulletSliderJoint(btDynamicsWorld *world, BasePtr _parent);

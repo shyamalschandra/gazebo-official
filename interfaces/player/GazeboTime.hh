@@ -27,13 +27,12 @@
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/msgs/msgs.hh"
-#include "gazebo/util/system.hh"
 
 /// \addtogroup player
 /// \brief Gazebo player driver
 /// \{
   /// \brief Gazebo access to PlayerTime
-class GAZEBO_VISIBLE GazeboTime : public PlayerTime
+class GazeboTime : public PlayerTime
 {
   /// \brief Constructor
   public: GazeboTime();

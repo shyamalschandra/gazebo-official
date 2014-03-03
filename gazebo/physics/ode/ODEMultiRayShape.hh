@@ -18,14 +18,13 @@
 #define _ODEMULTIRAYSHAPE_HH_
 
 #include "gazebo/physics/MultiRayShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief ODE specific version of MultiRayShape
-    class GAZEBO_VISIBLE ODEMultiRayShape : public MultiRayShape
+    class ODEMultiRayShape : public MultiRayShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.

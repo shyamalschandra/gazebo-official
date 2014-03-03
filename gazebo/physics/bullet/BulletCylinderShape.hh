@@ -24,7 +24,6 @@
 
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/CylinderShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +34,7 @@ namespace gazebo
     /// \{
 
     /// \brief Cylinder collision
-    class GAZEBO_VISIBLE BulletCylinderShape : public CylinderShape
+    class BulletCylinderShape : public CylinderShape
     {
       /// \brief Constructor
       public: BulletCylinderShape(CollisionPtr _parent)

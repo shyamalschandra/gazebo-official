@@ -20,7 +20,6 @@
 #include <string>
 
 #include "gazebo/rendering/ViewController.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
 
     /// \class FPSViewController FPSViewController.hh rendering/rendering.hh
     /// \brief First Person Shooter style view controller
-    class GAZEBO_VISIBLE FPSViewController : public ViewController
+    class FPSViewController : public ViewController
     {
       /// \brief Constructor
       /// \param[in] Camera to controll

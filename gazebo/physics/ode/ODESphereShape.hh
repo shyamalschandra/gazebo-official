@@ -21,14 +21,13 @@
 #include "gazebo/physics/ode/ODECollision.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/SphereShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief A ODE sphere shape
-    class GAZEBO_VISIBLE ODESphereShape : public SphereShape
+    class ODESphereShape : public SphereShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.

@@ -21,11 +21,10 @@
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE ModelTrajectoryTestPlugin : public ModelPlugin
+  class ModelTrajectoryTestPlugin : public ModelPlugin
   {
     public: ModelTrajectoryTestPlugin();
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);

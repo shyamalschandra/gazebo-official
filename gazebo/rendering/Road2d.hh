@@ -29,7 +29,6 @@
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Spline.hh"
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,7 +39,7 @@ namespace gazebo
 
     /// \class Road Road.hh rendering/rendering.hh
     /// \brief Used to render a strip of road.
-    class GAZEBO_VISIBLE Road2d
+    class Road2d
     {
       /// \brief Constructor
       public: Road2d();

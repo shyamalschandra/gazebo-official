@@ -19,7 +19,6 @@
 #define _SIMBODY_MODEL_HH_
 
 #include "gazebo/physics/Model.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +29,7 @@ namespace gazebo
 
     /// \class SimbodyModel SimbodyModel.hh physics/physics.hh
     /// \brief A model is a collection of links, joints, and plugins.
-    class GAZEBO_VISIBLE SimbodyModel : public Model
+    class SimbodyModel : public Model
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent object.

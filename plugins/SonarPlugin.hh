@@ -22,12 +22,11 @@
 #include "gazebo/sensors/SensorTypes.hh"
 #include "gazebo/sensors/SonarSensor.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   /// \brief A sonar sensor plugin
-  class GAZEBO_VISIBLE SonarPlugin : public SensorPlugin
+  class SonarPlugin : public SensorPlugin
   {
     /// \brief Constructor
     public: SonarPlugin();

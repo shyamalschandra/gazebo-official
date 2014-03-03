@@ -23,11 +23,10 @@
 #define FIDUCIALINTERFACE_HH
 
 #include "GazeboInterface.hh"
-#include "gazebo/util/system.hh"
 
 namespace boost
 {
-  class GAZEBO_VISIBLE recursive_mutex;
+  class recursive_mutex;
 }
 
 namespace libgazebo
@@ -38,10 +37,10 @@ namespace libgazebo
 /// \brief Plugin Player interface for Gazebo fiducials
 /// \{
   // Forward declarations
-  class GAZEBO_VISIBLE FiducialIface;
+  class FiducialIface;
 
   /// \brief Plugin Player interface for Gazebo fiducials
-  class GAZEBO_VISIBLE FiducialInterface : public GazeboInterface
+  class FiducialInterface : public GazeboInterface
   {
     /// \brief Constructor
     /// \param addr Plaer device address

@@ -22,7 +22,6 @@
 #include <vector>
 #include "gazebo/gui/qt.h"
 #include "gazebo/common/Event.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
     /// \class ScaleWidget ScaleWidget.hh
     /// \brief Widget that displays the scale (zoom level) of the editor
-    class GAZEBO_VISIBLE ScaleWidget : public QWidget
+    class ScaleWidget : public QWidget
     {
       Q_OBJECT
 

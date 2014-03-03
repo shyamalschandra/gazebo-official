@@ -20,13 +20,12 @@
 #include "gazebo/math/Rand.hh"
 #include "gazebo/rendering/rendering.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   /// \brief This plugin will generate 5 pictures of a model: perspective,
   /// top, front, side, back.
-  class GAZEBO_VISIBLE ModelPropShop : public SystemPlugin
+  class ModelPropShop : public SystemPlugin
   {
     /// \brief Destructor
     public: virtual ~ModelPropShop();

@@ -31,7 +31,6 @@
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/sensors/Sensor.hh"
 #include "gazebo/rendering/RenderTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -47,7 +46,7 @@ namespace gazebo
     /// This sensor cast rays into the world, tests for intersections, and
     /// reports the range to the nearest object.  It is used by ranging
     /// sensor models (e.g., sonars and scanning laser range finders).
-    class GAZEBO_VISIBLE GpuRaySensor: public Sensor
+    class GpuRaySensor: public Sensor
     {
       /// \brief Constructor
       public: GpuRaySensor();

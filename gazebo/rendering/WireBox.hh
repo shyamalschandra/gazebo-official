@@ -20,7 +20,6 @@
 
 #include "gazebo/math/Box.hh"
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
     /// \class WireBox WireBox.hh rendering/rendering.hh
     /// \brief Draws a wireframe box.
-    class GAZEBO_VISIBLE WireBox
+    class WireBox
     {
       /// \brief Constructor
       /// \param[in] _box Dimension of the box to draw.

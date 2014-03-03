@@ -20,7 +20,6 @@
 
 #include <stdint.h>
 #include <string>
-#include "gazebo/util/system.hh"
 
 struct AVFormatContext;
 struct AVCodecContext;
@@ -35,7 +34,7 @@ namespace gazebo
 
     /// \class AudioDecoder AudioDecoder.hh common/common.hh
     /// \brief An audio decoder based on FFMPEG.
-    class GAZEBO_VISIBLE AudioDecoder
+    class AudioDecoder
     {
       /// \brief Constructor.
       public: AudioDecoder();

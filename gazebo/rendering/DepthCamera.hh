@@ -33,7 +33,6 @@
 #include "gazebo/math/Vector2i.hh"
 
 #include "gazebo/rendering/Camera.hh"
-#include "gazebo/util/system.hh"
 
 namespace Ogre
 {
@@ -54,7 +53,7 @@ namespace gazebo
 
     /// \class DepthCamera DepthCamera.hh rendering/rendering.hh
     /// \brief Depth camera used to render depth data into an image buffer
-    class GAZEBO_VISIBLE DepthCamera : public Camera
+    class DepthCamera : public Camera
     {
       /// \brief Constructor
       /// \param[in] _namePrefix Unique prefix name for the camera.

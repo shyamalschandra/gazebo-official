@@ -19,7 +19,6 @@
 
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/Editor.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -29,7 +28,7 @@ namespace gazebo
 
     /// \class TerrainEditor TerrainEditor.hh gui/gui.hh
     /// \brief Interface to the terrain editor.
-    class GAZEBO_VISIBLE TerrainEditor : public Editor
+    class TerrainEditor : public Editor
     {
       Q_OBJECT
 

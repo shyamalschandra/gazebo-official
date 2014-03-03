@@ -24,14 +24,13 @@
 #include "gazebo/physics/ode/ode_inc.h"
 #include "gazebo/physics/ode/ODETypes.hh"
 #include "gazebo/physics/Link.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief ODE Link class.
-    class GAZEBO_VISIBLE ODELink : public Link
+    class ODELink : public Link
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent model.

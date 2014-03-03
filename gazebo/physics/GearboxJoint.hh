@@ -22,7 +22,6 @@
 
 #include "gazebo/math/Angle.hh"
 #include "gazebo/math/Vector3.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
     /// \class GearboxJoint GearboxJoint.hh physics/physics.hh
     /// \brief A double axis gearbox joint
     template<class T>
-    class GAZEBO_VISIBLE GearboxJoint : public T
+    class GearboxJoint : public T
     {
       /// \brief Constructor
       /// \param[in] _parent Parent link

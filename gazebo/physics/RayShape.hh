@@ -26,7 +26,6 @@
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/Shape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,7 +36,7 @@ namespace gazebo
 
     /// \class RayShape RayShape.hh physics/physics.hh
     /// \brief Base class for Ray collision geometry
-    class GAZEBO_VISIBLE RayShape : public Shape
+    class RayShape : public Shape
     {
       /// \brief Constructor for a global ray.
       /// \param[in] _physicsEngine Pointer to the physics engine.

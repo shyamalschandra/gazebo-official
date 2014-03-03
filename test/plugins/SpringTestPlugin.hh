@@ -22,11 +22,10 @@
 #include "gazebo/common/common.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE SpringTestPlugin : public ModelPlugin
+  class SpringTestPlugin : public ModelPlugin
   {
     public: SpringTestPlugin();
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);

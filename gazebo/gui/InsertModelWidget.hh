@@ -21,7 +21,6 @@
 #include <map>
 
 #include "gazebo/gui/qt.h"
-#include "gazebo/util/system.hh"
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -34,7 +33,7 @@ namespace gazebo
     /// \brief Private
     class InsertModelWidgetPrivate;
 
-    class GAZEBO_VISIBLE InsertModelWidget : public QWidget
+    class InsertModelWidget : public QWidget
     {
       Q_OBJECT
 
