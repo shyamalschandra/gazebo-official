@@ -248,6 +248,16 @@ void ODEPhysics::OnRequest(ConstRequestPtr &_msg)
     physicsMsg.set_min_step_size(
         boost::any_cast<double>(this->GetParam(MIN_STEP_SIZE)));
     physicsMsg.set_precon_iters(this->GetSORPGSPreconIters());
+    physicsMsg.set_irr(
+        boost::any_cast<bool>(this->GetParam("inertia_ratio_reduction")));
+    physicsMsg.set_friction_iters(
+        boost::any_cast<int>(this->GetParam("extra_friction_iterations")));
+    physicsMsg.set_warm_start_factor(
+        boost::any_cast<double>(this->GetParam("warm_start_factor")));
+    physicsMsg.set_reorder(
+        boost::any_cast<bool>(this->GetParam("experimental_row_reordering")));
+    physicsMsg.set_contact_residual_smoothing(
+        boost::any_cast<double>(this->GetParam("contact_residual_smoothing")));
     physicsMsg.set_iters(this->GetSORPGSIters());
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
     physicsMsg.set_sor(this->GetSORPGSW());
@@ -288,6 +298,22 @@ void ODEPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 
   if (_msg->has_precon_iters())
     this->SetSORPGSPreconIters(_msg->precon_iters());
+
+  if (_msg->has_irr())
+    this->SetParam("inertia_ratio_reduction", _msg->irr());
+
+  if (_msg->has_friction_iters())
+    this->SetParam("extra_friction_iterations", _msg->friction_iters());
+
+  if (_msg->has_warm_start_factor())
+    this->SetParam("warm_start_factor", _msg->warm_start_factor());
+
+  if (_msg->has_reorder())
+    this->SetParam("experimental_row_reordering", _msg->reorder());
+
+  if (_msg->has_contact_residual_smoothing())
+    this->SetParam("contact_residual_smoothing",
+    _msg->contact_residual_smoothing());
 
   if (_msg->has_iters())
     this->SetSORPGSIters(_msg->iters());
@@ -1285,6 +1311,42 @@ void ODEPhysics::SetParam(const std::string &_key, const boost::any &_value)
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "rms_error_tolerance")
+  {
+    dWorldSetQuickStepTolerance(this->worldId,
+        boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "inertia_ratio_reduction")
+  {
+    dWorldSetQuickStepInertiaRatioReduction(this->worldId,
+        boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "contact_residual_smoothing")
+  {
+    dWorldSetQuickStepContactResidualSmoothing(this->worldId,
+      boost::any_cast<double>(_value));
+    return;
+  }
+  else if (_key == "experimental_row_reordering")
+  {
+    dWorldSetQuickStepExperimentalRowReordering(this->worldId,
+      boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "warm_start_factor")
+  {
+    dWorldSetQuickStepWarmStartFactor(this->worldId,
+      boost::any_cast<double>(_value));
+    return;
+  }
+  else if (_key == "extra_friction_iterations")
+  {
+    dWorldSetQuickStepExtraFrictionIterations(this->worldId,
+      boost::any_cast<int>(_value));
+    return;
+  }
   else
   {
     gzwarn << _key << " is not supported in ode" << std::endl;
@@ -1388,6 +1450,24 @@ boost::any ODEPhysics::GetParam(const std::string &_key) const
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "rms_error_tolerance")
+    return dWorldGetQuickStepTolerance(this->worldId);
+  else if (_key == "rms_error")
+    return dWorldGetQuickStepRMSError(this->worldId);
+  else if (_key == "constraint_residual")
+    return dWorldGetQuickStepRMSConstraintResidual(this->worldId);
+  else if (_key == "num_contacts")
+    return dWorldGetQuickStepNumContacts(this->worldId);
+  else if (_key == "inertia_ratio_reduction")
+    return dWorldGetQuickStepInertiaRatioReduction(this->worldId);
+  else if (_key == "contact_residual_smoothing")
+    return dWorldGetQuickStepContactResidualSmoothing (this->worldId);
+  else if (_key == "experimental_row_reordering")
+    return dWorldGetQuickStepExperimentalRowReordering (this->worldId);
+  else if (_key == "warm_start_factor")
+    return dWorldGetQuickStepWarmStartFactor (this->worldId);
+  else if (_key == "extra_friction_iterations")
+    return dWorldGetQuickStepExtraFrictionIterations (this->worldId);
   else
   {
     gzwarn << _key << " is not supported in ode" << std::endl;
