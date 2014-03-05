@@ -66,9 +66,8 @@ namespace gazebo
       /// @todo to be implemented
       public: virtual std::string GetTopic() const;
 
-      /// \brief Update the sensor information
-      /// \param[in] _force True if update is forced, false if not
-      protected: virtual void UpdateImpl(bool _force);
+      // Documentation inherited
+      protected: virtual bool UpdateImpl(bool _force);
 
       /// \brief Finalize the camera
       protected: virtual void Fini();
@@ -98,10 +97,17 @@ namespace gazebo
       // Documentation inherited
       public: virtual bool IsActive();
 
-      private: rendering::CameraPtr camera;
-      private: rendering::ScenePtr scene;
+      /// \brief Handle the render event.
+      private: void Render();
 
+      /// \brief Pointer to the camera.
+      private: rendering::CameraPtr camera;
+
+      /// \brief Publisher of image messages.
       private: transport::PublisherPtr imagePub;
+
+      /// \brief True if the sensor was rendered.
+      private: bool rendered;
     };
     /// \}
   }

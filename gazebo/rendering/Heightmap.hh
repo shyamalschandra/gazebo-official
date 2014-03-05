@@ -229,7 +229,7 @@ namespace gazebo
       /// the heightmap's image has been modified.
       /// \param[in] _hash New hash value
       /// \param[in] _terrainDir Directory where the terrain hash and the
-      /// terrain pages are stored. Ex: /tmp/gazebo-paging/heigthmap_bowl
+      /// terrain pages are stored. Ex: $TMP/gazebo-paging/heigthmap_bowl
       private: void UpdateTerrainHash(const std::string &_hash,
           const boost::filesystem::path &_terrainDir);
 
@@ -241,10 +241,6 @@ namespace gazebo
       /// \return True if the terrain requires to regenerate the terrain files.
       private: bool PrepareTerrainPaging(
         const boost::filesystem::path &_terrainDirPath);
-
-      /// \brief DO NOT USE THIS. This is here for ABI compatibilty reasons.
-      // \todo Deprecated. Remove this in Gazebo 3.0
-      public: static const unsigned int NumTerrainSubdivisions;
 
       /// \brief Number of pieces in which a terrain is subdivided for paging.
       private: static const unsigned int numTerrainSubdivisions;

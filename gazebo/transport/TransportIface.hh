@@ -44,13 +44,16 @@ namespace gazebo
     bool get_master_uri(std::string &_master_host, unsigned int &_master_port);
 
     /// \brief Initialize the transport system
-    /// \param[in] _master_host The hostname or IP of the master. Leave empty to
-    ///                    use pull address from the GAZEBO_MASTER_URI env var.
-    /// \param[in] _master_port The port  of the master. Leave empty to
-    ///                    use pull address from the GAZEBO_MASTER_URI env var.
+    /// \param[in] _masterHost The hostname or IP of the master. Leave empty to
+    /// use pull address from the GAZEBO_MASTER_URI env var.
+    /// \param[in] _masterPort The port  of the master. Leave empty to
+    /// use pull address from the GAZEBO_MASTER_URI env var.
+    /// \param[in] _timeoutIterations Number of times to wait for
+    /// a connection to master.
     /// \return true if initialization succeeded; false otherwise
-    bool init(const std::string &_master_host ="",
-              unsigned int _master_port = 0);
+    bool init(const std::string &_masterHost = "",
+              unsigned int _masterPort = 0,
+              uint32_t _timeoutIterations = 30);
 
     /// \brief Run the transport component. Creates a thread to handle
     /// message passing. This call will block until the master can
@@ -146,6 +149,10 @@ namespace gazebo
     /// \brief Get whether minimal comms has been enabled.
     /// \return True if minimal comms is enabled.
     bool getMinimalComms();
+
+    /// \brief Create a connection to master.
+    /// \return Connection to the master.
+    transport::ConnectionPtr connectToMaster();
 
     /// \brief Blocks while waiting for topic namespaces from the Master.
     /// This function will wait a maximum of _maxWait.

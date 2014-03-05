@@ -15,7 +15,7 @@
  *
 */
 /*
- * Desc: Contact Plugin
+ * Desc: Ray Plugin
  * Author: Nate Koenig mod by John Hsu
  */
 
@@ -29,7 +29,7 @@
 
 namespace gazebo
 {
-  /// \brief A Bumper controller
+  /// \brief A Ray Sensor Plugin
   class RayPlugin : public SensorPlugin
   {
     /// \brief Constructor
