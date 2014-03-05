@@ -89,6 +89,7 @@ namespace gazebo
       /// \brief Update the collision.
       /// \param[in] _info Update information.
       public: void Update(const common::UpdateInfo &_info);
+      using Base::Update;
 
       /// \brief Set the scale of the link.
       /// \param[in] _scale Scale to set the link to.
@@ -201,6 +202,12 @@ namespace gazebo
       ///         frame.
       public: math::Pose GetWorldCoGPose() const;
 
+      /// \brief Get the linear velocity of the origin of the link frame,
+      ///        expressed in the world frame.
+      /// \return Linear velocity of the link frame.
+      public: virtual math::Vector3 GetWorldLinearVel() const
+              {return this->GetWorldLinearVel(math::Vector3::Zero);}
+
       /// \brief Get the linear velocity of a point on the body in the world
       ///        frame, using an offset expressed in a body-fixed frame. If
       ///        no offset is given, the velocity at the origin of the Link
@@ -209,7 +216,7 @@ namespace gazebo
       ///                    frame, expressed in the body-fixed frame.
       /// \return Linear velocity of the point on the body
       public: virtual math::Vector3 GetWorldLinearVel(
-          const math::Vector3 &_offset = math::Vector3(0, 0, 0)) const = 0;
+                  const math::Vector3 &_offset) const = 0;
 
       /// \brief Get the linear velocity of a point on the body in the world
       ///        frame, using an offset expressed in an arbitrary frame.
@@ -402,6 +409,7 @@ namespace gazebo
 
       // Documentation inherited.
       public: virtual void RemoveChild(EntityPtr _child);
+      using Base::RemoveChild;
 
       /// \brief Attach a static model to this link
       /// \param[in] _model Pointer to a static model.
@@ -455,6 +463,35 @@ namespace gazebo
       /// \brief Remove a collision from the link.
       /// \param[int] _name Name of the collision to remove.
       public: void RemoveCollision(const std::string &_name);
+
+      /// \brief Returns this link's potential energy,
+      /// based on position in world frame and gravity.
+      /// \return this link's potential energy,
+      public: double GetWorldEnergyPotential();
+
+      /// \brief Returns this link's kinetic energy
+      /// \return this link's kinetic energy
+      public: double GetWorldEnergyKinetic();
+
+      /// \brief Returns this link's total energy
+      /// \return this link's total energy
+      public: double GetWorldEnergy();
+
+      /// \brief Returns this link's kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's kinetic energy filtered by moving window average.
+      public: double GetWorldEnergyKineticFiltered();
+
+      /// \brief Returns this link's total energy with kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's filtered total energy.
+      public: double GetWorldEnergyFiltered();
+
+      /// \brief Returns this link's kinetic vibrational
+      /// "thermal" energy.  Where this is basically
+      ///   GetWorldEnergyKinetic() - GetWorldEnergyKineticFilterd()
+      /// \return this link's kinetic vibrational energy
+      public: double GetWorldEnergyKineticVibrational();
 
       /// \brief Freeze link to ground (inertial frame).
       /// \param[in] _static if true, freeze link to ground.  Otherwise
@@ -536,6 +573,54 @@ namespace gazebo
 
       /// \brief Cached list of collisions. This is here for performance.
       private: Collision_V collisions;
+
+      /// \brief For moving window average of kinetic energy
+      private: class MovingWindowFilter
+      {
+        MovingWindowFilter()
+        {
+          // for moving window smoothed velocity
+          /// \TODO FIXME hardcoded for now
+          this->velWindowSize = 4;
+          this->velHistory.resize(this->velWindowSize);
+          this->velIter = this->velHistory.begin();
+        }
+
+        public: void Update(math::Vector3 _vel)
+        {
+          // update avg
+          double n = 1.0/static_cast<double>(this->velWindowSize);
+          // std::vector<math::Vector3>::iterator old = this->velIter++;
+
+          // add new data
+          if (this->velIter == this->velHistory.end())
+            this->velIter = this->velHistory.begin();
+          (*this->velIter) = _vel;
+
+          // progressive add and subtrace oldest
+          // this->velFiltered += n*(*this->velIter - *old);
+
+          // sum and avg
+          this->velFiltered = math::Vector3(0, 0, 0);
+          for (std::vector<math::Vector3>::iterator it =
+            this->velHistory.begin();
+            it != this->velHistory.end(); ++it)
+            this->velFiltered += *it;
+          this->velFiltered *= n;
+        }
+
+        public: math::Vector3 Get()
+        {  return this->velFiltered; }
+
+        private: int velWindowSize;
+        private: math::Vector3 velFiltered;
+        private: std::vector<math::Vector3> velHistory;
+        private: std::vector<math::Vector3>::iterator velIter;
+        friend class Link;
+      };
+
+      private: MovingWindowFilter linVelFil;
+      private: MovingWindowFilter angVelFil;
 
 #ifdef HAVE_OPENAL
       /// \brief All the audio sources

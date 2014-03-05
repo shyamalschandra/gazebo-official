@@ -172,7 +172,7 @@ void ODEPhysics::Load(sdf::ElementPtr _sdf)
 {
   PhysicsEngine::Load(_sdf);
 
-  this->maxContacts = _sdf->Get<int>("max_contacts");
+  this->maxContacts = _sdf->Get<unsigned int>("max_contacts");
   this->SetMaxContacts(this->maxContacts);
 
   sdf::ElementPtr odeElem = this->sdf->GetElement("ode");
@@ -248,6 +248,16 @@ void ODEPhysics::OnRequest(ConstRequestPtr &_msg)
     physicsMsg.set_min_step_size(
         boost::any_cast<double>(this->GetParam(MIN_STEP_SIZE)));
     physicsMsg.set_precon_iters(this->GetSORPGSPreconIters());
+    physicsMsg.set_irr(
+        boost::any_cast<bool>(this->GetParam("inertia_ratio_reduction")));
+    physicsMsg.set_friction_iters(
+        boost::any_cast<int>(this->GetParam("extra_friction_iterations")));
+    physicsMsg.set_warm_start_factor(
+        boost::any_cast<double>(this->GetParam("warm_start_factor")));
+    physicsMsg.set_reorder(
+        boost::any_cast<bool>(this->GetParam("experimental_row_reordering")));
+    physicsMsg.set_contact_residual_smoothing(
+        boost::any_cast<double>(this->GetParam("contact_residual_smoothing")));
     physicsMsg.set_iters(this->GetSORPGSIters());
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
     physicsMsg.set_sor(this->GetSORPGSW());
@@ -288,6 +298,22 @@ void ODEPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 
   if (_msg->has_precon_iters())
     this->SetSORPGSPreconIters(_msg->precon_iters());
+
+  if (_msg->has_irr())
+    this->SetParam("inertia_ratio_reduction", _msg->irr());
+
+  if (_msg->has_friction_iters())
+    this->SetParam("extra_friction_iterations", _msg->friction_iters());
+
+  if (_msg->has_warm_start_factor())
+    this->SetParam("warm_start_factor", _msg->warm_start_factor());
+
+  if (_msg->has_reorder())
+    this->SetParam("experimental_row_reordering", _msg->reorder());
+
+  if (_msg->has_contact_residual_smoothing())
+    this->SetParam("contact_residual_smoothing",
+    _msg->contact_residual_smoothing());
 
   if (_msg->has_iters())
     this->SetSORPGSIters(_msg->iters());
@@ -649,7 +675,7 @@ double ODEPhysics::GetContactSurfaceLayer()
 }
 
 //////////////////////////////////////////////////
-int ODEPhysics::GetMaxContacts()
+unsigned int ODEPhysics::GetMaxContacts()
 {
   return this->maxContacts;
 }
@@ -820,23 +846,21 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
       << "2[" << (*pos2)[0]<< " " << (*pos2)[1] << " " << (*pos2)[2] << "]\n";
   }*/
 
-  int numc = 0;
+  unsigned int numc = 0;
   dContact contact;
 
   // maxCollide must less than the size of this->indices. Check the header
-  int maxCollide = MAX_CONTACT_JOINTS;
+  unsigned int maxCollide = MAX_CONTACT_JOINTS;
 
   // max_contacts specified globally
   if (this->GetMaxContacts() > 0 && this->GetMaxContacts() < MAX_CONTACT_JOINTS)
     maxCollide = this->GetMaxContacts();
 
   // over-ride with minimum of max_contacts from both collisions
-  if (_collision1->GetMaxContacts() >= 0 &&
-      _collision1->GetMaxContacts() < maxCollide)
+  if (_collision1->GetMaxContacts() < maxCollide)
     maxCollide = _collision1->GetMaxContacts();
 
-  if (_collision2->GetMaxContacts() >= 0 &&
-      _collision2->GetMaxContacts() < maxCollide)
+  if (_collision2->GetMaxContacts() < maxCollide)
     maxCollide = _collision2->GetMaxContacts();
 
   // Generate the contacts
@@ -855,7 +879,7 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
   if (numc > maxCollide)
   {
     double max = _contactCollisions[maxCollide-1].depth;
-    for (int i = maxCollide; i < numc; i++)
+    for (unsigned int i = maxCollide; i < numc; ++i)
     {
       if (_contactCollisions[i].depth > max)
       {
@@ -983,7 +1007,7 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
   }
 
   // Create a joint for each contact
-  for (int j = 0; j < numc; j++)
+  for (unsigned int j = 0; j < numc; ++j)
   {
     contact.geom = _contactCollisions[this->indices[j]];
 
@@ -1285,6 +1309,42 @@ void ODEPhysics::SetParam(const std::string &_key, const boost::any &_value)
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "rms_error_tolerance")
+  {
+    dWorldSetQuickStepTolerance(this->worldId,
+        boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "inertia_ratio_reduction")
+  {
+    dWorldSetQuickStepInertiaRatioReduction(this->worldId,
+        boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "contact_residual_smoothing")
+  {
+    dWorldSetQuickStepContactResidualSmoothing(this->worldId,
+      boost::any_cast<double>(_value));
+    return;
+  }
+  else if (_key == "experimental_row_reordering")
+  {
+    dWorldSetQuickStepExperimentalRowReordering(this->worldId,
+      boost::any_cast<bool>(_value));
+    return;
+  }
+  else if (_key == "warm_start_factor")
+  {
+    dWorldSetQuickStepWarmStartFactor(this->worldId,
+      boost::any_cast<double>(_value));
+    return;
+  }
+  else if (_key == "extra_friction_iterations")
+  {
+    dWorldSetQuickStepExtraFrictionIterations(this->worldId,
+      boost::any_cast<int>(_value));
+    return;
+  }
   else
   {
     gzwarn << _key << " is not supported in ode" << std::endl;
@@ -1388,6 +1448,24 @@ boost::any ODEPhysics::GetParam(const std::string &_key) const
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "rms_error_tolerance")
+    return dWorldGetQuickStepTolerance(this->worldId);
+  else if (_key == "rms_error")
+    return dWorldGetQuickStepRMSError(this->worldId);
+  else if (_key == "constraint_residual")
+    return dWorldGetQuickStepRMSConstraintResidual(this->worldId);
+  else if (_key == "num_contacts")
+    return dWorldGetQuickStepNumContacts(this->worldId);
+  else if (_key == "inertia_ratio_reduction")
+    return dWorldGetQuickStepInertiaRatioReduction(this->worldId);
+  else if (_key == "contact_residual_smoothing")
+    return dWorldGetQuickStepContactResidualSmoothing (this->worldId);
+  else if (_key == "experimental_row_reordering")
+    return dWorldGetQuickStepExperimentalRowReordering (this->worldId);
+  else if (_key == "warm_start_factor")
+    return dWorldGetQuickStepWarmStartFactor (this->worldId);
+  else if (_key == "extra_friction_iterations")
+    return dWorldGetQuickStepExtraFrictionIterations (this->worldId);
   else
   {
     gzwarn << _key << " is not supported in ode" << std::endl;
