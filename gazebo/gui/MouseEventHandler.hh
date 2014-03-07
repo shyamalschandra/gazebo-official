@@ -23,7 +23,6 @@
 
 #include "gazebo/common/SingletonT.hh"
 #include "gazebo/common/MouseEvent.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,8 +30,7 @@ namespace gazebo
   {
     /// \class MouseEventHandler MouseEventHandler.hh gui/Gui.hh
     /// \brief Processes and filters mouse events.
-    class GAZEBO_VISIBLE MouseEventHandler
-      : public SingletonT<MouseEventHandler>
+    class MouseEventHandler : public SingletonT<MouseEventHandler>
     {
       /// \def MouseEventFilter
       /// \brief Mouse event function pointer.

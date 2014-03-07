@@ -29,7 +29,6 @@
 
 #include "gazebo/common/Time.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,7 +39,7 @@ namespace gazebo
 
     /// \class Publisher Publisher.hh transport/transport.hh
     /// \brief A publisher of messages on a topic
-    class GAZEBO_VISIBLE Publisher
+    class Publisher
     {
       /// \brief Constructor
       /// \param[in] _topic Name of topic to be published

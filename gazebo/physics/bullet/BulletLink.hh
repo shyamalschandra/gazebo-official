@@ -25,7 +25,6 @@
 #include "gazebo/physics/bullet/bullet_inc.h"
 #include "gazebo/physics/bullet/BulletTypes.hh"
 #include "gazebo/physics/Link.hh"
-#include "gazebo/util/system.hh"
 
 class btRigidBody;
 
@@ -41,7 +40,7 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet Link class
-    class GAZEBO_VISIBLE BulletLink : public Link
+    class BulletLink : public Link
     {
       /// \brief Constructor
       public: BulletLink(EntityPtr _parent);

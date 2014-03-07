@@ -20,7 +20,6 @@
 
 #include <string>
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
 
     /// \class ArrowVisual ArrowVisual.hh rendering/rendering.hh
     /// \brief Basic arrow visualization
-    class GAZEBO_VISIBLE ArrowVisual : public Visual
+    class ArrowVisual : public Visual
     {
       /// \brief Constructor
       /// \param[in] _name Name of the arrow visual

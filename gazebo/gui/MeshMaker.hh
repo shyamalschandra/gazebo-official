@@ -19,7 +19,6 @@
 
 #include <string>
 #include "gazebo/gui/EntityMaker.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +29,7 @@ namespace gazebo
 
   namespace gui
   {
-    class GAZEBO_VISIBLE MeshMaker : public EntityMaker
+    class MeshMaker : public EntityMaker
     {
       public: MeshMaker();
       public: virtual ~MeshMaker();

@@ -24,8 +24,6 @@
 
 #include <string>
 
-#include "gazebo/util/system.hh"
-
 /// \addtogroup player
 /// \brief Gazebo client handler
 /// \{
@@ -35,7 +33,7 @@
 /// This class handles the Gazebo client object, and acts as a shared
 /// data-structure for all Gazebo related drivers.  Note that there
 /// can only be one instance of this class (it is entirely static).
-class GAZEBO_VISIBLE GazeboClient
+class GazeboClient
 {
   /// \brief Initialize
   public: static void Init(int _serverid, const std::string &_worldName);

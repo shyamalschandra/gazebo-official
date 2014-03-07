@@ -25,7 +25,6 @@
 #include <string>
 #include "player.h"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 /// \addtogroup player
 /// \brief Base class for all the player interfaces
@@ -34,7 +33,7 @@
 class GazeboDriver;
 
 /// \brief Base class for all the player interfaces
-class GAZEBO_VISIBLE GazeboInterface
+class GazeboInterface
 {
   /// \brief Constructor
   public: GazeboInterface(player_devaddr_t _addr, GazeboDriver *_driver,

@@ -23,14 +23,13 @@
 #define _ODEMESHSHAPE_HH_
 
 #include "gazebo/physics/MeshShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief Triangle mesh collision.
-    class GAZEBO_VISIBLE ODEMeshShape : public MeshShape
+    class ODEMeshShape : public MeshShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent collision object.

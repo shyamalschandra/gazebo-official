@@ -22,14 +22,13 @@
 
 #include "gazebo/physics/CylinderShape.hh"
 #include "gazebo/physics/dart/DARTPhysics.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief DART cylinder shape
-    class GAZEBO_VISIBLE DARTCylinderShape : public CylinderShape
+    class DARTCylinderShape : public CylinderShape
     {
       /// \brief Constructor
       /// \param[in] _parent Collision parent.

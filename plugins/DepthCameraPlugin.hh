@@ -25,11 +25,10 @@
 #include "gazebo/sensors/CameraSensor.hh"
 #include "gazebo/rendering/DepthCamera.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE DepthCameraPlugin : public SensorPlugin
+  class DepthCameraPlugin : public SensorPlugin
   {
     /// \brief Constructor
     public: DepthCameraPlugin();

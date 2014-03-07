@@ -27,7 +27,6 @@
 #include <map>
 
 #include "gazebo/physics/PhysicsTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -42,7 +41,7 @@ namespace gazebo
 
     /// \class PhysicsFactory PhysicsFactory.hh physics/physics.hh
     /// \brief The physics factory instantiates different physics engines.
-    class GAZEBO_VISIBLE PhysicsFactory
+    class PhysicsFactory
     {
       /// \brief Register everything.
       public: static void RegisterAll();

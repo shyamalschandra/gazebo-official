@@ -28,7 +28,6 @@
 #include "GazeboInterface.hh"
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace boost
 {
@@ -56,7 +55,7 @@ namespace boost
 ///
 
 /// \brief The Simulation interface
-class GAZEBO_VISIBLE SimulationInterface : public GazeboInterface
+class SimulationInterface : public GazeboInterface
 {
   /// \brief Constructor
   public: SimulationInterface(player_devaddr_t addr, GazeboDriver *driver,

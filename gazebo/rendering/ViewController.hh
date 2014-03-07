@@ -20,7 +20,6 @@
 #include <string>
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/rendering/RenderTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
 
     /// \class ViewController ViewController.hh rendering/rendering.hh
     /// \brief Base class for view controllers.
-    class GAZEBO_VISIBLE ViewController
+    class ViewController
     {
       /// \brief Constructor
       /// \param[in] _camera The user camera to controll.

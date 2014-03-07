@@ -26,7 +26,6 @@
 
 #include "gazebo/gui/qt.h"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +34,7 @@ namespace gazebo
     /// \cond
     /// \brief A custom combobox that pull in a list of topics for user
     /// selection.
-    class GAZEBO_VISIBLE TopicCombo : public QComboBox
+    class TopicCombo : public QComboBox
     {
       /// \brief Constructor
       /// \param[in] _w Parent widget.
@@ -73,7 +72,7 @@ namespace gazebo
     /// \endcond
 
     /// \brief Base class for widgets that display topic data.
-    class GAZEBO_VISIBLE TopicView : public QDialog
+    class TopicView : public QDialog
     {
       Q_OBJECT
 

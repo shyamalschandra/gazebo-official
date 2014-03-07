@@ -25,7 +25,6 @@
 #include "gazebo/gui/qt.h"
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +34,7 @@ namespace gazebo
 
     /// \class ModelRightMenu ModelRightMenu.hh gui/gui.hh
     /// \brief Displays a menu when the right mouse button has been pressed.
-    class GAZEBO_VISIBLE ModelRightMenu : public QObject
+    class ModelRightMenu : public QObject
     {
       Q_OBJECT
 
@@ -110,7 +109,7 @@ namespace gazebo
     /// \class ViewState ViewState.hh gui/gui.hh
     /// \brief A class for managing view visualization states.
     /// Used by ModelRightMenu.
-    class GAZEBO_VISIBLE ViewState : public QObject
+    class ViewState : public QObject
     {
       Q_OBJECT
 

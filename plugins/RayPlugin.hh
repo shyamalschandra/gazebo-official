@@ -26,12 +26,11 @@
 #include "gazebo/sensors/SensorTypes.hh"
 #include "gazebo/sensors/RaySensor.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   /// \brief A Ray Sensor Plugin
-  class GAZEBO_VISIBLE RayPlugin : public SensorPlugin
+  class RayPlugin : public SensorPlugin
   {
     /// \brief Constructor
     public: RayPlugin();

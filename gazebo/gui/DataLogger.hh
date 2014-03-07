@@ -20,7 +20,6 @@
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/gui/qt.h"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
 
     /// \class DataLogger DataLogger.hh gui/DataLogger.hh
     /// \brief A widget that provides data logging functionality.
-    class GAZEBO_VISIBLE DataLogger : public QDialog
+    class DataLogger : public QDialog
     {
       Q_OBJECT
 

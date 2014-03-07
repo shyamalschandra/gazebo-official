@@ -22,7 +22,6 @@
 #include <string>
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/common/Color.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,8 +36,7 @@ namespace gazebo
     };*/
 
     class SelectionBuffer;
-    class GAZEBO_VISIBLE MaterialSwitcher :
-      public Ogre::MaterialManager::Listener
+    class MaterialSwitcher : public Ogre::MaterialManager::Listener
     {
       /// \brief Constructor
       public: MaterialSwitcher();

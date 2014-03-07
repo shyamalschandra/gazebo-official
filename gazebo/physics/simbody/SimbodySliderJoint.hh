@@ -23,7 +23,6 @@
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/SliderJoint.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
     /// \{
 
     /// \brief A slider joint
-    class GAZEBO_VISIBLE SimbodySliderJoint : public SliderJoint<SimbodyJoint>
+    class SimbodySliderJoint : public SliderJoint<SimbodyJoint>
     {
       /// \brief Constructor
       /// \param[in] _world Pointer to the Simbody world.

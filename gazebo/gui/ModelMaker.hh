@@ -22,7 +22,6 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/gui/EntityMaker.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
   namespace gui
   {
-    class GAZEBO_VISIBLE ModelMaker : public EntityMaker
+    class ModelMaker : public EntityMaker
     {
       public: ModelMaker();
       public: virtual ~ModelMaker();

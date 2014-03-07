@@ -20,7 +20,6 @@
 
 #include <string>
 #include "gazebo/gui/qt.h"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
 
     /// \class StairsInspectorDialog StairsInspectorDialog.hh
     /// \brief Dialog for configuring a staircase item.
-    class GAZEBO_VISIBLE StairsInspectorDialog : public QDialog
+    class StairsInspectorDialog : public QDialog
     {
       Q_OBJECT
 

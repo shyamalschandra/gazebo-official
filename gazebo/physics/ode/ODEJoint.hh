@@ -27,14 +27,13 @@
 
 #include "gazebo/physics/ode/ODEPhysics.hh"
 #include "gazebo/physics/Joint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief ODE joint interface
-    class GAZEBO_VISIBLE ODEJoint : public Joint
+    class ODEJoint : public Joint
     {
       /// \brief internal variables used for implicit damping
       public:  enum CFMMode

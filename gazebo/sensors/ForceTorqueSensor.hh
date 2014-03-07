@@ -22,7 +22,6 @@
 
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/sensors/Sensor.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +34,7 @@ namespace gazebo
 
     /// \class ForceTorqueSensor ForceTorqueSensor.hh sensors/sensors.hh
     /// \brief Sensor for measure force and torque on a joint.
-    class GAZEBO_VISIBLE ForceTorqueSensor: public Sensor
+    class ForceTorqueSensor: public Sensor
     {
       /// \brief Constructor.
       public: ForceTorqueSensor();

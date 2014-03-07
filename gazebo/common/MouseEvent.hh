@@ -18,7 +18,6 @@
 #define _MOUSEEVENT_HH_
 
 #include "gazebo/math/Vector2i.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -29,7 +28,7 @@ namespace gazebo
 
     /// \class MouseEvent MouseEvent.hh common/common.hh
     /// \brief Generic description of a mouse event.
-    class GAZEBO_VISIBLE MouseEvent
+    class MouseEvent
     {
       /// \brief Standard mouse buttons enumeration.
       public: enum Buttons {NO_BUTTON = 0x0, LEFT = 0x1, MIDDLE = 0x2,
