@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "gazebo/sensors/SensorTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,7 +43,7 @@ namespace gazebo
   /// \{
   /// \class SensorFactor SensorFactory.hh sensors/sensors.hh
   /// \brief The sensor factory; the class is just for namespacing purposes.
-  class GAZEBO_VISIBLE SensorFactory
+  class SensorFactory
   {
     /// \brief Register all known sensors
     ///  \li sensors::CameraSensor

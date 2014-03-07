@@ -27,14 +27,13 @@
 
 #include "gazebo/physics/Hinge2Joint.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief A two axis hinge joint
-    class GAZEBO_VISIBLE ODEHinge2Joint : public Hinge2Joint<ODEJoint>
+    class ODEHinge2Joint : public Hinge2Joint<ODEJoint>
     {
       /// \brief Constructor
       /// \param[in] _worldID ODE id of the world.

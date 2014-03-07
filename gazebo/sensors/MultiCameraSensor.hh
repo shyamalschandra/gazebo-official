@@ -25,7 +25,6 @@
 #include "gazebo/msgs/MessageTypes.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/rendering/RenderTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -38,7 +37,7 @@ namespace gazebo
     /// \class MultiCameraSensor MultiCameraSensor.hh sensors/sensors.hh
     /// \brief Multiple camera sensor. This sensor type can create one or
     /// more synchronized cameras.
-    class GAZEBO_VISIBLE MultiCameraSensor : public Sensor
+    class MultiCameraSensor : public Sensor
     {
       /// \brief Constructor
       public: MultiCameraSensor();

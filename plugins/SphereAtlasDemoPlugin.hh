@@ -23,11 +23,10 @@
 #include "gazebo/common/common.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE SphereAtlasDemoPlugin : public ModelPlugin
+  class SphereAtlasDemoPlugin : public ModelPlugin
   {
     public: SphereAtlasDemoPlugin();
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);

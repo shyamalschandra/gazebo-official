@@ -19,7 +19,6 @@
 #define _SIMBODY_PLANESHAPE_HH_
 
 #include "gazebo/physics/PlaneShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +29,7 @@ namespace gazebo
     /// \{
 
     /// \brief Simbody collision for an infinite plane.
-    class GAZEBO_VISIBLE SimbodyPlaneShape : public PlaneShape
+    class SimbodyPlaneShape : public PlaneShape
     {
       /// \brief Constructor
       public: SimbodyPlaneShape(CollisionPtr _parent);

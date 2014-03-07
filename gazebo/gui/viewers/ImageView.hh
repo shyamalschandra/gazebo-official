@@ -27,7 +27,6 @@
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/viewers/ImageFrame.hh"
 #include "gazebo/gui/viewers/TopicView.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +34,7 @@ namespace gazebo
   {
     class ImageViewPrivate;
 
-    class GAZEBO_VISIBLE ImageView : public TopicView
+    class ImageView : public TopicView
     {
       Q_OBJECT
 

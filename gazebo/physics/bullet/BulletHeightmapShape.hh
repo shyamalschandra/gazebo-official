@@ -26,7 +26,6 @@
 #include "gazebo/physics/HeightmapShape.hh"
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/Collision.hh"
-#include "gazebo/util/system.hh"
 
 class btHeightfieldTerrainShape;
 
@@ -39,7 +38,7 @@ namespace gazebo
     /// \{
 
     /// \brief Height map collision
-    class GAZEBO_VISIBLE BulletHeightmapShape : public HeightmapShape
+    class BulletHeightmapShape : public HeightmapShape
     {
       /// \brief Constructor
       public: BulletHeightmapShape(CollisionPtr _parent);

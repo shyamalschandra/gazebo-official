@@ -28,7 +28,6 @@
 #include "gazebo/physics/simbody/SimbodyTypes.hh"
 
 #include "gazebo/physics/simbody/simbody_inc.h"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -39,7 +38,7 @@ namespace gazebo
     /// \{
 
     /// \brief Simbody physics engine
-    class GAZEBO_VISIBLE SimbodyPhysics : public PhysicsEngine
+    class SimbodyPhysics : public PhysicsEngine
     {
       /// \brief Constructor
       public: SimbodyPhysics(WorldPtr _world);

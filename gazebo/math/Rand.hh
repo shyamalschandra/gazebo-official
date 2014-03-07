@@ -23,7 +23,6 @@
 #define _RAND_HH_
 
 #include <boost/random.hpp>
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -57,7 +56,7 @@ namespace gazebo
 
     /// \class Rand Rand.hh gzmath/gzmath.hh
     /// \brief Random number generator class
-    class GAZEBO_VISIBLE Rand
+    class Rand
     {
       /// \brief Set the seed value.
       /// \param[in] _seed The seed used to initialize the randon number

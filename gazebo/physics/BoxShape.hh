@@ -23,7 +23,6 @@
 #define _BOXSHAPE_HH_
 
 #include "gazebo/physics/Shape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
 
     /// \class BoxShape BoxShape.hh physics/physcs.hh
     /// \brief Box geometry primitive.
-    class GAZEBO_VISIBLE BoxShape : public Shape
+    class BoxShape : public Shape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.

@@ -23,7 +23,6 @@
 #include "gazebo/physics/HeightmapShape.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/Collision.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
     /// \{
 
     /// \brief Height map collision.
-    class GAZEBO_VISIBLE SimbodyHeightmapShape : public HeightmapShape
+    class SimbodyHeightmapShape : public HeightmapShape
     {
       /// \brief Constructor.
       public: SimbodyHeightmapShape(CollisionPtr _parent);

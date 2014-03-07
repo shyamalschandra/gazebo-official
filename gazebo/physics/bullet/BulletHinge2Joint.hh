@@ -27,7 +27,6 @@
 #include "gazebo/physics/Hinge2Joint.hh"
 #include "gazebo/physics/bullet/BulletJoint.hh"
 #include "gazebo/physics/bullet/BulletPhysics.hh"
-#include "gazebo/util/system.hh"
 
 class btHinge2Constraint;
 
@@ -40,7 +39,7 @@ namespace gazebo
     /// \{
 
     /// \brief A two axis hinge joint
-    class GAZEBO_VISIBLE BulletHinge2Joint : public Hinge2Joint<BulletJoint>
+    class BulletHinge2Joint : public Hinge2Joint<BulletJoint>
     {
       /// \brief Constructor
       public: BulletHinge2Joint(btDynamicsWorld *world, BasePtr _parent);

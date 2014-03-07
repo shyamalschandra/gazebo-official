@@ -23,7 +23,6 @@
 
 #include "gazebo/physics/GearboxJoint.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
   {
     /// \class ODEGearboxJoint ODEGearboxJoint.hh physics/physics.hh
     /// \brief A double axis gearbox joint.
-    class GAZEBO_VISIBLE ODEGearboxJoint : public GearboxJoint<ODEJoint>
+    class ODEGearboxJoint : public GearboxJoint<ODEJoint>
     {
       /// \brief Constructor
       /// \param[in] _worldID ODE id of the world.

@@ -37,7 +37,6 @@
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/Base.hh"
-#include "gazebo/util/system.hh"
 
 namespace boost
 {
@@ -53,7 +52,7 @@ namespace gazebo
 
     /// \class Entity Entity.hh physics/physics.hh
     /// \brief Base class for all physics objects in Gazebo.
-    class GAZEBO_VISIBLE Entity : public Base
+    class Entity : public Base
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent of the entity.

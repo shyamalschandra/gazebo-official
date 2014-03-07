@@ -22,7 +22,6 @@
 #include "gazebo/physics/physics.hh"
 #include "gazebo/sensors/WirelessTransceiver.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -33,7 +32,7 @@ namespace gazebo
 
     /// \class WirelessTransmitter WirelessTransmitter.hh sensors/sensors.hh
     /// \brief Transmitter to send wireless signals
-    class GAZEBO_VISIBLE WirelessTransmitter: public WirelessTransceiver
+    class WirelessTransmitter: public WirelessTransceiver
     {
       /// \brief Constant used in the propagation model when there are no
       /// obstacles between transmitter and receiver

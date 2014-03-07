@@ -22,13 +22,12 @@
 #include <map>
 
 #include "gazebo/rendering/deferred_shading/ListenerFactoryLogic.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace rendering
   {
-    class GAZEBO_VISIBLE SSAOLogic : public ListenerFactoryLogic
+    class SSAOLogic : public ListenerFactoryLogic
     {
       /// @copydoc ListenerFactoryLogic::createListener
       protected: virtual Ogre::CompositorInstance::Listener *createListener(

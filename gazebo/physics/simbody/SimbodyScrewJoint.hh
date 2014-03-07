@@ -20,7 +20,6 @@
 
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/ScrewJoint.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +30,7 @@ namespace gazebo
     /// \{
 
     /// \brief A screw joint
-    class GAZEBO_VISIBLE SimbodyScrewJoint : public ScrewJoint<SimbodyJoint>
+    class SimbodyScrewJoint : public ScrewJoint<SimbodyJoint>
     {
       /// \brief Constructor
       /// \param[in] _world Pointer to the Simbody world.

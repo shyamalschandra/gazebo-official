@@ -25,7 +25,6 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/sensors/Sensor.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,7 +39,7 @@ namespace gazebo
     /// \brief Sensor with sonar cone.
     ///
     /// This sensor uses a cone .
-    class GAZEBO_VISIBLE SonarSensor: public Sensor
+    class SonarSensor: public Sensor
     {
       /// \brief Constructor
       public: SonarSensor();

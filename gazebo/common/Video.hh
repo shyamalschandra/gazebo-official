@@ -18,7 +18,6 @@
 #define _VIDEO_HH_
 
 #include <string>
-#include "gazebo/util/system.hh"
 
 struct AVFormatContext;
 struct AVCodecContext;
@@ -35,7 +34,7 @@ namespace gazebo
 
     /// \class Video Video.hh common/common.hh
     /// \brief Handle video encoding and decoding using libavcodec
-    class GAZEBO_VISIBLE Video
+    class Video
     {
       /// \brief Constructor
       public: Video();

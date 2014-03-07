@@ -27,7 +27,6 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Plane.hh"
 #include "gazebo/common/SingletonT.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,7 +43,7 @@ namespace gazebo
 
     /// \class MeshManager MeshManager.hh common/common.hh
     /// \brief Maintains and manages all meshes
-    class GAZEBO_VISIBLE MeshManager : public SingletonT<MeshManager>
+    class MeshManager : public SingletonT<MeshManager>
     {
       /// \brief Constructor
       private: MeshManager();

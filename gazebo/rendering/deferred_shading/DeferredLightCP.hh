@@ -28,7 +28,6 @@
 #include "gazebo/rendering/deferred_shading/DeferredLight.hh"
 #include "gazebo/rendering/deferred_shading/MaterialGenerator.hh"
 #include "gazebo/rendering/deferred_shading/AmbientLight.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -39,7 +38,7 @@ namespace gazebo
     /// calls of the spheres (point lights), cones (spotlights) and quads
     /// (directional lights) after the GBuffer has been constructed
     template<typename techniquePolicy>
-    class GAZEBO_VISIBLE DeferredLightRenderOperation
+    class DeferredLightRenderOperation
       : public Ogre::CompositorInstance::RenderSystemOperation,
         public techniquePolicy
     {
@@ -233,8 +232,8 @@ namespace gazebo
     /// \brief The custom composition pass that is used for rendering the light
     /// geometry. This class needs to be registered with the CompositorManager
     template<typename techniquePolicy>
-    class GAZEBO_VISIBLE DeferredLightCompositionPass
-      : public Ogre::CustomCompositionPass, public techniquePolicy
+    class DeferredLightCompositionPass : public Ogre::CustomCompositionPass,
+                                         public techniquePolicy
     {
       /// @copydoc CustomCompositionPass::createOperation
       public: virtual Ogre::CompositorInstance::RenderSystemOperation

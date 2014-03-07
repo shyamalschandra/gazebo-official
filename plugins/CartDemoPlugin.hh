@@ -21,7 +21,6 @@
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/gazebo.hh"
-#include "gazebo/util/system.hh"
 
 #define NUM_JOINTS 3
 
@@ -32,7 +31,7 @@ namespace gazebo
   /// a position pid.
   /// this is a test for general rolling contact stability.
   /// should refine the test to be more specific in the future.
-  class GAZEBO_VISIBLE CartDemoPlugin : public ModelPlugin
+  class CartDemoPlugin : public ModelPlugin
   {
     public: CartDemoPlugin();
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);

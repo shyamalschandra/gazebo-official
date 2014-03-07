@@ -21,7 +21,6 @@
 #include "gazebo/physics/dart/dart_inc.h"
 #include "gazebo/physics/dart/DARTTypes.hh"
 #include "gazebo/physics/Model.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
 
     /// \class DARTModel
     /// \brief DART model class
-    class GAZEBO_VISIBLE DARTModel : public Model
+    class DARTModel : public Model
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent object.

@@ -22,7 +22,6 @@
 #include "gazebo/common/Color.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Quaternion.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
     /// \brief Conversions Conversions.hh rendering/Conversions.hh
     /// \brief A set of utility function to convert between Gazebo and Ogre
     /// data types
-    class GAZEBO_VISIBLE Conversions
+    class Conversions
     {
       /// \brief Return the equivalent ogre color
       /// \param[in] _clr Gazebo color to convert

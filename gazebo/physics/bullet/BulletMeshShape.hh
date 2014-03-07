@@ -23,7 +23,6 @@
 #define _BULLETMESHSHAPE_HH_
 
 #include "gazebo/physics/MeshShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +33,7 @@ namespace gazebo
     /// \{
 
     /// \brief Triangle mesh collision
-    class GAZEBO_VISIBLE BulletMeshShape : public MeshShape
+    class BulletMeshShape : public MeshShape
     {
       /// \brief Constructor
       public: BulletMeshShape(CollisionPtr _parent);

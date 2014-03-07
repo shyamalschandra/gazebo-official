@@ -29,7 +29,6 @@
 #include "gazebo/sensors/Sensor.hh"
 #include "gazebo/math/gzmath.hh"
 #include "gazebo/physics/physics.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,7 +39,7 @@ namespace gazebo
 
     /// \class RFIDTag RFIDTag.hh sensors/sensors.hh
     /// \brief RFIDTag to interact with RFIDTagSensors
-    class GAZEBO_VISIBLE RFIDTag: public Sensor
+    class RFIDTag: public Sensor
     {
       /// \brief Constructor.
       public: RFIDTag();

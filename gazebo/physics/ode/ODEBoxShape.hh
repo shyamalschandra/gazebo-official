@@ -25,14 +25,13 @@
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/BoxShape.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief ODE Box shape
-    class GAZEBO_VISIBLE ODEBoxShape : public BoxShape
+    class ODEBoxShape : public BoxShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.

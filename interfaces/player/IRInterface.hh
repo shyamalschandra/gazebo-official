@@ -23,7 +23,6 @@
 #define IRINTERFACE_HH
 
 #include "GazeboInterface.hh"
-#include "gazebo/util/system.hh"
 
 namespace boost
 {
@@ -41,7 +40,7 @@ namespace libgazebo
 class IRIface;
 
 /// \brief Plugin Player interface for a Gazebo laser
-class GAZEBO_VISIBLE IRInterface : public GazeboInterface
+class IRInterface : public GazeboInterface
 {
   /// \brief Constructor
   /// \param addr Plaer device address

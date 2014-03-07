@@ -22,11 +22,10 @@
 #include <vector>
 
 #include <gazebo/gazebo.hh>
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE RubblePlugin : public WorldPlugin
+  class RubblePlugin : public WorldPlugin
   {
     /// \brief Constructor.
     public: RubblePlugin();
