@@ -14,7 +14,6 @@
  * limitations under the License.
  *
 */
-
 #include <iostream>
 #include "gazebo/physics/bullet/gzBtUniversalConstraint.hh"
 
@@ -52,8 +51,8 @@ gzBtUniversalConstraint::gzBtUniversalConstraint(btRigidBody &_rbA,
   btTransform frameInW;
   frameInW.setIdentity();
   frameInW.getBasis().setValue(xAxis[0], yAxis[0], zAxis[0],
-                               xAxis[1], yAxis[1], zAxis[1],
-                               xAxis[2], yAxis[2], zAxis[2]);
+      xAxis[1], yAxis[1], zAxis[1],
+      xAxis[2], yAxis[2], zAxis[2]);
   frameInW.setOrigin(_anchor);
 
   // now get constraint frame in local coordinate systems
