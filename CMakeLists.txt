@@ -297,7 +297,6 @@ else (build_errors)
   set(PKG_NAME ${PROJECT_NAME_UPPER})
   set(PKG_LIBRARIES
     gazebo
-    gazebo_ccd
     gazebo_common
     gazebo_gimpact
     gazebo_gui
@@ -316,6 +315,10 @@ else (build_errors)
     gazebo_skyx
     gazebo_transport
     gazebo_util)
+    
+  if (NOT HAVE_CCD)
+    set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_ccd)
+  endif()
     
   if (INCLUDE_PLAYER)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_player)
