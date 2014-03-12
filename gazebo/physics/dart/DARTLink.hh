@@ -153,7 +153,7 @@ namespace gazebo
 
       /// \brief Get pointer to DART World associated with this link.
       /// \return Pointer to the DART World.
-      public: dart::simulation::World *GetDARTWorld(void) const;
+      public: dart::simulation::SoftWorld *GetDARTWorld(void) const;
 
       /// \brief Get pointer to DART Model associated with this link.
       /// \return Pointer to the DART Model.
@@ -183,8 +183,14 @@ namespace gazebo
       /// \brief List of pointers to the child joints.
       private: std::vector<DARTJointPtr> dartChildJoints;
 
-      /// \biref If true, freeze link to world (inertial) frame.
+      /// \brief If true, freeze link to world (inertial) frame.
       private: bool staticLink;
+
+      /// \brief Ball joint constraint for SetLinkStatic()
+      private: dart::constraint::BallJointConstraint *ballConst;
+
+      /// \brief Revolute joint constraint for SetLinkStatic()
+      private: dart::constraint::RevoluteJointConstraint *revConst;
     };
     /// \}
   }

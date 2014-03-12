@@ -54,9 +54,6 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void Fini();
 
-      // Documentation inherited.
-      // public: void Reset();
-
       /// \brief
       public: void BackupState();
 
@@ -64,16 +61,16 @@ namespace gazebo
       public: void RestoreState();
 
       /// \brief
-      public: dart::dynamics::Skeleton *GetDARTSkeleton();
+      public: dart::dynamics::SoftSkeleton *GetDARTSkeleton();
 
       /// \brief
       public: DARTPhysicsPtr GetDARTPhysics(void) const;
 
       /// \brief
-      public: dart::simulation::World *GetDARTWorld(void) const;
+      public: dart::simulation::SoftWorld *GetDARTWorld(void) const;
 
       /// \brief
-      protected: dart::dynamics::Skeleton *dtSkeleton;
+      protected: dart::dynamics::SoftSkeleton *dtSkeleton;
 
       /// \brief
       protected: Eigen::VectorXd dtConfig;
