@@ -324,6 +324,22 @@ namespace gazebo
       /// \return this link's total energy
       public: double GetWorldEnergy() const;
 
+      /// \brief Returns this link's kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's kinetic energy filtered by moving window average.
+      public: double GetWorldEnergyKineticFiltered() const;
+
+      /// \brief Returns this link's total energy with kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's filtered total energy.
+      public: double GetWorldEnergyFiltered() const;
+
+      /// \brief Returns this link's kinetic vibrational
+      /// "thermal" energy.  Where this is basically
+      ///   GetWorldEnergyKinetic() - GetWorldEnergyKineticFilterd()
+      /// \return this link's kinetic vibrational energy
+      public: double GetWorldEnergyKineticVibrational() const;
+
       /// \brief Callback when the pose of the model has been changed.
       protected: virtual void OnPoseChange();
 
