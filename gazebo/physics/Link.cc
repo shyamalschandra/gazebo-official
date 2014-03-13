@@ -1154,3 +1154,45 @@ double Link::GetWorldEnergy() const
 {
   return this->GetWorldEnergyPotential() + this->GetWorldEnergyKinetic();
 }
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyKineticFiltered()
+{
+  // update filtered velocity for box
+  this->linVelFil.Update(this->GetWorldLinearVel());
+  this->angVelFil.Update(this->GetWorldAngularVel());
+
+  // compute potential energy for link CG location
+  math::Vector3 linVel = this->linVelFil.Get();
+  math::Vector3 angVel = this->angVelFil.Get();
+
+  double m = this->GetInertial()->GetMass();
+  math::Matrix3 moi = this->GetInertial()->GetMOI();
+
+  double linKE = 0.5 * m * linVel.GetSquaredLength();
+
+  // todo: make this an operator
+  // compute tmp = w' * MOI
+  math::Vector3 tmp(
+    angVel.x * moi[0][0] + angVel.y * moi[1][0] + angVel.z * moi[2][0],
+    angVel.x * moi[0][1] + angVel.y * moi[1][1] + angVel.z * moi[2][1],
+    angVel.x * moi[0][2] + angVel.y * moi[1][2] + angVel.z * moi[2][2]);
+  // compute w' * MOI * w = tmp * w
+  double wIw = tmp.Dot(angVel);
+  double angKE = 0.5 * wIw;
+
+  return linKE + angKE;
+}
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyFiltered()
+{
+  return this->GetWorldEnergyPotential() +
+    this->GetWorldEnergyKineticFiltered();
+}
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyKineticVibrational()
+{
+  return this->GetWorldEnergyKinetic() - this->GetWorldEnergyKineticFiltered();
+}
