@@ -307,6 +307,39 @@ namespace gazebo
       /// \sa Model::GetGripper()
       public: size_t GetGripperCount() const;
 
+      /// \brief Returns the potential energy of all links
+      /// and joint springs in the model.
+      /// \return this link's potential energy,
+      public: double GetWorldEnergyPotential() const;
+
+      /// \brief Returns sum of the kinetic energies of all links
+      /// in this model.  Computed using link's CoG velocity in
+      /// the inertial (world) frame.
+      /// \return this link's kinetic energy
+      public: double GetWorldEnergyKinetic() const;
+
+      /// \brief Returns this model's total energy, or
+      /// sum of Model::GetWorldEnergyPotential() and
+      /// Model::GetWorldEnergyKinetic().
+      /// \return this link's total energy
+      public: double GetWorldEnergy() const;
+
+      /// \brief Returns this link's kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's kinetic energy filtered by moving window average.
+      public: double GetWorldEnergyKineticFiltered() const;
+
+      /// \brief Returns this link's total energy with kinetic energy filtered
+      /// by moving window average.
+      /// \return this link's filtered total energy.
+      public: double GetWorldEnergyFiltered() const;
+
+      /// \brief Returns this link's kinetic vibrational
+      /// "thermal" energy.  Where this is basically
+      ///   GetWorldEnergyKinetic() - GetWorldEnergyKineticFilterd()
+      /// \return this link's kinetic vibrational energy
+      public: double GetWorldEnergyKineticVibrational() const;
+
       /// \brief Callback when the pose of the model has been changed.
       protected: virtual void OnPoseChange();
 
