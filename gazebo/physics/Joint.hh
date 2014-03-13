@@ -36,6 +36,7 @@
 #include "gazebo/physics/JointState.hh"
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/JointWrench.hh"
+#include "gazebo/util/system.hh"
 
 /// \brief maximum number of axis per joint anticipated.
 /// Currently, this is 2 as 3-axis joints (e.g. ball)
@@ -51,7 +52,7 @@ namespace gazebo
 
     /// \class Joint Joint.hh physics/physics.hh
     /// \brief Base class for all joints
-    class Joint : public Base
+    class GAZEBO_VISIBLE Joint : public Base
     {
       /// \enum Attribute
       /// \brief Joint attribute types.
@@ -528,6 +529,12 @@ namespace gazebo
       /// \param[in] _index joint axis index.
       /// \return Orientation of axis frame relative to world frame.
       public: math::Quaternion GetAxisFrame(unsigned int _index) const;
+
+      /// \brief Returns this joint's spring potential energy,
+      /// based on the reference position of the spring.
+      /// If using metric system, the unit of energy will be Joules.
+      /// \return this joint's spring potential energy,
+      public: double GetWorldEnergyPotentialSpring(unsigned int _index) const;
 
       /// \brief Get the angle of an axis helper function.
       /// \param[in] _index Index of the axis.
