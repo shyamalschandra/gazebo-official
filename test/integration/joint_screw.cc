@@ -60,6 +60,12 @@ void JointTestScrew::ScrewJointSetWorldPose(const std::string &_physicsEngine)
           << " See issue #857.\n";
     return;
   }
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "DART Screw Joint test needs work."
+          << " See issue #1096.\n";
+    return;
+  }
 
   // Load our screw joint test world
   Load("worlds/screw_joint_test.world", true, _physicsEngine);
@@ -94,7 +100,6 @@ void JointTestScrew::ScrewJointSetWorldPose(const std::string &_physicsEngine)
   physics::LinkPtr link_01 = model_1->GetLink("link_01");
   physics::JointPtr joint_00 = model_1->GetJoint("joint_00");
   physics::JointPtr joint_01 = model_1->GetJoint("joint_01");
-
   // both initial angles should be zero
   EXPECT_EQ(joint_00->GetAngle(0), 0);
   EXPECT_EQ(joint_00->GetAngle(1), 0);

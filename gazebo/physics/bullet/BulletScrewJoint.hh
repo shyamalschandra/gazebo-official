@@ -22,16 +22,18 @@
 #ifndef _BULLETSCREWJOINT_HH_
 #define _BULLETSCREWJOINT_HH_
 
+#include <string>
+
 #include "gazebo/physics/bullet/BulletJoint.hh"
 #include "gazebo/physics/ScrewJoint.hh"
 #include "gazebo/util/system.hh"
-
-class btSliderConstraint;
 
 namespace gazebo
 {
   namespace physics
   {
+    class btScrewConstraint;
+
     /// \ingroup gazebo_physics
     /// \addtogroup gazebo_physics_bullet Bullet Physics
     /// \{
@@ -46,7 +48,7 @@ namespace gazebo
       public: virtual ~BulletScrewJoint();
 
       /// \brief Load the BulletScrewJoint
-      protected: virtual void Load(sdf::ElementPtr _sdf);
+      public: virtual void Load(sdf::ElementPtr _sdf);
 
       // Documentation inherited
       public: virtual math::Vector3 GetAnchor(unsigned int _index) const;
@@ -61,32 +63,18 @@ namespace gazebo
       /// \brief Set the axis of motion
       public: void SetAxis(unsigned int _index, const math::Vector3 &_axis);
 
-      /// \copydoc ScrewJoint::SetThreadPitch
+      // Documentation inherited
       public: virtual void SetThreadPitch(unsigned int _index,
                   double _threadPitch);
 
-      /// \copydoc ScrewJoint::SetThreadPitch
+      // Documentation inherited
       public: virtual void SetThreadPitch(double _threadPitch);
 
-      /// \copydoc ScrewJoint::GetThreadPitch
+      // Documentation inherited
       public: virtual double GetThreadPitch(unsigned int _index);
 
-      /// \copydoc ScrewJoint::GetThreadPitch
+      // Documentation inherited
       public: virtual double GetThreadPitch();
-
-      /// \brief Set the high stop of an axis(index).
-      public: virtual void SetHighStop(unsigned int _index,
-                  const math::Angle &_angle);
-
-      /// \brief Set the low stop of an axis(index).
-      public: virtual void SetLowStop(unsigned int _index,
-                  const math::Angle &_angle);
-
-      /// \brief Get the high stop of an axis(index).
-      public: virtual math::Angle GetHighStop(unsigned int _index);
-
-      /// \brief Get the low stop of an axis(index).
-      public: virtual math::Angle GetLowStop(unsigned int _index);
 
       /// \brief Get the rate of change
       public: virtual double GetVelocity(unsigned int _index) const;
@@ -106,11 +94,18 @@ namespace gazebo
       /// \brief Get the angle of rotation
       public: virtual math::Angle GetAngleImpl(unsigned int _index) const;
 
+      // Documentation inherited.
+      public: virtual double GetAttribute(const std::string &_key,
+                                                unsigned int _index);
       /// \brief Set the screw force
       protected: virtual void SetForceImpl(unsigned int _index, double _force);
 
       /// \brief Pointer to bullet screw constraint
-      private: btSliderConstraint *bulletScrew;
+      private: btScrewConstraint *bulletScrew;
+
+      /// \brief Initial value of joint axis, expressed as unit vector
+      ///        in world frame.
+      private: math::Vector3 initialWorldAxis;
     };
     /// \}
   }
