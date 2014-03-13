@@ -30,6 +30,7 @@
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/Shape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,7 +45,7 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet physics engine
-    class BulletPhysics : public PhysicsEngine
+    class GAZEBO_VISIBLE BulletPhysics : public PhysicsEngine
     {
       /// \enum BulletParam
       /// \brief Bullet physics parameter types.
@@ -67,6 +68,12 @@ namespace gazebo
 
         /// \brief Surface layer depth
         CONTACT_SURFACE_LAYER,
+
+        /// \brief split impulse
+        SPLIT_IMPULSE,
+
+        /// \brief split impulse penetration threshold
+        SPLIT_IMPULSE_PENETRATION_THRESHOLD,
 
         /// \brief Maximum number of contacts
         MAX_CONTACTS,

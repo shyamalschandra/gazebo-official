@@ -63,6 +63,7 @@ set (headers
   Event.hh
   Events.hh
   Exception.hh
+  Filters.hh
   HeightmapData.hh
   Image.hh
   ImageHeightmap.hh
@@ -87,6 +88,7 @@ set (headers
   Timer.hh
   UpdateInfo.hh
   Video.hh
+  ffmpeg_inc.h
  )
 
 if (HAVE_GTS)
