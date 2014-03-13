@@ -28,15 +28,25 @@ endif()
 
 set(tests
   bandwidth.cc
+  concave_mesh.cc
   contact_sensor.cc
+  dem.cc
   factory.cc
   file_handling.cc
   gripper.cc
   imu.cc
+  joint_force_torque.cc
+  joint_revolute.cc
+  joint_spawn.cc
+  joint_test.cc
+  joint_universal.cc
   laser.cc
+  model_database.cc
+  noise.cc
   nondefault_world.cc
   physics.cc
   physics_friction.cc
+  physics_link.cc
   physics_msgs.cc
   physics_thread_safe.cc
   pioneer2dx.cc
@@ -49,6 +59,7 @@ set(tests
   transport.cc
   world.cc
   world_entity_below_point.cc
+  worlds_installed.cc
   )
 
 if (MANPAGES_SUPPORT)
@@ -74,6 +85,7 @@ set(dri_tests
   camera_sensor.cc
   multicamera_sensor.cc
   gpu_laser.cc
+  camera_follow.cc
   heightmap.cc
   ogre_log.cc
   pr2.cc
