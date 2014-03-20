@@ -15,7 +15,10 @@
  *
 */
 
+#include <algorithm>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "gazebo/msgs/msgs.hh"
 
@@ -1155,4 +1158,45 @@ double Link::GetWorldEnergyKinetic() const
 double Link::GetWorldEnergy() const
 {
   return this->GetWorldEnergyPotential() + this->GetWorldEnergyKinetic();
+}
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyKineticFiltered()
+{
+  // update filtered velocity for box
+  this->linVelFil.Update(this->GetWorldCoGLinearVel());
+  this->angVelFil.Update(this->GetWorldAngularVel());
+
+  // compute linear kinetic energy
+  // E = 1/2 m v^T v
+  double linKE;
+  {
+    math::Vector3 v = this->linVelFil.Get();
+    double m = this->GetInertial()->GetMass();
+    linKE = 0.5 * m * v.Dot(v);
+  }
+
+  // compute angular kinetic energy
+  // E = 1/2 w^T I w
+  double angKE;
+  {
+    math::Vector3 w = this->angVelFil.Get();
+    math::Matrix3 I = this->GetWorldInertiaMatrix();
+    angKE = 0.5 * w.Dot(I * w);
+  }
+
+  return linKE + angKE;
+}
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyFiltered()
+{
+  return this->GetWorldEnergyPotential() +
+    this->GetWorldEnergyKineticFiltered();
+}
+
+/////////////////////////////////////////////////
+double Link::GetWorldEnergyKineticVibrational()
+{
+  return this->GetWorldEnergyKinetic() - this->GetWorldEnergyKineticFiltered();
 }

@@ -314,8 +314,11 @@ void BulletPhysics::Load(sdf::ElementPtr _sdf)
   // but can lead to improper stacking of objects, see
   // http://web.archive.org/web/20120430155635/http://bulletphysics.org/
   //     mediawiki-1.5.8/index.php/BtContactSolverInfo#Split_Impulse
-  info.m_splitImpulse = 1;
-  info.m_splitImpulsePenetrationThreshold = -0.02;
+  info.m_splitImpulse =
+      boost::any_cast<bool>(this->GetParam(SPLIT_IMPULSE));
+  info.m_splitImpulsePenetrationThreshold =
+    boost::any_cast<double>(
+    this->GetParam(SPLIT_IMPULSE_PENETRATION_THRESHOLD));
 
   // Use multiple friction directions.
   // This is important for rolling without slip (see issue #480)
@@ -377,18 +380,27 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     physicsMsg.set_solver_type(this->solverType);
     // min_step_size is defined but not yet used
     physicsMsg.set_min_step_size(
-        boost::any_cast<double>(this->GetParam(MIN_STEP_SIZE)));
-    physicsMsg.set_iters(
-        boost::any_cast<int>(this->GetParam(PGS_ITERS)));
+      boost::any_cast<double>(this->GetParam(MIN_STEP_SIZE)));
+    physicsMsg.mutable_bullet()->set_iters(
+      boost::any_cast<int>(this->GetParam(PGS_ITERS)));
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
-    physicsMsg.set_sor(
-        boost::any_cast<double>(this->GetParam(SOR)));
-    physicsMsg.set_cfm(
-        boost::any_cast<double>(this->GetParam(GLOBAL_CFM)));
-    physicsMsg.set_erp(
-        boost::any_cast<double>(this->GetParam(GLOBAL_ERP)));
-    physicsMsg.set_contact_surface_layer(
-        boost::any_cast<double>(this->GetParam(CONTACT_SURFACE_LAYER)));
+    physicsMsg.mutable_bullet()->set_sor(
+      boost::any_cast<double>(this->GetParam(SOR)));
+    physicsMsg.mutable_bullet()->set_cfm(
+      boost::any_cast<double>(this->GetParam(GLOBAL_CFM)));
+    physicsMsg.mutable_bullet()->set_erp(
+      boost::any_cast<double>(this->GetParam(GLOBAL_ERP)));
+
+    physicsMsg.mutable_bullet()->set_contact_surface_layer(
+      boost::any_cast<double>(this->GetParam(CONTACT_SURFACE_LAYER)));
+
+    physicsMsg.mutable_bullet()->set_split_impulse(
+      boost::any_cast<bool>(this->GetParam(SPLIT_IMPULSE)));
+
+    physicsMsg.mutable_bullet()->set_split_impulse_penetration_threshold(
+      boost::any_cast<double>(
+      this->GetParam(SPLIT_IMPULSE_PENETRATION_THRESHOLD)));
+
     physicsMsg.mutable_gravity()->CopyFrom(msgs::Convert(this->GetGravity()));
     physicsMsg.set_real_time_update_rate(this->realTimeUpdateRate);
     physicsMsg.set_real_time_factor(this->targetRealTimeFactor);
@@ -403,48 +415,59 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
 /////////////////////////////////////////////////
 void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
-  if (_msg->has_min_step_size())
-    this->SetParam(MIN_STEP_SIZE, _msg->min_step_size());
-
   if (_msg->has_solver_type())
+  {
     this->SetParam(SOLVER_TYPE, _msg->solver_type());
-
-  if (_msg->has_iters())
-    this->SetParam(PGS_ITERS, _msg->iters());
-
-  if (_msg->has_sor())
-    this->SetParam(SOR, _msg->sor());
-
-  if (_msg->has_cfm())
-    this->SetParam(GLOBAL_CFM, _msg->cfm());
-
-  if (_msg->has_erp())
-    this->SetParam(GLOBAL_ERP, _msg->erp());
-
-  if (_msg->has_enable_physics())
-    this->world->EnablePhysicsEngine(_msg->enable_physics());
-
-  if (_msg->has_contact_surface_layer())
-    this->SetParam(CONTACT_SURFACE_LAYER, _msg->contact_surface_layer());
-
-  if (_msg->has_gravity())
-    this->SetGravity(msgs::Convert(_msg->gravity()));
-
-  if (_msg->has_real_time_factor())
-    this->SetTargetRealTimeFactor(_msg->real_time_factor());
-
-  if (_msg->has_real_time_update_rate())
-  {
-    this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
   }
 
-  if (_msg->has_max_step_size())
+  if (_msg->has_min_step_size())
   {
-    this->SetMaxStepSize(_msg->max_step_size());
+    this->SetParam(MIN_STEP_SIZE, _msg->min_step_size());
   }
 
-  /// Make sure all models get at least one update cycle.
-  this->world->EnableAllModels();
+  if (_msg->has_bullet())
+  {
+    const msgs::PhysicsBullet *msgBullet = &_msg->bullet();
+
+    if (msgBullet->has_iters())
+    {
+      this->SetParam(PGS_ITERS, msgBullet->iters());
+    }
+
+    if (msgBullet->has_sor())
+    {
+      this->SetParam(SOR, msgBullet->sor());
+    }
+
+    if (msgBullet->has_cfm())
+    {
+      this->SetParam(GLOBAL_CFM, msgBullet->cfm());
+    }
+
+    if (msgBullet->has_erp())
+    {
+      this->SetParam(GLOBAL_ERP, msgBullet->erp());
+    }
+
+    if (msgBullet->has_contact_surface_layer())
+    {
+      this->SetParam(CONTACT_SURFACE_LAYER, msgBullet->contact_surface_layer());
+    }
+
+    if (msgBullet->has_split_impulse())
+    {
+      this->SetParam(SPLIT_IMPULSE, msgBullet->split_impulse());
+    }
+
+    if (msgBullet->has_split_impulse_penetration_threshold())
+    {
+      this->SetParam(SPLIT_IMPULSE_PENETRATION_THRESHOLD,
+        msgBullet->split_impulse_penetration_threshold());
+    }
+  }
+
+  // Parent class handles many generic parameters
+  PhysicsEngine::OnPhysicsMsg(_msg);
 }
 
 //////////////////////////////////////////////////
@@ -608,6 +631,40 @@ void BulletPhysics::SetParam(BulletParam _param, const boost::any &_value)
           "contact_surface_layer")->Set(value);
       break;
     }
+    case SPLIT_IMPULSE:
+    {
+      /// TODO: Implement contact surface layer param
+      bool value;
+      try
+      {
+        value = boost::any_cast<bool>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
+      bulletElem->GetElement("constraints")->GetElement(
+          "split_impulse")->Set(value);
+      break;
+    }
+    case SPLIT_IMPULSE_PENETRATION_THRESHOLD:
+    {
+      /// TODO: Implement contact surface layer param
+      double value;
+      try
+      {
+        value = boost::any_cast<double>(_value);
+      }
+      catch(boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return;
+      }
+      bulletElem->GetElement("constraints")->GetElement(
+          "split_impulse_penetration_threshold")->Set(value);
+      break;
+    }
     case MAX_CONTACTS:
     {
       /// TODO: Implement max contacts param
@@ -664,10 +721,19 @@ void BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
     param = SOR;
   else if (_key == "contact_surface_layer")
     param = CONTACT_SURFACE_LAYER;
+  else if (_key == "split_impulse")
+    param = SPLIT_IMPULSE;
+  else if (_key == "split_impulse_penetration_threshold")
+    param = SPLIT_IMPULSE_PENETRATION_THRESHOLD;
   else if (_key == "max_contacts")
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "max_step_size")
+  {
+    this->SetMaxStepSize(boost::any_cast<double>(_value));
+    return;
+  }
   else
   {
     gzwarn << _key << " is not supported in bullet" << std::endl;
@@ -717,6 +783,18 @@ boost::any BulletPhysics::GetParam(BulletParam _param) const
           "contact_surface_layer");
       break;
     }
+    case SPLIT_IMPULSE:
+    {
+      value = bulletElem->GetElement("constraints")->Get<bool>(
+          "split_impulse");
+      break;
+    }
+    case SPLIT_IMPULSE_PENETRATION_THRESHOLD:
+    {
+      value = bulletElem->GetElement("constraints")->Get<double>(
+          "split_impulse_penetration_threshold");
+      break;
+    }
     case MAX_CONTACTS:
     {
       value = bulletElem->GetElement("max_contacts")->Get<int>();
@@ -753,10 +831,16 @@ boost::any BulletPhysics::GetParam(const std::string &_key) const
     param = SOR;
   else if (_key == "contact_surface_layer")
     param = CONTACT_SURFACE_LAYER;
+  else if (_key == "split_impulse")
+    param = SPLIT_IMPULSE;
+  else if (_key == "split_impulse_penetration_threshold")
+    param = SPLIT_IMPULSE_PENETRATION_THRESHOLD;
   else if (_key == "max_contacts")
     param = MAX_CONTACTS;
   else if (_key == "min_step_size")
     param = MIN_STEP_SIZE;
+  else if (_key == "max_step_size")
+    return this->GetMaxStepSize();
   else
   {
     gzwarn << _key << " is not supported in bullet" << std::endl;
