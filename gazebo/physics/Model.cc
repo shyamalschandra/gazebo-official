@@ -1087,3 +1087,33 @@ double Model::GetWorldEnergy() const
 {
   return this->GetWorldEnergyPotential() + this->GetWorldEnergyKinetic();
 }
+
+/////////////////////////////////////////////////
+double Model::GetWorldEnergyKineticFiltered() const
+{
+  double e = 0;
+  for (Link_V::const_iterator iter = this->links.begin();
+    iter != this->links.end(); ++iter)
+    e += (*iter)->GetWorldEnergyKineticFiltered();
+  return e;
+}
+
+/////////////////////////////////////////////////
+double Model::GetWorldEnergyFiltered() const
+{
+  double e = 0;
+  for (Link_V::const_iterator iter = this->links.begin();
+    iter != this->links.end(); ++iter)
+    e += (*iter)->GetWorldEnergyFiltered();
+  return e;
+}
+
+/////////////////////////////////////////////////
+double Model::GetWorldEnergyKineticVibrational() const
+{
+  double e = 0;
+  for (Link_V::const_iterator iter = this->links.begin();
+    iter != this->links.end(); ++iter)
+    e += (*iter)->GetWorldEnergyKineticVibrational();
+  return e;
+}
