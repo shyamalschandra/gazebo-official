@@ -40,6 +40,7 @@ set(tests
   gz_physics.cc
   gz_world.cc
   imu.cc
+  joint_screw.cc
   joint_force_torque.cc
   joint_revolute.cc
   joint_spawn.cc
