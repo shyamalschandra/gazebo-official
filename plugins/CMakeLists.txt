@@ -25,6 +25,7 @@ set (plugins
   JointTrajectoryPlugin
   LiftDragPlugin
   ModelPropShop
+  MotorDemoPlugin
   MudPlugin
   PressurePlugin
   RayPlugin
