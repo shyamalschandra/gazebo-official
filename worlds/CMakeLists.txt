@@ -11,6 +11,7 @@ set (files
   everything.world
   force_torque_demo.world
   friction_demo.world
+  gearbox.world
   gripper.world
   heightmap_dem.world
   heightmap.world
@@ -23,6 +24,7 @@ set (files
   openal.world
   pioneer2dx.world
   plane_demo.world
+  plane_propeller_demo.world
   plugin.world
   pr2.world
   presentation.world
