@@ -13,6 +13,18 @@
     + ***Deprecation*** void CFMDamping()
     + ***Replacement*** void ApplyImplicitStiffnessDamping()
 
+1. **gazebo/physics/ScrewJoint.hh**
+    + ***Deprecation*** virtual void SetThreadPitch(unsigned int _index, double _threadPitch) = 0
+    + ***Replacement*** virtual void SetThreadPitch(double _threadPitch) = 0
+    ---
+    + ***Deprecation*** virtual void GetThreadPitch(unsigned int _index) = 0
+    + ***Replacement*** virtual void GetThreadPitch() = 0
+
+1. **gazebo/physics/bullet/BulletScrewJoint.hh**
+    + ***Deprecation*** protected: virtual void Load(sdf::ElementPtr _sdf)
+    + ***Replacement*** public: virtual void Load(sdf::ElementPtr _sdf)
+
+
 1. **gazebo/physics/Joint.hh**
     + ***Deprecation*** virtual double GetAttribute(const std::string &_key, unsigned int _index) = 0
     + ***Replacement*** virtual double GetParam(const std::string &_key, unsigned int _index) = 0;
@@ -325,6 +337,22 @@
     + virtual void SetLowStop(unsigned int _index, const math::Angle &_angle)
     + virtual void SetAttribute(const std::string &_key, unsigned int _index, const boost::any &_value)
     + virtual double GetAttribute(const std::string &_key, unsigned int _index)
+
+1. **gazebo/physics/simbody/SimbodyScrewJoint.hh**
+    + virtual void SetThreadPitch(double _threadPitch)
+    + virtual void GetThreadPitch() 
+
+1. **gazebo/physics/ode/ODEScrewJoint.hh**
+    + virtual void SetThreadPitch(double _threadPitch)
+    + virtual void GetThreadPitch() 
+
+1. **gazebo/physics/ScrewJoint.hh**
+    + virtual math::Vector3 GetAnchor(unsigned int _index) const
+    + virtual void SetAnchor(unsigned int _index, const math::Vector3 &_anchor)
+
+1. **gazebo/physics/bullet/BulletJoint.hh**
+    + virtual math::Angle GetHighStop(unsigned int _index)
+    + virtual math::Angle GetLowStop(unsigned int _index)
 
 ### Deletions
 
