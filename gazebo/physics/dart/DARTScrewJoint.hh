@@ -39,6 +39,9 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void Load(sdf::ElementPtr _sdf);
 
+      // Documentation inherited
+      public: virtual math::Vector3 GetAnchor(unsigned int _index) const;
+
       // Documentation inherited.
       public: virtual void Init();
 
@@ -49,12 +52,18 @@ namespace gazebo
       public: virtual void SetAxis(unsigned int _index,
                   const math::Vector3 &_axis);
 
-      // Documentation inherited
+      /// \copydoc ScrewJoint::SetThreadPitch
       public: virtual void SetThreadPitch(unsigned int _index,
                   double _threadPitch);
 
-      // Documentation inherited
+      /// \copydoc ScrewJoint::SetThreadPitch
+      public: virtual void SetThreadPitch(double _threadPitch);
+
+      /// \copydoc ScrewJoint::GetThreadPitch
       public: virtual double GetThreadPitch(unsigned int _index);
+
+      /// \copydoc ScrewJoint::GetThreadPitch
+      public: virtual double GetThreadPitch();
 
       // Documentation inherited
       public: virtual math::Angle GetAngleImpl(unsigned int _index) const;
@@ -79,6 +88,9 @@ namespace gazebo
 
       // Documentation inherited.
       protected: virtual void SetForceImpl(unsigned int _index, double _effort);
+
+      /// \copydoc Joint::GetAttribute
+      public: double GetAttribute(const std::string &_key, unsigned int _index);
 
       /// \brief Universal joint of DART
       protected: dart::dynamics::ScrewJoint *dartScrewJoint;

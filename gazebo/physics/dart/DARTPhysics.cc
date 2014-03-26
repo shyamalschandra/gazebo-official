@@ -62,9 +62,9 @@ GZ_REGISTER_PHYSICS_ENGINE("dart", DARTPhysics)
 DARTPhysics::DARTPhysics(WorldPtr _world)
     : PhysicsEngine(_world)
 {
-  this->dtWorld = new dart::simulation::World;
-  this->dtWorld->getConstraintHandler()->setCollisionDetector(
-        new dart::collision::DARTCollisionDetector());
+  this->dtWorld = new dart::simulation::SoftWorld;
+//  this->dtWorld->getConstraintHandler()->setCollisionDetector(
+//        new dart::collision::DARTCollisionDetector());
 //  this->dtWorld->getConstraintHandler()->setAllowablePenetration(1e-6);
 //  this->dtWorld->getConstraintHandler()->setMaxReducingPenetrationVelocity(
 //        0.01);
@@ -87,6 +87,9 @@ void DARTPhysics::Load(sdf::ElementPtr _sdf)
 
   // Gravity
   math::Vector3 g = this->sdf->Get<math::Vector3>("gravity");
+  // ODEPhysics checks this, so we will too.
+  if (g == math::Vector3(0, 0, 0))
+    gzwarn << "Gravity vector is (0, 0, 0). Objects will float.\n";
   this->dtWorld->setGravity(Eigen::Vector3d(g.x, g.y, g.z));
 
   // Time step
@@ -385,7 +388,7 @@ boost::any DARTPhysics::GetParam(const std::string &_key) const
     param = MIN_STEP_SIZE;
   else
   {
-    gzwarn << _key << " is not supported in ode" << std::endl;
+    gzwarn << _key << " is not supported in dart" << std::endl;
     return 0;
   }
 
@@ -421,7 +424,7 @@ boost::any DARTPhysics::GetParam(DARTPhysics::DARTParam _param) const
 }
 
 //////////////////////////////////////////////////
-dart::simulation::World *DARTPhysics::GetDARTWorld()
+dart::simulation::SoftWorld *DARTPhysics::GetDARTWorld()
 {
   return this->dtWorld;
 }
