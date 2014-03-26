@@ -71,11 +71,11 @@ namespace gazebo
       public: virtual void SetMaxForce(unsigned int _index, double _t);
 
       /// \brief Set the high stop of an axis(index).
-      public: virtual void SetHighStop(unsigned int _index,
+      public: virtual bool SetHighStop(unsigned int _index,
                   const math::Angle &_angle);
 
       /// \brief Set the low stop of an axis(index).
-      public: virtual void SetLowStop(unsigned int _index,
+      public: virtual bool SetLowStop(unsigned int _index,
                   const math::Angle &_angle);
 
       // Documentation inherited.
@@ -87,7 +87,17 @@ namespace gazebo
       // Documentation inherited.
       protected: virtual void SetForceImpl(unsigned int _index, double _torque);
 
-      /// \brief Pointer to Bullet ball constraint
+      // Documentation inherited.
+      public: virtual void SetAxis(unsigned int _index,
+                                   const math::Vector3 &_axis);
+
+      // Documentation inherited.
+      public: virtual math::Angle GetHighStop(unsigned int _index);
+
+      // Documentation inherited.
+      public: virtual math::Angle GetLowStop(unsigned int _index);
+
+      /// \brief bullet ball constraint
       private: btPoint2PointConstraint *bulletBall;
     };
 
