@@ -12,10 +12,29 @@
     + ***Deprecation*** void CFMDamping()
     + ***Replacement*** void ApplyImplicitStiffnessDamping()
 
+1. **gazebo/physics/PhysicsEngine.hh**
+    + ***Deprecation*** virtual void SetSORPGSPreconIters(unsigned int _iters)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+    ---
+    + ***Deprecation*** virtual void SetSORPGSIters(unsigned int _iters)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+    ---
+    + ***Deprecation*** virtual void SetSORPGSW(double _w)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+    ---
+    + ***Deprecation*** virtual int GetSORPGSPreconIters()
+    + ***Replacement*** virtual boost::any GetParam(const std::string &_key) const
+    ---
+    + ***Deprecation*** virtual int GetSORPGSIters()
+    + ***Replacement*** virtual boost::any GetParam(const std::string &_key) const
+    ---
+    + ***Deprecation*** virtual double GetSORPGSW()
+    + ***Replacement*** virtual boost::any GetParam(const std::string &_key) const
+
 ### Modifications
 1. **gazebo/gui/GuiIface.hh**
     + ***Removed:*** void load() `ABI change`
-    + ***Replacement:*** bool load();
+    + ***Replacement:*** bool load()
     + ***Note:*** Changed return type from void to bool.
 1. **Functions in joint classes use unsigned int, instead of int**
     + All functions in Joint classes (gazebo/physics/\*Joint\*) and subclasses (gazebo/physics/[ode,bullet,simbody,dart]/\*Joint\*) now use unsigned integers instead of integers when referring to a specific joint axis.
@@ -72,6 +91,18 @@
     + ***Replacement:*** double RaySensor::GetFiducial(unsigned int _index)
     + ***Note:*** Changed argument type from int to unsigned int.
 
+1. **gazebo/physics/PhysicsEngine.hh**
+    + ***Removed*** virtual void SetParam(const std::string &_key, const boost::any &_value)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+
+1. **gazebo/physics/ode/ODEPhysics.hh**
+    + ***Removed*** virtual void SetParam(const std::string &_key, const boost::any &_value)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+
+1. **gazebo/physics/bullet/BulletPhysics.hh**
+    + ***Removed*** virtual void SetParam(const std::string &_key, const boost::any &_value)
+    + ***Replacement*** virtual bool SetParam(const std::string &_key, const boost::any &_value)
+
 ### Additions
 
 1. **gazebo/transport/TransportIface.hh**
@@ -100,13 +131,19 @@
 
 1. **gazebo/physics/Link.hh**
     + double GetWorldEnergy() const
+    + double GetWorldEnergyFiltered() const
     + double GetWorldEnergyKinetic() const
+    + double GetWorldEnergyKineticFiltered() const
+    + double GetWorldEnergyKineticVibrational() const
     + double GetWorldEnergyPotential() const
     + bool initialized
 
 1. **gazebo/physics/Model.hh**
     + double GetWorldEnergy() const
+    + double GetWorldEnergyFiltered() const
     + double GetWorldEnergyKinetic() const
+    + double GetWorldEnergyKineticFiltered() const
+    + double GetWorldEnergyKineticVibrational() const
     + double GetWorldEnergyPotential() const
 
 1. **gazebo/physics/SurfaceParams.hh**
@@ -165,6 +202,18 @@
     + virtual void SetLowStop(unsigned int _index, const math::Angle &_angle)
     + virtual void SetAttribute(const std::string &_key, unsigned int _index, const boost::any &_value)
     + virtual double GetAttribute(const std::string &_key, unsigned int _index)
+
+1. **gazebo/physics/simbody/SimbodyPhysics.hh**
+    + virtual boost::any GetParam(const std::string &_key) const
+    + virtual bool SetParam(const std::string &_key, const boost::any &_value)
+
+1. **gazebo/physics/dart/DARTPhysics.hh**
+    + virtual boost::any GetParam(const std::string &_key) const
+    + virtual bool SetParam(const std::string &_key, const boost::any &_value)
+
+1. **gazebo/physics/Link.hh**
+    + common::MovingWindowFilter<math::Vector3> *GetLinVelFil() const
+    + common::MovingWindowFilter<math::Vector3> *GetAngVelFil() const
 
 ### Deletions
 
