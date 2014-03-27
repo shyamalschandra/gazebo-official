@@ -69,6 +69,12 @@ namespace gazebo
         /// \brief Surface layer depth
         CONTACT_SURFACE_LAYER,
 
+        /// \brief split impulse
+        SPLIT_IMPULSE,
+
+        /// \brief split impulse penetration threshold
+        SPLIT_IMPULSE_PENETRATION_THRESHOLD,
+
         /// \brief Maximum number of contacts
         MAX_CONTACTS,
 
@@ -160,11 +166,11 @@ namespace gazebo
       /// \brief Set a parameter of the bullet physics engine
       /// \param[in] _param A parameter listed in the BulletParam enum
       /// \param[in] _value The value to set to
-      public: virtual void SetParam(BulletParam _param,
+      public: virtual bool SetParam(BulletParam _param,
                   const boost::any &_value);
 
       /// Documentation inherited
-      public: virtual void SetParam(const std::string &_key,
+      public: virtual bool SetParam(const std::string &_key,
                   const boost::any &_value);
 
       /// Documentation inherited
