@@ -14,8 +14,8 @@
  * limitations under the License.
  *
 */
+#include <stdio.h>
 #include "gazebo/rendering/ogre_gazebo.h"
-
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/math/Vector2d.hh"
 #include "gazebo/common/Assert.hh"
@@ -300,7 +300,7 @@ void Visual::LoadFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
 
   if (_msg->has_geometry())
   {
-    if (_msg->geometry().type() == msgs::Geometry::BOX)
+   if (_msg->geometry().type() == msgs::Geometry::BOX)
     {
       sdf::ElementPtr elem = geomElem->AddElement("box");
       elem->GetElement("size")->Set(
@@ -323,6 +323,17 @@ void Visual::LoadFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
       sdf::ElementPtr elem = geomElem->AddElement("plane");
       elem->GetElement("normal")->Set(plane.normal);
       elem->GetElement("size")->Set(plane.size);
+    }
+    else if (_msg->geometry().type() == msgs::Geometry::POLYLINE)
+    {
+     sdf::ElementPtr elem = geomElem->AddElement("polyline");
+     elem->GetElement("height")->Set(_msg->geometry().polyline().height());
+     for(int i =0; i < _msg->geometry().polyline().point_size(); i++)
+     {
+        elem->AddElement("point")->Set(msgs::Convert(_msg->geometry().polyline().point(i)));
+  
+     }
+
     }
     else if (_msg->geometry().type() == msgs::Geometry::MESH)
     {
@@ -520,6 +531,11 @@ void Visual::Load()
       this->dataPtr->scale =
           geomElem->GetElement("mesh")->Get<math::Vector3>("scale");
     }
+//    else if (geomElem->HasElement("polyline"))
+//    {
+//      this->dataPtr->scale = 
+//          geomElem->GetElement("polyline")->Get<math::Vector3>("scale");
+//    }
   }
 
   this->dataPtr->sceneNode->setScale(this->dataPtr->scale.x,
@@ -801,6 +817,10 @@ void Visual::SetScale(const math::Vector3 &_scale)
   }
   else if (geomElem->HasElement("mesh"))
     geomElem->GetElement("mesh")->GetElement("scale")->Set(_scale);
+
+//  else if (geomElem->HasElement("polyline"))
+  //  geomElem->GetElement("polyline")->GetElement("scale")->Set(_scale);
+
 
   this->dataPtr->sceneNode->setScale(
       Conversions::Convert(this->dataPtr->scale));
@@ -2234,6 +2254,10 @@ void Visual::UpdateFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
     }
     else if (_msg->geometry().type() == msgs::Geometry::EMPTY)
       geomScale.x = geomScale.y = geomScale.z = 1.0;
+    else if (_msg->geometry().type() == msgs::Geometry::POLYLINE)
+     {
+      geomScale.x = geomScale.y = geomScale.z = 1.0;
+     }
     else
       gzerr << "Unknown geometry type[" << _msg->geometry().type() << "]\n";
 
@@ -2300,6 +2324,8 @@ std::string Visual::GetMeshName() const
       return "unit_cylinder";
     else if (geomElem->HasElement("plane"))
       return "unit_plane";
+    else if (geomElem->HasElement("polyline"))
+      return "polyline";
     else if (geomElem->HasElement("mesh") || geomElem->HasElement("heightmap"))
     {
       sdf::ElementPtr tmpElem = geomElem->GetElement("mesh");

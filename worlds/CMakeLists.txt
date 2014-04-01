@@ -24,6 +24,7 @@ set (files
   pioneer2dx.world
   plane_demo.world
   plugin.world
+  polyline.world
   pr2.world
   presentation.world
   pressure_sensor.world
