@@ -15,6 +15,10 @@
  *
 */
 
+#include <string>
+#include <algorithm>
+#include <vector>
+
 #include "gazebo/transport/transport.hh"
 #include "gazebo/physics/Road.hh"
 #include "gazebo/msgs/msgs.hh"
@@ -53,6 +57,16 @@ void Road::Init()
 
   this->width = this->sdf->Get<double>("width");
   msg.set_width(this->width);
+
+  if (this->sdf->HasElement("texture"))
+  {
+    this->texture = this->sdf->Get<std::string>("texture");
+
+    std::transform(this->texture.begin(), this->texture.end(),
+                   this->texture.begin(), ::tolower);
+
+    msg.set_texture(this->texture);
+  }
 
   sdf::ElementPtr pointElem = this->sdf->GetElement("point");
   while (pointElem)
