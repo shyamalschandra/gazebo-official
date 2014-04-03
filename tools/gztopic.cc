@@ -56,8 +56,7 @@ bool g_useShortDebugString = false;
 /////////////////////////////////////////////////
 void help(po::options_description &_options)
 {
-  std::cerr << "gztopic -- Tool to interact with gztopics on a "
-    "Gazebo master\n\n";
+  std::cerr << "gztopic -- DEPRECATED(see 'gz help topic')\n\n";
 
   std::cerr << "`gztopic` [options] <command>\n\n";
 
@@ -499,13 +498,11 @@ void hz()
 /////////////////////////////////////////////////
 void view(int _argc, char **_argv)
 {
-  if (!gazebo::load())
+  if (!gazebo::setupClient())
   {
     printf("load error\n");
     return;
   }
-
-  gazebo::run();
 
   QApplication *app = new QApplication(_argc, _argv);
 
@@ -543,15 +540,9 @@ void view(int _argc, char **_argv)
       gzerr << "Unable to create viewer for message type[" << msgType << "]\n";
   }
 
-  if (!gazebo::init())
-  {
-    gzerr << "Unable to initialize Gazebo\n";
-    return;
-  }
-
   app->exec();
 
-  gazebo::fini();
+  gazebo::shutdown();
 }
 
 /////////////////////////////////////////////////
@@ -559,6 +550,8 @@ int main(int argc, char **argv)
 {
   if (!parse(argc, argv))
     return 0;
+
+  gazebo::common::Console::SetQuiet(true);
 
   if (params[0] == "list")
     list();

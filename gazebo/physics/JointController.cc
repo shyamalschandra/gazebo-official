@@ -79,18 +79,12 @@ void JointController::Update()
 
     if (!this->positions.empty())
     {
-      double cmd;
       std::map<std::string, double>::iterator iter;
 
       for (iter = this->positions.begin(); iter != this->positions.end();
            ++iter)
       {
-        std::map<std::string, JointPtr>::iterator testIter;
-        testIter = this->joints.find(iter->first);
-        if (testIter == this->joints.end())
-          gzerr << "No joint with name[" << iter->first << "]\n";
-
-        cmd = this->posPids[iter->first].Update(
+        double cmd = this->posPids[iter->first].Update(
             this->joints[iter->first]->GetAngle(0).Radian() - iter->second,
             stepTime);
         this->joints[iter->first]->SetForce(0, cmd);
@@ -99,14 +93,12 @@ void JointController::Update()
 
     if (!this->velocities.empty())
     {
-      double cmd;
       std::map<std::string, double>::iterator iter;
 
-      gzerr << "VELOCITY UPDATE[" << this->velocities.size() << "]\n\n";
       for (iter = this->velocities.begin();
            iter != this->velocities.end(); ++iter)
       {
-        cmd = this->velPids[iter->first].Update(
+        double cmd = this->velPids[iter->first].Update(
             this->joints[iter->first]->GetVelocity(0) - iter->second,
             stepTime);
         this->joints[iter->first]->SetForce(0, cmd);
@@ -425,84 +417,4 @@ void JointController::AddConnectedLinks(Link_V &_linksOut,
       }
     }
   }
-}
-
-//////////////////////////////////////////////////
-void JointController::SetPositionPID(const std::string &_jointName,
-                                     const common::PID &_pid)
-{
-  std::map<std::string, JointPtr>::iterator iter;
-  iter = this->joints.find(_jointName);
-
-  if (iter != this->joints.end())
-    this->posPids[_jointName]  = _pid;
-  else
-    gzerr << "Unable to find joint with name[" << _jointName << "]\n";
-}
-
-//////////////////////////////////////////////////
-void JointController::SetPositionTarget(const std::string &_jointName,
-                                        double _target)
-{
-  std::map<std::string, JointPtr>::iterator iter;
-  iter = this->joints.find(_jointName);
-
-  if (iter != this->joints.end())
-    this->positions[_jointName] = _target;
-  else
-    gzerr << "Unable to find joint with name[" << _jointName << "]\n";
-}
-
-//////////////////////////////////////////////////
-double JointController::GetPositionTarget(const std::string &_jointName)
-{
-  double result = 0;
-  std::map<std::string, double>::iterator iter;
-  iter = this->positions.find(_jointName);
-  if (iter != this->positions.end())
-    result = iter->second;
-  else
-    gzerr << "Unable to find position target for joint[" << _jointName << "]\n";
-
-  return result;
-}
-
-//////////////////////////////////////////////////
-void JointController::SetVelocityPID(const std::string &_jointName,
-                                     const common::PID &_pid)
-{
-  std::map<std::string, JointPtr>::iterator iter;
-  iter = this->joints.find(_jointName);
-
-  if (iter != this->joints.end())
-    this->velPids[_jointName]  = _pid;
-  else
-    gzerr << "Unable to find joint with name[" << _jointName << "]\n";
-}
-
-//////////////////////////////////////////////////
-void JointController::SetVelocityTarget(const std::string &_jointName,
-                                        double _target)
-{
-  std::map<std::string, JointPtr>::iterator iter;
-  iter = this->joints.find(_jointName);
-
-  if (iter != this->joints.end())
-    this->velocities[_jointName] = _target;
-  else
-    gzerr << "Unable to find joint with name[" << _jointName << "]\n";
-}
-
-//////////////////////////////////////////////////
-double JointController::GetVelocityTarget(const std::string &_jointName)
-{
-  double result = 0;
-  std::map<std::string, double>::iterator iter;
-  iter = this->velocities.find(_jointName);
-  if (iter != this->velocities.end())
-    result = iter->second;
-  else
-    gzerr << "Unable to find position target for joint[" << _jointName << "]\n";
-
-  return result;
 }
