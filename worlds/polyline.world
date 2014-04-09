@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <model name="pentagon">
+    <static>true</static>
+    <pose>0 0 0 0 0 0</pose>
+      <link name="polyLine">
+        <visual name="polyLineGeom">
+          <geometry>
+            <polyline>
+              <point>0 0</point>
+              <point>0 1</point>
+              <point>1 0</point>
+              <height>0.2</height>
+            </polyline>
+        <!-->
+            <box><size>1 1 1</size></box>
+         --> </geometry>
+        </visual>  
+      <pose>1 1 0 0 0 0</pose>
+      </link>
+    
+    </model>
+  </world>
+</sdf>
