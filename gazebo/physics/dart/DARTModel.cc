@@ -43,7 +43,7 @@ DARTModel::~DARTModel()
 void DARTModel::Load(sdf::ElementPtr _sdf)
 {
   // create skeletonDynamics of DART
-  this->dtSkeleton = new dart::dynamics::Skeleton();
+  this->dtSkeleton = new dart::dynamics::SoftSkeleton();
 
   Model::Load(_sdf);
 }
@@ -117,9 +117,9 @@ void DARTModel::Init()
   // collidable.
   if (hasPairOfSelfCollidableLinks)
   {
-    this->dtSkeleton->setSelfCollidable(true);
+    this->dtSkeleton->enableSelfCollision();
 
-    dart::simulation::World *dtWorld = this->GetDARTPhysics()->GetDARTWorld();
+    dart::simulation::SoftWorld *dtWorld = this->GetDARTPhysics()->GetDARTWorld();
     dart::collision::CollisionDetector *dtCollDet =
         dtWorld->getConstraintHandler()->getCollisionDetector();
 
@@ -170,8 +170,8 @@ void DARTModel::Fini()
 //////////////////////////////////////////////////
 void DARTModel::BackupState()
 {
-  dtConfig = this->dtSkeleton->get_q();
-  dtVelocity = this->dtSkeleton->get_dq();
+  dtConfig = this->dtSkeleton->getConfigs();
+  dtVelocity = this->dtSkeleton->getGenVels();
 }
 
 //////////////////////////////////////////////////
@@ -182,12 +182,12 @@ void DARTModel::RestoreState()
   GZ_ASSERT(dtVelocity.size() == this->dtSkeleton->getNumGenCoords(),
             "Cannot RestoreState, invalid size");
 
-  this->dtSkeleton->set_q(dtConfig);
-  this->dtSkeleton->set_dq(dtVelocity);
+  this->dtSkeleton->setConfigs(dtConfig, true, false, false);
+  this->dtSkeleton->setGenVels(dtVelocity, true, false);
 }
 
 //////////////////////////////////////////////////
-dart::dynamics::Skeleton *DARTModel::GetDARTSkeleton()
+dart::dynamics::SoftSkeleton *DARTModel::GetDARTSkeleton()
 {
   return dtSkeleton;
 }
@@ -200,7 +200,7 @@ DARTPhysicsPtr DARTModel::GetDARTPhysics(void) const
 }
 
 //////////////////////////////////////////////////
-dart::simulation::World *DARTModel::GetDARTWorld(void) const
+dart::simulation::SoftWorld *DARTModel::GetDARTWorld(void) const
 {
   return GetDARTPhysics()->GetDARTWorld();
 }

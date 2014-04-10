@@ -56,17 +56,21 @@ namespace gazebo
       public: virtual void SetAxis(unsigned int _index,
                   const math::Vector3 &_axis);
 
-      // Documentation inherited
+      // Documentation inherited.
+      public: virtual double GetAttribute(const std::string &_key,
+                  unsigned int _index) GAZEBO_DEPRECATED(3.0);
+
+      /// \copydoc ScrewJoint::SetThreadPitch
       public: virtual void SetThreadPitch(unsigned int _index,
                   double _threadPitch);
 
-      ///  \copydoc ScrewJoint::SetThreadPitch
+      /// \copydoc ScrewJoint::SetThreadPitch
       public: virtual void SetThreadPitch(double _threadPitch);
 
-      // Documentation inherited
+      /// \copydoc ScrewJoint::GetThreadPitch
       public: virtual double GetThreadPitch(unsigned int _index);
 
-      ///  \copydoc ScrewJoint::GetThreadPitch
+      /// \copydoc ScrewJoint::GetThreadPitch
       public: virtual double GetThreadPitch();
 
       // Documentation inherited
