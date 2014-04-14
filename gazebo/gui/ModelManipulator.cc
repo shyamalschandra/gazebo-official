@@ -160,7 +160,6 @@ math::Vector3 ModelManipulator::GetMousePositionOnPlane(
 
   return p1;
 }
-
 /////////////////////////////////////////////////
 math::Vector3 ModelManipulator::SnapPoint(const math::Vector3 &_point,
     double _interval, double _sensitivity)
@@ -456,9 +455,10 @@ void ModelManipulator::OnMousePressEvent(const common::MouseEvent &_event)
   if (vis && !vis->IsPlane() &&
       this->dataPtr->mouseEvent.button == common::MouseEvent::LEFT)
   {
-    if (gui::get_entity_id(vis->GetRootVisual()->GetName()))
+    rendering::VisualPtr rootVis = vis->GetRootVisual();
+    if (gui::get_entity_id(rootVis->GetName()))
     {
-      vis = vis->GetRootVisual();
+      vis = rootVis;
     }
 
     this->dataPtr->mouseMoveVisStartPose = vis->GetWorldPose();
