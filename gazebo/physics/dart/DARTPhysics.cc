@@ -62,9 +62,10 @@ GZ_REGISTER_PHYSICS_ENGINE("dart", DARTPhysics)
 DARTPhysics::DARTPhysics(WorldPtr _world)
     : PhysicsEngine(_world)
 {
-  this->dtWorld = new dart::simulation::World;
-  this->dtWorld->getConstraintHandler()->setCollisionDetector(
-        new dart::collision::DARTCollisionDetector());
+  this->dtWorld =
+    static_cast<dart::simulation::World*>(new dart::simulation::SoftWorld);
+//  this->dtWorld->getConstraintHandler()->setCollisionDetector(
+//        new dart::collision::DARTCollisionDetector());
 //  this->dtWorld->getConstraintHandler()->setAllowablePenetration(1e-6);
 //  this->dtWorld->getConstraintHandler()->setMaxReducingPenetrationVelocity(
 //        0.01);
@@ -87,6 +88,9 @@ void DARTPhysics::Load(sdf::ElementPtr _sdf)
 
   // Gravity
   math::Vector3 g = this->sdf->Get<math::Vector3>("gravity");
+  // ODEPhysics checks this, so we will too.
+  if (g == math::Vector3(0, 0, 0))
+    gzwarn << "Gravity vector is (0, 0, 0). Objects will float.\n";
   this->dtWorld->setGravity(Eigen::Vector3d(g.x, g.y, g.z));
 
   // Time step
@@ -139,10 +143,10 @@ void DARTPhysics::UpdateCollision()
 {
   this->contactManager->ResetCount();
 
-  dart::constraint::ConstraintDynamics *dtConstraintDynamics =
-      this->dtWorld->getConstraintHandler();
+  dart::constraint::ConstraintSolver *dtConstraintSolver =
+      this->dtWorld->getConstraintSolver();
   dart::collision::CollisionDetector *dtCollisionDetector =
-      dtConstraintDynamics->getCollisionDetector();
+      dtConstraintSolver->getCollisionDetector();
   int numContacts = dtCollisionDetector->getNumContacts();
 
   for (int i = 0; i < numContacts; ++i)
@@ -390,7 +394,7 @@ boost::any DARTPhysics::GetParam(const std::string &_key) const
   }
   else
   {
-    gzwarn << _key << " is not supported in ode" << std::endl;
+    gzwarn << _key << " is not supported in dart" << std::endl;
     return 0;
   }
 
