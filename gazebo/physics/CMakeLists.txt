@@ -143,3 +143,7 @@ set (gtest_sources
   SphereShape_TEST.cc
 )
 gz_build_tests(${gtest_sources})
+
+
+add_library(PhysicsPluginExample SHARED PhysicsPluginExample.cc)
+
