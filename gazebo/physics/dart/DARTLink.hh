@@ -184,8 +184,14 @@ namespace gazebo
       /// \brief List of pointers to the child joints.
       private: std::vector<DARTJointPtr> dartChildJoints;
 
-      /// \biref If true, freeze link to world (inertial) frame.
+      /// \brief If true, freeze link to world (inertial) frame.
       private: bool staticLink;
+
+      /// \brief Ball joint constraint for SetLinkStatic()
+      private: dart::constraint::BallJointConstraint *ballConst;
+
+      /// \brief Revolute joint constraint for SetLinkStatic()
+      private: dart::constraint::RevoluteJointConstraint *revConst;
     };
     /// \}
   }
