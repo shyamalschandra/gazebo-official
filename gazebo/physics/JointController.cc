@@ -528,7 +528,7 @@ void JointController::SetJointPosition(
 //                                           parentLink != parentLinks.end();
 //                                           ++parentLink)
 //       {
-//         if ((*parentLink)->GetName() != _link->GetName() &&
+//         if ((*parentLink)->GetScopedName() != _link->GetName() &&
 //             !this->ContainsLink(_linksOut, (*parentLink)))
 //         {
 //           _linksOut.push_back(*parentLink);
