@@ -3,12 +3,14 @@ include_directories(
   ${PROTOBUF_INCLUDE_DIR}
   ${SDF_INCLUDE_DIRS}
   ${OGRE_INCLUDE_DIRS}
-  ${Orocos-KDL_INCLUDE_DIRS}
 )
 
+# Tinyxml are used since the plugins are linking against gazebo_common
+# which uses tinxyml. Not defining the link directory here will end up 
+# failures in clang.
 link_directories(
   ${SDF_LIBRARY_DIRS}
-  ${Orocos-KDL_LIBRARY_DIRS}
+  ${tinyxml_LIBRARY_DIRS}
 )
 
 if (HAVE_BULLET)
@@ -22,10 +24,8 @@ set (plugins
   ContactPlugin
   DepthCameraPlugin
   DiffDrivePlugin
-  DRCVehiclePlugin
   ForceTorquePlugin
   GpuRayPlugin
-  Hydra
   JointTrajectoryPlugin
   LiftDragPlugin
   ModelPropShop
@@ -53,24 +53,3 @@ target_link_libraries(BreakableJointPlugin ForceTorquePlugin)
 set_target_properties(BreakableJointPlugin PROPERTIES
   INSTALL_RPATH ${GAZEBO_PLUGIN_INSTALL_DIR}
 )
-  
-add_library(AtlasPlugin SHARED AtlasPlugin.cc)
-target_link_libraries(AtlasPlugin libgazebo gazebo_sensors ${ogre_libraries} ${Orocos-KDL_LIBRARIES})
-install (TARGETS AtlasPlugin DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins/)
-gz_install_includes("plugins" AtlasPlugin.hh)
-
-add_library(SimpleIKPlugin SHARED SimpleIKPlugin.cc)
-target_link_libraries(SimpleIKPlugin libgazebo gazebo_sensors ${ogre_libraries} ${Orocos-KDL_LIBRARIES})
-install (TARGETS SimpleIKPlugin DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins/)
-gz_install_includes("plugins" SimpleIKPlugin.hh)
-
-
-add_library(RobonautPlugin SHARED RobonautPlugin.cc)
-target_link_libraries(RobonautPlugin libgazebo gazebo_sensors ${ogre_libraries} ${Orocos-KDL_LIBRARIES})
-install (TARGETS RobonautPlugin DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins/)
-gz_install_includes("plugins" RobonautPlugin.hh)
-
-add_library(SimpleArmPlugin SHARED SimpleArmPlugin.cc)
-target_link_libraries(SimpleArmPlugin libgazebo gazebo_sensors ${ogre_libraries} ${Orocos-KDL_LIBRARIES})
-install (TARGETS SimpleArmPlugin DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins/)
-gz_install_includes("plugins" SimpleArmPlugin.hh)

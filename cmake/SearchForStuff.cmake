@@ -73,22 +73,6 @@ if (PKG_CONFIG_FOUND)
     BUILD_ERROR ("Missing: SDF. Required for reading and writing SDF files.")
   endif()
 
-  pkg_check_modules(libudev libudev)
-  if (NOT libudev_FOUND)
-    BUILD_ERROR ("Missing: libudev. Required for usb peripherals.")
-    set(HAVE_LIBUDEV False)
-  else()
-    set(HAVE_LIBUDEV True)
-  endif()
-
-  pkg_check_modules(xinerama xinerama)
-  if (NOT xinerama_FOUND)
-    BUILD_WARNING ("Missing: xinerama. Required for Oculus Rift")
-    set(HAVE_XINERAMA False)
-  else()
-    set(HAVE_XINERAMA True)
-  endif()
-
   pkg_check_modules(CURL libcurl)
   if (NOT CURL_FOUND)
     BUILD_ERROR ("Missing: libcurl. Required for connection to model database.")
@@ -456,6 +440,18 @@ else ()
   message (STATUS "Looking for libgdal - found")
   set (HAVE_GDAL ON CACHE BOOL "HAVE GDAL" FORCE)
 endif ()
+
+#################################################
+# Find Oculus SDK.
+pkg_check_modules(OculusVR OculusVR)
+
+if (OculusVR_FOUND)
+  set (HAVE_OCULUS ON CACHE BOOL "HAVE OCULUS" FORCE)
+  include_directories(${OculusVR_INCLUDEDIR})
+else ()
+  BUILD_WARNING ("OculusVR not found, Oculus support will be disabled.")
+  set (HAVE_OCULUS OFF CACHE BOOL "HAVE OCULUS" FORCE)
+endif()
 
 ########################################
 # Include man pages stuff

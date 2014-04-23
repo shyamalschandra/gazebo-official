@@ -17,10 +17,10 @@
 #ifndef _SCENE_HH_
 #define _SCENE_HH_
 
-#include <vector>
+#include <list>
 #include <map>
 #include <string>
-#include <list>
+#include <vector>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered/unordered_map.hpp>
@@ -28,14 +28,13 @@
 
 #include <sdf/sdf.hh>
 
-#include "gazebo/msgs/msgs.hh"
-
-#include "gazebo/rendering/RenderTypes.hh"
-
-#include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Color.hh"
+#include "gazebo/gazebo_config.h"
 #include "gazebo/math/Vector2i.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
 
 namespace SkyX
@@ -162,10 +161,18 @@ namespace gazebo
       /// \return Pointer to the new camera.
       public: CameraPtr CreateCamera(const std::string &_name,
                                      bool _autoRender = true);
+
+#ifdef HAVE_OCULUS
       /// \brief Create an oculus rift camera
       /// \param[in] _name Name of the new camera.
       /// \return Pointer to the new camera.
       public: OculusCameraPtr CreateOculusCamera(const std::string &_name);
+
+      /// \brief Get the number of cameras in this scene
+      /// \return Number of cameras.
+      public: uint32_t GetOculusCameraCount() const;
+
+#endif
 
       /// \brief Create depth camera
       /// \param[in] _name Name of the new camera.
@@ -184,7 +191,7 @@ namespace gazebo
                                          bool _autoRender = true);
 
       /// \brief Get the number of cameras in this scene
-      /// \return Number of lasers.
+      /// \return Number of cameras.
       public: uint32_t GetCameraCount() const;
 
       /// \brief Get a camera based on an index. Index must be between
@@ -592,8 +599,10 @@ namespace gazebo
       /// \brief All the user cameras.
       private: std::vector<UserCameraPtr> userCameras;
 
+#ifdef HAVE_OCULUS
       /// \brief All the oculus cameras.
       private: std::vector<OculusCameraPtr> oculusCameras;
+#endif
 
       /// \brief The ogre scene manager.
       private: Ogre::SceneManager *manager;

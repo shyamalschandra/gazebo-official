@@ -15,6 +15,7 @@
  *
 */
 
+#include <OVR.h>
 #include <sstream>
 
 #include "gazebo/rendering/ogre_gazebo.h"
@@ -38,7 +39,6 @@
 #include "gazebo/rendering/DynamicLines.hh"
 #include "gazebo/rendering/OculusCamera.hh"
 
-#include "OVR.h"
 
 using namespace gazebo;
 using namespace rendering;
@@ -60,18 +60,14 @@ OculusCamera::OculusCamera(const std::string &_name, ScenePtr _scene)
 
   this->deviceManager = OVR::DeviceManager::Create();
   if (!this->deviceManager)
-  {
-    gzlog << "Oculus: Failed to create Device Manager\n";
-    return;
-  }
+    gzthrow("Oculus: Failed to create Device Manager\n");
+
   gzlog << "Oculus: Created Device Manager\n";
 
   this->stereoConfig = new OVR::Util::Render::StereoConfig();
   if (!this->stereoConfig)
-  {
-    gzlog << "Oculus: Failed to create StereoConfig\n";
-    return;
-  }
+    gzthrow("Oculus: Failed to create StereoConfig\n");
+
   gzlog << "Oculus: Created StereoConfig\n";
 
   this->centerOffset = this->stereoConfig->GetProjectionCenterOffset();
@@ -93,10 +89,8 @@ OculusCamera::OculusCamera(const std::string &_name, ScenePtr _scene)
   }
 
   if (!this->sensor)
-  {
-    gzlog << "Oculus: Failed to create sensor\n";
-    return;
-  }
+    gzthrow("Oculus: Failed to create sensor\n");
+
   gzlog << "Oculus: Created sensor\n";
 
   this->sensorFusion = new OVR::SensorFusion();
@@ -129,7 +123,6 @@ OculusCamera::~OculusCamera()
 void OculusCamera::Load(sdf::ElementPtr _sdf)
 {
   Camera::Load(_sdf);
-
 }
 
 //////////////////////////////////////////////////
@@ -326,9 +319,9 @@ void OculusCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
   if (this->viewport)
   {
     this->viewport->setDimensions(0, 0, 0.5, 1);
-    this->rightViewport->setDimensions(0.5,0,0.5,1);
+    this->rightViewport->setDimensions(0.5, 0, 0.5, 1);
 
-    //double ratio = static_cast<double>(this->viewport->getActualWidth()) /
+    // double ratio = static_cast<double>(this->viewport->getActualWidth()) /
     //               static_cast<double>(this->viewport->getActualHeight());
 
     /*double hfov = 85.0;
@@ -349,7 +342,7 @@ void OculusCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
 
 //////////////////////////////////////////////////
 void OculusCamera::SetViewportDimensions(float /*x_*/, float /*y_*/,
-                                       float /*w_*/, float /*h_*/)
+                                         float /*w_*/, float /*h_*/)
 {
   // this->viewport->setDimensions(x, y, w, h);
 }
@@ -371,13 +364,11 @@ unsigned int OculusCamera::GetTriangleCount() const
 //////////////////////////////////////////////////
 void OculusCamera::ToggleShowVisual()
 {
-  // this->visual->ToggleVisible();
 }
 
 //////////////////////////////////////////////////
 void OculusCamera::ShowVisual(bool /*_s*/)
 {
-  // this->visual->SetVisible(_s);
 }
 
 //////////////////////////////////////////////////
@@ -478,6 +469,8 @@ void OculusCamera::OnMoveToVisualComplete()
 void OculusCamera::SetRenderTarget(Ogre::RenderTarget *_target)
 {
   Camera::SetRenderTarget(_target);
+
+  this->viewport->setDimensions(0, 0, 0.5, 1.0);
 
   this->rightViewport =
     this->renderTarget->addViewport(this->rightCamera, 1,
@@ -588,23 +581,23 @@ void OculusCamera::Oculus()
       "Ogre/Compositor/Oculus/Right");
 
   Ogre::Camera *cam;
-  for(int i=0; i<2; ++i)
+  for (int i = 0; i < 2; ++i)
   {
     cam = i == 0 ? this->camera : this->rightCamera;
 
     int idx = i * 2 - 1;
-    if(this->stereoConfig)
+    if (this->stereoConfig)
     {
       // Setup cameras.
       cam->setNearClipDistance(this->stereoConfig->GetEyeToScreenDistance());
       cam->setFarClipDistance(g_defaultFarClip);
-      cam->setPosition(0,idx * this->stereoConfig->GetIPD() * 0.5f * -1.0, 0);
+      cam->setPosition(0, idx * this->stereoConfig->GetIPD() * 0.5f * -1.0, 0);
       cam->setAspectRatio(this->stereoConfig->GetAspect());
       cam->setFOVy(Ogre::Radian(this->stereoConfig->GetYFOVRadians()));
 
       // Oculus requires offset projection, create a custom projection matrix
       Ogre::Matrix4 proj = Ogre::Matrix4::IDENTITY;
-      proj.setTrans( Ogre::Vector3(
+      proj.setTrans(Ogre::Vector3(
             -this->stereoConfig->GetProjectionCenterOffset() * idx, 0, 0));
       cam->setCustomProjectionMatrix(true, proj * cam->getProjectionMatrix());
     }
@@ -638,7 +631,7 @@ void OculusCamera::Oculus()
 void OculusCamera::AdjustAspect(double _v)
 {
   Ogre::Camera *cam;
-  for(int i=0;i<2;++i)
+  for (int i = 0; i < 2; ++i)
   {
     cam = i == 0 ? this->camera : this->rightCamera;
     cam->setAspectRatio(cam->getAspectRatio() + _v);
