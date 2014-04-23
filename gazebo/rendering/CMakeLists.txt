@@ -5,7 +5,6 @@ include_directories(SYSTEM
   ${CEGUI_INCLUDE_DIRS}
   skyx
   skyx/include
-  ${CMAKE_SOURCE_DIR}/deps/oculus/include
 )
 
 if (${OGRE_VERSION} GREATER 1.7.4)
@@ -37,7 +36,6 @@ set (sources
   Material.cc
   MovableText.cc
   OrbitViewController.cc
-  OculusCamera.cc
   Projector.cc
   RenderEngine.cc
   RenderEvents.cc
@@ -81,7 +79,6 @@ set (headers
   Material.hh
   MovableText.hh
   OrbitViewController.hh
-  OculusCamera.hh
   Projector.hh
   RenderEngine.hh
   RenderEvents.hh
@@ -104,6 +101,15 @@ set (headers
   ogre_gazebo.h
   cegui.h
 )
+
+if (HAVE_OCULUS)
+  set (sources ${sources}
+    OculusCamera.cc
+  )
+  set (headers ${headers}
+    OculusCamera.hh
+  )
+endif ()
 
 set (gtest_sources
 )
@@ -142,12 +148,9 @@ target_link_libraries(gazebo_rendering
   ${CEGUI_LIBRARIES}
 )
 
-if (HAVE_LIBUDEV AND HAVE_XINERAMA)
-  MESSAGE ("Libudev and xinerama")
+if (HAVE_OCULUS)
   target_link_libraries(gazebo_rendering
-    Xinerama
-    gazebo_ovr
-    udev
+    OculusVR
   )
 endif()
 

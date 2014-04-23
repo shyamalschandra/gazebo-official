@@ -20,7 +20,6 @@
 
 #include "gazebo/gui/TopicSelector.hh"
 #include "gazebo/gui/DataLogger.hh"
-#include "gazebo/gui/OculusWindow.hh"
 #include "gazebo/gui/viewers/ViewFactory.hh"
 #include "gazebo/gui/viewers/TopicView.hh"
 #include "gazebo/gui/viewers/ImageView.hh"
@@ -35,6 +34,7 @@
 
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
+#include "gazebo/rendering/Scene.hh"
 
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/GuiIface.hh"
@@ -52,6 +52,10 @@
 
 #ifdef HAVE_QWT
 #include "gazebo/gui/Diagnostics.hh"
+#endif
+
+#ifdef HAVE_OCULUS
+#include "gazebo/gui/OculusWindow.hh"
 #endif
 
 
@@ -187,17 +191,24 @@ MainWindow::~MainWindow()
 void MainWindow::Load()
 {
   this->guiSub = this->node->Subscribe("~/gui", &MainWindow::OnGUI, this, true);
-
+#ifdef HAVE_OCULUS
+  int oculusAutoLaunch = getINIProperty<int>("oculus.autolaunch", 0);
   int oculusX = getINIProperty<int>("oculus.x", 0);
   int oculusY = getINIProperty<int>("oculus.y", 0);
-  std::string visual = getINIProperty<std::string>("oculus.visual", ""); 
+  std::string visual = getINIProperty<std::string>("oculus.visual", "");
 
-  if (!visual.empty())
+  if (oculusAutoLaunch == 1 && !visual.empty())
   {
     gui::OculusWindow *oculusWindow = new gui::OculusWindow(
         oculusX, oculusY, visual);
-    oculusWindow->show();
+
+    if (oculusWindow->CreateCamera())
+      oculusWindow->show();
   }
+  else
+    gzlog << "Oculus: No visual link specified in for attaching the camera. "
+         << "Did you forget to set ~/.gazebo/gui.ini?\n";
+#endif
 }
 
 /////////////////////////////////////////////////
@@ -681,7 +692,6 @@ void MainWindow::OnFullScreen(bool _value)
     this->leftColumn->show();
     this->toolsWidget->show();
     this->menuBar->show();
-    this->centralWidget()->layout()->setContentsMargins(10, 10, 10, 10);
   }
 }
 
@@ -796,9 +806,32 @@ void MainWindow::Orbit()
 /////////////////////////////////////////////////
 void MainWindow::ViewOculus()
 {
-  gui::OculusWindow *oculusWindow = new gui::OculusWindow(0, 0, "");
-  oculusWindow->show();
+#ifdef HAVE_OCULUS
+  rendering::ScenePtr scene = rendering::get_scene();
+  if (scene->GetOculusCameraCount() != 0)
+  {
+    gzlog << "Oculus camera already exists." << std::endl;
+    return;
+  }
+
+  int oculusX = getINIProperty<int>("oculus.x", 0);
+  int oculusY = getINIProperty<int>("oculus.y", 0);
+  std::string visual = getINIProperty<std::string>("oculus.visual", "");
+
+  if (!visual.empty())
+  {
+    gui::OculusWindow *oculusWindow = new gui::OculusWindow(
+        oculusX, oculusY, visual);
+
+    if (oculusWindow->CreateCamera())
+      oculusWindow->show();
+  }
+  else
+    gzlog << "Oculus: No visual link specified in for attaching the camera. "
+         << "Did you forget to set ~/.gazebo/gui.ini?\n";
+#endif
 }
+
 
 /////////////////////////////////////////////////
 void MainWindow::DataLogger()
@@ -1073,9 +1106,11 @@ void MainWindow::CreateActions()
   g_orbitAct->setStatusTip(tr("Orbit View Style"));
   connect(g_orbitAct, SIGNAL(triggered()), this, SLOT(Orbit()));
 
+#ifdef HAVE_OCULUS
   g_viewOculusAct = new QAction(tr("Oculus Rift"), this);
   g_viewOculusAct->setStatusTip(tr("Oculus Rift Render Window"));
   connect(g_viewOculusAct, SIGNAL(triggered()), this, SLOT(ViewOculus()));
+#endif
 
   g_dataLoggerAct = new QAction(tr("&Log Data"), this);
   g_dataLoggerAct->setShortcut(tr("Ctrl+D"));
@@ -1174,7 +1209,10 @@ void MainWindow::CreateMenuBar()
   windowMenu->addAction(g_topicVisAct);
   windowMenu->addSeparator();
   windowMenu->addAction(g_dataLoggerAct);
+
+#ifdef HAVE_OCULUS
   windowMenu->addAction(g_viewOculusAct);
+#endif
 
 #ifdef HAVE_QWT
   // windowMenu->addAction(g_diagnosticsAct);
@@ -1472,9 +1510,11 @@ void MainWindow::CreateDisabledIcon(const std::string &_pixmap, QAction *_act)
 {
   QIcon icon = _act->icon();
   QPixmap pixmap(_pixmap.c_str());
-  QPainter p(&pixmap);
-  p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-  p.fillRect(pixmap.rect(), QColor(0, 0, 0, 100));
-  icon.addPixmap(pixmap, QIcon::Disabled);
+  QPixmap disabledPixmap(pixmap.size());
+  disabledPixmap.fill(Qt::transparent);
+  QPainter p(&disabledPixmap);
+  p.setOpacity(0.4);
+  p.drawPixmap(0, 0, pixmap);
+  icon.addPixmap(disabledPixmap, QIcon::Disabled);
   _act->setIcon(icon);
 }

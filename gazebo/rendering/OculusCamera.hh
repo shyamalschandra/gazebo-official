@@ -61,7 +61,7 @@ namespace gazebo
 
     /// \class OculusCamera OculusCamera.hh rendering/rendering.hh
     /// \brief A camera used for user visualization of a scene
-    class OculusCamera : public Camera
+    class GAZEBO_VISIBLE OculusCamera : public Camera
     {
       /// \brief Constructor
       /// \param[in] _name Name of the camera.
@@ -166,6 +166,8 @@ namespace gazebo
       /// disable.
       public: void EnableViewController(bool _value) const;
 
+      /// \brief Change screen aspect ratio.
+      /// \param[in] _v Aspect ratio.
       public: void AdjustAspect(double _v);
 
       /// \brief Get an entity at a pixel location using a camera. Used for
@@ -231,22 +233,20 @@ namespace gazebo
       /// a visual.
       private: void OnMoveToVisualComplete();
 
-      /// \brief Used to select objects from mouse clicks.
-      private: SelectionBuffer *selectionBuffer;
+      private: void Oculus();
 
       protected: Ogre::Camera *rightCamera;
       protected: Ogre::Viewport *rightViewport;
 
-      private: void Oculus();
+      /// \brief Used to select objects from mouse clicks.
+      private: SelectionBuffer *selectionBuffer;
       private: Ogre::CompositorInstance *compositors[2];
-
       private: OVR::DeviceManager *deviceManager;
       private: OVR::HMDDevice *hmd;
       private: OVR::Util::Render::StereoConfig *stereoConfig;
       private: OVR::SensorDevice *sensor;
       private: OVR::SensorFusion *sensorFusion;
       private: float centerOffset;
-
       private: transport::NodePtr node;
       private: transport::SubscriberPtr controlSub;
     };

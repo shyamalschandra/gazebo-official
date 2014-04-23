@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2014 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
 #include "gazebo/gui/OculusWindow.hh"
 #include "gazebo/rendering/OculusCamera.hh"
@@ -50,6 +66,7 @@ OculusWindow::~OculusWindow()
 {
   this->attachCameraThread->join();
   delete this->attachCameraThread;
+  this->oculusCamera.reset();
 }
 
 /////////////////////////////////////////////////
@@ -89,38 +106,58 @@ void OculusWindow::AttachCameraToVisual()
     gzerr << "Scene is NULL!" << std::endl;
     return;
   }
-  while (!this->scene->GetVisual(this->visualName))
+  int tries = 0;
+  while (!this->scene->GetVisual(this->visualName) && tries < 50)
   {
     common::Time::MSleep(100);
+    tries++;
   }
- 
-  this->oculusCamera->AttachToVisual(this->visualName, true); 
-  
-  math::Vector3 camPos(0.1, 0, 0);  
+
+  if (tries >= 50)
+  {
+    gzerr << "Oculus: visual link not found and Oculus is not attached."
+          << std::endl;
+    return;
+  }
+
+  this->oculusCamera->AttachToVisual(this->visualName, true);
+
+  math::Vector3 camPos(0.1, 0, 0);
   math::Vector3 lookAt(0, 0, 0);
   math::Vector3 delta = lookAt - camPos;
 
   double yaw = atan2(delta.y, delta.x);
 
   double pitch = atan2(-delta.z, sqrt(delta.x*delta.x + delta.y*delta.y));
-  
+
   this->oculusCamera->SetWorldPose(math::Pose(
-        camPos, math::Vector3(0, pitch, yaw)));  
+        camPos, math::Vector3(0, pitch, yaw)));
+}
+
+/////////////////////////////////////////////////
+bool OculusWindow::CreateCamera()
+{
+  try
+  {
+    this->scene = rendering::get_scene();
+
+    // CreateCoulusCamera will throw an exception if Oculus is not connected.
+    this->oculusCamera = this->scene->CreateOculusCamera("gzoculus_camera");
+  }
+  catch(const common::Exception &_e)
+  {
+    gzlog << _e.GetErrorStr() << std::endl;
+    return false;
+  }
+  return true;
 }
 
 /////////////////////////////////////////////////
 void OculusWindow::showEvent(QShowEvent *_event)
 {
-  this->scene = rendering::get_scene();
-  
-  if (!this->oculusCamera)
-  {
-    this->oculusCamera = this->scene->CreateOculusCamera("gzoculus_camera");
-  
+  if (this->oculusCamera)
     this->attachCameraThread = new boost::thread(
         boost::bind(&OculusWindow::AttachCameraToVisual, this));
-  }
-  //this->oculusCamera->AttachToVisual(this->visualName, true);
 
   if (this->windowId == -1)
   {
@@ -128,12 +165,10 @@ void OculusWindow::showEvent(QShowEvent *_event)
       CreateWindow(this->GetOgreHandle(), this->width(), this->height());
     if (this->oculusCamera)
       rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-          this->windowId, this->oculusCamera);      
+          this->windowId, this->oculusCamera);
   }
 
   QWidget::showEvent(_event);
-
-
 
   this->setFocus();
 

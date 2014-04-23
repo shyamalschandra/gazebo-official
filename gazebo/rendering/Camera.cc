@@ -1279,10 +1279,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
   if (this->renderTarget)
   {
     // Setup the viewport to use the texture
-    // Oculus
-    //this->viewport = this->renderTarget->addViewport(this->camera);
-    this->viewport = this->renderTarget->addViewport(this->camera,
-        0, 0, 0, 0.5, 1.0);
+    this->viewport = this->renderTarget->addViewport(this->camera);
     this->viewport->setClearEveryFrame(true);
     this->viewport->setShadowsEnabled(true);
     this->viewport->setOverlaysEnabled(false);
@@ -1503,6 +1500,7 @@ bool Camera::IsVisible(VisualPtr _visual)
     box.setMinimum(bbox.min.x, bbox.min.y, bbox.min.z);
     box.setMaximum(bbox.max.x, bbox.max.y, bbox.max.z);
 
+    box.transformAffine(_visual->GetSceneNode()->_getFullTransform());
     return this->camera->isVisible(box);
   }
 
