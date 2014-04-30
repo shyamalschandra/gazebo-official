@@ -62,8 +62,7 @@ GZ_REGISTER_PHYSICS_ENGINE("dart", DARTPhysics)
 DARTPhysics::DARTPhysics(WorldPtr _world)
     : PhysicsEngine(_world)
 {
-  this->dtWorld =
-    static_cast<dart::simulation::World*>(new dart::simulation::SoftWorld);
+  this->dtWorld = new dart::simulation::World;
 //  this->dtWorld->getConstraintHandler()->setCollisionDetector(
 //        new dart::collision::DARTCollisionDetector());
 //  this->dtWorld->getConstraintHandler()->setAllowablePenetration(1e-6);
@@ -153,10 +152,8 @@ void DARTPhysics::UpdateCollision()
   {
     const dart::collision::Contact &dtContact =
         dtCollisionDetector->getContact(i);
-    dart::dynamics::BodyNode *dtBodyNode1 =
-        dtContact.collisionNode1->getBodyNode();
-    dart::dynamics::BodyNode *dtBodyNode2 =
-        dtContact.collisionNode2->getBodyNode();
+    dart::dynamics::BodyNode *dtBodyNode1 = dtContact.bodyNode1;
+    dart::dynamics::BodyNode *dtBodyNode2 = dtContact.bodyNode2;
 
     DARTLinkPtr dartLink1 = this->FindDARTLink(dtBodyNode1);
     DARTLinkPtr dartLink2 = this->FindDARTLink(dtBodyNode2);

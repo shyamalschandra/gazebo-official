@@ -42,9 +42,8 @@ DARTModel::~DARTModel()
 //////////////////////////////////////////////////
 void DARTModel::Load(sdf::ElementPtr _sdf)
 {
-  // create skeletonDynamics of DART
-  this->dtSkeleton = dynamic_cast<dart::dynamics::Skeleton*>(
-    new dart::dynamics::SoftSkeleton());
+  // create skeleton of DART
+  this->dtSkeleton = new dart::dynamics::Skeleton();
 
   Model::Load(_sdf);
 }
@@ -120,9 +119,7 @@ void DARTModel::Init()
   {
     this->dtSkeleton->enableSelfCollision();
 
-    dart::simulation::SoftWorld *dtWorld =
-      dynamic_cast<dart::simulation::SoftWorld*>(
-      this->GetDARTPhysics()->GetDARTWorld());
+    dart::simulation::World *dtWorld = this->GetDARTPhysics()->GetDARTWorld();
     dart::collision::CollisionDetector *dtCollDet =
         dtWorld->getConstraintSolver()->getCollisionDetector();
 
@@ -180,9 +177,11 @@ void DARTModel::BackupState()
 //////////////////////////////////////////////////
 void DARTModel::RestoreState()
 {
-  GZ_ASSERT(dtConfig.size() == this->dtSkeleton->getNumGenCoords(),
+  GZ_ASSERT(static_cast<size_t>(dtConfig.size()) ==
+            this->dtSkeleton->getNumGenCoords(),
             "Cannot RestoreState, invalid size");
-  GZ_ASSERT(dtVelocity.size() == this->dtSkeleton->getNumGenCoords(),
+  GZ_ASSERT(static_cast<size_t>(dtVelocity.size()) ==
+            this->dtSkeleton->getNumGenCoords(),
             "Cannot RestoreState, invalid size");
 
   this->dtSkeleton->setConfigs(dtConfig, true, false, false);
