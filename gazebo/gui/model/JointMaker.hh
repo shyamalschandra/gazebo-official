@@ -25,11 +25,22 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/common/MouseEvent.hh"
+#include "gazebo/common/KeyEvent.hh"
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/gui/qt.h"
 #include "gazebo/util/system.hh"
+
+namespace Ogre
+{
+  class BillboardSet;
+}
+
+namespace boost
+{
+  class recursive_mutex;
+}
 
 namespace gazebo
 {
@@ -78,9 +89,19 @@ namespace gazebo
       /// \brief Reset the joint maker;
       public: void Reset();
 
-      /// \brief Create a joint
-      /// \param[_type] Type of joint to be created
-      public: void CreateJoint(JointType _type);
+      /// \brief Add a joint
+      /// \param[in] _type Type of joint to be added in string.
+      public: void AddJoint(const std::string &_type);
+
+      /// \brief Add a joint
+      /// \param[in] _type Type of joint to be added
+      public: void AddJoint(JointType _type);
+
+      /// \brief Create a joint with parent and child.
+      /// \param[in] _parent Parent of the joint.
+      /// \param[in] _child Child of the joint.
+      public: JointData *CreateJoint(rendering::VisualPtr _parent,
+          rendering::VisualPtr _child);
 
       /// \brief Update callback on PreRender.
       public: void Update();
@@ -136,8 +157,19 @@ namespace gazebo
       /// \return True if the event was handled
       private: bool OnMouseDoubleClick(const common::MouseEvent &_event);
 
+      /// \brief Key event filter callback when key is pressed.
+      /// \param[in] _event The key event.
+      /// \return True if the event was handled
+      private: bool OnKeyPress(const common::KeyEvent &_event);
+
       /// \brief Helper method to create hotspot visual for mouse interaction.
       private: void CreateHotSpot();
+
+      /// \brief Get the centroid of the part visual in world coordinates.
+      /// \param[in] _visual Visual of the part.
+      /// \return Centroid in world coordinates;
+      private: math::Vector3 GetPartWorldCentroid(
+          const rendering::VisualPtr _visual);
 
       /// \brief Open joint inspector.
       /// \param[in] _name Name of joint.
@@ -161,7 +193,7 @@ namespace gazebo
       /// \brief Currently selected visual
       private: rendering::VisualPtr selectedVis;
 
-      /// \brief Visual that is currently being inspected.
+      /// \brief Joint visual that is currently being inspected.
       private: rendering::VisualPtr inspectVis;
 
       /// \brief All joints created by joint maker.
@@ -188,6 +220,12 @@ namespace gazebo
 
       /// \brief Qt action for opening the joint inspector.
       private: QAction *inspectAct;
+
+      /// \brief Mutex to protect the list of joints
+      private: boost::recursive_mutex *updateMutex;
+
+      /// \brief Selected joint.
+      private: rendering::VisualPtr selectedJoint;
     };
     /// \}
 
@@ -212,6 +250,10 @@ namespace gazebo
 
       /// \brief Visual line used to represent joint connecting parent and child
       public: rendering::DynamicLines *line;
+
+      /// \brief Visual handle used to represent joint parent / child
+      public: rendering::DynamicLines *handle;
+      public: Ogre::BillboardSet *handles;
 
       /// \brief Type of joint.
       public: JointMaker::JointType type;
