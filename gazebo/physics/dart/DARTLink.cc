@@ -103,6 +103,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
 
   if (dartElem != NULL)
   {
+    // Debug code
     std::cout << "dartElem: " << dartElem << std::endl;
     std::cout << "SoftBodyNode!" << std::endl;
 
@@ -113,6 +114,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
     // Mass
     double fleshMassFraction = dartElem->Get<double>("flesh_mass_fraction");
 
+    // Debug code
     std::cout << "fleshMassFraction: " << fleshMassFraction << std::endl;
 
     // bone_attachment (Kv)
@@ -121,6 +123,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
       double kv = dartElem->Get<double>("bone_attachment");
       dtSoftBodyNode->setVertexSpringStiffness(kv);
 
+      // Debug code
       std::cout << "bone_attachment: " << kv << std::endl;
     }
 
@@ -130,6 +133,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
       double ke = dartElem->Get<double>("stiffness");
       dtSoftBodyNode->setEdgeSpringStiffness(ke);
 
+      // Debug code
       std::cout << "stiffness: " << ke << std::endl;
     }
 
@@ -139,6 +143,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
       double damping = dartElem->Get<double>("damping");
       dtSoftBodyNode->setDampingCoefficient(damping);
 
+      // Debug code
       std::cout << "damping: " << damping << std::endl;
     }
 
@@ -147,15 +152,18 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
     std::cout << "pose" << T.matrix() << std::endl;
     if (softCollElem->HasElement("pose"))
     {
+      // Debug code
       std::cout << "In pose!" << std::endl;
       T = DARTTypes::ConvPose(softCollElem->Get<math::Pose>("pose"));
 
+      // Debug code
       std::cout << "pose" << T.matrix() << std::endl;
     }
 
     // geometry
     if (softGeomElem->HasElement("box"))
     {
+      // Debug code
       std::cout << "box" << std::endl;
 
       sdf::ElementPtr boxEle = softGeomElem->GetElement("box");
@@ -166,6 +174,7 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
       dtSoftBodyNode->addCollisionShape(
             new dart::dynamics::SoftMeshShape(dtSoftBodyNode));
 
+      // Debug code
       std::cout << "box finished" << std::endl;
     }
 //    else if (geomElem->HasElement("ellipsoid"))
@@ -459,9 +468,7 @@ void DARTLink::SetSelfCollide(bool _collide)
   if (dtBodyNode->getSkeleton() == NULL)
     return;
 
-  dart::simulation::SoftWorld *dtWorld =
-    dynamic_cast<dart::simulation::SoftWorld*>(
-    this->dartPhysics->GetDARTWorld());
+  dart::simulation::World *dtWorld = this->dartPhysics->GetDARTWorld();
   dart::dynamics::Skeleton *dtSkeleton = this->dtBodyNode->getSkeleton();
   dart::collision::CollisionDetector *dtCollDet =
       dtWorld->getConstraintSolver()->getCollisionDetector();
@@ -602,12 +609,9 @@ void DARTLink::SetLinkStatic(bool _static)
 
   if (_static == true)
   {
-    // DART still does not support weld joint contraint. We here do workaround
-    // that creating quasi-weld joint constraint by combining ball and revolute
-    // joint contratint.
-
     // Add weld joint constraint to DART
-    weldJointConst = new dart::constraint::WeldJointConstraint(this->dtBodyNode);
+    this->weldJointConst =
+        new dart::constraint::WeldJointConstraint(this->dtBodyNode);
     GetDARTWorld()->getConstraintSolver()->addConstraint(weldJointConst);
   }
   else
