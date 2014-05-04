@@ -15,6 +15,7 @@
  *
 */
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
 
@@ -32,9 +33,10 @@ using namespace physics;
 //////////////////////////////////////////////////
 DARTLink::DARTLink(EntityPtr _parent)
   : Link(_parent),
-    dtBodyNode(new dart::dynamics::BodyNode)
+    dtBodyNode(NULL),
+    staticLink(false),
+    weldJointConst(NULL)
 {
-  staticLink = false;
 }
 
 //////////////////////////////////////////////////
@@ -52,6 +54,153 @@ void DARTLink::Load(sdf::ElementPtr _sdf)
 
   if (this->dartPhysics == NULL)
     gzthrow("Not using the dart physics engine");
+
+  // Check if soft_contact element is contained in this link. If so,
+  // SoftBodyNode will be created. Otherwise, BodyNode will be created.
+  sdf::ElementPtr dartElem;
+  sdf::ElementPtr softCollElem;
+  sdf::ElementPtr softGeomElem;
+
+  if (_sdf->HasElement("collision"))
+  {
+    sdf::ElementPtr collElem = _sdf->GetElement("collision");
+    while (collElem)
+    {
+      // Geometry
+      sdf::ElementPtr geomElem = collElem->GetElement("geometry");
+
+      // Surface
+      if (collElem->HasElement("surface"))
+      {
+        sdf::ElementPtr surfaceElem = collElem->GetElement("surface");
+
+        // Soft contact
+        if (surfaceElem->HasElement("soft_contact"))
+        {
+          sdf::ElementPtr softContactElem
+              = surfaceElem->GetElement("soft_contact");
+
+          if (softContactElem->HasElement("dart"))
+          {
+            if (dartElem != NULL)
+            {
+              gzerr << "DART supports only one deformable body in a link.\n";
+              break;
+            }
+
+            dartElem = softContactElem->GetElement("dart");
+            softCollElem = collElem;
+            softGeomElem = geomElem;
+
+            gzmsg << "This link is soft link.\n";
+          }
+        }
+      }
+
+      collElem = collElem->GetNextElement("collision");
+    }
+  }
+
+  if (dartElem != NULL)
+  {
+    // Debug code
+    std::cout << "dartElem: " << dartElem << std::endl;
+    std::cout << "SoftBodyNode!" << std::endl;
+
+    // Create DART SoftBodyNode
+    dart::dynamics::SoftBodyNode* dtSoftBodyNode
+        = new dart::dynamics::SoftBodyNode();
+
+    // Mass
+    double fleshMassFraction = dartElem->Get<double>("flesh_mass_fraction");
+
+    // Debug code
+    std::cout << "fleshMassFraction: " << fleshMassFraction << std::endl;
+
+    // bone_attachment (Kv)
+    if (dartElem->HasElement("bone_attachment"))
+    {
+      double kv = dartElem->Get<double>("bone_attachment");
+      dtSoftBodyNode->setVertexSpringStiffness(kv);
+
+      // Debug code
+      std::cout << "bone_attachment: " << kv << std::endl;
+    }
+
+    // stiffness (Ke)
+    if (dartElem->HasElement("stiffness"))
+    {
+      double ke = dartElem->Get<double>("stiffness");
+      dtSoftBodyNode->setEdgeSpringStiffness(ke);
+
+      // Debug code
+      std::cout << "stiffness: " << ke << std::endl;
+    }
+
+    // damping
+    if (dartElem->HasElement("damping"))
+    {
+      double damping = dartElem->Get<double>("damping");
+      dtSoftBodyNode->setDampingCoefficient(damping);
+
+      // Debug code
+      std::cout << "damping: " << damping << std::endl;
+    }
+
+    // pose
+    Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
+    std::cout << "pose" << T.matrix() << std::endl;
+    if (softCollElem->HasElement("pose"))
+    {
+      // Debug code
+      std::cout << "In pose!" << std::endl;
+      T = DARTTypes::ConvPose(softCollElem->Get<math::Pose>("pose"));
+
+      // Debug code
+      std::cout << "pose" << T.matrix() << std::endl;
+    }
+
+    // geometry
+    if (softGeomElem->HasElement("box"))
+    {
+      // Debug code
+      std::cout << "box" << std::endl;
+
+      sdf::ElementPtr boxEle = softGeomElem->GetElement("box");
+      Eigen::Vector3d size
+          = DARTTypes::ConvVec3(boxEle->Get<math::Vector3>("size"));
+      dart::dynamics::SoftBodyNodeHelper::setBox(
+            dtSoftBodyNode, size, T, fleshMassFraction);
+      dtSoftBodyNode->addCollisionShape(
+            new dart::dynamics::SoftMeshShape(dtSoftBodyNode));
+
+      // Debug code
+      std::cout << "box finished" << std::endl;
+    }
+//    else if (geomElem->HasElement("ellipsoid"))
+//    {
+//      sdf::ElementPtr ellipsoidEle = geomElem->GetElement("ellipsoid");
+//      Eigen::Vector3d size
+//          = DARTTypes::ConvVec3(ellipsoidEle->Get<math::Vector3>("size"));
+//      double nSlices = ellipsoidEle->Get<double>("num_slices");
+//      double nStacks = ellipsoidEle->Get<double>("num_stacks");
+//      dart::dynamics::SoftBodyNodeHelper::setEllipsoid(
+//            dtSoftBodyNode, size, nSlices, nStacks, fleshMassFraction);
+//      dtSoftBodyNode->addCollisionShape(
+//            new dart::dynamics::SoftMeshShape(dtSoftBodyNode));
+//    }
+    else
+    {
+      gzerr << "Unknown soft shape" << std::endl;
+    }
+
+    dtBodyNode = dtSoftBodyNode;
+  }
+  else
+  {
+    // Create DART BodyNode
+    dtBodyNode = new dart::dynamics::BodyNode();
+  }
 
   Link::Load(_sdf);
 }
@@ -112,11 +261,11 @@ void DARTLink::OnPoseChange()
   if (joint == NULL)
     return;
 
-  if (joint->getJointType() == dart::dynamics::Joint::FREE)
+  dart::dynamics::FreeJoint* freeJoint =
+      dynamic_cast<dart::dynamics::FreeJoint*>(joint);
+  if (freeJoint)
   {
-    dart::dynamics::FreeJoint* freeJoint =
-        dynamic_cast<dart::dynamics::FreeJoint*>(joint);
-
+    // If the parent joint is free joint, set the 6 dof to fit the target pose.
     const Eigen::Isometry3d &W = DARTTypes::ConvPose(this->GetWorldPose());
     const Eigen::Isometry3d &T1 = joint->getTransformFromParentBodyNode();
     const Eigen::Isometry3d &InvT2 = joint->getTransformFromChildBodyNode();
@@ -126,15 +275,20 @@ void DARTLink::OnPoseChange()
       P = this->dtBodyNode->getParentBodyNode()->getWorldTransform();
 
     Eigen::Isometry3d Q = T1.inverse() * P.inverse() * W * InvT2;
-    Eigen::Vector6d t = Eigen::Vector6d::Zero();
-    t.tail<3>() = Q.translation();
-    t.head<3>() = dart::math::logMap(Q.linear());
-    freeJoint->set_q(t);
+    // Set generalized coordinate and update the transformations only
+    freeJoint->setConfigs(dart::math::logMap(Q), true, false, false);
+  }
+  else if (joint->getNumGenCoords() > 0)
+  {
+    // If the parent joint is not free joint (nor weld joint), set the n dof
+    // as minimal value that makes the link's pose close to the target pose.
+    const Eigen::Isometry3d &W = DARTTypes::ConvPose(this->GetWorldPose());
+    this->dtBodyNode->fitWorldTransform(W);
   }
   else
   {
-    gzdbg << "DARTLink::OnPoseChange() doesn't make sense unless the link has "
-          << "free joint.\n";
+    gzdbg << "DARTLink::OnPoseChange() doesn't make sense if the dof of the "
+          << "parent joint is 0.\n";
   }
 }
 
@@ -152,15 +306,15 @@ bool DARTLink::GetEnabled() const
 }
 
 //////////////////////////////////////////////////
-void DARTLink::SetLinearVel(const math::Vector3 &/*_vel*/)
+void DARTLink::SetLinearVel(const math::Vector3 &_vel)
 {
-  gzdbg << "DARTLink::SetLinearVel() doesn't make sense in dart.\n";
+  dtBodyNode->fitWorldLinearVel(DARTTypes::ConvVec3(_vel));
 }
 
 //////////////////////////////////////////////////
-void DARTLink::SetAngularVel(const math::Vector3 &/*_vel*/)
+void DARTLink::SetAngularVel(const math::Vector3 &_vel)
 {
-  gzdbg << "DARTLink::SetAngularVel() doesn't make sense in dart.\n";
+  dtBodyNode->fitWorldAngularVel(DARTTypes::ConvVec3(_vel));
 }
 
 //////////////////////////////////////////////////
@@ -250,9 +404,9 @@ math::Vector3 DARTLink::GetWorldLinearVel(
 //////////////////////////////////////////////////
 math::Vector3 DARTLink::GetWorldCoGLinearVel() const
 {
-  Eigen::Vector3d worldCOM = this->dtBodyNode->getWorldCOM();
+  Eigen::Vector3d localCOM = this->dtBodyNode->getLocalCOM();
   Eigen::Vector3d linVel
-    = this->dtBodyNode->getWorldVelocity(worldCOM).tail<3>();
+    = this->dtBodyNode->getWorldVelocity(localCOM, true).tail<3>();
 
   return DARTTypes::ConvVec3(linVel);
 }
@@ -317,12 +471,12 @@ void DARTLink::SetSelfCollide(bool _collide)
   dart::simulation::World *dtWorld = this->dartPhysics->GetDARTWorld();
   dart::dynamics::Skeleton *dtSkeleton = this->dtBodyNode->getSkeleton();
   dart::collision::CollisionDetector *dtCollDet =
-      dtWorld->getConstraintHandler()->getCollisionDetector();
+      dtWorld->getConstraintSolver()->getCollisionDetector();
 
   Link_V links = this->GetModel()->GetLinks();
 
   bool isSkeletonSelfCollidable =
-      this->dtBodyNode->getSkeleton()->isSelfCollidable();
+      this->dtBodyNode->getSkeleton()->isEnabledSelfCollisionCheck();
 
   if (_collide)
   {
@@ -355,7 +509,7 @@ void DARTLink::SetSelfCollide(bool _collide)
     // the pairs of which both of the links in the pair is not self collidable.
     else
     {
-      dtSkeleton->setSelfCollidable(true);
+      dtSkeleton->enableSelfCollision();
 
       for (size_t i = 0; i < links.size() - 1; ++i)
       {
@@ -408,7 +562,7 @@ void DARTLink::SetSelfCollide(bool _collide)
       }
     }
     if (isAllLinksNotCollidable)
-      dtSkeleton->setSelfCollidable(false);
+      dtSkeleton->disableSelfCollision();
   }
 }
 
@@ -448,24 +602,25 @@ void DARTLink::SetAutoDisable(bool /*_disable*/)
 }
 
 //////////////////////////////////////////////////
-void DARTLink::SetLinkStatic(bool /*_static*/)
+void DARTLink::SetLinkStatic(bool _static)
 {
-//  if (_static == staticLink)
-//    return;
+  if (_static == staticLink)
+    return;
 
-//  if (_static)
-//  {
-//    // Store the original joint
-//    this->dtDynamicJoint = this->dtBodyNode->getParentJoint();
+  if (_static == true)
+  {
+    // Add weld joint constraint to DART
+    this->weldJointConst =
+        new dart::constraint::WeldJointConstraint(this->dtBodyNode);
+    GetDARTWorld()->getConstraintSolver()->addConstraint(weldJointConst);
+  }
+  else
+  {
+    // Remove ball and revolute joint constraints from DART
+    GetDARTWorld()->getConstraintSolver()->removeConstraint(weldJointConst);
+  }
 
-//    this->dtBodyNode->setParentJoint(this->dtStaticJoint);
-//  }
-//  else
-//  {
-
-//  }
-
-  gzwarn << "DART does not support DARTLink::SetLinkStatic() yet.\n";
+  staticLink = _static;
 }
 
 //////////////////////////////////////////////////
