@@ -20,6 +20,7 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/math/Vector3.hh"
 
+#include "gazebo/transport/Node.hh"
 #include "gazebo/transport/Publisher.hh"
 
 #include "gazebo/physics/Collision.hh"
@@ -31,6 +32,8 @@
 #include "gazebo/physics/PhysicsFactory.hh"
 #include "gazebo/physics/SurfaceParams.hh"
 #include "gazebo/physics/World.hh"
+
+#include "gazebo/physics/dart/dart_inc.h"
 
 #include "gazebo/physics/dart/DARTScrewJoint.hh"
 #include "gazebo/physics/dart/DARTHingeJoint.hh"
@@ -72,6 +75,10 @@ DARTPhysics::DARTPhysics(WorldPtr _world)
 //        DART_TO_RADIAN*1e-1);
 //  this->dtWorld->getConstraintHandler()->setMaxReducingJointViolationVelocity(
 //        DART_TO_RADIAN*1e-0);
+
+  this->meshPub =
+    this->node->Advertise<msgs::Mesh>("~/mesh");
+
 }
 
 //////////////////////////////////////////////////
@@ -219,6 +226,61 @@ void DARTPhysics::UpdateCollision()
     }
 
     ++contactFeedback->count;
+
+    // publish soft body mesh data
+    for (int j = 0; j < dtBodyNode1->getNumCollisionShapes(); ++j)
+    {
+      dart::dynamics::Shape *shape1 = dtBodyNode1->getCollisionShape(j);
+      if (shape1->getShapeType() == dart::dynamics::Shape::SOFT_MESH)
+      {
+        dart::dynamics::SoftMeshShape* softMeshShape =
+            static_cast<dart::dynamics::SoftMeshShape*>(shape1);
+        msgs::Mesh meshMsg;
+        this->FillMeshMsg(meshMsg, softMeshShape);
+        this->meshPub->Publish(meshMsg);
+      }
+    }
+    for (int j = 0; j < dtBodyNode2->getNumCollisionShapes(); ++j)
+    {
+      dart::dynamics::Shape *shape2 = dtBodyNode2->getCollisionShape(j);
+      if (shape2->getShapeType() == dart::dynamics::Shape::SOFT_MESH)
+      {
+        dart::dynamics::SoftMeshShape* softMeshShape =
+            static_cast<dart::dynamics::SoftMeshShape*>(shape2);
+        msgs::Mesh meshMsg;
+        this->FillMeshMsg(meshMsg, softMeshShape);
+        this->meshPub->Publish(meshMsg);
+      }
+    }
+
+  }
+}
+
+//////////////////////////////////////////////////
+void DARTPhysics::FillMeshMsg(msgs::Mesh &_meshMsg,
+    dart::dynamics::SoftMeshShape *_meshShape)
+{
+  msgs::SubMesh *submeshMsg = _meshMsg.add_submeshes();
+  //fcl::Transform3f shapeT = getFclTransform(_meshShape->getLocalTransform());
+  const aiMesh* mesh = _meshShape->getAssimpMesh();
+
+  for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
+  {
+    //fcl::Vec3f vertices[3];
+    for (unsigned int k = 0; k < 3; k++)
+    {
+      const aiVector3D& vertex
+          = mesh->mVertices[mesh->mFaces[i].mIndices[k]];
+
+      msgs::Vector3d *vMsg = submeshMsg->add_vertices();
+      vMsg->set_x(vertex.x);
+      vMsg->set_y(vertex.y);
+      vMsg->set_z(vertex.z);
+//      msgs::Convert(math::Vector3(vertex.x, vertex.y, vertex.z)
+      //vertices[k] = fcl::Vec3f(vertex.x, vertex.y, vertex.z);
+      //vertices[k] = shapeT.transform(vertices[k]);
+    }
+   // mMeshes[i]->updateTriangle(vertices[0], vertices[1], vertices[2]);
   }
 }
 
@@ -566,4 +628,3 @@ DARTLinkPtr DARTPhysics::FindDARTLink(
 
   return res;
 }
-
