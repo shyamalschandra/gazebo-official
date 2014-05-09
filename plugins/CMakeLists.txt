@@ -30,6 +30,7 @@ set (plugins
   LiftDragPlugin
   ModelPropShop
   MudPlugin
+  PlaneDemoPlugin
   PressurePlugin
   RayPlugin
   RaySensorNoisePlugin
