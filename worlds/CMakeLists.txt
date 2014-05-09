@@ -23,6 +23,7 @@ set (files
   openal.world
   pioneer2dx.world
   plane_demo.world
+  plane_propeller_demo.world
   plugin.world
   pr2.world
   presentation.world

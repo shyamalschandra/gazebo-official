@@ -33,6 +33,9 @@ namespace gazebo
     /// \brief Constructor.
     public: LiftDragPlugin();
 
+    /// \brief Destructor.
+    public: ~LiftDragPlugin();
+
     // Documentation Inherited.
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
 
