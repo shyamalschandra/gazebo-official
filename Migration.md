@@ -1,3 +1,23 @@
+## Gazebo 3.x to 4.0
+
+### Additions
+
+1. **gazebo/msgs/msgs.hh**
+    + sdf::ElementPtr LightToSDF(const msgs::Light &_msg, sdf::ElementPtr _sdf = sdf::ElementPtr())
+
+1. **gazebo/rendering/Light.hh**
+    + math::Quaternion GetRotation() const
+    + void SetRotation(const math::Quaternion &_q)
+
+1. **gazebo/gui/GuiEvents.hh**
+    + template<typename T> static event::ConnectionPtr ConnectLightUpdate(T _subscriber)
+    + static void DisconnectLightUpdate(event::ConnectionPtr _subscriber)
+
+### Modifications
+1. **gazebo/physics/Model.hh**
+    + ***Removed:*** Link_V GetLinks() const `ABI Change`
+    + ***Replacement:***  const Link_V &GetLinks() const
+
 ## Gazebo 3.0 to 3.1
 
 ### Additions
