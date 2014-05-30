@@ -14,6 +14,9 @@
  * limitations under the License.
  *
 */
+/* Desc: The world; all models are collected here
+ * Author: Andrew Howard and Nate Koenig
+ */
 
 #include <time.h>
 
@@ -133,6 +136,7 @@ World::World(const std::string &_name)
   this->connections.push_back(
      event::Events::ConnectPause(
        boost::bind(&World::SetPaused, this, _1)));
+  this->physicsPlugin = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -158,7 +162,7 @@ World::~World()
 }
 
 //////////////////////////////////////////////////
-void World::Load(sdf::ElementPtr _sdf)
+void World::Load(sdf::ElementPtr _sdf, const std::string &_physicsPlugin)
 {
   this->loaded = false;
   this->sdf = _sdf;
@@ -205,8 +209,6 @@ void World::Load(sdf::ElementPtr _sdf)
   this->requestSub = this->node->Subscribe("~/request",
                                            &World::OnRequest, this, true);
   this->jointSub = this->node->Subscribe("~/joint", &World::JointLog, this);
-  this->lightSub = this->node->Subscribe("~/light", &World::OnLightMsg, this);
-
   this->modelSub = this->node->Subscribe<msgs::Model>("~/model/modify",
       &World::OnModelMsg, this);
 
@@ -220,6 +222,9 @@ void World::Load(sdf::ElementPtr _sdf)
   std::string type = this->sdf->GetElement("physics")->Get<std::string>("type");
   this->physicsEngine = PhysicsFactory::NewPhysicsEngine(type,
       shared_from_this());
+
+  if (!_physicsPlugin.empty())
+    this->physicsPlugin = this->CreatePhysicsPlugin(_physicsPlugin);
 
   if (this->physicsEngine == NULL)
     gzthrow("Unable to create physics engine\n");
@@ -291,6 +296,12 @@ void World::Load(sdf::ElementPtr _sdf)
   event::Events::worldCreated(this->GetName());
 
   this->loaded = true;
+
+  // Initialize the physics plugin
+  if (this->physicsPlugin)
+  {
+    this->physicsPlugin->init();
+  }
 }
 
 //////////////////////////////////////////////////
@@ -326,26 +337,26 @@ void World::Init()
   this->testRay = boost::dynamic_pointer_cast<RayShape>(
       this->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
 
+  util::LogRecord::Instance()->Add(this->GetName(), "state.log",
+      boost::bind(&World::OnLog, this, _1));
+
   this->prevStates[0].SetWorld(shared_from_this());
   this->prevStates[1].SetWorld(shared_from_this());
 
   this->prevStates[0].SetName(this->GetName());
   this->prevStates[1].SetName(this->GetName());
 
+  this->initialized = true;
+
   this->updateInfo.worldName = this->GetName();
 
   this->iterations = 0;
   this->logPrevIteration = 0;
 
-  util::DiagnosticManager::Instance()->Init(this->GetName());
-
-  util::LogRecord::Instance()->Add(this->GetName(), "state.log",
-      boost::bind(&World::OnLog, this, _1));
-
-  this->initialized = true;
-
   // Mark the world initialization
-  gzlog << "Init world[" << this->GetName() << "]" << std::endl;
+  gzlog << "World::Init" << std::endl;
+
+  util::DiagnosticManager::Instance()->Init(this->GetName());
 }
 
 //////////////////////////////////////////////////
@@ -397,12 +408,11 @@ void World::RunLoop()
 
   this->prevStepWallTime = common::Time::GetWallTime();
 
+  this->logThread = new boost::thread(boost::bind(&World::LogWorker, this));
+
   // Get the first state
   this->prevStates[0] = WorldState(shared_from_this());
-  this->prevStates[1] = WorldState(shared_from_this());
   this->stateToggle = 0;
-
-  this->logThread = new boost::thread(boost::bind(&World::LogWorker, this));
 
   if (!util::LogPlay::Instance()->IsOpen())
   {
@@ -427,10 +437,6 @@ void World::RunLoop()
   if (this->logThread)
   {
     this->logCondition.notify_all();
-    {
-      boost::mutex::scoped_lock lock(this->logMutex);
-      this->logCondition.notify_all();
-    }
     this->logThread->join();
     delete this->logThread;
     this->logThread = NULL;
@@ -704,6 +710,12 @@ void World::Update()
 void World::Fini()
 {
   this->Stop();
+  if (this->physicsPlugin)
+  {
+    this->physicsPlugin->destroy();
+    this->physicsPlugin = NULL;
+  }
+
   this->plugins.clear();
 
   this->publishModelPoses.clear();
@@ -1459,15 +1471,6 @@ void World::ProcessRequestMsgs()
       this->sceneMsg.SerializeToString(serializedData);
       response.set_type(sceneMsg.GetTypeName());
     }
-    else if ((*iter).request() == "spherical_coordinates_info")
-    {
-      msgs::SphericalCoordinates sphereCoordMsg;
-      msgs::Set(&sphereCoordMsg, *(this->sphericalCoordinates));
-
-      std::string *serializedData = response.mutable_serialized_data();
-      sphereCoordMsg.SerializeToString(serializedData);
-      response.set_type(sphereCoordMsg.GetTypeName());
-    }
     else
       send = false;
 
@@ -1524,8 +1527,7 @@ void World::ProcessModelMsgs()
       this->modelPub->Publish(*iter);
     }
   }
-
-  if (!this->modelMsgs.empty())
+  if (this->modelMsgs.size())
   {
     this->EnableAllModels();
     this->modelMsgs.clear();
@@ -2025,29 +2027,62 @@ void World::RemoveModel(const std::string &_name)
   }
 }
 
-/////////////////////////////////////////////////
-void World::OnLightMsg(ConstLightPtr &_msg)
+//////////////////////////////////////////////////
+PhysicsPlugin *World::CreatePhysicsPlugin(const std::string &_filename)
 {
-  boost::recursive_mutex::scoped_lock lock(*this->receiveMutex);
+  PhysicsPlugin *plugin = NULL;
 
-  bool lightExists = false;
+  // PluginPtr result;
+  struct stat st;
+  bool found = false;
+  std::string fullname, filename(_filename);
+  std::list<std::string>::iterator iter;
+  std::list<std::string> pluginPaths =
+    common::SystemPaths::Instance()->GetPluginPaths();
 
-  // Find the light by name, and copy the new parameters.
-  for (int i = 0; i < this->sceneMsg.light_size(); ++i)
+  for (iter = pluginPaths.begin();
+      iter!= pluginPaths.end(); ++iter)
   {
-    if (this->sceneMsg.light(i).name() == _msg->name())
+    fullname = (*iter)+std::string("/")+filename;
+    if (stat(fullname.c_str(), &st) == 0)
     {
-      lightExists = true;
-      this->sceneMsg.mutable_light(i)->CopyFrom(*_msg);
+      found = true;
       break;
     }
   }
 
-  // Add a new light if the light doesn't exist.
-  if (!lightExists)
+  if (!found)
+    fullname = filename;
+
+  union
   {
-    this->sceneMsg.add_light()->CopyFrom(*_msg);
+    PhysicsPlugin *(*func)();
+    void *ptr;
+  } registerFunc;
+
+  std::string registerName = "create";
+
+  void *dlHandle = dlopen(fullname.c_str(), RTLD_LAZY|RTLD_GLOBAL);
+  if (!dlHandle)
+  {
+    gzerr << "Failed to load plugin " << fullname << ": "
+      << dlerror() << "\n";
+    return plugin;
   }
+
+  registerFunc.ptr = dlsym(dlHandle, registerName.c_str());
+
+  if (!registerFunc.ptr)
+  {
+    gzerr << "Failed to resolve " << registerName
+      << ": " << dlerror();
+    return plugin;
+  }
+
+  // Register the new controller.
+  plugin = registerFunc.func();
+
+  return plugin;
 }
 
 /////////////////////////////////////////////////

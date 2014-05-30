@@ -36,6 +36,7 @@
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
 
+#include "gazebo/physics/PhysicsPlugin.h"
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/WorldState.hh"
@@ -69,7 +70,10 @@ namespace gazebo
       /// \brief Load the world using SDF parameters.
       /// Load a world from and SDF pointer.
       /// \param[in] _sdf SDF parameters.
-      public: void Load(sdf::ElementPtr _sdf);
+      /// \param[in] _physicsPlugin Shared library filensmae that is a
+      /// physics plugin.
+      public: void Load(sdf::ElementPtr _sdf,
+                        const std::string &_physicsPlugin = "");
 
       /// \brief Save a world to a file.
       /// Save the current world and its state to a file.
@@ -85,6 +89,12 @@ namespace gazebo
       /// \param[in] _iterations Run for this many iterations, then stop.
       /// A value of zero disables run stop.
       public: void Run(unsigned int _iterations = 0);
+
+      /// \brief Run the world. This call blocks.
+      /// Run the update loop.
+      /// \param[in] _iterations Run for this many iterations, then stop.
+      /// A value of zero disables run stop.
+      public: void RunBlocking(unsigned int _iterations = 0);
 
       /// \brief Return the running state of the world.
       /// \return True if the world is running.
@@ -452,6 +462,8 @@ namespace gazebo
       /// \param[in] _msg Pointer to the light message.
       private: void OnLightMsg(ConstLightPtr &_msg);
 
+      private: PhysicsPlugin *CreatePhysicsPlugin(const std::string &_filename);
+
       /// \brief For keeping track of time step throttling.
       private: common::Time prevStepWallTime;
 
@@ -695,12 +707,8 @@ namespace gazebo
       /// \brief A cached list of models. This is here for performance.
       private: Model_V models;
 
-      /// \todo In gazebo 3.0 this should be move to the proper section.
-      /// \brief Run the world. This call blocks.
-      /// Run the update loop.
-      /// \param[in] _iterations Run for this many iterations, then stop.
-      /// A value of zero disables run stop.
-      public: void RunBlocking(unsigned int _iterations = 0);
+      /// \brief Pointer to the physics plugin
+      private: PhysicsPlugin *physicsPlugin;
     };
     /// \}
   }
