@@ -57,6 +57,7 @@ GLWidget::GLWidget(QWidget *_parent)
   this->setObjectName("GLWidget");
   this->state = "select";
   this->sceneCreated = false;
+  this->copyEntitylName = "";
 
   this->setFocusPolicy(Qt::StrongFocus);
 
@@ -139,6 +140,9 @@ GLWidget::GLWidget(QWidget *_parent)
 
   MouseEventHandler::Instance()->AddDoubleClickFilter("glwidget",
       boost::bind(&GLWidget::OnMouseDoubleClick, this, _1));
+
+  connect(g_copyAct, SIGNAL(triggered()), this, SLOT(OnCopy()));
+  connect(g_pasteAct, SIGNAL(triggered()), this, SLOT(OnPaste()));
 }
 
 /////////////////////////////////////////////////
@@ -280,6 +284,20 @@ void GLWidget::keyPressEvent(QKeyEvent *_event)
     this->keyModifiers & Qt::ShiftModifier ? true : false;
   this->mouseEvent.alt =
     this->keyModifiers & Qt::AltModifier ? true : false;
+
+  if (this->mouseEvent.control)
+  {
+    if (_event->key() == Qt::Key_C)
+    {
+      this->Copy(this->selectedVis->GetName());
+    }
+    else if (_event->key() == Qt::Key_V && !this->copyEntitylName.empty())
+    {
+      this->Paste(this->copyEntitylName);
+      // this makes the entity appear at the mouse cursor
+      this->entityMaker->OnMouseMove(this->mouseEvent);
+    }
+  }
 
   ModelManipulator::Instance()->OnKeyPressEvent(this->keyEvent);
 
@@ -881,7 +899,13 @@ void GLWidget::SetSelectedVisual(rendering::VisualPtr _vis)
   if (this->selectedVis && !this->selectedVis->IsPlane())
   {
     this->selectedVis->SetHighlighted(true);
+    g_copyAct->setEnabled(true);
   }
+  else
+  {
+    g_copyAct->setEnabled(false);
+  }
+
 }
 
 /////////////////////////////////////////////////
@@ -896,16 +920,35 @@ void GLWidget::OnManipMode(const std::string &_mode)
 }
 
 /////////////////////////////////////////////////
-void GLWidget::Paste(const std::string &_object)
+void GLWidget::OnCopy()
 {
-  if (!_object.empty())
+  if (this->selectedVis)
+    this->Copy(this->selectedVis->GetName());
+}
+
+/////////////////////////////////////////////////
+void GLWidget::OnPaste()
+{
+  this->Paste(this->copyEntitylName);
+}
+
+/////////////////////////////////////////////////
+void GLWidget::Copy(const std::string &_name)
+{
+  this->copyEntitylName = _name;
+  g_pasteAct->setEnabled(true);
+}
+
+/////////////////////////////////////////////////
+void GLWidget::Paste(const std::string &_name)
+{
+  if (!_name.empty())
   {
     this->ClearSelection();
     if (this->entityMaker)
       this->entityMaker->Stop();
 
-    // \todo Put this back in when pasting is enabled again
-    // this->modelMaker.InitFromModel(_object);
+    this->modelMaker.InitFromModel(_name);
     this->entityMaker = &this->modelMaker;
     this->entityMaker->Start(this->userCamera);
     gui::Events::manipMode("make_entity");
@@ -929,7 +972,6 @@ void GLWidget::ClearSelection()
 /////////////////////////////////////////////////
 void GLWidget::OnSetSelectedEntity(const std::string &_name,
                                    const std::string &_mode)
-
 {
   if (!_name.empty())
   {
