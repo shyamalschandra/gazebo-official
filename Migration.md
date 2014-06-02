@@ -1,3 +1,27 @@
+## Gazebo 3.1 to 4.0
+
+### Additions
+
+1. **gazebo/msgs/msgs.hh**
+    + sdf::ElementPtr LightToSDF(const msgs::Light &_msg, sdf::ElementPtr _sdf = sdf::ElementPtr())
+
+1. **gazebo/rendering/Light.hh**
+    + math::Quaternion GetRotation() const
+    + void SetRotation(const math::Quaternion &_q)
+
+1. **gazebo/gui/GuiEvents.hh**
+    + template<typename T> static event::ConnectionPtr ConnectLightUpdate(T _subscriber)
+    + static void DisconnectLightUpdate(event::ConnectionPtr _subscriber)
+
+### Modifications
+1. **gazebo/physics/Model.hh**
+    + ***Removed:*** Link_V GetLinks() const `ABI Change`
+    + ***Replacement:***  const Link_V &GetLinks() const
+
+1. **gazebo/physics/Base.cc**
+   + ***GetScopedName()*** Functionality was broken, did not prepend world name as described in function documentation.
+
+
 ## Gazebo 3.0 to 3.1
 
 ### Additions
@@ -5,11 +29,6 @@
 1. **gazebo/physics/JointController.hh**
     + void SetPositionPID(const std::string &_jointName, const common::PID &_pid);
     + void SetVelocityPID(const std::string &_jointName, const common::PID &_pid);
-
-### Modification
-1. **gazebo/physics/Base.cc**
-   + ***GetScopedName()*** Functionality was broken, did not prepend world name as described in function documentation.
-
 
 ## Gazebo 2.0 to 3.0
 
@@ -143,10 +162,12 @@
     + ***Replacement*** virtual bool SetParam(const std::string &_key, unsigned int _index, const boost::any &_value)
 
 ### Modifications
+1. **gazebo/physics/Entity.hh**
+    + ***Removed:*** inline const math::Pose &GetWorldPose() const `ABI change`
+    + ***Replacement:*** inline virutal const math::Pose &GetWorldPose() const
 1. **gazebo/physics/Box.hh**
     + ***Removed:*** bool operator==(const Box &_b) `ABI Change`
     + ***Replacement:***  bool operator==(const Box &_b) const
-
 1. **gazebo/gui/GuiIface.hh**
     + ***Removed:*** void load() `ABI change`
     + ***Replacement:*** bool load()
@@ -311,6 +332,9 @@
 
 ### Additions
 
+1. **gazebo/physics/Collision.hh**
+    + void SetWorldPoseDirty()
+    + virtual const math::Pose &GetWorldPose() const
 1. **gazebo/physics/JointController.hh**
       + common::Time GetLastUpdateTime() const
       + std::map<std::string, JointPtr> GetJoints() const
