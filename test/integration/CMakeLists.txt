@@ -62,6 +62,7 @@ set(tests
   pioneer2dx.cc
   sensor.cc
   server_fixture.cc
+  joint_set_position_test.cc
   speed.cc
   stress_spawn_models.cc
   #state_log.cc

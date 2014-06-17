@@ -568,3 +568,10 @@ math::Angle BulletJoint::GetLowStop(unsigned int _index)
 {
   return this->GetLowerLimit(_index);
 }
+
+//////////////////////////////////////////////////
+bool BulletJoint::SetPosition(unsigned int _index, double _position,
+                           double _velocity)
+{
+  return Joint::SetPositionMaximal(_index, _position, _velocity);
+}

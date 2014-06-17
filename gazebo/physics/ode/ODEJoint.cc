@@ -19,6 +19,7 @@
 #include "gazebo/common/Assert.hh"
 
 #include "gazebo/physics/World.hh"
+#include "gazebo/physics/Model.hh"
 #include "gazebo/physics/Link.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/ode/ODELink.hh"
@@ -1396,4 +1397,11 @@ void ODEJoint::ApplyExplicitStiffnessDamping()
 
     // gzerr << this->GetVelocity(0) << " : " << dampingForce << "\n";
   }
+}
+
+//////////////////////////////////////////////////
+bool ODEJoint::SetPosition(unsigned int _index, double _position,
+                           double _velocity)
+{
+  return Joint::SetPositionMaximal(_index, _position, _velocity);
 }
