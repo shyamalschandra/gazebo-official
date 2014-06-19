@@ -354,7 +354,8 @@ namespace gazebo
       /// \param[in] _force Maximum force that can be applied to the axis.
       public: virtual void SetMaxForce(unsigned int _index, double _force) = 0;
 
-      /// \brief Get the max allowed force of an axis(index).
+      /// \brief Get the max allowed force of an axis(index) when using
+      /// Joint::SetVelocity.
       /// Note that the unit of force should be consistent with the rest
       /// of the simulation scales.
       /// \param[in] _index Index of the axis.
@@ -380,7 +381,37 @@ namespace gazebo
       /// link.
       /// \param[in] _index Index of the axis.
       /// \param[in] _angle Angle to set the joint to.
-      public: void SetAngle(unsigned int _index, math::Angle _angle);
+      public: void SetAngle(unsigned int _index, math::Angle _angle)
+              GAZEBO_DEPRECATED(3.1);
+
+      /// \brief If the Joint is static, Gazebo stores the state of
+      /// this Joint as a scalar inside the Joint class, so
+      /// this call will NOT move the joint dynamically for a static Model.
+      /// But if this Model is not static, then it is updated dynamically.
+      /// The child link of this joint is updated based on position change.
+      /// And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// \param[in] _velocity Velocity for the joint, defaults to 0 if
+      /// unspecified, pure kinematic teleportation.
+      /// \return returns true if operation succeeds, 0 if it fails.
+      public: virtual bool SetPosition(unsigned int _index, double _position,
+                                       double _velocity = 0.0);
+
+      /// \brief Helper function for maximal coordinate solver SetPosition.
+      /// The child link of this joint is updated based on position change.
+      /// And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// \param[in] _velocity Velocity for the joint, defaults to 0 if
+      /// unspecified, pure kinematic teleportation.
+      /// \return returns true if operation succeeds, 0 if it fails.
+      protected: bool SetPositionMaximal(unsigned int _index, double _position,
+                                 double _velocity);
 
       /// \brief Get the forces applied to the center of mass of a physics::Link
       /// due to the existence of this Joint.
