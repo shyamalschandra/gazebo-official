@@ -29,6 +29,10 @@ add_executable(gztopic gztopic.cc)
 target_link_libraries(gztopic gazebo_msgs gazebo_common gazebo_transport pthread gazebo_gui ${QT_LIBRARIES})
 gz_install_executable(gztopic)
 
+add_executable(gzplot gzplot.cc)
+target_link_libraries(gzplot gazebo_msgs gazebo_common gazebo_transport pthread gazebo_gui ${QT_LIBRARIES})
+gz_install_executable(gzplot)
+
 add_executable(gzlog gzlog.cc)
 target_link_libraries(gzlog gazebo_common gazebo_physics gazebo_transport gazebo_sensors gazebo_msgs pthread)
 gz_install_executable(gzlog)
