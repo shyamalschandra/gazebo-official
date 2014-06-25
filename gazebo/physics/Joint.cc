@@ -703,21 +703,6 @@ double Joint::GetForce(unsigned int /*_index*/)
 }
 
 //////////////////////////////////////////////////
-double Joint::GetDampingCoefficient() const
-{
-  gzerr << "Joint::GetDampingCoefficient() is deprecated, please switch "
-        << "to Joint::GetDamping(index)\n";
-  return this->dissipationCoefficient[0];
-}
-
-//////////////////////////////////////////////////
-void Joint::ApplyDamping()
-{
-  gzerr << "Joint::ApplyDamping deprecated by Joint::ApplyStiffnessDamping.\n";
-  this->ApplyStiffnessDamping();
-}
-
-//////////////////////////////////////////////////
 void Joint::ApplyStiffnessDamping()
 {
   gzerr << "Joint::ApplyStiffnessDamping should be overloaded by "
@@ -1086,6 +1071,11 @@ double Joint::GetWorldEnergyPotentialSpring(unsigned int _index) const
   double x = this->GetAngle(_index).Radian() -
     this->springReferencePosition[_index];
   return 0.5 * k * x * x;
+}
+
+//////////////////////////////////////////////////
+void Joint::CacheForceTorque()
+{
 }
 
 //////////////////////////////////////////////////
