@@ -51,6 +51,7 @@ set(tests
   joint_test.cc
   joint_universal.cc
   laser.cc
+  model.cc
   model_database.cc
   noise.cc
   nondefault_world.cc
@@ -62,6 +63,7 @@ set(tests
   physics_msgs.cc
   physics_thread_safe.cc
   pioneer2dx.cc
+  sensor.cc
   server_fixture.cc
   speed.cc
   stress_spawn_models.cc
