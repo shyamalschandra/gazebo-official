@@ -385,17 +385,17 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     // min_step_size is defined but not yet used
     physicsMsg.set_min_step_size(
       boost::any_cast<double>(this->GetParam("min_step_size")));
-    physicsMsg.set_iters(
+    physicsMsg.mutable_bullet()->set_iters(
       boost::any_cast<int>(this->GetParam("iters")));
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
-    physicsMsg.set_sor(
+    physicsMsg.mutable_bullet()->set_sor(
       boost::any_cast<double>(this->GetParam("sor")));
-    physicsMsg.set_cfm(
+    physicsMsg.mutable_bullet()->set_cfm(
       boost::any_cast<double>(this->GetParam("cfm")));
-    physicsMsg.set_erp(
+    physicsMsg.mutable_bullet()->set_erp(
       boost::any_cast<double>(this->GetParam("erp")));
 
-    physicsMsg.set_contact_surface_layer(
+    physicsMsg.mutable_bullet()->set_contact_surface_layer(
       boost::any_cast<double>(this->GetParam("contact_surface_layer")));
 
     physicsMsg.mutable_gravity()->CopyFrom(msgs::Convert(this->GetGravity()));
@@ -412,44 +412,55 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
 /////////////////////////////////////////////////
 void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
-  if (_msg->has_min_step_size())
-    this->SetParam("min_step_size", _msg->min_step_size());
-
   if (_msg->has_solver_type())
-    this->SetParam("solver_type", _msg->solver_type());
-
-  if (_msg->has_iters())
-    this->SetParam("iters", _msg->iters());
-
-  if (_msg->has_sor())
-    this->SetParam("sor", _msg->sor());
-
-  if (_msg->has_cfm())
-    this->SetParam("cfm", _msg->cfm());
-
-  if (_msg->has_erp())
-    this->SetParam("erp", _msg->erp());
-
-  if (_msg->has_enable_physics())
-    this->world->EnablePhysicsEngine(_msg->enable_physics());
-
-  if (_msg->has_contact_surface_layer())
-    this->SetParam("contact_surface_layer", _msg->contact_surface_layer());
-
-  if (_msg->has_gravity())
-    this->SetGravity(msgs::Convert(_msg->gravity()));
-
-  if (_msg->has_real_time_factor())
-    this->SetTargetRealTimeFactor(_msg->real_time_factor());
-
-  if (_msg->has_real_time_update_rate())
   {
     this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
   }
 
-  if (_msg->has_max_step_size())
+  if (_msg->has_min_step_size())
   {
-    this->SetMaxStepSize(_msg->max_step_size());
+    this->SetParam("min_step_size", _msg->min_step_size());
+  }
+
+  if (_msg->has_bullet())
+  {
+    const msgs::PhysicsBullet *msgBullet = &_msg->bullet();
+
+    if (msgBullet->has_iters())
+    {
+      this->SetParam("iters", msgBullet->iters());
+    }
+
+    if (msgBullet->has_sor())
+    {
+      this->SetParam("sor", msgBullet->sor());
+    }
+
+    if (msgBullet->has_cfm())
+    {
+      this->SetParam("cfm", msgBullet->cfm());
+    }
+
+    if (msgBullet->has_erp())
+    {
+      this->SetParam("erp", msgBullet->erp());
+    }
+
+    if (msgBullet->has_contact_surface_layer())
+    {
+      this->SetParam("contact_surface_layer", msgBullet->contact_surface_layer());
+    }
+
+    if (msgBullet->has_split_impulse())
+    {
+      this->SetParam("split_impulse", msgBullet->split_impulse());
+    }
+
+    if (msgBullet->has_split_impulse_penetration_threshold())
+    {
+      this->SetParam("split_impulse_penetration_threshold",
+        msgBullet->split_impulse_penetration_threshold());
+    }
   }
 
   /// Make sure all models get at least one update cycle.
@@ -504,59 +515,6 @@ void BulletPhysics::SetSORPGSIters(unsigned int _iters)
       "solver")->GetElement("iters")->Set(_iters);
 }
 
-
-//////////////////////////////////////////////////
-bool BulletPhysics::SetParam(BulletParam _param, const boost::any &_value)
-{
-  if (!this->dynamicsWorld)
-    return false;
-
-  gzwarn << "Deprecated by "
-         << "bool SetParam(const std::string&, const boost::any&).\n";
-
-  switch (_param)
-  {
-    case SOLVER_TYPE:
-    {
-      return this->SetParam("solver_type", _value);
-    }
-    case GLOBAL_CFM:
-    {
-      return this->SetParam("cfm", _value);
-    }
-    case GLOBAL_ERP:
-    {
-      return this->SetParam("erp", _value);
-    }
-    case PGS_ITERS:
-    {
-      return this->SetParam("iters", _value);
-    }
-    case SOR:
-    {
-      return this->SetParam("sor", _value);
-    }
-    case CONTACT_SURFACE_LAYER:
-    {
-      return this->SetParam("contact_surface_layer", _value);
-    }
-    case MAX_CONTACTS:
-    {
-      return this->SetParam("max_contacts", _value);
-    }
-    case MIN_STEP_SIZE:
-    {
-      return this->SetParam("min_step_size", _value);
-    }
-    default:
-    {
-      gzwarn << "Param not supported in bullet" << std::endl;
-      return false;
-    }
-  }
-  return true;
-}
-
 //////////////////////////////////////////////////
 bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 {
@@ -565,13 +523,7 @@ bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 
   btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
 
-  if (_key == "type")
-  {
-    gzwarn << "keyword `type` for GetParam/SetParam is deprecated, please"
-           << " use `solver_type`.\n";
-    return this->SetParam("solver_type", _value);
-  }
-  else if (_key == "solver_type")
+  if (_key == "solver_type")
   {
     std::string value;
     try
@@ -768,64 +720,12 @@ bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 }
 
 //////////////////////////////////////////////////
-boost::any BulletPhysics::GetParam(BulletParam _param) const
-{
-  boost::any value = 0;
-  switch (_param)
-  {
-    case SOLVER_TYPE:
-    {
-      return this->GetParam("solver_type");
-    }
-    case GLOBAL_CFM:
-    {
-      return this->GetParam("cfm");
-    }
-    case GLOBAL_ERP:
-    {
-      return this->GetParam("erp");
-    }
-    case PGS_ITERS:
-    {
-      return this->GetParam("iters");
-    }
-    case SOR:
-    {
-      return this->GetParam("sor");
-    }
-    case CONTACT_SURFACE_LAYER:
-    {
-      return this->GetParam("contact_surface_layer");
-    }
-    case MAX_CONTACTS:
-    {
-      return this->GetParam("max_contacts");
-    }
-    case MIN_STEP_SIZE:
-    {
-      return this->GetParam("min_step_size");
-    }
-    default:
-    {
-      gzwarn << "Param not supported in bullet" << std::endl;
-      return value;
-    }
-  }
-}
-
-//////////////////////////////////////////////////
 boost::any BulletPhysics::GetParam(const std::string &_key) const
 {
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
   GZ_ASSERT(bulletElem != NULL, "Bullet SDF element does not exist");
 
-  if (_key == "type")
-  {
-    gzwarn << "keyword `type` for GetParam/SetParam is deprecated, please"
-           << " use `solver_type`.\n";
-    return this->GetParam("solver_type");
-  }
-  else if (_key == "solver_type")
+  if (_key == "solver_type")
     return bulletElem->GetElement("solver")->Get<std::string>("type");
   else if (_key == "cfm")
     return bulletElem->GetElement("constraints")->Get<double>("cfm");

@@ -542,6 +542,9 @@ namespace gazebo
       /// \return true if value is in vector.
       private: bool ContainsLink(const Link_V &_vector, const LinkPtr &_value);
 
+      /// \brief Update visual SDFs.
+      private: void UpdateVisualSDF();
+
       /// \brief Inertial properties.
       protected: InertialPtr inertial;
 
@@ -599,6 +602,9 @@ namespace gazebo
 
       /// \brief Cached list of collisions. This is here for performance.
       private: Collision_V collisions;
+
+      /// \brief scale of the link.
+      private: math::Vector3 scale;
 
 #ifdef HAVE_OPENAL
       /// \brief All the audio sources
