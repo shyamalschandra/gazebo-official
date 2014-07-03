@@ -453,23 +453,23 @@ void Visual::Load()
   // Read the desired position and rotation of the mesh
   pose = this->dataPtr->sdf->Get<math::Pose>("pose");
 
-  std::string meshName = this->GetMeshName();
-  std::string subMeshName = this->GetSubMeshName();
+  std::string mesh = this->GetMeshName();
+  std::string subMesh = this->GetSubMeshName();
   bool centerSubMesh = this->GetCenterSubMesh();
 
-  if (!meshName.empty())
+  if (!mesh.empty())
   {
     try
     {
       // Create the visual
       stream << "VISUAL_" << this->dataPtr->sceneNode->getName();
-      obj = this->AttachMesh(meshName, subMeshName, centerSubMesh,
+      obj = this->AttachMesh(mesh, subMesh, centerSubMesh,
           stream.str());
     }
     catch(Ogre::Exception &e)
     {
       gzerr << "Ogre Error:" << e.getFullDescription() << "\n";
-      gzerr << "Unable to create a mesh from " <<  meshName << "\n";
+      gzerr << "Unable to create a mesh from " <<  mesh << "\n";
       return;
     }
   }
@@ -719,6 +719,8 @@ unsigned int Visual::GetAttachedObjectCount() const
 void Visual::DetachObjects()
 {
   this->dataPtr->sceneNode->detachAllObjects();
+  this->dataPtr->meshName = "";
+  this->dataPtr->subMeshName = "";
 }
 
 //////////////////////////////////////////////////
@@ -764,18 +766,22 @@ Ogre::MovableObject *Visual::AttachMesh(const std::string &_meshName,
   if (_meshName.empty())
     return NULL;
 
+  this->dataPtr->meshName = _meshName;
+  this->dataPtr->subMeshName = _subMesh;
+
   Ogre::MovableObject *obj;
   std::string objName = _objName;
-  std::string meshName = _meshName;
-  meshName += _subMesh.empty() ? "" : "::" + _subMesh;
+  std::string entityMeshName = _meshName;
+  entityMeshName += _subMesh.empty() ? "" : "::" + _subMesh;
 
   if (objName.empty())
-    objName = this->dataPtr->sceneNode->getName() + "_ENTITY_" + meshName;
+    objName = this->dataPtr->sceneNode->getName() + "_ENTITY_" + entityMeshName;
 
   this->InsertMesh(_meshName, _subMesh, _centerSubmesh);
 
   obj = (Ogre::MovableObject*)
-      (this->dataPtr->sceneNode->getCreator()->createEntity(objName, meshName));
+      (this->dataPtr->sceneNode->getCreator()->createEntity(
+      objName, entityMeshName));
 
   this->AttachObject(obj);
   return obj;
@@ -1391,7 +1397,13 @@ void Visual::SetHighlighted(bool _highlighted)
       this->dataPtr->boundingBox = new WireBox(shared_from_this(),
                                       this->GetBoundingBox());
     }
-
+    else
+    {
+      math::Box b = this->GetBoundingBox();
+      this->dataPtr->boundingBox->Init(math::Box(b.min/this->dataPtr->scale,
+          b.max/this->dataPtr->scale));
+      //this->dataPtr->boundingBox->Init(this->GetBoundingBox());
+    }
     this->dataPtr->boundingBox->SetVisible(true);
   }
   else if (this->dataPtr->boundingBox)
@@ -1771,8 +1783,8 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
       Ogre::Any any = obj->getUserAny();
       if (any.getType() == typeid(std::string))
       {
-        std::string str = Ogre::any_cast<std::string>(any);
-        if (str.substr(0, 3) == "rot" || str.substr(0, 5) == "trans")
+        std::string str = Ogre::any_cast<std::string>(any).substr(0, 5);
+        if (str.substr(0, 3) == "rot" || str == "trans" || str == "scale")
           continue;
       }
 
@@ -2279,6 +2291,11 @@ bool Visual::IsPlane() const
 //////////////////////////////////////////////////
 std::string Visual::GetMeshName() const
 {
+  if (!this->dataPtr->meshName.empty())
+  {
+    return this->dataPtr->meshName;
+  }
+
   if (this->dataPtr->sdf->HasElement("geometry"))
   {
     sdf::ElementPtr geomElem = this->dataPtr->sdf->GetElement("geometry");
@@ -2317,6 +2334,11 @@ std::string Visual::GetMeshName() const
 //////////////////////////////////////////////////
 std::string Visual::GetSubMeshName() const
 {
+  if (!this->dataPtr->subMeshName.empty())
+  {
+    return this->dataPtr->subMeshName;
+  }
+
   std::string result;
 
   if (this->dataPtr->sdf->HasElement("geometry"))

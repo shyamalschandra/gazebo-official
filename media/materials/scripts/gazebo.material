@@ -1278,3 +1278,15 @@ material Gazebo/PointCloud
    }
 }
 
+material Gazebo/PointHandle
+{
+   technique
+   {
+      pass
+      {
+        lighting off
+        scene_blend alpha_blend
+        depth_write off
+      }
+   }
+}
