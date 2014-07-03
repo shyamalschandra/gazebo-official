@@ -629,6 +629,31 @@ void MainWindow::Scale()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::Align()
+{
+  for (unsigned int i = 0 ; i < this->alignActionGroups.size(); ++i)
+  {
+    this->alignActionGroups[i]->setExclusive(false);
+    if (this->alignActionGroups[i]->checkedAction())
+      this->alignActionGroups[i]->checkedAction()->setChecked(false);
+    this->alignActionGroups[i]->setExclusive(true);
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnAlignMode(QString _mode)
+{
+  std::string mode = _mode.toStdString();
+  gui::Events::alignMode(mode.substr(0,1), mode.substr(1));
+}
+
+/////////////////////////////////////////////////
+void MainWindow::Snap()
+{
+  gui::Events::manipMode("snap");
+}
+
+/////////////////////////////////////////////////
 void MainWindow::CreateBox()
 {
   g_arrowAct->setChecked(true);
@@ -1154,6 +1179,118 @@ void MainWindow::CreateActions()
   g_pasteAct->setCheckable(false);
   this->CreateDisabledIcon(":/images/paste_object.png", g_pasteAct);
   g_pasteAct->setEnabled(false);
+
+  g_snapAct = new QAction(QIcon(":/images/magnet.png"),
+      tr("Snap Mode"), this);
+  g_snapAct->setStatusTip(tr("Snap entity"));
+  g_snapAct->setCheckable(true);
+  g_snapAct->setToolTip(tr("Snap Mode"));
+  connect(g_snapAct, SIGNAL(triggered()), this, SLOT(Snap()));
+
+  // set up align actions and widget
+  QAction *xAlignMin = new QAction(QIcon(":/images/x_min.png"),
+      tr("X Align Min"), this);
+  QAction *xAlignCenter = new QAction(QIcon(":/images/x_center.png"),
+      tr("X Align Center"), this);
+  QAction *xAlignMax = new QAction(QIcon(":/images/x_max.png"),
+      tr("X Align Max"), this);
+  QAction *yAlignMin = new QAction(QIcon(":/images/y_min.png"),
+      tr("Y Align Min"), this);
+  QAction *yAlignCenter = new QAction(QIcon(":/images/y_center.png"),
+      tr("Y Align Center"), this);
+  QAction *yAlignMax = new QAction(QIcon(":/images/y_max.png"),
+      tr("Y Align Max"), this);
+  QAction *zAlignMin = new QAction(QIcon(":/images/z_min.png"),
+      tr("Z Align Min"), this);
+  QAction *zAlignCenter = new QAction(QIcon(":/images/z_center.png"),
+      tr("Z Align Center"), this);
+  QAction *zAlignMax = new QAction(QIcon(":/images/z_max.png"),
+      tr("Z Align Max"), this);
+
+  xAlignMin->setCheckable(true);
+  xAlignCenter->setCheckable(true);
+  xAlignMax->setCheckable(true);
+  yAlignMin->setCheckable(true);
+  yAlignCenter->setCheckable(true);
+  yAlignMax->setCheckable(true);
+  zAlignMin->setCheckable(true);
+  zAlignCenter->setCheckable(true);
+  zAlignMax->setCheckable(true);
+
+  QActionGroup *xAlignActionGroup = new QActionGroup(this);
+  xAlignActionGroup->addAction(xAlignMin);
+  xAlignActionGroup->addAction(xAlignCenter);
+  xAlignActionGroup->addAction(xAlignMax);
+  xAlignActionGroup->setExclusive(true);
+  QActionGroup *yAlignActionGroup = new QActionGroup(this);
+  yAlignActionGroup->addAction(yAlignMin);
+  yAlignActionGroup->addAction(yAlignCenter);
+  yAlignActionGroup->addAction(yAlignMax);
+  yAlignActionGroup->setExclusive(true);
+  QActionGroup *zAlignActionGroup = new QActionGroup(this);
+  zAlignActionGroup->addAction(zAlignMin);
+  zAlignActionGroup->addAction(zAlignCenter);
+  zAlignActionGroup->addAction(zAlignMax);
+  zAlignActionGroup->setExclusive(true);
+  this->alignActionGroups.push_back(xAlignActionGroup);
+  this->alignActionGroups.push_back(yAlignActionGroup);
+  this->alignActionGroups.push_back(zAlignActionGroup);
+
+  QWidget *alignWidget = new QWidget;
+  QVBoxLayout *alignLayout = new QVBoxLayout;
+  QLabel *xAlignLabel = new QLabel(tr("X: "));
+  QLabel *yAlignLabel = new QLabel(tr("Y: "));
+  QLabel *zAlignLabel = new QLabel(tr("Z: "));
+  QToolBar *xAlignBar = new QToolBar(alignWidget);
+  QToolBar *yAlignBar = new QToolBar(alignWidget);
+  QToolBar *zAlignBar = new QToolBar(alignWidget);
+  xAlignBar->addWidget(xAlignLabel);
+  yAlignBar->addWidget(yAlignLabel);
+  zAlignBar->addWidget(zAlignLabel);
+  xAlignBar->addAction(xAlignMin);
+  xAlignBar->addAction(xAlignCenter);
+  xAlignBar->addAction(xAlignMax);
+  yAlignBar->addAction(yAlignMin);
+  yAlignBar->addAction(yAlignCenter);
+  yAlignBar->addAction(yAlignMax);
+  zAlignBar->addAction(zAlignMin);
+  zAlignBar->addAction(zAlignCenter);
+  zAlignBar->addAction(zAlignMax);
+  alignLayout->addWidget(xAlignBar);
+  alignLayout->addWidget(yAlignBar);
+  alignLayout->addWidget(zAlignBar);
+  alignWidget->setLayout(alignLayout);
+  alignWidget->adjustSize();
+  alignWidget->setFixedWidth(alignWidget->width()+1);
+
+  QSignalMapper *alignSignalMapper = new QSignalMapper(this);
+  connect(alignSignalMapper, SIGNAL(mapped(QString)),
+      this, SLOT(OnAlignMode(QString)));
+
+  connect(xAlignMin, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(xAlignMin, tr("xmin"));
+  connect(xAlignCenter, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(xAlignCenter, tr("xcenter"));
+  connect(xAlignMax, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(xAlignMax, tr("xmax"));
+  connect(yAlignMin, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(yAlignMin, tr("ymin"));
+  connect(yAlignCenter, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(yAlignCenter, tr("ycenter"));
+  connect(yAlignMax, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(yAlignMax, tr("ymax"));
+  connect(zAlignMin, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(zAlignMin, tr("zmin"));
+  connect(zAlignCenter, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(zAlignCenter, tr("zcenter"));
+  connect(zAlignMax, SIGNAL(triggered()), alignSignalMapper, SLOT(map()));
+  alignSignalMapper->setMapping(zAlignMax, tr("zmax"));
+
+  g_alignAct = new QWidgetAction(this);
+  g_alignAct->setCheckable(true);
+  g_alignAct->setDefaultWidget(alignWidget);
+  g_alignAct->setEnabled(false);
+  connect(g_alignAct, SIGNAL(triggered()), this, SLOT(Align()));
 }
 
 /////////////////////////////////////////////////

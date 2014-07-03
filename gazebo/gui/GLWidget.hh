@@ -151,6 +151,11 @@ namespace gazebo
       /// visual
       private: void SetSelectedVisual(rendering::VisualPtr _vis);
 
+      /// \brief Callback when a specific alignment configuration is set.
+      /// \param[in] _axis Axis of alignment: x, y, or z.
+      /// \param[in] _config Configuration: min, center, or max.
+      private: void OnAlignMode(std::string _axis, std::string _config);
+
       /// \brief Copy an entity by name
       /// \param[in] _name Name of entity to be copied.
       private: void Copy(const std::string &_name);
@@ -190,7 +195,10 @@ namespace gazebo
       /// \brief Light maker
       private: LightMaker lightMaker;
 
-      private: rendering::VisualPtr hoverVis, selectedVis;
+      private: rendering::VisualPtr hoverVis;
+
+      /// \brief A list of selected visuals.
+      private: std::vector<rendering::VisualPtr> selectedVisuals;
 
       private: transport::NodePtr node;
       private: transport::PublisherPtr modelPub, factoryPub;
