@@ -116,15 +116,16 @@ void BulletScrewJoint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-math::Vector3 BulletScrewJoint::GetAnchor(unsigned int /*index*/) const
+ignition::math::Vector3d BulletScrewJoint::GetAnchor(
+    unsigned int /*index*/) const
 {
   gzerr << "BulletScrewJoint::GetAnchor not implemented, return 0 vector.\n";
-  return math::Vector3();
+  return ignition::math::Vector3d();
 }
 
 //////////////////////////////////////////////////
 void BulletScrewJoint::SetAnchor(unsigned int /*index*/,
-    const math::Vector3 &/*_anchor*/)
+    const ignition::math::Vector3d &/*_anchor*/)
 {
   gzerr << "BulletScrewJoint::SetAnchor not implemented.\n";
 }
@@ -140,8 +141,8 @@ void BulletScrewJoint::Init()
     boost::static_pointer_cast<BulletLink>(this->parentLink);
 
   // Get axis unit vector (expressed in world frame).
-  math::Vector3 axis = this->initialWorldAxis;
-  if (axis == math::Vector3::Zero)
+  ignition::math::Vector3d axis = this->initialWorldAxis;
+  if (axis == ignition::math::Vector3d::Zero)
   {
     gzerr << "axis must have non-zero length, resetting to 0 0 1\n";
     axis.Set(0, 0, 1);
@@ -149,8 +150,8 @@ void BulletScrewJoint::Init()
 
   // Local variables used to compute pivots and axes in body-fixed frames
   // for the parent and child links.
-  math::Vector3 pivotParent, pivotChild, axisParent, axisChild;
-  math::Pose pose;
+  ignition::math::Vector3d pivotParent, pivotChild, axisParent, axisChild;
+  ignition::math::Pose3d pose;
   btTransform frameParent, frameChild;
   btVector3 axis2, axis3;
 
@@ -167,16 +168,16 @@ void BulletScrewJoint::Init()
     // Subtract CoG position from anchor position, both in world frame.
     pivotParent -= pose.pos;
     // Rotate pivot offset and axis into body-fixed frame of parent.
-    pivotParent = pose.rot.RotateVectorReverse(pivotParent);
+    pivotParent = pose.Rot().RotateVectorReverse(pivotParent);
     frameParent.setOrigin(BulletTypes::ConvertVector3(pivotParent));
-    axisParent = pose.rot.RotateVectorReverse(axis);
+    axisParent = pose.Rot().RotateVectorReverse(axis);
     axisParent = axisParent.Normalize();
     // The following math is based on btHingeConstraint.cpp:95-115
     btPlaneSpace1(BulletTypes::ConvertVector3(axisParent), axis2, axis3);
     frameParent.getBasis().setValue(
-      axisParent.x, axis2.x(), axis3.x(),
-      axisParent.y, axis2.y(), axis3.y(),
-      axisParent.z, axis2.z(), axis3.z());
+      axisParent.X(), axis2.X(), axis3.X(),
+      axisParent.Y(), axis2.Y(), axis3.Y(),
+      axisParent.Z(), axis2.Z(), axis3.Z());
   }
   // Check if childLink exists. If not, the child will be the world.
   if (this->childLink)
@@ -186,16 +187,16 @@ void BulletScrewJoint::Init()
     // Subtract CoG position from anchor position, both in world frame.
     pivotChild -= pose.pos;
     // Rotate pivot offset and axis into body-fixed frame of child.
-    pivotChild = pose.rot.RotateVectorReverse(pivotChild);
+    pivotChild = pose.Rot().RotateVectorReverse(pivotChild);
     frameChild.setOrigin(BulletTypes::ConvertVector3(pivotChild));
-    axisChild = pose.rot.RotateVectorReverse(axis);
+    axisChild = pose.Rot().RotateVectorReverse(axis);
     axisChild = axisChild.Normalize();
     // The following math is based on btHingeConstraint.cpp:95-115
     btPlaneSpace1(BulletTypes::ConvertVector3(axisChild), axis2, axis3);
     frameChild.getBasis().setValue(
-      axisChild.x, axis2.x(), axis3.x(),
-      axisChild.y, axis2.y(), axis3.y(),
-      axisChild.z, axis2.z(), axis3.z());
+      axisChild.X(), axis2.X(), axis3.X(),
+      axisChild.Y(), axis2.Y(), axis3.Y(),
+      axisChild.Z(), axis2.Z(), axis3.Z());
   }
 
   // If both links exist, then create a joint between the two links.
@@ -245,7 +246,7 @@ void BulletScrewJoint::Init()
   this->bulletScrew->setUpperAngLimit(upper);
   // enforce linear dof in bullet.
   double tp = this->threadPitch;
-  if (math::equal(tp, 0.0))
+  if (ignition::math::equal(tp, 0.0))
   {
     gzerr << "thread pitch should not be zero (joint is a slider?)"
           << " using thread pitch = 1.0e6\n";
@@ -280,7 +281,7 @@ void BulletScrewJoint::Init()
 double BulletScrewJoint::GetVelocity(unsigned int /*_index*/) const
 {
   double result = 0;
-  math::Vector3 globalAxis = this->GetGlobalAxis(0);
+  ignition::math::Vector3d globalAxis = this->GetGlobalAxis(0);
   if (this->childLink)
     result += globalAxis.Dot(this->childLink->GetWorldLinearVel());
   if (this->parentLink)
@@ -291,7 +292,7 @@ double BulletScrewJoint::GetVelocity(unsigned int /*_index*/) const
 //////////////////////////////////////////////////
 void BulletScrewJoint::SetVelocity(unsigned int _index, double _vel)
 {
-  math::Vector3 desiredVel;
+  ignition::math::Vector3d desiredVel;
   if (this->parentLink)
     desiredVel = this->parentLink->GetWorldLinearVel();
   desiredVel += _vel * this->GetGlobalAxis(_index);
@@ -301,14 +302,14 @@ void BulletScrewJoint::SetVelocity(unsigned int _index, double _vel)
 
 //////////////////////////////////////////////////
 void BulletScrewJoint::SetAxis(unsigned int /*_index*/,
-    const math::Vector3 &_axis)
+    const ignition::math::Vector3d &_axis)
 {
   // Note that _axis is given in a world frame,
   // but bullet uses a body-fixed frame
   if (!this->bulletScrew)
   {
     // this hasn't been initialized yet, store axis in initialWorldAxis
-    math::Quaternion axisFrame = this->GetAxisFrame(0);
+    ignition::math::Quaterniond axisFrame = this->GetAxisFrame(0);
     this->initialWorldAxis = axisFrame.RotateVector(_axis);
   }
   else
@@ -413,7 +414,7 @@ double BulletScrewJoint::GetMaxForce(unsigned int /*index*/)
 
 //////////////////////////////////////////////////
 bool BulletScrewJoint::SetHighStop(unsigned int _index,
-                      const math::Angle &_angle)
+                      const ignition::math::Angle &_angle)
 {
   Joint::SetHighStop(0, _angle);
 
@@ -432,7 +433,7 @@ bool BulletScrewJoint::SetHighStop(unsigned int _index,
 
     // set corresponding linear constraints
     double tp = this->threadPitch;
-    if (math::equal(tp, 0.0))
+    if (ignition::math::equal(tp, 0.0))
     {
       gzwarn << "thread pitch should not be zero (joint is a slider?)"
              << " using thread pitch = 1.0e6\n";
@@ -487,7 +488,7 @@ bool BulletScrewJoint::SetHighStop(unsigned int _index,
 
 //////////////////////////////////////////////////
 bool BulletScrewJoint::SetLowStop(unsigned int _index,
-                     const math::Angle &_angle)
+                     const ignition::math::Angle &_angle)
 {
   Joint::SetLowStop(0, _angle);
 
@@ -507,7 +508,7 @@ bool BulletScrewJoint::SetLowStop(unsigned int _index,
 
     // set corresponding linear constraints
     double tp = this->threadPitch;
-    if (math::equal(tp, 0.0))
+    if (ignition::math::equal(tp, 0.0))
     {
       gzerr << "thread pitch should not be zero (joint is a slider?)"
             << " using thread pitch = 1.0e6\n";
@@ -561,9 +562,10 @@ bool BulletScrewJoint::SetLowStop(unsigned int _index,
 }
 
 //////////////////////////////////////////////////
-math::Vector3 BulletScrewJoint::GetGlobalAxis(unsigned int /*_index*/) const
+ignition::math::Vector3d BulletScrewJoint::GetGlobalAxis(
+    unsigned int /*_index*/) const
 {
-  math::Vector3 result = this->initialWorldAxis;
+  ignition::math::Vector3d result = this->initialWorldAxis;
   if (this->bulletScrew)
   {
     // bullet uses x-axis for slider
@@ -578,9 +580,9 @@ math::Vector3 BulletScrewJoint::GetGlobalAxis(unsigned int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-math::Angle BulletScrewJoint::GetAngleImpl(unsigned int _index) const
+ignition::math::Angle BulletScrewJoint::GetAngleImpl(unsigned int _index) const
 {
-  math::Angle result;
+  ignition::math::Angle result;
   if (this->bulletScrew)
   {
     if (_index == 0)
@@ -977,7 +979,7 @@ void btScrewConstraint::_getInfo2NonVirtual(
     // if (limit && (lostop == histop)) raises warnings, using
     // a warning-less implementation.
     if (limit &&
-      math::equal(lostop, histop,
+      ignition::math::equal(lostop, histop,
       static_cast<btScalar>(std::numeric_limits<double>::epsilon())))
     {
       // the joint motor is ineffective
@@ -1013,7 +1015,7 @@ void btScrewConstraint::_getInfo2NonVirtual(
       // issue #1104:
       // if (lostop == histop) raises warnings, using
       // a warning-less implementation.
-      if (math::equal(lostop, histop,
+      if (ignition::math::equal(lostop, histop,
           static_cast<btScalar>(std::numeric_limits<double>::epsilon())))
       {
         // limited low and high simultaneously
@@ -1104,7 +1106,7 @@ void btScrewConstraint::_getInfo2NonVirtual(
     // if (limit && (lostop == histop)) raises warnings, using
     // a warning-less implementation.
     if (limit &&
-      math::equal(lostop, histop,
+      ignition::math::equal(lostop, histop,
       static_cast<btScalar>(std::numeric_limits<double>::epsilon())))
     {  // the joint motor is ineffective
       powered = 0;
@@ -1134,7 +1136,7 @@ void btScrewConstraint::_getInfo2NonVirtual(
       // issue #1104:
       // if (lostop == histop) raises warnings, using
       // a warning-less implementation.
-      if (math::equal(lostop, histop,
+      if (ignition::math::equal(lostop, histop,
           static_cast<btScalar>(std::numeric_limits<double>::epsilon())))
       {
         // limited low and high simultaneously

@@ -95,19 +95,19 @@ void ContactVisual::Update()
   {
     for (int j = 0; j < dPtr->contactsMsg->contact(i).position_size(); j++)
     {
-      math::Vector3 pos = msgs::Convert(
+      ignition::math::Vector3d pos = msgs::Convert(
           dPtr->contactsMsg->contact(i).position(j));
-      math::Vector3 normal = msgs::Convert(
+      ignition::math::Vector3d normal = msgs::Convert(
           dPtr->contactsMsg->contact(i).normal(j));
       double depth = dPtr->contactsMsg->contact(i).depth(j);
 
-      math::Vector3 force = msgs::Convert(
+      ignition::math::Vector3d force = msgs::Convert(
           dPtr->contactsMsg->contact(i).wrench(j).body_1_wrench().force());
 
       // Scaling factor for the normal line.
       // Eq in the family of Y = 1/(1+exp(-(x^2)))
       double normalScale = (2.0 * vRange) / (1 + exp
-          (-force.GetSquaredLength() / magScale)) - offset;
+          (-force.SquaredLength() / magScale)) - offset;
 
       // Create a new contact visualization point if necessary
       if (c >= dPtr->points.size())
@@ -196,11 +196,11 @@ void ContactVisual::CreateNewPoint()
   cp->normal = new DynamicLines(RENDERING_LINE_LIST);
   cp->depth = new DynamicLines(RENDERING_LINE_LIST);
 
-  cp->normal->AddPoint(math::Vector3(0, 0, 0));
-  cp->normal->AddPoint(math::Vector3(0, 0, 0.1));
+  cp->normal->AddPoint(ignition::math::Vector3d(0, 0, 0));
+  cp->normal->AddPoint(ignition::math::Vector3d(0, 0, 0.1));
 
-  cp->depth->AddPoint(math::Vector3(0, 0, 0));
-  cp->depth->AddPoint(math::Vector3(0, 0, -1));
+  cp->depth->AddPoint(ignition::math::Vector3d(0, 0, 0));
+  cp->depth->AddPoint(ignition::math::Vector3d(0, 0, -1));
 
   obj->setVisibilityFlags(GZ_VISIBILITY_GUI);
   cp->depth->setVisibilityFlags(GZ_VISIBILITY_GUI);

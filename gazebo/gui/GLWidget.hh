@@ -22,6 +22,8 @@
 #include <utility>
 #include <list>
 
+#include <ignition/math/Pose3.hh>
+
 #include "gazebo/gui/qt.h"
 #include "gazebo/rendering/RenderTypes.hh"
 
@@ -30,8 +32,6 @@
 #include "gazebo/common/MouseEvent.hh"
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/common/Event.hh"
-
-#include "gazebo/math/Pose.hh"
 
 #include "gazebo/msgs/msgs.hh"
 
@@ -144,7 +144,7 @@ namespace gazebo
       private: void ClearSelection();
 
       private: void PushHistory(const std::string &_visName,
-                                const math::Pose &_pose);
+                                const ignition::math::Pose3d &_pose);
       private: void PopHistory();
 
       /// \brief Set the selected visual, which will highlight the
@@ -204,7 +204,8 @@ namespace gazebo
 
       private: std::string state;
 
-      private: std::list<std::pair<std::string, math::Pose> > moveHistory;
+      private: std::list<std::pair<std::string, ignition::math::Pose3d>>
+               moveHistory;
 
       /// \brief Name of entity that is being copied.
       private: std::string copyEntityName;

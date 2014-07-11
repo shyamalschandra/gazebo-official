@@ -147,7 +147,6 @@ namespace gazebo
       ///   traversal through the kinematic graph has unexpected behavior
       ///   if you try to set the joint position of a link inside
       ///   a loop structure.
-      /// Warning:
       /// \param[in] _joint Joint to set.
       /// \param[in] _position Position of the joint.
       public: void SetJointPosition(

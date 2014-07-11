@@ -15,7 +15,6 @@
  *
 */
 #include <string.h>
-#include "gazebo/math/Helpers.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/transport/Node.hh"
 
@@ -45,7 +44,7 @@ class FactoryTest : public ServerFixture,
 // (see issue #651)
 void FactoryTest::BoxSdf(const std::string &_physicsEngine)
 {
-  math::Pose setPose, testPose;
+  ignition::math::Pose3d setPose, testPose;
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
   ASSERT_TRUE(world != NULL);
@@ -56,9 +55,10 @@ void FactoryTest::BoxSdf(const std::string &_physicsEngine)
   {
     std::ostringstream name;
     name << "test_box_" << i;
-    setPose.Set(math::Vector3(0, 0, i+0.5), math::Quaternion(0, 0, 0));
-    SpawnBox(name.str(), math::Vector3(1, 1, 1), setPose.pos,
-        setPose.rot.GetAsEuler());
+    setPose.Set(ignition::math::Vector3d(0, 0, i+0.5),
+        ignition::math::Quaterniond(0, 0, 0));
+    SpawnBox(name.str(), ignition::math::Vector3d(1, 1, 1), setPose.Pos(),
+        setPose.Rot().Euler());
   }
 
   // This loop must be separate from the previous loop to cause
@@ -86,20 +86,24 @@ TEST_P(FactoryTest, BoxSdf)
 /////////////////////////////////////////////////
 void FactoryTest::Box(const std::string &_physicsEngine)
 {
-  math::Pose setPose, testPose;
+  ignition::math::Pose3d setPose, testPose;
   Load("worlds/empty.world", true, _physicsEngine);
 
   for (unsigned int i = 0; i < 100; i++)
   {
     std::ostringstream name;
     name << "test_box_" << i;
-    setPose.Set(math::Vector3(0, 0, i+0.5), math::Quaternion(0, 0, 0));
-    SpawnBox(name.str(), math::Vector3(1, 1, 1), setPose.pos,
-        setPose.rot.GetAsEuler());
+    setPose.Set(ignition::math::Vector3d(0, 0, i+0.5),
+        ignition::math::Quaterniond(0, 0, 0));
+    SpawnBox(name.str(), ignition::math::Vector3d(1, 1, 1), setPose.Pos(),
+        setPose.Rot().Euler());
     testPose = GetEntityPose(name.str());
-    EXPECT_TRUE(math::equal(testPose.pos.x, setPose.pos.x, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.y, setPose.pos.y, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.z, setPose.pos.z, 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().X(),
+          setPose.Pos().X(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Y(),
+          setPose.Pos().Y(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Z(),
+          setPose.Pos().Z(), 0.1));
   }
 }
 
@@ -112,19 +116,23 @@ TEST_P(FactoryTest, Box)
 /////////////////////////////////////////////////
 void FactoryTest::Sphere(const std::string &_physicsEngine)
 {
-  math::Pose setPose, testPose;
+  ignition::math::Pose3d setPose, testPose;
   Load("worlds/empty.world", true, _physicsEngine);
 
   for (unsigned int i = 0; i < 100; i++)
   {
     std::ostringstream name;
     name << "test_sphere_" << i;
-    setPose.Set(math::Vector3(0, 0, i+0.5), math::Quaternion(0, 0, 0));
-    SpawnSphere(name.str(), setPose.pos, setPose.rot.GetAsEuler());
+    setPose.Set(ignition::math::Vector3d(0, 0, i+0.5),
+        ignition::math::Quaterniond(0, 0, 0));
+    SpawnSphere(name.str(), setPose.Pos(), setPose.Rot().Euler());
     testPose = GetEntityPose(name.str());
-    EXPECT_TRUE(math::equal(testPose.pos.x, setPose.pos.x, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.y, setPose.pos.y, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.z, setPose.pos.z, 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().X(),
+          setPose.Pos().X(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Y(),
+          setPose.Pos().Y(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Z(),
+          setPose.Pos().Z(), 0.1));
   }
 }
 
@@ -137,19 +145,23 @@ TEST_P(FactoryTest, Sphere)
 /////////////////////////////////////////////////
 void FactoryTest::Cylinder(const std::string &_physicsEngine)
 {
-  math::Pose setPose, testPose;
+  ignition::math::Pose3d setPose, testPose;
   Load("worlds/empty.world", true, _physicsEngine);
 
   for (unsigned int i = 0; i < 100; i++)
   {
     std::ostringstream name;
     name << "test_cylinder_" << i;
-    setPose.Set(math::Vector3(0, 0, i+0.5), math::Quaternion(0, 0, 0));
-    SpawnCylinder(name.str(), setPose.pos, setPose.rot.GetAsEuler());
+    setPose.Set(ignition::math::Vector3d(0, 0, i+0.5),
+        ignition::math::Quaterniond(0, 0, 0));
+    SpawnCylinder(name.str(), setPose.Pos(), setPose.Rot().Euler());
     testPose = GetEntityPose(name.str());
-    EXPECT_TRUE(math::equal(testPose.pos.x, setPose.pos.x, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.y, setPose.pos.y, 0.1));
-    EXPECT_TRUE(math::equal(testPose.pos.z, setPose.pos.z, 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().X(),
+          setPose.Pos().X(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Y(),
+          setPose.Pos().Y(), 0.1));
+    EXPECT_TRUE(ignition::math::equal(testPose.Pos().Z(),
+          setPose.Pos().Z(), 0.1));
   }
 }
 
@@ -279,11 +291,12 @@ TEST_P(FactoryTest, Clone)
       rendering::RenderEngine::NONE)
     return;
 
-  math::Pose setPose, testPose;
+  ignition::math::Pose3d setPose, testPose;
   Load("worlds/empty.world");
-  setPose.Set(math::Vector3(-5, 0, 5), math::Quaternion(0, GZ_DTOR(15), 0));
-  SpawnCamera("camera_model", "camera_sensor2", setPose.pos,
-      setPose.rot.GetAsEuler());
+  setPose.Set(ignition::math::Vector3d(-5, 0, 5),
+  ignition::math::Quaterniond(0, IGN_DTOR(15), 0));
+  SpawnCamera("camera_model", "camera_sensor2", setPose.Pos(),
+      setPose.Rot().Euler());
 
   unsigned char *img = NULL;
   unsigned int width;

@@ -19,9 +19,11 @@
 
 #include <string>
 #include <vector>
+
+#include <ignition/math/Pose3.hh>
+#include <ignition/math/Vector3.hh>
+
 #include "gazebo/gui/qt.h"
-#include "gazebo/math/Pose.hh"
-#include "gazebo/math/Vector3.hh"
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/util/system.hh"
 
@@ -218,10 +220,10 @@ namespace gazebo
       private: rendering::VisualPtr visual;
 
       /// \brief Size of the manipular.
-      private: math::Vector3 size;
+      private: ignition::math::Vector3d size;
 
       /// \brief Pose of the manip.
-      private: math::Pose pose;
+      private: ignition::math::Pose3d pose;
 
       /// \brief Maker that manages this manip.
       private: BuildingMaker *maker;
