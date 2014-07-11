@@ -592,12 +592,6 @@ void World::Step()
 }
 
 //////////////////////////////////////////////////
-void World::StepWorld(int _steps)
-{
-  this->Step(_steps);
-}
-
-//////////////////////////////////////////////////
 void World::Step(unsigned int _steps)
 {
   if (!this->IsPaused())
@@ -2028,6 +2022,28 @@ void World::RemoveModel(const std::string &_name)
       this->sdf->RemoveChild(childElem);
   }
 
+  if (this->sdf->HasElement("light"))
+  {
+    sdf::ElementPtr childElem = this->sdf->GetElement("light");
+    while (childElem && childElem->Get<std::string>("name") != (*iter))
+      childElem = childElem->GetNextElement("light");
+    if (childElem)
+    {
+      this->sdf->RemoveChild(childElem);
+      // Find the light by name in the scene msg, and remove it.
+      for (int i = 0; i < this->sceneMsg.light_size(); ++i)
+      {
+        if (this->sceneMsg.light(i).name() == (*iter))
+        {
+          this->sceneMsg.mutable_light()->SwapElements(i,
+              this->sceneMsg.light_size()-1);
+          this->sceneMsg.mutable_light()->RemoveLast();
+          break;
+        }
+      }
+    }
+  }
+
   {
     boost::recursive_mutex::scoped_lock lock(
         *this->GetPhysicsEngine()->GetPhysicsUpdateMutex());
@@ -2074,6 +2090,12 @@ void World::OnLightMsg(ConstLightPtr &_msg)
     {
       lightExists = true;
       this->sceneMsg.mutable_light(i)->MergeFrom(*_msg);
+
+      sdf::ElementPtr childElem = this->sdf->GetElement("light");
+      while (childElem && childElem->Get<std::string>("name") != _msg->name())
+        childElem = childElem->GetNextElement("light");
+      if (childElem)
+        msgs::LightToSDF(*_msg, childElem);
       break;
     }
   }
@@ -2082,6 +2104,11 @@ void World::OnLightMsg(ConstLightPtr &_msg)
   if (!lightExists)
   {
     this->sceneMsg.add_light()->CopyFrom(*_msg);
+
+    // add to the world sdf
+    sdf::ElementPtr lightSDF = msgs::LightToSDF(*_msg);
+    lightSDF->SetParent(this->sdf);
+    lightSDF->GetParent()->InsertElement(lightSDF);
   }
 }
 
