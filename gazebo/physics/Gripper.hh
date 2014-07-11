@@ -14,16 +14,16 @@
  * limitations under the License.
  *
 */
-#ifndef _GRIPPER_HH_
-#define _GRIPPER_HH_
+#ifndef _GAZEBO_GRIPPER_HH_
+#define _GAZEBO_GRIPPER_HH_
 
 #include <map>
 #include <vector>
 #include <string>
+#include <ignition/math/Pose3.hh>
 
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/math/Pose.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/util/system.hh"
 
@@ -114,7 +114,7 @@ namespace gazebo
 
       /// \brief Previous difference between the palm link and grasped
       /// object.
-      private: math::Pose prevDiff;
+      private: ignition::math::Pose3d prevDiff;
 
       /// \brief Used to determine when to create the fixed joint.
       private: std::vector<double> diffs;

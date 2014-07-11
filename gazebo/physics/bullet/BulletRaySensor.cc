@@ -14,20 +14,8 @@
  * limitations under the License.
  *
 */
-/* Desc: Bullet ray sensor
- * Author: Nate Koenig
- * Date: 21 May 2009
- */
-/*
-#include "World.hh"
-
-#include "BulletPhysics.hh"
-#include "BulletRaySensor.hh"
-*/
-
 using namespace gazebo;
 using namespace physics;
-
 
 //////////////////////////////////////////////////
 BulletRaySensor::BulletRaySensor(Link *_body)
@@ -52,7 +40,8 @@ BulletRaySensor::~BulletRaySensor()
 }
 
 //////////////////////////////////////////////////
-void BulletRaySensor::AddRay(math::Vector3 start, math::Vector3 end,
+void BulletRaySensor::AddRay(ignition::math::Vector3d start,
+    ignition::math::Vector3d end,
     double minRange, double maxRange, bool display)
 {
   BulletRayCollision *rayCollision;
@@ -75,7 +64,7 @@ int BulletRaySensor::GetCount() const
 
 //////////////////////////////////////////////////
 void BulletRaySensor::GetRelativePoints(int _index,
-    math::Vector3 &_a, math::Vector3 &_b)
+    ignition::math::Vector3d &_a, ignition::math::Vector3d &_b)
 {
   if (_index <0 || _index >= static_cast<int>(this->rays.size()))
   {
@@ -99,7 +88,7 @@ double BulletRaySensor::GetRange(int _index) const
     gzthrow(stream.str());
   }
 
-  return this->rays[_index]->GetLength();
+  return this->rays[_index]->Length();
 }
 
 //////////////////////////////////////////////////

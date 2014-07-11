@@ -17,9 +17,10 @@
 #ifndef _ENTITYMAKER_HH_
 #define _ENTITYMAKER_HH_
 
+#include <ignition/math/Vector3.hh>
+
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/math/Vector3.hh"
 #include "gazebo/util/system.hh"
 
 namespace gazebo
@@ -42,8 +43,8 @@ namespace gazebo
     {
       /// \def CreateCallback
       /// \brief boost::function with vector3 pos and vector3 scale
-      public: typedef boost::function<void(const math::Vector3 &pos,
-                  const math::Vector3 &scale)> CreateCallback;
+      public: typedef boost::function<void(const ignition::math::Vector3d &pos,
+                  const ignition::math::Vector3d &scale)> CreateCallback;
 
       /// \brief Constructor
       public: EntityMaker();
@@ -81,8 +82,9 @@ namespace gazebo
 
       /// \brief Get a point snapped to a grid
       /// \param[in] _p input point to be snapped
-      /// \return math::Vector3 with the point on the grid
-      protected: math::Vector3 GetSnappedPoint(math::Vector3 _p);
+      /// \return ignition::math::Vector3d with the point on the grid
+      protected: ignition::math::Vector3d GetSnappedPoint(
+                     ignition::math::Vector3d _p);
 
       /// \brief Creates the entity
       protected: virtual void CreateTheEntity() = 0;

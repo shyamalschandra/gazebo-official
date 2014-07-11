@@ -161,7 +161,7 @@ TEST(gz_log, EchoFilter)
     FAIL() << "Please add support for sdf version: " << SDF_VERSION;
 
   echo = custom_exec(
-      std::string("gz log -e --filter pr2.pose.x -f ") +
+      std::string("gz log -e --filter pr2.pose.X() -f ") +
       PROJECT_SOURCE_PATH + "/test/data/pr2_state.log");
   shasum = gazebo::common::get_sha1<std::string>(echo);
   // EXPECT_EQ(pr2PoseXStateLog, echo);
@@ -219,7 +219,7 @@ TEST(gz_log, HzFilter)
 
   // Test Hz filter
   echo = custom_exec(
-      std::string("gz log -e -r -z 1.0 --filter pr2.pose.z -f ") +
+      std::string("gz log -e -r -z 1.0 --filter pr2.pose.Z() -f ") +
       PROJECT_SOURCE_PATH + "/test/data/pr2_state.log");
   boost::trim_right(echo);
   validEcho = "-0.000008";
@@ -227,7 +227,7 @@ TEST(gz_log, HzFilter)
 
   // Test zero Hz filter
   echo = custom_exec(
-      std::string("gz log -e -r -z 0 --filter pr2.pose.z -f ") +
+      std::string("gz log -e -r -z 0 --filter pr2.pose.Z() -f ") +
       PROJECT_SOURCE_PATH + "/test/data/pr2_state.log");
   boost::trim_right(echo);
   validEcho = "-0.000008 \n-0.000015";
@@ -235,7 +235,7 @@ TEST(gz_log, HzFilter)
 
   // Test negative Hz filter
   echo = custom_exec(
-      std::string("gz log -e -r -z -1.0 --filter pr2.pose.z -f ") +
+      std::string("gz log -e -r -z -1.0 --filter pr2.pose.Z() -f ") +
       PROJECT_SOURCE_PATH + "/test/data/pr2_state.log");
   boost::trim_right(echo);
   validEcho = "-0.000008 \n-0.000015";

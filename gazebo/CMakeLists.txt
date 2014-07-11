@@ -18,7 +18,7 @@ if (HAVE_BULLET)
 endif()
 
 add_subdirectory(msgs)
-add_subdirectory(math)
+
 add_subdirectory(transport)
 add_subdirectory(common)
 add_subdirectory(rendering)
@@ -90,9 +90,10 @@ target_link_libraries(libgazebo
   gazebo_sensors
   gazebo_rendering
   gazebo_msgs
-  gazebo_math
   pthread
 )
+
+target_link_libraries(libgazebo ${IGNITION_MATH_LIBRARIES})
 
 add_dependencies(libgazebo gazebo_msgs)
 gz_install_library(libgazebo)

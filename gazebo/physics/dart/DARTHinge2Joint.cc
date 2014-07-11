@@ -51,7 +51,8 @@ void DARTHinge2Joint::Init()
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTHinge2Joint::GetAnchor(unsigned int /*_index*/) const
+ignition::math::Vector3d DARTHinge2Joint::GetAnchor(
+    unsigned int /*_index*/) const
 {
   Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
                         this->dtJoint->getTransformFromChildBodyNode();
@@ -61,7 +62,8 @@ math::Vector3 DARTHinge2Joint::GetAnchor(unsigned int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-void DARTHinge2Joint::SetAxis(unsigned int _index, const math::Vector3 &_axis)
+void DARTHinge2Joint::SetAxis(unsigned int _index,
+    const ignition::math::Vector3d &_axis)
 {
   Eigen::Vector3d dartAxis = DARTTypes::ConvVec3(_axis);
 
@@ -92,7 +94,8 @@ void DARTHinge2Joint::SetAxis(unsigned int _index, const math::Vector3 &_axis)
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTHinge2Joint::GetGlobalAxis(unsigned int _index) const
+ignition::math::Vector3d DARTHinge2Joint::GetGlobalAxis(
+    unsigned int _index) const
 {
   Eigen::Vector3d globalAxis = Eigen::Vector3d::UnitX();
 
@@ -125,19 +128,19 @@ math::Vector3 DARTHinge2Joint::GetGlobalAxis(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
-math::Angle DARTHinge2Joint::GetAngleImpl(unsigned int _index) const
+ignition::math::Angle DARTHinge2Joint::GetAngleImpl(unsigned int _index) const
 {
-  math::Angle result;
+  ignition::math::Angle result;
 
   if (_index == 0)
   {
     double radianAngle = this->dtJoint->getPosition(0);
-    result.SetFromRadian(radianAngle);
+    result.Radian(radianAngle);
   }
   else if (_index == 1)
   {
     double radianAngle = this->dtJoint->getPosition(1);
-    result.SetFromRadian(radianAngle);
+    result.Radian(radianAngle);
   }
   else
   {

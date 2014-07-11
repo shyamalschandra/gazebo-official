@@ -23,6 +23,7 @@
 #include <string>
 
 #include <sdf/sdf.hh>
+#include <ignition/math/Pose3.hh>
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/rendering/RenderTypes.hh"
@@ -31,7 +32,6 @@
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Time.hh"
-#include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
 
@@ -129,7 +129,7 @@ namespace gazebo
 
       /// \brief Get the current pose.
       /// \return Current pose of the sensor.
-      public: virtual math::Pose GetPose() const;
+      public: virtual ignition::math::Pose3d GetPose() const;
 
       /// \brief Set whether the sensor is active or not.
       /// \param[in] _value True if active, false if not.
@@ -220,7 +220,7 @@ namespace gazebo
       protected: sdf::ElementPtr sdf;
 
       /// \brief Pose of the sensor.
-      protected: math::Pose pose;
+      protected: ignition::math::Pose3d pose;
 
       /// \brief All event connections.
       protected: std::vector<event::ConnectionPtr> connections;
