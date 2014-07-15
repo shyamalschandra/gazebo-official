@@ -341,14 +341,21 @@ namespace gazebo
       /// on conventions.
       public: virtual JointWrench GetForceTorque(unsigned int _index) = 0;
 
-      /// \brief Set the max allowed force of an axis(index).
+      /// \brief Set the max allowed force of an axis(index) when using
+      /// Joint::SetVelocity.
+      /// Current implementation in Bullet and ODE is enforced using impulses,
+      /// which enforces force/torque limits when calling Joint::SetVelocity.
+      /// Current implementation is engine dependent. See for example
+      /// ODE implementation in ODEHingeJoint::SetMaxForce.
+      /// Note this functionality is not implemented in DART and Simbody.
       /// Note that the unit of force should be consistent with the rest
       /// of the simulation scales.
       /// \param[in] _index Index of the axis.
       /// \param[in] _force Maximum force that can be applied to the axis.
       public: virtual void SetMaxForce(unsigned int _index, double _force) = 0;
 
-      /// \brief Get the max allowed force of an axis(index).
+      /// \brief Get the max allowed force of an axis(index) when using
+      /// Joint::SetVelocity.
       /// Note that the unit of force should be consistent with the rest
       /// of the simulation scales.
       /// \param[in] _index Index of the axis.
@@ -367,13 +374,36 @@ namespace gazebo
       /// \brief If the Joint is static, Gazebo stores the state of
       /// this Joint as a scalar inside the Joint class, so
       /// this call will NOT move the joint dynamically for a static Model.
-      /// But if this Model is not static, then it is updated dynamically,
-      /// all the conencted children Link's are moved as a result of the
-      /// Joint angle setting.  Dynamic Joint angle update is accomplished
-      /// by calling JointController::SetJointPosition.
+      /// But if this Model is not static, then it is updated dynamically.
+      /// The child links of this joint are updated based on position change.
+      /// And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
       /// \param[in] _index Index of the axis.
       /// \param[in] _angle Angle to set the joint to.
-      public: void SetAngle(unsigned int _index, math::Angle _angle);
+      public: void SetAngle(unsigned int _index, math::Angle _angle)
+              GAZEBO_DEPRECATED(4.0);
+
+      /// \brief The child links of this joint are updated based on desired
+      /// position.  And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// unspecified, pure kinematic teleportation.
+      /// \return returns true if operation succeeds, 0 if it fails.
+      public: virtual bool SetPosition(unsigned int _index, double _position);
+
+      /// \brief Helper function for maximal coordinate solver SetPosition.
+      /// The child links of this joint are updated based on position change.
+      /// And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// unspecified, pure kinematic teleportation.
+      /// \return returns true if operation succeeds, 0 if it fails.
+      protected: bool SetPositionMaximal(unsigned int _index, double _position);
 
       /// \brief Get the forces applied to the center of mass of a physics::Link
       /// due to the existence of this Joint.
@@ -547,6 +577,27 @@ namespace gazebo
       /// \return Angle of the axis.
       protected: virtual math::Angle GetAngleImpl(
                      unsigned int _index) const = 0;
+
+      /// \brief internal helper to find all links connected to the child link
+      /// branching out from the children of the child link and any parent
+      /// of the child link other than the parent link through this joint.
+      /// \param[in] _originalParentLink parent link of this joint, this
+      /// is used to check for loops connecting back to the parent link.
+      /// \param[in/out] _connectedLinks list of aggregated links that
+      /// contains all links connected to the child link of this joint.
+      /// Empty if a loop is found that connects back to the parent link.
+      /// \return true if successful, false if a loop is found that connects
+      /// back to the parent link.
+      protected: bool FindAllConnectedLinks(const LinkPtr &_originalParentLink,
+        Link_V &_connectedLinks);
+
+      /// \brief internal function to help us compute child link pose
+      /// if a joint position change is applied.
+      /// \param[in] _index axis index
+      /// \param[in] _position new joint position
+      /// \return new child link pose at new joint position.
+      protected: math::Pose ComputeChildLinkPose(unsigned int _index,
+          double _position);
 
       /// \brief Helper function to load a joint.
       /// \param[in] _pose Pose of the anchor.
