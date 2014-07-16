@@ -59,6 +59,12 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
     return;
   }
 
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Aborting test for DART, see issue #1173.\n";
+    return;
+  }
+
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -138,13 +144,13 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
   msgs::Contacts contacts02;
 
   // let objects stablize
-  world->StepWorld(1000);
+  world->Step(1000);
 
   int steps = 1000;
   while ((contacts01.contact_size() == 0 || contacts02.contact_size() == 0)
       && --steps > 0)
   {
-    world->StepWorld(1);
+    world->Step(1);
     contacts01 = contactSensor01->GetContacts();
     contacts02 = contactSensor02->GetContacts();
   }
@@ -346,15 +352,15 @@ void ContactSensor::TorqueTest(const std::string &_physicsEngine)
   msgs::Contacts contacts;
 
   physics->SetContactMaxCorrectingVel(0);
-  physics->SetSORPGSIters(100);
+  physics->SetParam("iters", 100);
 
-  world->StepWorld(1);
+  world->Step(1);
 
   // run simulation until contacts occur
   int steps = 2000;
   while (contacts.contact_size() == 0 && --steps > 0)
   {
-    world->StepWorld(1);
+    world->Step(1);
     contacts = contactSensor->GetContacts();
   }
 
