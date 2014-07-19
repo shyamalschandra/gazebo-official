@@ -91,7 +91,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   // \todo: This is a hack. There is no guarantee (other than the
   // improbability of creating an extreme number of visuals), that
   // this contactVisId is unique.
-  this->contactVisId = GZ_UINT32_MAX;
+  this->contactVisId = IGN_UINT32_MAX;
 
   this->initialized = false;
   this->showCOMs = false;
@@ -727,7 +727,7 @@ VisualPtr Scene::GetSelectedVisual() const
 
 //////////////////////////////////////////////////
 VisualPtr Scene::GetVisualAt(CameraPtr _camera,
-                             const math::Vector2i &_mousePos,
+                             const ignition::math::Vector2i &_mousePos,
                              std::string &_mod)
 {
   VisualPtr visual;
@@ -767,7 +767,7 @@ VisualPtr Scene::GetVisualAt(CameraPtr _camera,
 
 //////////////////////////////////////////////////
 VisualPtr Scene::GetModelVisualAt(CameraPtr _camera,
-                                  const math::Vector2i &_mousePos)
+                                  const ignition::math::Vector2i &_mousePos)
 {
   VisualPtr vis = this->GetVisualAt(_camera, _mousePos);
   if (vis)
@@ -784,9 +784,10 @@ void Scene::SnapVisualToNearestBelow(const std::string &_visualName)
 
   if (vis && visBelow)
   {
-    math::Vector3 pos = vis->GetWorldPose().pos;
-    double dz = vis->GetBoundingBox().min.z - visBelow->GetBoundingBox().max.z;
-    pos.z -= dz;
+    ignition::math::Vector3d pos = vis->GetWorldPose().Pos();
+    double dz = vis->GetBoundingBox().Min().Z() -
+      visBelow->GetBoundingBox().Max().Z();
+    pos.Z() -= dz;
     vis->SetWorldPosition(pos);
   }
 }
@@ -800,16 +801,16 @@ VisualPtr Scene::GetVisualBelow(const std::string &_visualName)
   if (vis)
   {
     std::vector<VisualPtr> below;
-    this->GetVisualsBelowPoint(vis->GetWorldPose().pos, below);
+    this->GetVisualsBelowPoint(vis->GetWorldPose().Pos(), below);
 
     double maxZ = -10000;
 
     for (uint32_t i = 0; i < below.size(); ++i)
     {
       if (below[i]->GetName().find(vis->GetName()) != 0
-          && below[i]->GetBoundingBox().max.z > maxZ)
+          && below[i]->GetBoundingBox().Max().Z() > maxZ)
       {
-        maxZ = below[i]->GetBoundingBox().max.z;
+        maxZ = below[i]->GetBoundingBox().Max().Z();
         result = below[i];
       }
     }
@@ -819,7 +820,7 @@ VisualPtr Scene::GetVisualBelow(const std::string &_visualName)
 }
 
 //////////////////////////////////////////////////
-double Scene::GetHeightBelowPoint(const math::Vector3 &_pt)
+double Scene::GetHeightBelowPoint(const ignition::math::Vector3d &_pt)
 {
   double height = 0;
   Ogre::Ray ray(Conversions::Convert(_pt), Ogre::Vector3(0, 0, -1));
@@ -845,7 +846,7 @@ double Scene::GetHeightBelowPoint(const math::Vector3 &_pt)
       if (iter->movable->getName().substr(0, 15) == "__SELECTION_OBJ")
         continue;
 
-      height = _pt.z - iter->distance;
+      height = _pt.Z() - iter->distance;
       break;
     }
   }
@@ -854,8 +855,8 @@ double Scene::GetHeightBelowPoint(const math::Vector3 &_pt)
   // check ourselves.
   if (this->terrain)
   {
-    double terrainHeight = this->terrain->GetHeight(_pt.x, _pt.y, _pt.z);
-    if (terrainHeight <= _pt.z)
+    double terrainHeight = this->terrain->GetHeight(_pt.X(), _pt.Y(), _pt.Z());
+    if (terrainHeight <= _pt.Z())
       height = std::max(height, terrainHeight);
   }
 
@@ -863,7 +864,7 @@ double Scene::GetHeightBelowPoint(const math::Vector3 &_pt)
 }
 
 //////////////////////////////////////////////////
-void Scene::GetVisualsBelowPoint(const math::Vector3 &_pt,
+void Scene::GetVisualsBelowPoint(const ignition::math::Vector3d &_pt,
                                  std::vector<VisualPtr> &_visuals)
 {
   Ogre::Ray ray(Conversions::Convert(_pt), Ogre::Vector3(0, 0, -1));
@@ -913,7 +914,7 @@ void Scene::GetVisualsBelowPoint(const math::Vector3 &_pt,
 
 //////////////////////////////////////////////////
 VisualPtr Scene::GetVisualAt(CameraPtr _camera,
-                             const math::Vector2i &_mousePos)
+                             const ignition::math::Vector2i &_mousePos)
 {
   VisualPtr visual;
 
@@ -937,16 +938,16 @@ VisualPtr Scene::GetVisualAt(CameraPtr _camera,
 
 /////////////////////////////////////////////////
 Ogre::Entity *Scene::GetOgreEntityAt(CameraPtr _camera,
-                                     const math::Vector2i &_mousePos,
-                                     bool _ignoreSelectionObj)
+    const ignition::math::Vector2i &_mousePos,
+    bool _ignoreSelectionObj)
 {
   Ogre::Camera *ogreCam = _camera->GetOgreCamera();
 
   Ogre::Real closest_distance = -1.0f;
   Ogre::Ray mouseRay = ogreCam->getCameraToViewportRay(
-      static_cast<float>(_mousePos.x) /
+      static_cast<float>(_mousePos.X()) /
       ogreCam->getViewport()->getActualWidth(),
-      static_cast<float>(_mousePos.y) /
+      static_cast<float>(_mousePos.Y()) /
       ogreCam->getViewport()->getActualHeight());
 
   this->raySceneQuery->setRay(mouseRay);
@@ -1026,19 +1027,19 @@ Ogre::Entity *Scene::GetOgreEntityAt(CameraPtr _camera,
 
 //////////////////////////////////////////////////
 bool Scene::GetFirstContact(CameraPtr _camera,
-                            const math::Vector2i &_mousePos,
-                            math::Vector3 &_position)
+                            const ignition::math::Vector2i &_mousePos,
+                            ignition::math::Vector3d &_position)
 {
   bool valid = false;
   Ogre::Camera *ogreCam = _camera->GetOgreCamera();
 
-  _position = math::Vector3::Zero;
+  _position = ignition::math::Vector3d::Zero;
 
   // Ogre::Real closest_distance = -1.0f;
   Ogre::Ray mouseRay = ogreCam->getCameraToViewportRay(
-      static_cast<float>(_mousePos.x) /
+      static_cast<float>(_mousePos.X()) /
       ogreCam->getViewport()->getActualWidth(),
-      static_cast<float>(_mousePos.y) /
+      static_cast<float>(_mousePos.Y()) /
       ogreCam->getViewport()->getActualHeight());
 
   this->raySceneQuery->setSortByDistance(true);
@@ -1121,7 +1122,7 @@ bool Scene::GetFirstContact(CameraPtr _camera,
 
   // Compute the interesection point using the mouse ray and a distance
   // value.
-  if (_position == math::Vector3::Zero && distance > 0.0)
+  if (_position == ignition::math::Vector3d::Zero && distance > 0.0)
   {
     _position = Conversions::Convert(mouseRay.getPoint(distance));
     valid = true;
@@ -1137,11 +1138,11 @@ void Scene::PrintSceneGraph()
 }
 
 //////////////////////////////////////////////////
-void Scene::PrintSceneGraphHelper(const std::string &prefix_, Ogre::Node *node_)
+void Scene::PrintSceneGraphHelper(const std::string &_prefix, Ogre::Node *_node)
 {
-  Ogre::SceneNode *snode = dynamic_cast<Ogre::SceneNode*>(node_);
+  Ogre::SceneNode *snode = dynamic_cast<Ogre::SceneNode*>(_node);
 
-  std::string nodeName = node_->getName();
+  std::string nodeName = _node->getName();
   int numAttachedObjs = 0;
   bool isInSceneGraph = false;
   if (snode)
@@ -1155,49 +1156,49 @@ void Scene::PrintSceneGraphHelper(const std::string &prefix_, Ogre::Node *node_)
     return;
   }
 
-  int numChildren = node_->numChildren();
-  Ogre::Vector3 pos = node_->getPosition();
-  Ogre::Vector3 scale = node_->getScale();
+  int numChildren = _node->numChildren();
+  Ogre::Vector3 pos = _node->getPosition();
+  Ogre::Vector3 scale = _node->getScale();
 
-  std::cout << prefix_ << nodeName << "\n";
-  std::cout << prefix_ << "  Num Objs[" << numAttachedObjs << "]\n";
+  std::cout << _prefix << nodeName << "\n";
+  std::cout << _prefix << "  Num Objs[" << numAttachedObjs << "]\n";
   for (int i = 0; i < numAttachedObjs; i++)
   {
-    std::cout << prefix_
+    std::cout << _prefix
       << "    Obj[" << snode->getAttachedObject(i)->getName() << "]\n";
   }
-  std::cout << prefix_ << "  Num Children[" << numChildren << "]\n";
-  std::cout << prefix_ << "  IsInGraph[" << isInSceneGraph << "]\n";
-  std::cout << prefix_
+  std::cout << _prefix << "  Num Children[" << numChildren << "]\n";
+  std::cout << _prefix << "  IsInGraph[" << isInSceneGraph << "]\n";
+  std::cout << _prefix
     << "  Pos[" << pos.x << " " << pos.y << " " << pos.z << "]\n";
-  std::cout << prefix_
+  std::cout << _prefix
     << "  Scale[" << scale.x << " " << scale.y << " " << scale.z << "]\n";
 
-  for (uint32_t i = 0; i < node_->numChildren(); i++)
+  for (uint32_t i = 0; i < _node->numChildren(); i++)
   {
-    this->PrintSceneGraphHelper(prefix_ + "  ", node_->getChild(i));
+    this->PrintSceneGraphHelper(_prefix + "  ", _node->getChild(i));
   }
 }
 
 //////////////////////////////////////////////////
-void Scene::DrawLine(const math::Vector3 &start_,
-                     const math::Vector3 &end_,
-                     const std::string &name_)
+void Scene::DrawLine(const ignition::math::Vector3d &_start,
+                     const ignition::math::Vector3d &_end,
+                     const std::string &_name)
 {
   Ogre::SceneNode *sceneNode = NULL;
   Ogre::ManualObject *obj = NULL;
   bool attached = false;
 
-  if (this->manager->hasManualObject(name_))
+  if (this->manager->hasManualObject(_name))
   {
-    sceneNode = this->manager->getSceneNode(name_);
-    obj = this->manager->getManualObject(name_);
+    sceneNode = this->manager->getSceneNode(_name);
+    obj = this->manager->getManualObject(_name);
     attached = true;
   }
   else
   {
-    sceneNode = this->manager->getRootSceneNode()->createChildSceneNode(name_);
-    obj = this->manager->createManualObject(name_);
+    sceneNode = this->manager->getRootSceneNode()->createChildSceneNode(_name);
+    obj = this->manager->createManualObject(_name);
   }
 
   sceneNode->setVisible(true);
@@ -1205,8 +1206,8 @@ void Scene::DrawLine(const math::Vector3 &start_,
 
   obj->clear();
   obj->begin("Gazebo/Red", Ogre::RenderOperation::OT_LINE_LIST);
-  obj->position(start_.x, start_.y, start_.z);
-  obj->position(end_.x, end_.y, end_.z);
+  obj->position(_start.X(), _start.Y(), _start.Z());
+  obj->position(_end.X(), _end.Y(), _end.Z());
   obj->end();
 
   if (!attached)
@@ -1240,13 +1241,13 @@ void Scene::SetFog(const std::string &_type, const common::Color &_color,
 }
 
 //////////////////////////////////////////////////
-void Scene::SetVisible(const std::string &name_, bool visible_)
+void Scene::SetVisible(const std::string &_name, bool _visible)
 {
-  if (this->manager->hasSceneNode(name_))
-    this->manager->getSceneNode(name_)->setVisible(visible_);
+  if (this->manager->hasSceneNode(_name))
+    this->manager->getSceneNode(_name)->setVisible(_visible);
 
-  if (this->manager->hasManualObject(name_))
-    this->manager->getManualObject(name_)->setVisible(visible_);
+  if (this->manager->hasManualObject(_name))
+    this->manager->getManualObject(_name)->setVisible(_visible);
 }
 
 //////////////////////////////////////////////////
@@ -1612,7 +1613,8 @@ void Scene::PreRender()
         filename2 << "/tmp/render_targets/iter_"
                   << this->iterations << "_" << i << "_b.png";
 
-        Ogre::MultiRenderTarget *mtarget = dynamic_cast<Ogre::MultiRenderTarget*>(renderIter.current()->second);
+        Ogre::MultiRenderTarget *mtarget =
+        dynamic_cast<Ogre::MultiRenderTarget*>(renderIter.current()->second);
         if (mtarget)
         {
           // std::cout << renderIter.current()->first << "\n";
@@ -1804,7 +1806,7 @@ void Scene::PreRender()
         if (!this->selectedVis || this->selectionMode != "move" ||
             iter->first != this->selectedVis->GetId())
         {
-          math::Pose pose = msgs::Convert(pIter->second);
+          ignition::math::Pose3d pose = msgs::Convert(pIter->second);
           GZ_ASSERT(iter->second, "Visual pointer is NULL");
           iter->second->SetPose(pose);
           PoseMsgs_M::iterator prev = pIter++;
@@ -1834,7 +1836,7 @@ void Scene::PreRender()
             if (!this->selectedVis || this->selectionMode != "move" ||
               iter->first != this->selectedVis->GetId())
             {
-              math::Pose pose = msgs::Convert(pose_msg);
+              ignition::math::Pose3d pose = msgs::Convert(pose_msg);
               iter2->second->SetPose(pose);
             }
           }
@@ -2286,7 +2288,7 @@ void Scene::ProcessRequestMsg(ConstRequestPtr &_msg)
   else if (_msg->request() == "show_skeleton")
   {
     VisualPtr vis = this->GetVisual(_msg->data());
-    bool show = (math::equal(_msg->dbl_data(), 1.0)) ? true : false;
+    bool show = (ignition::math::equal(_msg->dbl_data(), 1.0)) ? true : false;
       if (vis)
         vis->ShowSkeleton(show);
   }
@@ -2507,21 +2509,21 @@ void Scene::OnSkyMsg(ConstSkyPtr &_msg)
   if (_msg->has_time())
   {
     Ogre::Vector3 t = this->skyxController->getTime();
-    t.x = math::clamp(_msg->time(), 0.0, 24.0);
+    t.x = ignition::math::clamp(_msg->time(), 0.0, 24.0);
     this->skyxController->setTime(t);
   }
 
   if (_msg->has_sunrise())
   {
     Ogre::Vector3 t = this->skyxController->getTime();
-    t.y = math::clamp(_msg->sunrise(), 0.0, 24.0);
+    t.y = ignition::math::clamp(_msg->sunrise(), 0.0, 24.0);
     this->skyxController->setTime(t);
   }
 
   if (_msg->has_sunset())
   {
     Ogre::Vector3 t = this->skyxController->getTime();
-    t.z = math::clamp(_msg->sunset(), 0.0, 24.0);
+    t.z = ignition::math::clamp(_msg->sunset(), 0.0, 24.0);
     this->skyxController->setTime(t);
   }
 
@@ -2543,7 +2545,7 @@ void Scene::OnSkyMsg(ConstSkyPtr &_msg)
   if (_msg->has_humidity())
   {
     Ogre::Vector2 wheater = vclouds->getWheater();
-    vclouds->setWheater(math::clamp(_msg->humidity(), 0.0, 1.0),
+    vclouds->setWheater(ignition::math::clamp(_msg->humidity(), 0.0, 1.0),
                         wheater.y, true);
   }
 
@@ -2551,7 +2553,7 @@ void Scene::OnSkyMsg(ConstSkyPtr &_msg)
   {
     Ogre::Vector2 wheater = vclouds->getWheater();
     vclouds->setWheater(wheater.x,
-                        math::clamp(_msg->mean_cloud_size(), 0.0, 1.0), true);
+        ignition::math::clamp(_msg->mean_cloud_size(), 0.0, 1.0), true);
   }
 
   this->skyx->update(0);
@@ -2879,7 +2881,7 @@ void Scene::ShowContacts(bool _show)
 {
   ContactVisualPtr vis;
 
-  if (this->contactVisId == GZ_UINT32_MAX && _show)
+  if (this->contactVisId == IGN_UINT32_MAX && _show)
   {
     vis.reset(new ContactVisual("__GUIONLY_CONTACT_VISUAL__",
               this->worldVisual, "~/physics/contacts"));

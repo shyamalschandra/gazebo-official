@@ -15,6 +15,7 @@
  *
  */
 #include <sstream>
+#include <ignition/math/Quaternion.hh>
 
 #include "gazebo/msgs/msgs.hh"
 
@@ -26,7 +27,6 @@
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/Scene.hh"
 
-#include "gazebo/math/Quaternion.hh"
 
 #include "gazebo/transport/Publisher.hh"
 #include "gazebo/transport/Node.hh"
@@ -143,7 +143,7 @@ bool ModelMaker::Init()
 
   // Load the world file
   std::string modelName;
-  math::Pose modelPose, linkPose, visualPose;
+  ignition::math::Pose3d modelPose, linkPose, visualPose;
   sdf::ElementPtr modelElem;
 
   if (this->modelSDF->root->HasElement("model"))
@@ -157,7 +157,7 @@ bool ModelMaker::Init()
   }
 
   if (modelElem->HasElement("pose"))
-    modelPose = modelElem->Get<math::Pose>("pose");
+    modelPose = modelElem->Get<ignition::math::Pose3d>("pose");
 
   modelName = this->node->GetTopicNamespace() + "::" +
     modelElem->Get<std::string>("name");
@@ -182,7 +182,7 @@ bool ModelMaker::Init()
       {
         std::string linkName = linkElem->Get<std::string>("name");
         if (linkElem->HasElement("pose"))
-          linkPose = linkElem->Get<math::Pose>("pose");
+          linkPose = linkElem->Get<ignition::math::Pose3d>("pose");
         else
           linkPose.Set(0, 0, 0, 0, 0, 0);
 
@@ -201,7 +201,7 @@ bool ModelMaker::Init()
         while (visualElem)
         {
           if (visualElem->HasElement("pose"))
-            visualPose = visualElem->Get<math::Pose>("pose");
+            visualPose = visualElem->Get<ignition::math::Pose3d>("pose");
           else
             visualPose.Set(0, 0, 0, 0, 0, 0);
 
@@ -290,14 +290,14 @@ void ModelMaker::OnMouseRelease(const common::MouseEvent &_event)
 /////////////////////////////////////////////////
 void ModelMaker::OnMouseMove(const common::MouseEvent &_event)
 {
-  math::Pose pose = this->modelVisual->GetWorldPose();
-  pose.pos = ModelManipulator::GetMousePositionOnPlane(this->camera, _event);
+  ignition::math::Pose3d pose = this->modelVisual->GetWorldPose();
+  pose.Pos() = ModelManipulator::GetMousePositionOnPlane(this->camera, _event);
 
   if (!_event.shift)
   {
-    pose.pos = ModelManipulator::SnapPoint(pose.pos);
+    pose.Pos() = ModelManipulator::SnapPoint(pose.Pos());
   }
-  pose.pos.z = this->modelVisual->GetWorldPose().pos.z;
+  pose.Pos().Z() = this->modelVisual->GetWorldPose().Pos().Z();
 
   this->modelVisual->SetWorldPose(pose);
 }

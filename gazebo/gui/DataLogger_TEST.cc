@@ -16,10 +16,11 @@
 */
 
 #include <boost/filesystem.hpp>
+#include <ignition/math/Rand.hh>
+
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/gui/DataLogger.hh"
 #include "gazebo/gui/DataLogger_TEST.hh"
-#include "gazebo/math/Rand.hh"
 
 /////////////////////////////////////////////////
 void DataLogger_TEST::RecordButton()
@@ -151,7 +152,8 @@ void DataLogger_TEST::StressTest()
       recordButton->toggle();
 
       // Sleep for random times
-      gazebo::common::Time::MSleep(gazebo::math::Rand::GetIntUniform(10, 500));
+      gazebo::common::Time::MSleep(
+          ignition::math::Rand::IntUniform(10, 500));
     }
 
     // There should be (count * 0.5) log directories in $TMP/gazebo_test

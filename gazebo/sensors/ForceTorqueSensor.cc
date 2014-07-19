@@ -100,10 +100,10 @@ void ForceTorqueSensor::Load(const std::string &_worldName,
   // is expressed in joint orientation
   GZ_ASSERT(this->parentJoint,
             "parentJoint should be defined by single argument Load()");
-  math::Quaternion rotationChildSensor =
-    (this->pose + this->parentJoint->GetInitialAnchorPose()).rot;
+  ignition::math::Quaterniond rotationChildSensor =
+    (this->pose + this->parentJoint->GetInitialAnchorPose()).Rot();
   this->rotationSensorChild =
-    rotationChildSensor.GetInverse().GetAsMatrix3();
+    ignition::math::Matrix3d(rotationChildSensor.Inverse());
 
   // Handle measure direction
   bool defaultDirectionIsParentToChild = false;
@@ -176,13 +176,13 @@ physics::JointPtr ForceTorqueSensor::GetJoint() const
 }
 
 //////////////////////////////////////////////////
-math::Vector3 ForceTorqueSensor::GetForce() const
+ignition::math::Vector3d ForceTorqueSensor::GetForce() const
 {
   return msgs::Convert(this->wrenchMsg.wrench().force());
 }
 
 //////////////////////////////////////////////////
-math::Vector3 ForceTorqueSensor::GetTorque() const
+ignition::math::Vector3d ForceTorqueSensor::GetTorque() const
 {
   return msgs::Convert(this->wrenchMsg.wrench().torque());
 }
@@ -198,8 +198,8 @@ bool ForceTorqueSensor::UpdateImpl(bool /*_force*/)
   physics::JointWrench wrench = this->parentJoint->GetForceTorque(0u);
 
   // Get the force and torque in the appropriate frame.
-  math::Vector3 measuredForce;
-  math::Vector3 measuredTorque;
+  ignition::math::Vector3d measuredForce;
+  ignition::math::Vector3d measuredTorque;
 
   if (this->measureFrame == PARENT_LINK)
   {

@@ -101,9 +101,9 @@ bool LightMaker::Init()
   this->light->Load();
 
   this->light->SetLightType(this->lightTypename);
-  this->light->SetPosition(math::Vector3(0, 0, 1));
+  this->light->SetPosition(ignition::math::Vector3d(0, 0, 1));
   if (this->lightTypename == "directional")
-    this->light->SetDirection(math::Vector3(.1, .1, -0.9));
+    this->light->SetDirection(ignition::math::Vector3d(.1, .1, -0.9));
 
   std::ostringstream stream;
   stream << "user_" << this->lightTypename << "_light_" << counter++;
@@ -152,7 +152,7 @@ void LightMaker::CreateTheEntity()
   msgs::Set(this->msg.mutable_pose()->mutable_position(),
             this->light->GetPosition());
   msgs::Set(this->msg.mutable_pose()->mutable_orientation(),
-            math::Quaternion());
+            ignition::math::Quaterniond());
   this->lightPub->Publish(this->msg);
   this->camera.reset();
 }
@@ -172,14 +172,14 @@ void LightMaker::OnMouseRelease(const common::MouseEvent &_event)
 // prevent code duplication.
 void LightMaker::OnMouseMove(const common::MouseEvent &_event)
 {
-  math::Vector3 origin1, dir1, p1;
+  ignition::math::Vector3d origin1, dir1, p1;
 
   // Cast two rays from the camera into the world
-  this->camera->GetCameraToViewportRay(_event.pos.x, _event.pos.y,
+  this->camera->GetCameraToViewportRay(_event.pos.X(), _event.pos.Y(),
                                        origin1, dir1);
 
   // Compute the distance from the camera to plane of translation
-  math::Plane plane(math::Vector3(0, 0, 1), 0);
+  ignition::math::Planed plane(ignition::math::Vector3d(0, 0, 1), 0);
 
   double dist1 = plane.Distance(origin1, dir1);
 
@@ -189,17 +189,17 @@ void LightMaker::OnMouseMove(const common::MouseEvent &_event)
 
   if (!_event.shift)
   {
-    if (ceil(p1.x) - p1.x <= .4)
-      p1.x = ceil(p1.x);
-    else if (p1.x - floor(p1.x) <= .4)
-      p1.x = floor(p1.x);
+    if (ceil(p1.X()) - p1.X() <= .4)
+      p1.X() = ceil(p1.X());
+    else if (p1.X() - floor(p1.X()) <= .4)
+      p1.X() = floor(p1.X());
 
-    if (ceil(p1.y) - p1.y <= .4)
-      p1.y = ceil(p1.y);
-    else if (p1.y - floor(p1.y) <= .4)
-      p1.y = floor(p1.y);
+    if (ceil(p1.Y()) - p1.Y() <= .4)
+      p1.Y() = ceil(p1.Y());
+    else if (p1.Y() - floor(p1.Y()) <= .4)
+      p1.Y() = floor(p1.Y());
   }
-  p1.z = this->light->GetPosition().z;
+  p1.Z() = this->light->GetPosition().Z();
 
   this->light->SetPosition(p1);
 }

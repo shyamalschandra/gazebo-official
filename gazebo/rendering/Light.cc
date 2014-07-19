@@ -82,7 +82,7 @@ void Light::Load(sdf::ElementPtr _sdf)
 //////////////////////////////////////////////////
 void Light::Load()
 {
-  math::Vector3 vec;
+  ignition::math::Vector3d vec;
 
   try
   {
@@ -115,7 +115,7 @@ void Light::Update()
   this->SetSpecularColor(
       this->sdf->GetElement("specular")->Get<common::Color>());
   this->SetDirection(
-      this->sdf->Get<math::Vector3>("direction"));
+      this->sdf->Get<ignition::math::Vector3d>("direction"));
 
   if (this->sdf->HasElement("attenuation"))
   {
@@ -248,62 +248,62 @@ void Light::CreateVisual()
   if (lightType == "directional")
   {
     float s =.5;
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
-    this->line->AddPoint(math::Vector3(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
 
-    this->line->AddPoint(math::Vector3(-s, s, 0));
-    this->line->AddPoint(math::Vector3(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
 
-    this->line->AddPoint(math::Vector3(s, s, 0));
-    this->line->AddPoint(math::Vector3(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
 
-    this->line->AddPoint(math::Vector3(s, -s, 0));
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
 
-    this->line->AddPoint(math::Vector3(0, 0, 0));
-    this->line->AddPoint(math::Vector3(0, 0, -s));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, -s));
   }
   if (lightType == "point")
   {
     float s = 0.1;
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
-    this->line->AddPoint(math::Vector3(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
 
-    this->line->AddPoint(math::Vector3(-s, s, 0));
-    this->line->AddPoint(math::Vector3(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
 
-    this->line->AddPoint(math::Vector3(s, s, 0));
-    this->line->AddPoint(math::Vector3(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
 
-    this->line->AddPoint(math::Vector3(s, -s, 0));
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
-
-
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, s));
-
-    this->line->AddPoint(math::Vector3(-s, s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, s));
-
-    this->line->AddPoint(math::Vector3(s, s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, s));
-
-    this->line->AddPoint(math::Vector3(s, -s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, s));
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
 
 
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, s));
 
-    this->line->AddPoint(math::Vector3(-s, -s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, -s));
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, s));
 
-    this->line->AddPoint(math::Vector3(-s, s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, -s));
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, s));
 
-    this->line->AddPoint(math::Vector3(s, s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, -s));
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, s));
 
-    this->line->AddPoint(math::Vector3(s, -s, 0));
-    this->line->AddPoint(math::Vector3(0, 0, -s));
+
+
+    this->line->AddPoint(ignition::math::Vector3d(-s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, -s));
+
+    this->line->AddPoint(ignition::math::Vector3d(-s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, -s));
+
+    this->line->AddPoint(ignition::math::Vector3d(s, s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, -s));
+
+    this->line->AddPoint(ignition::math::Vector3d(s, -s, 0));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, -s));
   }
   else if (lightType == "spot")
   {
@@ -316,60 +316,73 @@ void Light::CreateVisual()
     angles[1] = range * tan(innerAngle);
 
     unsigned int i = 0;
-    this->line->AddPoint(math::Vector3(0, 0, 0));
-    this->line->AddPoint(math::Vector3(angles[i], angles[i], -range));
+    this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+    this->line->AddPoint(
+        ignition::math::Vector3d(angles[i], angles[i], -range));
 
     for (i = 0; i < 2; i++)
     {
-      this->line->AddPoint(math::Vector3(0, 0, 0));
-      this->line->AddPoint(math::Vector3(angles[i], angles[i], -range));
+      this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(0, 0, 0));
-      this->line->AddPoint(math::Vector3(-angles[i], -angles[i], -range));
+      this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], -angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(0, 0, 0));
-      this->line->AddPoint(math::Vector3(angles[i], -angles[i], -range));
+      this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], -angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(0, 0, 0));
-      this->line->AddPoint(math::Vector3(-angles[i], angles[i], -range));
+      this->line->AddPoint(ignition::math::Vector3d(0, 0, 0));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(angles[i], angles[i], -range));
-      this->line->AddPoint(math::Vector3(-angles[i], angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(-angles[i], angles[i], -range));
-      this->line->AddPoint(math::Vector3(-angles[i], -angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], -angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(-angles[i], -angles[i], -range));
-      this->line->AddPoint(math::Vector3(angles[i], -angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(-angles[i], -angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], -angles[i], -range));
 
-      this->line->AddPoint(math::Vector3(angles[i], -angles[i], -range));
-      this->line->AddPoint(math::Vector3(angles[i], angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], -angles[i], -range));
+      this->line->AddPoint(
+          ignition::math::Vector3d(angles[i], angles[i], -range));
     }
   }
 }
 
 //////////////////////////////////////////////////
-void Light::SetPosition(const math::Vector3 &_p)
+void Light::SetPosition(const ignition::math::Vector3d &_p)
 {
   this->visual->SetPosition(_p);
 }
 
 //////////////////////////////////////////////////
-math::Vector3 Light::GetPosition() const
+ignition::math::Vector3d Light::GetPosition() const
 {
   return this->visual->GetPosition();
 }
 
 //////////////////////////////////////////////////
-void Light::SetRotation(const math::Quaternion &_q)
+void Light::SetRotation(const ignition::math::Quaterniond &_q)
 {
   this->visual->SetRotation(_q);
 }
 
 //////////////////////////////////////////////////
-math::Quaternion Light::GetRotation() const
+ignition::math::Quaterniond Light::GetRotation() const
 {
-  return this->visual->GetRotation();
+  return this->visual->Rotation();
 }
 
 //////////////////////////////////////////////////
@@ -460,22 +473,22 @@ void Light::SetSpecularColor(const common::Color &_color)
 }
 
 //////////////////////////////////////////////////
-void Light::SetDirection(const math::Vector3 &_dir)
+void Light::SetDirection(const ignition::math::Vector3d &_dir)
 {
   // Set the direction which the light points
-  math::Vector3 vec = _dir;
+  ignition::math::Vector3d vec = _dir;
   vec.Normalize();
 
-  if (vec != this->sdf->Get<math::Vector3>("direction"))
+  if (vec != this->sdf->Get<ignition::math::Vector3d>("direction"))
     this->sdf->GetElement("direction")->Set(vec);
 
-  this->light->setDirection(vec.x, vec.y, vec.z);
+  this->light->setDirection(Conversions::Convert(vec));
 }
 
 //////////////////////////////////////////////////
-math::Vector3 Light::GetDirection() const
+ignition::math::Vector3d Light::GetDirection() const
 {
-  return this->sdf->Get<math::Vector3>("direction");
+  return this->sdf->Get<ignition::math::Vector3d>("direction");
 }
 
 //////////////////////////////////////////////////

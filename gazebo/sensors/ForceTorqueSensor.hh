@@ -57,11 +57,11 @@ namespace gazebo
 
       /// \brief Get the current joint torque.
       /// \return The latested measured torque.
-      public: math::Vector3 GetTorque() const;
+      public: ignition::math::Vector3d GetTorque() const;
 
       /// \brief Get the current joint force.
       /// \return The latested measured force.
-      public: math::Vector3 GetForce() const;
+      public: ignition::math::Vector3d GetForce() const;
 
       /// \brief Get Parent Joint
       /// \return Pointer to the joint containing this sensor
@@ -122,7 +122,7 @@ namespace gazebo
       /// \brief Rotation matrix than transforms a vector expressed in child
       ///        orientation in a vector expressed in joint orientation.
       ///        Necessary is the measure is specified in joint frame.
-      private: math::Matrix3 rotationSensorChild;
+      private: ignition::math::Matrix3d rotationSensorChild;
     };
     /// \}
   }

@@ -189,16 +189,15 @@ void WindowItem::WindowChanged()
       this->levelBaseHeight + this->windowElevation);
 }
 
-/*
 /////////////////////////////////////////////////
-void WindowItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
-{
-  QMenu menu;
-  menu.addAction(this->openInspectorAct);
-  menu.exec(_event->screenPos());
-  _event->accept();
-}
-*/
+// void WindowItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
+// {
+//   QMenu menu;
+//   menu.addAction(this->openInspectorAct);
+//   menu.exec(_event->screenPos());
+//   _event->accept();
+// }
+
 
 /////////////////////////////////////////////////
 void WindowItem::OnOpenInspector()

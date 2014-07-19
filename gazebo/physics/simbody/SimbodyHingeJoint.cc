@@ -48,7 +48,7 @@ void SimbodyHingeJoint::Load(sdf::ElementPtr _sdf)
 
 //////////////////////////////////////////////////
 void SimbodyHingeJoint::SetAxis(unsigned int /*_index*/,
-    const math::Vector3 &/*_axis*/)
+    const ignition::math::Vector3d &/*_axis*/)
 {
   // Simbody seems to handle setAxis improperly. It readjust all the pivot
   // points
@@ -115,7 +115,8 @@ void SimbodyHingeJoint::SetForceImpl(unsigned int _index, double _torque)
 }
 
 //////////////////////////////////////////////////
-math::Vector3 SimbodyHingeJoint::GetGlobalAxis(unsigned int _index) const
+ignition::math::Vector3d SimbodyHingeJoint::GetGlobalAxis(
+    unsigned int _index) const
 {
   if (this->simbodyPhysics &&
       this->simbodyPhysics->simbodyPhysicsStepped &&
@@ -128,7 +129,7 @@ math::Vector3 SimbodyHingeJoint::GetGlobalAxis(unsigned int _index) const
 
       // express Z-axis of X_OM in world frame
       SimTK::Vec3 z_W(this->mobod.expressVectorInGroundFrame(
-        this->simbodyPhysics->integ->getState(), X_OM.z()));
+        this->simbodyPhysics->integ->getState(), X_OM.Z()));
 
       return SimbodyPhysics::Vec3ToVector3(z_W);
     }
@@ -147,7 +148,7 @@ math::Vector3 SimbodyHingeJoint::GetGlobalAxis(unsigned int _index) const
     if (_index >= this->GetAngleCount())
     {
       gzerr << "index out of bound\n";
-      return math::Vector3(SimTK::NaN, SimTK::NaN, SimTK::NaN);
+      return ignition::math::Vector3d(SimTK::NaN, SimTK::NaN, SimTK::NaN);
     }
     else
     {
@@ -163,7 +164,7 @@ math::Vector3 SimbodyHingeJoint::GetGlobalAxis(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
-math::Angle SimbodyHingeJoint::GetAngleImpl(unsigned int _index) const
+ignition::math::Angle SimbodyHingeJoint::GetAngleImpl(unsigned int _index) const
 {
   if (_index < this->GetAngleCount())
   {
@@ -172,14 +173,14 @@ math::Angle SimbodyHingeJoint::GetAngleImpl(unsigned int _index) const
     {
       if (!this->mobod.isEmptyHandle())
       {
-        return math::Angle(this->mobod.getOneQ(
+        return ignition::math::Angle(this->mobod.getOneQ(
           this->simbodyPhysics->integ->getState(), _index));
       }
       else
       {
         gzerr << "Joint mobod not initialized correctly.  Please file"
               << " a report on issue tracker.\n";
-        return math::Angle(0.0);
+        return ignition::math::Angle(0.0);
       }
     }
     else
@@ -187,13 +188,13 @@ math::Angle SimbodyHingeJoint::GetAngleImpl(unsigned int _index) const
       gzdbg << "GetAngleImpl() simbody not yet initialized, "
             << "initial angle should be zero until <initial_angle> "
             << "is implemented.\n";
-      return math::Angle(0.0);
+      return ignition::math::Angle(0.0);
     }
   }
   else
   {
     gzerr << "index out of bound\n";
-    return math::Angle(SimTK::NaN);
+    return ignition::math::Angle(SimTK::NaN);
   }
 }
 
