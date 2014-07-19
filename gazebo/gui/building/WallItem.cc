@@ -188,8 +188,8 @@ bool WallItem::GrabberEventFilter(GrabberHandle *_grabber, QEvent *_event)
       angle = -range*increment;
       double lineLength = lineToPoint.length();
 
-      newScenePos.setX(startScenePoint.x() + cos(GZ_DTOR(angle))*lineLength);
-      newScenePos.setY(startScenePoint.y() + sin(GZ_DTOR(angle))*lineLength);
+      newScenePos.setX(startScenePoint.x() + cos(IGN_DTOR(angle))*lineLength);
+      newScenePos.setY(startScenePoint.y() + sin(IGN_DTOR(angle))*lineLength);
     }
 
     this->SetVertexPosition(grabberIndex, newScenePos);
@@ -357,7 +357,7 @@ void WallItem::OnApply()
   this->wallHeight = dialog->GetHeight() / this->scale;
   this->WallChanged();
 
-  double newLength = dialog->GetLength() / this->scale;
+  double newLength = dialog->Length() / this->scale;
 
   // The if statement below limits the change to either the length of
   // the wall segment or its start/end pos.

@@ -15,7 +15,7 @@
  *
 */
 #include <boost/filesystem.hpp>
-#include "gazebo/math/Helpers.hh"
+#include <ignition/math/Helpers.hh>
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportIface.hh"
 #include "gazebo/gui/Actions.hh"
@@ -122,7 +122,7 @@ void MainWindow_TEST::CopyPasteModel()
     QTest::qWait(30);
     sleep++;
   }
-  QVERIFY(modelVisClone);
+  QVERIFY(modelVisClone != NULL);
 
   cam->Fini();
   mainWindow->close();
@@ -217,7 +217,7 @@ void MainWindow_TEST::CopyPasteLight()
     QTest::qWait(30);
     sleep++;
   }
-  QVERIFY(lightClone);
+  QVERIFY(lightClone != NULL);
 
   lightClone.reset();
   cam->Fini();
@@ -296,7 +296,7 @@ void MainWindow_TEST::Wireframe()
 
   // Redraw the screen
   for (unsigned int i = 0; i < 100 &&
-      gazebo::math::equal(avgPostWireframe, avgPreWireframe, 1e-3); ++i)
+       ignition::math::equal(avgPostWireframe, avgPreWireframe, 1e-3); ++i)
   {
     gazebo::common::Time::MSleep(30);
     QCoreApplication::processEvents();
@@ -323,7 +323,7 @@ void MainWindow_TEST::Wireframe()
         << "] AvgPostWireframe[" << avgPostWireframe << "]\n";
 
   // Removing the grey ground plane should change the image.
-  QVERIFY(!gazebo::math::equal(avgPreWireframe, avgPostWireframe));
+  QVERIFY(!ignition::math::equal(avgPreWireframe, avgPostWireframe));
 
   cam->Fini();
   mainWindow->close();

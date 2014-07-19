@@ -65,6 +65,15 @@ else ()
 endif ()
 
 ########################################
+find_package(ignition-math QUIET)
+if (NOT ignition-math_FOUND)
+  BUILD_ERROR ("Missing: Ignition math library.")
+  message(STATUS "Looking for ignition-math-config.cmake - not found")
+else()
+  message(STATUS "Looking for ignition-math-config.cmake - found")
+endif()
+
+########################################
 # Find packages
 if (PKG_CONFIG_FOUND)
 
@@ -127,7 +136,7 @@ if (PKG_CONFIG_FOUND)
   # Find Simbody
   set(SimTK_INSTALL_DIR ${SimTK_INSTALL_PREFIX})
   #list(APPEND CMAKE_MODULE_PATH ${SimTK_INSTALL_PREFIX}/share/cmake)
-  find_package(Simbody)
+  find_package(Simbody QUIET)
   if (SIMBODY_FOUND)
     set (HAVE_SIMBODY TRUE)
   else()

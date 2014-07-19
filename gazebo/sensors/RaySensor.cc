@@ -14,10 +14,8 @@
  * limitations under the License.
  *
 */
-/* Desc: Ray proximity sensor
- * Author: Carle Cote
- * Date: 23 february 2004
-*/
+#include <ignition/math/Vector3.hh>
+#include <ignition/math/Rand.hh>
 
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/MultiRayShape.hh"
@@ -32,9 +30,6 @@
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/Publisher.hh"
 #include "gazebo/msgs/msgs.hh"
-
-#include "gazebo/math/Vector3.hh"
-#include "gazebo/math/Rand.hh"
 
 #include "gazebo/sensors/SensorFactory.hh"
 #include "gazebo/sensors/RaySensor.hh"
@@ -143,7 +138,7 @@ void RaySensor::Fini()
 }
 
 //////////////////////////////////////////////////
-math::Angle RaySensor::GetAngleMin() const
+ignition::math::Angle RaySensor::GetAngleMin() const
 {
   if (this->laserShape)
     return this->laserShape->GetMinAngle();
@@ -152,7 +147,7 @@ math::Angle RaySensor::GetAngleMin() const
 }
 
 //////////////////////////////////////////////////
-math::Angle RaySensor::GetAngleMax() const
+ignition::math::Angle RaySensor::GetAngleMax() const
 {
   if (this->laserShape)
     return this->laserShape->GetMaxAngle();
@@ -235,7 +230,7 @@ int RaySensor::GetVerticalRangeCount() const
 }
 
 //////////////////////////////////////////////////
-math::Angle RaySensor::GetVerticalAngleMin() const
+ignition::math::Angle RaySensor::GetVerticalAngleMin() const
 {
   if (this->laserShape)
     return this->laserShape->GetVerticalMinAngle();
@@ -244,7 +239,7 @@ math::Angle RaySensor::GetVerticalAngleMin() const
 }
 
 //////////////////////////////////////////////////
-math::Angle RaySensor::GetVerticalAngleMax() const
+ignition::math::Angle RaySensor::GetVerticalAngleMax() const
 {
   if (this->laserShape)
     return this->laserShape->GetVerticalMaxAngle();
@@ -467,7 +462,8 @@ bool RaySensor::UpdateImpl(bool /*_force*/)
       {
         // currently supports only one noise model per laser sensor
         range = this->noises[0]->Apply(range);
-        range = math::clamp(range, this->GetRangeMin(), this->GetRangeMax());
+        range = ignition::math::clamp(range, this->GetRangeMin(),
+            this->GetRangeMax());
       }
 
       scan->add_ranges(range);

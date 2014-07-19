@@ -15,7 +15,7 @@
  *
 */
 
-#include "gazebo/math/Angle.hh"
+#include <ignition/math/Angle.hh>
 #include "gazebo/gui/building/BuildingEditorWidget.hh"
 #include "gazebo/gui/building/GrabberHandle.hh"
 #include "gazebo/gui/building/RotateHandle.hh"
@@ -233,7 +233,7 @@ bool RectItem::RotateEventFilter(RotateHandle *_rotate, QEvent *_event)
       if (angle < 90 || angle > 270)
       {
         angle = 180;
-        this->SetRotation(this->GetRotation() + angle);
+        this->SetRotation(this->Rotation() + angle);
       }
     }
     else
@@ -241,7 +241,7 @@ bool RectItem::RotateEventFilter(RotateHandle *_rotate, QEvent *_event)
       QLineF prevLine(center.x(), center.y(),
           mouseEvent->lastScenePos().x(), mouseEvent->lastScenePos().y());
       angle = -prevLine.angleTo(line);
-      this->SetRotation(this->GetRotation() + angle);
+      this->SetRotation(this->Rotation() + angle);
     }
   }
   return true;
@@ -532,10 +532,10 @@ void RectItem::mouseMoveEvent(QGraphicsSceneMouseEvent *_event)
   // arbitrary (snap to parent items) when dragged
   QPointF trans = this->mapFromScene(_event->scenePos()) - this->mousePressPos;
   QPointF rotatedTrans;
-  rotatedTrans.setX(cos(GZ_DTOR(this->rotationAngle))*-trans.x()
-    - sin(GZ_DTOR(this->rotationAngle))*-trans.y());
-  rotatedTrans.setY(sin(GZ_DTOR(this->rotationAngle))*-trans.x()
-    + cos(GZ_DTOR(this->rotationAngle))*-trans.y());
+  rotatedTrans.setX(cos(IGN_DTOR(this->rotationAngle))*-trans.x()
+    - sin(IGN_DTOR(this->rotationAngle))*-trans.y());
+  rotatedTrans.setY(sin(IGN_DTOR(this->rotationAngle))*-trans.x()
+    + cos(IGN_DTOR(this->rotationAngle))*-trans.y());
 
   this->SetPosition(this->pos() - rotatedTrans);
 }
@@ -804,7 +804,7 @@ void RectItem::SetRotation(double _angle)
 }
 
 /////////////////////////////////////////////////
-double RectItem::GetRotation() const
+double RectItem::Rotation() const
 {
   return this->rotationAngle;
 }

@@ -14,7 +14,6 @@
  * limitations under the License.
  *
 */
-
 #include "gazebo/common/Mesh.hh"
 
 #include "gazebo/physics/bullet/BulletMesh.hh"

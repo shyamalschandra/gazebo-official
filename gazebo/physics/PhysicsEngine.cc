@@ -15,6 +15,7 @@
  *
 */
 #include <sdf/sdf.hh>
+#include <ignition/math/Rand.hh>
 
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/common/Exception.hh"
@@ -23,8 +24,6 @@
 
 #include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
-
-#include "gazebo/math/Rand.hh"
 
 #include "gazebo/physics/ContactManager.hh"
 #include "gazebo/physics/Link.hh"
@@ -99,9 +98,9 @@ PhysicsEngine::~PhysicsEngine()
 }
 
 //////////////////////////////////////////////////
-math::Vector3 PhysicsEngine::GetGravity() const
+ignition::math::Vector3d PhysicsEngine::GetGravity() const
 {
-  return this->sdf->Get<math::Vector3>("gravity");
+  return this->sdf->Get<ignition::math::Vector3d>("gravity");
 }
 
 //////////////////////////////////////////////////

@@ -23,6 +23,9 @@
 #include <boost/thread/mutex.hpp>
 
 #include <sdf/sdf.hh>
+#include <ignition/math/Angle.hh>
+#include <ignition/math/Helpers.hh>
+
 #include "gazebo/common/Image.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/common/Console.hh"
@@ -42,9 +45,6 @@
 
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/Publisher.hh"
-
-#include "gazebo/math/Angle.hh"
-#include "gazebo/math/Helpers.hh"
 
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/ModelRightMenu.hh"
@@ -571,7 +571,7 @@ void ModelListWidget::LightPropertyChanged(QtProperty * /*_item*/)
             (*iter)).toString().toStdString());
     else if ((*iter)->propertyName().toStdString() == "pose")
     {
-      math::Pose pose;
+      ignition::math::Pose3d pose;
       pose.Set(this->variantManager->value(
                  this->GetChildItem((*iter), "x")).toDouble(),
                this->variantManager->value(
@@ -1003,24 +1003,24 @@ void ModelListWidget::FillPoseMsg(QtProperty *_item,
       this->GetChildItem(_item, "pitch")).toDouble();
   yaw = this->variantManager->value(
       this->GetChildItem(_item, "yaw")).toDouble();
-  math::Quaternion q(roll, pitch, yaw);
+  ignition::math::Quaterniond q(roll, pitch, yaw);
 
   orientReflection->SetDouble(
       orientMessage,
       orientDescriptor->FindFieldByName("x"),
-      q.x);
+      q.X());
   orientReflection->SetDouble(
       orientMessage,
       orientDescriptor->FindFieldByName("y"),
-      q.y);
+      q.Y());
   orientReflection->SetDouble(
       orientMessage,
       orientDescriptor->FindFieldByName("z"),
-      q.z);
+      q.Z());
   orientReflection->SetDouble(
       orientMessage,
       orientDescriptor->FindFieldByName("w"),
-      q.w);
+      q.W());
 }
 
 /////////////////////////////////////////////////
@@ -2115,7 +2115,7 @@ void ModelListWidget::FillVector3dProperty(const msgs::Vector3d &_msg,
     return;
 
   QtVariantProperty *item;
-  math::Vector3 value;
+  ignition::math::Vector3d value;
   value = msgs::Convert(_msg);
   value.Round(6);
 
@@ -2130,7 +2130,7 @@ void ModelListWidget::FillVector3dProperty(const msgs::Vector3d &_msg,
   static_cast<QtVariantPropertyManager*>
     (this->variantFactory->propertyManager(item))->setAttribute(
         item, "decimals", 6);
-  item->setValue(value.x);
+  item->setValue(value.X());
 
   // Add Y value
   item = static_cast<QtVariantProperty*>(this->GetChildItem(_parent, "y"));
@@ -2142,7 +2142,7 @@ void ModelListWidget::FillVector3dProperty(const msgs::Vector3d &_msg,
   }
   static_cast<QtVariantPropertyManager*>(this->variantFactory->propertyManager(
     item))->setAttribute(item, "decimals", 6);
-  item->setValue(value.y);
+  item->setValue(value.Y());
 
   // Add Z value
   item = static_cast<QtVariantProperty*>(this->GetChildItem(_parent, "z"));
@@ -2154,7 +2154,7 @@ void ModelListWidget::FillVector3dProperty(const msgs::Vector3d &_msg,
   }
   static_cast<QtVariantPropertyManager*>(this->variantFactory->propertyManager(
     item))->setAttribute(item, "decimals", 6);
-  item->setValue(value.z);
+  item->setValue(value.Z());
 }
 
 /////////////////////////////////////////////////
@@ -2165,11 +2165,11 @@ void ModelListWidget::FillPoseProperty(const msgs::Pose &_msg,
     return;
 
   QtVariantProperty *item;
-  math::Pose value;
+  ignition::math::Pose3d value;
   value = msgs::Convert(_msg);
   value.Round(6);
 
-  math::Vector3 rpy = value.rot.GetAsEuler();
+  ignition::math::Vector3d rpy = value.Rot().Euler();
   rpy.Round(6);
 
   this->FillVector3dProperty(_msg.position(), _parent);
@@ -2186,7 +2186,7 @@ void ModelListWidget::FillPoseProperty(const msgs::Pose &_msg,
   }
   static_cast<QtVariantPropertyManager*>(this->variantFactory->propertyManager(
     item))->setAttribute(item, "decimals", 6);
-  item->setValue(rpy.x);
+  item->setValue(rpy.X());
 
   // Add Pitch value
   item = static_cast<QtVariantProperty*>(this->GetChildItem(_parent, "pitch"));
@@ -2198,7 +2198,7 @@ void ModelListWidget::FillPoseProperty(const msgs::Pose &_msg,
   }
   static_cast<QtVariantPropertyManager*>(this->variantFactory->propertyManager(
     item))->setAttribute(item, "decimals", 6);
-  item->setValue(rpy.y);
+  item->setValue(rpy.Y());
 
   // Add Yaw value
   item = static_cast<QtVariantProperty*>(this->GetChildItem(_parent, "yaw"));
@@ -2210,7 +2210,7 @@ void ModelListWidget::FillPoseProperty(const msgs::Pose &_msg,
   }
   static_cast<QtVariantPropertyManager*>(this->variantFactory->propertyManager(
     item))->setAttribute(item, "decimals", 6);
-  item->setValue(rpy.z);
+  item->setValue(rpy.Z());
 }
 
 /////////////////////////////////////////////////
@@ -2577,7 +2577,7 @@ void ModelListWidget::FillPropertyTree(const msgs::Light &_msg,
   if (_msg.has_pose())
     this->FillPoseProperty(_msg.pose(), topItem);
   else
-    this->FillPoseProperty(msgs::Convert(math::Pose()), topItem);
+    this->FillPoseProperty(msgs::Convert(ignition::math::Pose3d()), topItem);
 
   // Create and set the diffuse color property
   item = this->variantManager->addProperty(QVariant::Color, tr("diffuse"));
