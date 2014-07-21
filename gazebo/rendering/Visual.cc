@@ -1768,6 +1768,10 @@ math::Box Visual::GetBoundingBox() const
 void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
 {
   node->_updateBounds();
+  node->_update(false, true);
+
+  Ogre::Matrix4 invTransform =
+      this->dataPtr->sceneNode->_getFullTransform().inverse();
 
   Ogre::SceneNode::ChildNodeIterator it = node->getChildIterator();
 
@@ -1782,7 +1786,8 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
       if (any.getType() == typeid(std::string))
       {
         std::string str = Ogre::any_cast<std::string>(any);
-        if (str.substr(0, 3) == "rot" || str.substr(0, 5) == "trans")
+        if (str.substr(0, 3) == "rot" || str.substr(0, 5) == "trans"
+            || str.substr(0, 5) == "scale")
           continue;
       }
 
@@ -1790,14 +1795,6 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
 
       math::Vector3 min;
       math::Vector3 max;
-      math::Quaternion rotDiff;
-      math::Vector3 posDiff;
-
-      rotDiff = Conversions::Convert(node->_getDerivedOrientation()) -
-                this->GetWorldPose().rot;
-
-      posDiff = Conversions::Convert(node->_getDerivedPosition()) -
-                this->GetWorldPose().pos;
 
       // Ogre does not return a valid bounding box for lights.
       if (obj->getMovableType() == "Light")
@@ -1807,12 +1804,12 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
       }
       else
       {
-        min = rotDiff *
-          Conversions::Convert(bb.getMinimum() * node->getScale()) + posDiff;
-        max = rotDiff *
-          Conversions::Convert(bb.getMaximum() * node->getScale()) + posDiff;
+        // get oriented bounding box in object's local space
+        bb.transformAffine(invTransform * node->_getFullTransform());
+        bb.scale(node->_getDerivedScale());
+        min = Conversions::Convert(bb.getMinimum());
+        max = Conversions::Convert(bb.getMaximum());
       }
-
 
       box.Merge(math::Box(min, max));
     }
