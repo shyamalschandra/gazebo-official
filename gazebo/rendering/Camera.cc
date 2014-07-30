@@ -83,6 +83,8 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
 
   this->sceneNode = NULL;
 
+  this->projectionType = PERSPECTIVE;
+
   this->screenshotPath = getenv("HOME");
   this->screenshotPath += "/.gazebo/pictures";
 
@@ -1675,4 +1677,42 @@ void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
 {
   boost::mutex::scoped_lock lock(this->dataPtr->receiveMutex);
   this->dataPtr->commandMsgs.push_back(_msg);
+}
+
+//////////////////////////////////////////////////
+void Camera::SetProjectionType(ProjectionType _type)
+{
+  if (_type == this->projectionType)
+    return;
+
+  this->projectionType = _type;
+
+  if (this->projectionType == ORTHOGRAPHIC)
+  {
+    this->camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);
+    RTShaderSystem::DetachViewport(this->viewport, this->scene);
+  }
+  else if (this->projectionType == PERSPECTIVE)
+  {
+    this->camera->setProjectionType(Ogre::PT_PERSPECTIVE);
+    RTShaderSystem::AttachViewport(this->viewport, this->scene);
+  }
+}
+
+//////////////////////////////////////////////////
+void Camera::SetOrthoWindowSize(double _width, double _height)
+{
+  this->camera->setOrthoWindow(_width, _height);
+}
+
+//////////////////////////////////////////////////
+double Camera::GetOrthoWindowWidth()
+{
+  return this->camera->getOrthoWindowWidth();
+}
+
+//////////////////////////////////////////////////
+double Camera::GetOrthoWindowHeight()
+{
+  return this->camera->getOrthoWindowHeight();
 }
