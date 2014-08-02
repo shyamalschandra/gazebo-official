@@ -1,0 +1,400 @@
+/*
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+#ifndef MESSAGES_UTILITY_H
+#define MESSAGES_UTILITY_H
+
+#include <string>
+
+#include <sdf/sdf.hh>
+
+#include "gazebo/msgs/MessageTypes.hh"
+
+#include "gazebo/math/MathTypes.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Plane.hh"
+#include "gazebo/math/Box.hh"
+
+#include "gazebo/common/SphericalCoordinates.hh"
+#include "gazebo/common/Color.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/common/Image.hh"
+
+namespace gazebo
+{
+  /// \ingroup gazebo_msgs Messages
+  /// \brief Messages namespace
+  namespace msgs
+  {
+    /// \addtogroup gazebo_msgs Messages
+    /// \brief All messages and helper functions
+    /// \{
+
+    /// \brief Create a request message
+    /// \param[in] _request Request string
+    /// \param[in] _data Optional data string
+    /// \return A Request message
+    GAZEBO_VISIBLE
+    msgs::Request *CreateRequest(const std::string &_request,
+                                 const std::string &_data = "");
+
+    /// \brief Initialize a message
+    /// \param[in] _message Message to initialize
+    /// \param[in] _id Optional string id
+    GAZEBO_VISIBLE
+    void Init(google::protobuf::Message &_message, const std::string &_id ="");
+
+    /// \brief Time stamp a header
+    /// \param[in] _header Header to stamp
+    GAZEBO_VISIBLE
+    void Stamp(msgs::Header *_header);
+
+    /// \brief Set the time in a time message
+    /// \param[in] _time A Time message
+    GAZEBO_VISIBLE
+    void Stamp(msgs::Time *_time);
+
+    /// \cond
+    GAZEBO_VISIBLE
+    std::string Package(const std::string &type,
+        const google::protobuf::Message &message);
+    /// \endcond
+
+    /// \brief Convert a math::Vector2d to a msgs::Vector2d
+    /// \param[in] _v The vector to convert
+    /// \return A msgs::Vector2d object
+    GAZEBO_VISIBLE
+    msgs::Vector2d      Convert(const math::Vector2d &_v);
+
+    /// \brief Convert a math::Vector3 to a msgs::Vector3d
+    /// \param[in] _v The vector to convert
+    /// \return A msgs::Vector3d object
+    GAZEBO_VISIBLE
+    msgs::Vector3d      Convert(const math::Vector3 &_v);
+
+    /// \brief Convert a math::Quaternion to a msgs::Quaternion
+    /// \param[in] _q The quaternion to convert
+    /// \return A msgs::Quaternion object
+    GAZEBO_VISIBLE
+    msgs::Quaternion Convert(const math::Quaternion &_q);
+
+    /// \brief Convert a math::Pose to a msgs::Pose
+    /// \param[in] _p The pose to convert
+    /// \return A msgs::Pose object
+    GAZEBO_VISIBLE
+    msgs::Pose       Convert(const math::Pose &_p);
+
+    /// \brief Convert a common::Color to a msgs::Color
+    /// \param[in] _c The color to convert
+    /// \return A msgs::Color object
+    GAZEBO_VISIBLE
+    msgs::Color      Convert(const common::Color &_c);
+
+    /// \brief Convert a common::Time to a msgs::Time
+    /// \param[in] _t The time to convert
+    /// \return A msgs::Time object
+    GAZEBO_VISIBLE
+    msgs::Time       Convert(const common::Time &_t);
+
+    /// \brief Convert a math::Plane to a msgs::PlaneGeom
+    /// \param[in] _p The plane to convert
+    /// \return A msgs::PlaneGeom object
+    GAZEBO_VISIBLE
+    msgs::PlaneGeom Convert(const math::Plane &_p);
+
+    /// \brief Convert a string to a msgs::Joint::Type enum.
+    /// \param[in] _str Joint type string.
+    /// \return A msgs::Joint::Type enum.
+    GAZEBO_VISIBLE
+    msgs::Joint::Type Convert(const std::string &_str);
+
+    /// \brief Convert a msgs::Vector2d to a math::Vector2d
+    /// \param[in] _v The plane to convert
+    /// \return A math::Vector2d object
+    GAZEBO_VISIBLE
+    math::Vector2d   Convert(const msgs::Vector2d &_v);
+
+    /// \brief Convert a msgs::Vector3d to a math::Vector
+    /// \param[in] _v The plane to convert
+    /// \return A math::Vector3 object
+    GAZEBO_VISIBLE
+    math::Vector3    Convert(const msgs::Vector3d &_v);
+
+    /// \brief Convert a msgs::Quaternion to a math::Quaternion
+    /// \param[in] _q The quaternion to convert
+    /// \return A math::Quaternion object
+    GAZEBO_VISIBLE
+    math::Quaternion Convert(const msgs::Quaternion &_q);
+
+    /// \brief Convert a msgs::Pose to a math::Pose
+    /// \param[in] _q The pose to convert
+    /// \return A math::Pose object
+    GAZEBO_VISIBLE
+    math::Pose       Convert(const msgs::Pose &_p);
+
+    /// \brief Convert a msgs::Image to a common::Image
+    /// \param[out] _img The common::Image container
+    /// \param[in] _msg The Image message to convert
+    GAZEBO_VISIBLE
+    void Set(common::Image &_img, const msgs::Image &_msg);
+
+    /// \brief Convert a msgs::Color to a common::Color
+    /// \param[in] _c The color to convert
+    /// \return A common::Color object
+    GAZEBO_VISIBLE
+    common::Color    Convert(const msgs::Color &_c);
+
+    /// \brief Convert a msgs::Time to a common::Time
+    /// \param[in] _t The time to convert
+    /// \return A common::Time object
+    GAZEBO_VISIBLE
+    common::Time     Convert(const msgs::Time &_t);
+
+    /// \brief Convert a msgs::PlaneGeom to a common::Plane
+    /// \param[in] _p The plane to convert
+    /// \return A common::Plane object
+    GAZEBO_VISIBLE
+    math::Plane      Convert(const msgs::PlaneGeom &_p);
+
+    /// \brief Set a msgs::Image from a common::Image
+    /// \param[out] _msg A msgs::Image pointer
+    /// \param[in] _i A common::Image reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Image *_msg, const common::Image &_i);
+
+    /// \brief Set a msgs::Vector3d from a math::Vector3
+    /// \param[out] _pt A msgs::Vector3d pointer
+    /// \param[in] _v A math::Vector3 reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Vector3d *_pt, const math::Vector3 &_v);
+
+    /// \brief Set a msgs::Vector2d from a math::Vector3
+    /// \param[out] _pt A msgs::Vector2d pointer
+    /// \param[in] _v A math::Vector2d reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Vector2d *_pt, const math::Vector2d &_v);
+
+    /// \brief Set a msgs::Quaternion from a math::Quaternion
+    /// \param[out] _q A msgs::Quaternion pointer
+    /// \param[in] _v A math::Quaternion reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Quaternion *_q, const math::Quaternion &_v);
+
+    /// \brief Set a msgs::Pose from a math::Pose
+    /// \param[out] _p A msgs::Pose pointer
+    /// \param[in] _v A math::Pose reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Pose *_p, const math::Pose &_v);
+
+    /// \brief Set a msgs::Color from a common::Color
+    /// \param[out] _p A msgs::Color pointer
+    /// \param[in] _v A common::Color reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Color *_c, const common::Color &_v);
+
+    /// \brief Set a msgs::Time from a common::Time
+    /// \param[out] _p A msgs::Time pointer
+    /// \param[in] _v A common::Time reference
+    GAZEBO_VISIBLE
+    void Set(msgs::Time *_t, const common::Time &_v);
+
+    /// \brief Set a msgs::SphericalCoordinates from
+    /// a common::SphericalCoordinates object.
+    /// \param[out] _p A msgs::SphericalCoordinates pointer.
+    /// \param[in] _v A common::SphericalCoordinates reference
+    void Set(msgs::SphericalCoordinates *_s,
+             const common::SphericalCoordinates &_v);
+
+    /// \brief Set a msgs::Plane from a math::Plane
+    /// \param[out] _p A msgs::Plane pointer
+    /// \param[in] _v A math::Plane reference
+    GAZEBO_VISIBLE
+    void Set(msgs::PlaneGeom *_p, const math::Plane &_v);
+
+    /// \brief Create a msgs::TrackVisual from a track visual SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::TrackVisual object
+    GAZEBO_VISIBLE
+    msgs::TrackVisual TrackVisualFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::GUI from a GUI SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::GUI object
+    GAZEBO_VISIBLE
+    msgs::GUI GUIFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::Light from a light SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::Light object
+    GAZEBO_VISIBLE
+    msgs::Light LightFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::MeshGeom from a mesh SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::MeshGeom object
+    GAZEBO_VISIBLE
+    msgs::MeshGeom MeshFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::Geometry from a geometry SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::Geometry object
+    GAZEBO_VISIBLE
+    msgs::Geometry GeometryFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::Visual from a visual SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::Visual object
+    GAZEBO_VISIBLE
+    msgs::Visual VisualFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::Fog from a fog SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::Fog object
+    GAZEBO_VISIBLE
+    msgs::Fog FogFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Create a msgs::Scene from a scene SDF element
+    /// \param[in] _sdf The sdf element
+    /// \return The new msgs::Scene object
+    GAZEBO_VISIBLE
+    msgs::Scene SceneFromSDF(sdf::ElementPtr _sdf);
+
+    /// \brief Add a simple box link to a Model message.
+    /// The size and mass of the box are specified, and a
+    /// single collision is added, along with an inertial
+    /// block corresponding to box of uniform density.
+    /// \param[out] _msg The msgs::Model to which the link is added.
+    /// \param[in] _mass Mass of the box.
+    /// \param[in] _size Size of the box.
+    GAZEBO_VISIBLE
+    void AddBoxLink(msgs::Model &_msg, double _mass,
+                    const math::Vector3 &_size);
+
+    /// \brief Create an SDF string from msgs::Model.
+    /// \param[in] _sdf The msgs::Model object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Model &_msg);
+
+    /// \brief Create an SDF string from msgs::Link.
+    /// \param[in] _sdf The msgs::Link object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Link &_msg);
+
+    /// \brief Create an SDF string from msgs::Collision.
+    /// \param[in] _sdf The msgs::Collision object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Collision &_msg);
+
+    /// \brief Create an SDF string from msgs::Geometry.
+    /// \param[in] _sdf The msgs::Geometry object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Geometry &_msg);
+
+    /// \brief Create an SDF string from msgs::Axis.
+    /// \param[in] _sdf The msgs::Axis object.
+    /// \param[in] _name Name of axis element (axis or axis2).
+    /// \param[in] _useParentModelFrame Flag to use parent model frame,
+    ///   <0 for not set, 0 for false, >0 for true.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Axis &_msg,
+                      const std::string &_name = "axis",
+                      int _useParentModelFrame = -1
+                      );
+
+    /// \brief Create an SDF string from msgs::BoxGeom.
+    /// \param[in] _sdf The msgs::BoxGeom object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::BoxGeom &_msg);
+
+    /// \brief Create an SDF string from msgs::CylinderGeom.
+    /// \param[in] _sdf The msgs::CylinderGeom object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::CylinderGeom &_msg);
+
+    /// \brief Create an SDF string from msgs::ImageGeom.
+    /// \param[in] _sdf The msgs::ImageGeom object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::ImageGeom &_msg);
+
+    /// \brief Create an SDF string from msgs::Joint.
+    /// \param[in] _sdf The msgs::Joint object.
+    /// \param[in] _useParentModelFrame1 Use parent model frame for axis 1.
+    ///   <0 for not set, 0 for false, >0 for true.
+    /// \param[in] _useParentModelFrame2 Use parent model frame for axis 2.
+    ///   <0 for not set, 0 for false, >0 for true.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Joint &_msg,
+                      int _useParentModelFrame1 = -1,
+                      int _useParentModelFrame2 = -1);
+
+    /// \brief Create an SDF string from msgs::PlaneGeom.
+    /// \param[in] _sdf The msgs::PlaneGeom object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::PlaneGeom &_msg);
+
+    /// \brief Create an SDF string from msgs::SphereGeom.
+    /// \param[in] _sdf The msgs::SphereGeom object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::SphereGeom &_msg);
+
+    /// \brief Create an SDF string from msgs::Friction.
+    /// \param[in] _sdf The msgs::Friction object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Friction &_msg);
+
+    /// \brief Create an SDF string from msgs::Inertial.
+    /// \param[in] _sdf The msgs::Inertial object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Inertial &_msg);
+
+    /// \brief Create an SDF string from msgs::Surface.
+    /// \param[in] _sdf The msgs::Surface object.
+    /// \return sdf string.
+    GAZEBO_VISIBLE
+    std::string ToSDF(const msgs::Surface &_msg);
+
+    /// \cond
+    GAZEBO_VISIBLE
+    const google::protobuf::FieldDescriptor *GetFD(
+        google::protobuf::Message &message, const std::string &name);
+    /// \endcond
+
+    /// \brief Get the header from a protobuf message
+    /// \param[in] _message A google protobuf message
+    /// \return A pointer to the message's header
+    GAZEBO_VISIBLE
+    msgs::Header *GetHeader(google::protobuf::Message &_message);
+
+    /// \}
+  }
+}
+
+#endif
+
