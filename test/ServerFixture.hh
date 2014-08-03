@@ -391,6 +391,36 @@ class ServerFixture : public testing::Test
                                      unsigned int _sleepEach,
                                      int _retries);
 
+  /// \brief Spawn a light.
+  /// \param[in] _name Name for the light.
+  /// \param[in] _size Type of light - "spot", "directional", or "point".
+  /// \param[in] _pos Position for the light.
+  /// \param[in] _rpy Roll, pitch, yaw for the light.
+  /// \param[in] _diffuse Diffuse color of the light.
+  /// \param[in] _specular Specular color of the light.
+  /// \param[in] _direction Direction of the light ("spot" and "directional").
+  /// \param[in] _attenuationRange Range of attenuation.
+  /// \param[in] _attenuationConstant Constant component of attenuation
+  /// \param[in] _attenuationLinear Linear component of attenuation
+  /// \param[in] _attenuationQuadratic Quadratic component of attenuation
+  /// \param[in] _spotInnerAngle Inner angle ("spot" only).
+  /// \param[in] _spotOuterAngle Outer angle ("spot" only).
+  /// \param[in] _spotFallOff Fall off ("spot" only).
+  /// \param[in] _castShadows True to cast shadows.
+  protected: void SpawnLight(const std::string &_name, const std::string &_type,
+                 const math::Vector3 &_pos, const math::Vector3 &_rpy,
+                 const common::Color &_diffuse = common::Color::White,
+                 const common::Color &_specular = common::Color::White,
+                 const math::Vector3 &_direction = -math::Vector3::UnitZ,
+                 double _attenuationRange = 20,
+                 double _attenuationConstant = 0.5,
+                 double _attenuationLinear = 0.01,
+                 double _attenuationQuadratic = 0.001,
+                 double _spotInnerAngle = 0,
+                 double _spotOuterAngle = 0,
+                 double _spotFallOff = 0,
+                 bool _castShadows = true);
+
   /// \brief Spawn a cylinder
   /// \param[in] _name Name for the model.
   /// \param[in] _pos Position for the model.
@@ -490,6 +520,21 @@ class ServerFixture : public testing::Test
 
   /// \brief Get unique string.
   protected: std::string GetUniqueString(const std::string &_prefix);
+
+  /// \brief Helper to record data to gtest xml output.
+  /// \param[in] _name Name of data.
+  /// \param[in] _data Floating point number to store.
+  void Record(const std::string &_name, double _data);
+
+  /// \brief Helper to record signal statistics to gtest xml output.
+  /// \param[in] _prefix Prefix string for data names.
+  /// \param[in] _stats Signal statistics to store.
+  void Record(const std::string &_prefix, const math::SignalStats &_stats);
+
+  /// \brief Helper to record Vector3 signal statistics to gtest xml output.
+  /// \param[in] _prefix Prefix string for data names.
+  /// \param[in] _stats Vector3 signal statistics to store.
+  void Record(const std::string &_prefix, const math::Vector3Stats &_stats);
 
   /// \brief Pointer the Gazebo server.
   protected: Server *server;
