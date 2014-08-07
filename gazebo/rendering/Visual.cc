@@ -1807,12 +1807,11 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
       }
       else
       {
-        min = rotDiff *
-          Conversions::Convert(bb.getMinimum() * node->getScale()) + posDiff;
-        max = rotDiff *
-          Conversions::Convert(bb.getMaximum() * node->getScale()) + posDiff;
+        min = rotDiff * Conversions::Convert(
+            bb.getMinimum() * node->_getDerivedScale()) + posDiff;
+        max = rotDiff * Conversions::Convert(
+            bb.getMaximum() * node->_getDerivedScale()) + posDiff;
       }
-
 
       box.Merge(math::Box(min, max));
     }
