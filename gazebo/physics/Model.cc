@@ -23,6 +23,7 @@
 #include <sstream>
 
 #include "gazebo/util/OpenAL.hh"
+#include "gazebo/util/Diagnostics.hh"
 #include "gazebo/common/KeyFrame.hh"
 #include "gazebo/common/Animation.hh"
 #include "gazebo/common/Plugin.hh"
@@ -254,6 +255,40 @@ void Model::Update()
         this->onJointAnimationComplete();
     }
     this->prevAnimationTime = this->world->GetSimTime();
+  }
+
+  // diagnostics
+  if (DIAG_ENABLED())
+  {
+    DIAG_VARIABLE("model ["+this->GetName()+"] potential energy",
+      this->GetWorldEnergyPotential());
+    DIAG_VARIABLE("model ["+this->GetName()+"] kinetic energy",
+      this->GetWorldEnergyKinetic());
+    DIAG_VARIABLE("model ["+this->GetName()+"] total energy",
+      this->GetWorldEnergy());
+
+    for (Link_V::iterator liter = this->links.begin();
+         liter != this->links.end(); ++liter)
+    {
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] potential energy",
+        (*liter)->GetWorldEnergyPotential());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] kinetic energy",
+        (*liter)->GetWorldEnergyKinetic());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] total energy",
+        (*liter)->GetWorldEnergy());
+    }
+
+    for (Joint_V::iterator jiter = this->joints.begin();
+         jiter != this->joints.end(); ++jiter)
+    {
+      for(unsigned int i = 0; i < (*jiter)->GetAngleCount(); ++i)
+      {
+        std::ostringstream stream;
+        stream << "joint [" << (*jiter)->GetScopedName() << "] ["
+               << i << "] potential spring energy";
+        DIAG_VARIABLE(stream.str(), (*jiter)->GetWorldEnergyPotentialSpring(i));
+      }
+    }
   }
 }
 
