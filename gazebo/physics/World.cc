@@ -66,7 +66,6 @@ using namespace physics;
 /// \brief Flag used to say if/when to clear all models.
 /// This will be replaced with a class member variable in Gazebo 3.0
 bool g_clearModels;
-boost::mutex g_deprecatedMutexReplaceInGazebo4;
 
 class ModelUpdate_TBB
 {
@@ -182,6 +181,9 @@ void World::Load(sdf::ElementPtr _sdf)
 
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->GetName());
+
+  // Publish clock for diagnostics
+  this->clockPub = this->node->Advertise<msgs::Time>("~/clock", 10);
 
   // pose pub for server side, mainly used for updating and timestamping
   // Scene, which in turn will be used by rendering sensors.
@@ -582,20 +584,17 @@ void World::Step()
         util::LogRecord::Instance()->Notify();
       this->pauseTime += stepTime;
     }
+
+    DIAG_TIMER_LAP("World::Step", "update");
   }
 
   this->ProcessMessages();
+  DIAG_TIMER_LAP("World::Step", "processMessages");
 
   DIAG_TIMER_STOP("World::Step");
 
   if (g_clearModels)
     this->ClearModels();
-}
-
-//////////////////////////////////////////////////
-void World::StepWorld(int _steps)
-{
-  this->Step(_steps);
 }
 
 //////////////////////////////////////////////////
@@ -616,7 +615,7 @@ void World::Step(unsigned int _steps)
   bool wait = true;
   while (wait)
   {
-    common::Time::MSleep(1);
+    common::Time::NSleep(1);
     boost::recursive_mutex::scoped_lock lock(*this->worldUpdateMutex);
     if (this->stepInc == 0 || this->stop)
       wait = false;
@@ -645,6 +644,9 @@ void World::Update()
   event::Events::worldUpdateBegin(this->updateInfo);
 
   DIAG_TIMER_LAP("World::Update", "Events::worldUpdateBegin");
+
+  /// \brief Publish clock
+  this->clockPub->Publish(msgs::Convert(this->updateInfo.simTime));
 
   // Update all the models
   (*this.*modelUpdateFunc)();
@@ -710,6 +712,7 @@ void World::Update()
   DIAG_TIMER_LAP("World::Update", "ContactManager::PublishContacts");
 
   event::Events::worldUpdateEnd();
+  DIAG_TIMER_LAP("World::Update", "endEvent");
 
   DIAG_TIMER_STOP("World::Update");
 }
@@ -743,6 +746,8 @@ void World::Fini()
 #ifdef HAVE_OPENAL
   util::OpenAL::Instance()->Fini();
 #endif
+
+  util::DiagnosticManager::Instance()->Fini();
 }
 
 //////////////////////////////////////////////////
@@ -1094,6 +1099,8 @@ void World::SetPaused(bool _p)
 {
   if (this->pause == _p)
     return;
+
+  DIAG_MARKER("paused");
 
   {
     boost::recursive_mutex::scoped_lock(*this->worldUpdateMutex);
@@ -1668,7 +1675,7 @@ void World::ProcessFactoryMsgs()
   {
     try
     {
-      boost::mutex::scoped_lock lock(g_deprecatedMutexReplaceInGazebo4);
+      boost::mutex::scoped_lock lock(this->factoryDeleteMutex);
 
       ModelPtr model = this->LoadModel(*iter2, this->rootElement);
       model->Init();
@@ -1860,6 +1867,7 @@ void World::ProcessMessages()
 {
   {
     boost::recursive_mutex::scoped_lock lock(*this->receiveMutex);
+    DIAG_TIMER_START("World::ProcessMessages");
 
     if ((this->posePub && this->posePub->HasConnections()) ||
         (this->poseLocalPub && this->poseLocalPub->HasConnections()))
@@ -1906,17 +1914,24 @@ void World::ProcessMessages()
       }
     }
     this->publishModelPoses.clear();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Pose");
   }
 
   if (common::Time::GetWallTime() - this->prevProcessMsgsTime >
       this->processMsgsPeriod)
   {
     this->ProcessEntityMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Entities");
     this->ProcessRequestMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Requests");
     this->ProcessFactoryMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Factory");
     this->ProcessModelMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Model");
     this->prevProcessMsgsTime = common::Time::GetWallTime();
   }
+
+  DIAG_TIMER_STOP("World::ProcessMessages");
 }
 
 //////////////////////////////////////////////////
@@ -2001,7 +2016,7 @@ uint32_t World::GetIterations() const
 //////////////////////////////////////////////////
 void World::RemoveModel(const std::string &_name)
 {
-  boost::mutex::scoped_lock flock(g_deprecatedMutexReplaceInGazebo4);
+  boost::mutex::scoped_lock flock(this->factoryDeleteMutex);
 
   // Remove all the dirty poses from the delete entity.
   {
@@ -2025,6 +2040,28 @@ void World::RemoveModel(const std::string &_name)
       childElem = childElem->GetNextElement("model");
     if (childElem)
       this->sdf->RemoveChild(childElem);
+  }
+
+  if (this->sdf->HasElement("light"))
+  {
+    sdf::ElementPtr childElem = this->sdf->GetElement("light");
+    while (childElem && childElem->Get<std::string>("name") != _name)
+      childElem = childElem->GetNextElement("light");
+    if (childElem)
+    {
+      this->sdf->RemoveChild(childElem);
+      // Find the light by name in the scene msg, and remove it.
+      for (int i = 0; i < this->sceneMsg.light_size(); ++i)
+      {
+        if (this->sceneMsg.light(i).name() == _name)
+        {
+          this->sceneMsg.mutable_light()->SwapElements(i,
+              this->sceneMsg.light_size()-1);
+          this->sceneMsg.mutable_light()->RemoveLast();
+          break;
+        }
+      }
+    }
   }
 
   {
@@ -2073,6 +2110,12 @@ void World::OnLightMsg(ConstLightPtr &_msg)
     {
       lightExists = true;
       this->sceneMsg.mutable_light(i)->MergeFrom(*_msg);
+
+      sdf::ElementPtr childElem = this->sdf->GetElement("light");
+      while (childElem && childElem->Get<std::string>("name") != _msg->name())
+        childElem = childElem->GetNextElement("light");
+      if (childElem)
+        msgs::LightToSDF(*_msg, childElem);
       break;
     }
   }
@@ -2081,6 +2124,11 @@ void World::OnLightMsg(ConstLightPtr &_msg)
   if (!lightExists)
   {
     this->sceneMsg.add_light()->CopyFrom(*_msg);
+
+    // add to the world sdf
+    sdf::ElementPtr lightSDF = msgs::LightToSDF(*_msg);
+    lightSDF->SetParent(this->sdf);
+    lightSDF->GetParent()->InsertElement(lightSDF);
   }
 }
 

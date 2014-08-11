@@ -67,12 +67,6 @@ endif ()
 ########################################
 # Find packages
 if (PKG_CONFIG_FOUND)
-
-  pkg_check_modules(SDF sdformat>=2.0.1)
-  if (NOT SDF_FOUND)
-    BUILD_ERROR ("Missing: SDF version >=2.0.1. Required for reading and writing SDF files.")
-  endif()
-
   pkg_check_modules(CURL libcurl)
   if (NOT CURL_FOUND)
     BUILD_ERROR ("Missing: libcurl. Required for connection to model database.")
@@ -137,13 +131,13 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find DART
-  find_package(DARTCore QUIET)
+  find_package(DARTCore 4.1 QUIET)
   if (DARTCore_FOUND)
     message (STATUS "Looking for DARTCore - found")
     set (HAVE_DART TRUE)
   else()
     message (STATUS "Looking for DARTCore - not found")
-    BUILD_WARNING ("DART not found, for dart physics engine option, please install libdart-core3.")
+    BUILD_WARNING ("DART not found, for dart physics engine option, please install libdart-core4-dev.")
     set (HAVE_DART FALSE)
   endif()
 
@@ -391,6 +385,18 @@ else (PKG_CONFIG_FOUND)
   BUILD_ERROR ("Error: pkg-config not found")
 endif ()
 
+########################################
+# Find SDFormat
+find_package(SDFormat 2.0.1)
+if (NOT SDFormat_FOUND)
+  message (STATUS "Looking for SDFormat - not found")
+  BUILD_ERROR ("Missing: SDF version >=2.0.1. Required for reading and writing SDF files.")
+else()
+  message (STATUS "Looking for SDFormat - found")
+endif()
+
+########################################
+# Find QT
 find_package (Qt4)
 if (NOT QT4_FOUND)
   BUILD_ERROR("Missing: Qt4")
@@ -405,8 +411,6 @@ if (NOT Boost_FOUND)
   set (BUILD_GAZEBO OFF CACHE INTERNAL "Build Gazebo" FORCE)
   BUILD_ERROR ("Boost not found. Please install thread signals system filesystem program_options regex date_time boost version ${MIN_BOOST_VERSION} or higher.")
 endif()
-
-
 
 ########################################
 # Find libdl
@@ -440,6 +444,33 @@ else ()
 endif ()
 
 ########################################
+# Find libusb
+pkg_check_modules(libusb-1.0 libusb-1.0)
+if (NOT libusb-1.0_FOUND)
+  BUILD_WARNING ("libusb-1.0 not found. USB peripherals support will be disabled.")
+  set (HAVE_USB OFF CACHE BOOL "HAVE USB" FORCE)
+else()
+  message (STATUS "Looking for libusb-1.0 - found. USB peripherals support enabled.")
+  set (HAVE_USB ON CACHE BOOL "HAVE USB" FORCE)
+  include_directories(${libusb-1.0_INCLUDE_DIRS})
+  link_directories(${libusb-1.0_LIBRARY_DIRS})
+endif ()
+
+#################################################
+# Find Oculus SDK.
+pkg_check_modules(OculusVR OculusVR)
+
+if (HAVE_USB AND OculusVR_FOUND)
+  message (STATUS "Oculus Rift support enabled.")
+  set (HAVE_OCULUS ON CACHE BOOL "HAVE OCULUS" FORCE)
+  include_directories(SYSTEM ${OculusVR_INCLUDE_DIRS})
+  link_directories(${OculusVR_LIBRARY_DIRS})
+else ()
+  BUILD_WARNING ("Oculus Rift support will be disabled.")
+  set (HAVE_OCULUS OFF CACHE BOOL "HAVE OCULUS" FORCE)
+endif()
+
+########################################
 # Include man pages stuff
 include (${gazebo_cmake_dir}/Ronn2Man.cmake)
 include (${gazebo_cmake_dir}/Man.cmake)
@@ -447,31 +478,31 @@ add_manpage_target()
 
 ########################################
 # Find QWT (QT graphing library)
-#find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
-#  /usr/include
-#  /usr/local/include
-#  "$ENV{LIB_DIR}/include"
-#  "$ENV{INCLUDE}"
-#  PATH_SUFFIXES qwt-qt4 qwt qwt5
-#  )
-#
-#find_library(QWT_LIBRARY NAMES qwt qwt6 qwt5 PATHS
-#  /usr/lib
-#  /usr/local/lib
-#  "$ENV{LIB_DIR}/lib"
-#  "$ENV{LIB}/lib"
-#  )
-#
-#if (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#  set(HAVE_QWT TRUE)
-#endif (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#
-#if (HAVE_QWT)
-#  if (NOT QWT_FIND_QUIETLY)
-#    message(STATUS "Found Qwt: ${QWT_LIBRARY}")
-#  endif (NOT QWT_FIND_QUIETLY)
-#else ()
-#  if (QWT_FIND_REQUIRED)
-#    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
-#  endif (QWT_FIND_REQUIRED)
-#endif ()
+find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
+  /usr/include
+  /usr/local/include
+  "$ENV{LIB_DIR}/include"
+  "$ENV{INCLUDE}"
+  PATH_SUFFIXES qwt-qt4 qwt qwt5
+  )
+
+find_library(QWT_LIBRARY NAMES qwt qwt6 qwt5 PATHS
+  /usr/lib
+  /usr/local/lib
+  "$ENV{LIB_DIR}/lib"
+  "$ENV{LIB}/lib"
+  )
+
+if (QWT_INCLUDE_DIR AND QWT_LIBRARY)
+  set(HAVE_QWT TRUE)
+endif (QWT_INCLUDE_DIR AND QWT_LIBRARY)
+
+if (HAVE_QWT)
+  if (NOT QWT_FIND_QUIETLY)
+    message(STATUS "Found Qwt: ${QWT_LIBRARY}")
+  endif (NOT QWT_FIND_QUIETLY)
+else ()
+  if (QWT_FIND_REQUIRED)
+    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
+  endif (QWT_FIND_REQUIRED)
+endif ()
