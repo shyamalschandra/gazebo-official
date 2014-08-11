@@ -12,6 +12,7 @@ set (msgs
   contactsensor.proto
   cylindergeom.proto
   diagnostics.proto
+  diagnostic_control.proto
   factory.proto
   fog.proto
   friction.proto
@@ -24,6 +25,7 @@ set (msgs
   gz_string_v.proto
   header.proto
   heightmapgeom.proto
+  hydra.proto
   imagegeom.proto
   image.proto
   image_stamped.proto
@@ -50,10 +52,16 @@ set (msgs
   model_v.proto
   packet.proto
   physics.proto
+  physics_custom.proto
+  physics_bullet.proto
+  physics_dart.proto
+  physics_ode.proto
+  physics_simbody.proto
   planegeom.proto
   pid.proto
   plugin.proto
   pointcloud.proto
+  polylinegeom.proto
   pose.proto
   pose_animation.proto
   pose_stamped.proto

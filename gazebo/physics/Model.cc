@@ -23,6 +23,7 @@
 #include <sstream>
 
 #include "gazebo/util/OpenAL.hh"
+#include "gazebo/util/Diagnostics.hh"
 #include "gazebo/common/KeyFrame.hh"
 #include "gazebo/common/Animation.hh"
 #include "gazebo/common/Plugin.hh"
@@ -67,10 +68,14 @@ void Model::Load(sdf::ElementPtr _sdf)
   this->jointPub = this->node->Advertise<msgs::Joint>("~/joint");
 
   this->SetStatic(this->sdf->Get<bool>("static"));
-  this->sdf->GetElement("static")->GetValue()->SetUpdateFunc(
-      boost::bind(&Entity::IsStatic, this));
+  if (this->sdf->HasElement("static"))
+  {
+    this->sdf->GetElement("static")->GetValue()->SetUpdateFunc(
+        boost::bind(&Entity::IsStatic, this));
+  }
 
-  this->SetAutoDisable(this->sdf->Get<bool>("allow_auto_disable"));
+  if (this->sdf->HasElement("allow_auto_disable"))
+    this->SetAutoDisable(this->sdf->Get<bool>("allow_auto_disable"));
   this->LoadLinks();
 
   // Load the joints if the world is already loaded. Otherwise, the World
@@ -250,6 +255,40 @@ void Model::Update()
         this->onJointAnimationComplete();
     }
     this->prevAnimationTime = this->world->GetSimTime();
+  }
+
+  // diagnostics
+  if (DIAG_ENABLED())
+  {
+    DIAG_VARIABLE("model ["+this->GetName()+"] potential energy",
+      this->GetWorldEnergyPotential());
+    DIAG_VARIABLE("model ["+this->GetName()+"] kinetic energy",
+      this->GetWorldEnergyKinetic());
+    DIAG_VARIABLE("model ["+this->GetName()+"] total energy",
+      this->GetWorldEnergy());
+
+    for (Link_V::iterator liter = this->links.begin();
+         liter != this->links.end(); ++liter)
+    {
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] potential energy",
+        (*liter)->GetWorldEnergyPotential());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] kinetic energy",
+        (*liter)->GetWorldEnergyKinetic());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] total energy",
+        (*liter)->GetWorldEnergy());
+    }
+
+    for (Joint_V::iterator jiter = this->joints.begin();
+         jiter != this->joints.end(); ++jiter)
+    {
+      for(unsigned int i = 0; i < (*jiter)->GetAngleCount(); ++i)
+      {
+        std::ostringstream stream;
+        stream << "joint [" << (*jiter)->GetScopedName() << "] ["
+               << i << "] potential spring energy";
+        DIAG_VARIABLE(stream.str(), (*jiter)->GetWorldEnergyPotentialSpring(i));
+      }
+    }
   }
 }
 
@@ -560,18 +599,9 @@ JointPtr Model::GetJoint(const std::string &_name)
 
   for (iter = this->joints.begin(); iter != this->joints.end(); ++iter)
   {
-    if ((*iter)->GetScopedName() == _name ||
-        (*iter)->GetName() == _name)
+    if ((*iter)->GetScopedName() == _name || (*iter)->GetName() == _name)
     {
       result = (*iter);
-      break;
-    }
-    else if ((*iter)->GetName() == _name)
-    {
-      // check again without scoped names, deprecated, warn
-      result = (*iter);
-      gzwarn << "Calling Model::GetJoint(" << _name
-             << ") with un-scoped joint name is deprecated, please scope\n";
       break;
     }
   }
@@ -586,7 +616,7 @@ LinkPtr Model::GetLinkById(unsigned int _id) const
 }
 
 //////////////////////////////////////////////////
-Link_V Model::GetLinks() const
+const Link_V &Model::GetLinks() const
 {
   return this->links;
 }

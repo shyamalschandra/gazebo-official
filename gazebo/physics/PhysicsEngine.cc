@@ -14,10 +14,6 @@
  * limitations under the License.
  *
 */
-/* Desc: The base class for all physics engines
- * Author: Nate Koenig
- */
-
 #include <sdf/sdf.hh>
 
 #include "gazebo/msgs/msgs.hh"
@@ -196,21 +192,6 @@ void PhysicsEngine::SetAutoDisableFlag(bool /*_autoDisable*/)
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSPreconIters(unsigned int /*_iters*/)
-{
-}
-
-//////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSIters(unsigned int /*_iters*/)
-{
-}
-
-//////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSW(double /*_w*/)
-{
-}
-
-//////////////////////////////////////////////////
 void PhysicsEngine::SetContactMaxCorrectingVel(double /*_vel*/)
 {
 }
@@ -226,8 +207,36 @@ void PhysicsEngine::OnRequest(ConstRequestPtr &/*_msg*/)
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &/*_msg*/)
+void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
+  // Only handle parameters that don't require GetParam or SetParam
+  if (_msg->has_gravity())
+  {
+    this->SetGravity(msgs::Convert(_msg->gravity()));
+  }
+
+  if (_msg->has_enable_physics())
+  {
+    this->world->EnablePhysicsEngine(_msg->enable_physics());
+  }
+
+  if (_msg->has_real_time_factor())
+  {
+    this->SetTargetRealTimeFactor(_msg->real_time_factor());
+  }
+
+  if (_msg->has_real_time_update_rate())
+  {
+    this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
+  }
+
+  if (_msg->has_max_step_size())
+  {
+    this->SetMaxStepSize(_msg->max_step_size());
+  }
+
+  /// Make sure all models get at least one update cycle.
+  this->world->EnableAllModels();
 }
 
 //////////////////////////////////////////////////
