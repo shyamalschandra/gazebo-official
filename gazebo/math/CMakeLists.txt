@@ -12,6 +12,7 @@ set (sources
   Quaternion.cc
   Rand.cc
   RotationSpline.cc
+  SignalStats.cc
   Spline.cc
   Vector2d.cc
   Vector2i.cc
@@ -33,6 +34,7 @@ set (headers
   Quaternion.hh
   Rand.hh
   RotationSpline.hh
+  SignalStats.hh
   Spline.hh
   Vector2d.hh
   Vector2i.hh
@@ -51,6 +53,7 @@ set (gtest_sources
   Quaternion_TEST.cc
   Rand_TEST.cc
   RotationSpline_TEST.cc
+  SignalStats_TEST.cc
   Spline_TEST.cc
   Vector2d_TEST.cc
   Vector2i_TEST.cc
