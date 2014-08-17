@@ -1,0 +1,38 @@
+package gazebo.msgs;
+
+/// \ingroup gazebo_msgs
+/// \interface Diagnostics
+/// \brief Diagnostic information about a running instance of Gazebo.
+/// Gazebo must have been compiled with the ENABLE_DIAGNOSTICS flag.
+
+import "time.proto";
+
+message Diagnostics
+{
+  message DiagTime
+  {
+    required string name = 1;
+    required Time elapsed = 2;
+    required Time wall = 3;
+  }
+
+  message DiagVariable
+  {
+    required string name = 1;
+    required Time wall = 2;
+    required double value = 3;
+  }
+
+  message DiagMarker
+  {
+    required string name = 1;
+    required Time wall = 2;
+  }
+
+  repeated DiagTime time = 1;
+  repeated DiagVariable variable = 2;
+  repeated DiagMarker marker = 3;
+  required Time real_time = 4;
+  required Time sim_time = 5;
+  required double real_time_factor = 6;
+}
