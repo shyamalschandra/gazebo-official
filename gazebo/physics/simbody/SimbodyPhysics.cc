@@ -30,6 +30,7 @@
 #include "gazebo/physics/simbody/SimbodyBoxShape.hh"
 #include "gazebo/physics/simbody/SimbodyCylinderShape.hh"
 #include "gazebo/physics/simbody/SimbodyMeshShape.hh"
+#include "gazebo/physics/simbody/SimbodyPolylineShape.hh"
 #include "gazebo/physics/simbody/SimbodyRayShape.hh"
 
 #include "gazebo/physics/simbody/SimbodyHingeJoint.hh"
@@ -519,6 +520,8 @@ ShapePtr SimbodyPhysics::CreateShape(const std::string &_type,
     shape.reset(new SimbodyCylinderShape(collision));
   else if (_type == "mesh" || _type == "trimesh")
     shape.reset(new SimbodyMeshShape(collision));
+  else if (_type == "polyline")
+    shape.reset(new SimbodyPolylineShape(collision));
   else if (_type == "heightmap")
     shape.reset(new SimbodyHeightmapShape(collision));
   else if (_type == "multiray")
@@ -1169,7 +1172,12 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
     Transform X_LC =
       SimbodyPhysics::Pose2Transform((*ci)->GetRelativePose());
 
-    switch ((*ci)->GetShapeType() & (~physics::Entity::SHAPE))
+    // The following is required until the deprecated, non-const version of
+    // Collision::GetShapeType is removed
+    // Otherwise it could be:
+    // (*ci)->GetShapeType()
+    boost::shared_ptr<const Collision> col = *ci;
+    switch (col->GetShapeType() & (~physics::Entity::SHAPE))
     {
       case physics::Entity::PLANE_SHAPE:
       {
@@ -1260,7 +1268,7 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
       }
       break;
       default:
-        gzerr << "Collision type [" << (*ci)->GetShapeType()
+        gzerr << "Collision type [" << col->GetShapeType()
               << "] unimplemented\n";
         break;
     }
@@ -1361,6 +1369,10 @@ boost::any SimbodyPhysics::GetParam(const std::string &_key) const
   else if (_key == "max_transient_velocity")
   {
     return this->contact.getTransitionVelocity();
+  }
+  else if (_key == "max_step_size")
+  {
+    return this->GetMaxStepSize();
   }
   else
   {

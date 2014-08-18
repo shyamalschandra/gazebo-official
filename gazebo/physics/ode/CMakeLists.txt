@@ -16,9 +16,11 @@ set (sources
   ODEHingeJoint.cc
   ODEJoint.cc
   ODELink.cc
+  ODEMesh.cc
   ODEMeshShape.cc
   ODEMultiRayShape.cc
   ODEPhysics.cc
+  ODEPolylineShape.cc
   ODERayShape.cc
   ODEScrewJoint.cc
   ODESliderJoint.cc
@@ -38,10 +40,12 @@ SET (headers
   ODEHingeJoint.hh
   ODEJoint.hh
   ODELink.hh
+  ODEMesh.hh
   ODEMeshShape.hh
   ODEMultiRayShape.hh
   ODEPhysics.hh
   ODEPlaneShape.hh
+  ODEPolylineShape.hh
   ODERayShape.hh
   ODEScrewJoint.hh
   ODESliderJoint.hh
@@ -52,6 +56,7 @@ SET (headers
 )
 
 set (gtest_sources
+  ODEJoint_TEST.cc
   ODEPhysics_TEST.cc
 )
 gz_build_tests(${gtest_sources})
