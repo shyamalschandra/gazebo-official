@@ -133,6 +133,7 @@ World::World(const std::string &_name)
   this->connections.push_back(
      event::Events::ConnectPause(
        boost::bind(&World::SetPaused, this, _1)));
+  this->physicsPlugin = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -158,7 +159,7 @@ World::~World()
 }
 
 //////////////////////////////////////////////////
-void World::Load(sdf::ElementPtr _sdf)
+void World::Load(sdf::ElementPtr _sdf, const std::string &_physicsPlugin)
 {
   this->loaded = false;
   this->sdf = _sdf;
@@ -220,6 +221,9 @@ void World::Load(sdf::ElementPtr _sdf)
   std::string type = this->sdf->GetElement("physics")->Get<std::string>("type");
   this->physicsEngine = PhysicsFactory::NewPhysicsEngine(type,
       shared_from_this());
+
+  if (!_physicsPlugin.empty())
+    this->physicsPlugin = this->CreatePhysicsPlugin(_physicsPlugin);
 
   if (this->physicsEngine == NULL)
     gzthrow("Unable to create physics engine\n");
@@ -291,6 +295,19 @@ void World::Load(sdf::ElementPtr _sdf)
   event::Events::worldCreated(this->GetName());
 
   this->loaded = true;
+
+  // Initialize the physics plugin
+  if (this->physicsPlugin)
+  {
+    // here we want to pass the gazebo model into the physics engine
+    // and setup ways to get back states.
+    // two main mechanisms:
+    //   movedCallback: when physics engine updates, propagate into gazebo
+    //   OnPoseChange: if user changes state in gazebo, propagate to engine
+    // other useful callse:
+    //   step: take a step in simulation
+    this->physicsPlugin->init();
+  }
 }
 
 //////////////////////////////////////////////////
@@ -711,6 +728,12 @@ void World::Update()
 void World::Fini()
 {
   this->Stop();
+  if (this->physicsPlugin)
+  {
+    this->physicsPlugin->destroy();
+    this->physicsPlugin = NULL;
+  }
+
   this->plugins.clear();
 
   this->publishModelPoses.clear();
@@ -2108,6 +2131,64 @@ void World::OnLightMsg(ConstLightPtr &_msg)
     lightSDF->SetParent(this->sdf);
     lightSDF->GetParent()->InsertElement(lightSDF);
   }
+}
+
+//////////////////////////////////////////////////
+PhysicsPlugin *World::CreatePhysicsPlugin(const std::string &_filename)
+{
+  PhysicsPlugin *plugin = NULL;
+
+  // PluginPtr result;
+  struct stat st;
+  bool found = false;
+  std::string fullname, filename(_filename);
+  std::list<std::string>::iterator iter;
+  std::list<std::string> pluginPaths =
+    common::SystemPaths::Instance()->GetPluginPaths();
+
+  for (iter = pluginPaths.begin();
+      iter!= pluginPaths.end(); ++iter)
+  {
+    fullname = (*iter)+std::string("/")+filename;
+    if (stat(fullname.c_str(), &st) == 0)
+    {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found)
+    fullname = filename;
+
+  union
+  {
+    PhysicsPlugin *(*func)();
+    void *ptr;
+  } registerFunc;
+
+  std::string registerName = "create";
+
+  void *dlHandle = dlopen(fullname.c_str(), RTLD_LAZY|RTLD_GLOBAL);
+  if (!dlHandle)
+  {
+    gzerr << "Failed to load plugin " << fullname << ": "
+      << dlerror() << "\n";
+    return plugin;
+  }
+
+  registerFunc.ptr = dlsym(dlHandle, registerName.c_str());
+
+  if (!registerFunc.ptr)
+  {
+    gzerr << "Failed to resolve " << registerName
+      << ": " << dlerror();
+    return plugin;
+  }
+
+  // Register the new controller.
+  plugin = registerFunc.func();
+
+  return plugin;
 }
 
 /////////////////////////////////////////////////

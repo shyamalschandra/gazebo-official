@@ -85,6 +85,7 @@ set (headers
   PhysicsIface.hh
   PhysicsEngine.hh
   PhysicsFactory.hh
+  PhysicsPlugin.h
   PhysicsTypes.hh
   PlaneShape.hh
   PolylineShape.hh
