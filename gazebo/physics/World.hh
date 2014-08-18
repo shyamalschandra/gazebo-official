@@ -36,6 +36,7 @@
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
 
+#include "gazebo/physics/PhysicsPlugin.h"
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/WorldState.hh"
@@ -69,7 +70,10 @@ namespace gazebo
       /// \brief Load the world using SDF parameters.
       /// Load a world from and SDF pointer.
       /// \param[in] _sdf SDF parameters.
-      public: void Load(sdf::ElementPtr _sdf);
+      /// \param[in] _physicsPlugin Shared library filensmae that is a
+      /// physics plugin.
+      public: void Load(sdf::ElementPtr _sdf,
+                        const std::string &_physicsPlugin = "");
 
       /// \brief Save a world to a file.
       /// Save the current world and its state to a file.
@@ -460,6 +464,8 @@ namespace gazebo
       /// \param[in] _msg Pointer to the light message.
       private: void OnLightMsg(ConstLightPtr &_msg);
 
+      private: PhysicsPlugin *CreatePhysicsPlugin(const std::string &_filename);
+
       /// \brief For keeping track of time step throttling.
       private: common::Time prevStepWallTime;
 
@@ -706,6 +712,9 @@ namespace gazebo
       /// \brief This mutex is used to by the ::RemoveModel and
       /// ::ProcessFactoryMsgs functions.
       private: boost::mutex factoryDeleteMutex;
+
+      /// \brief Pointer to the physics plugin
+      private: PhysicsPlugin *physicsPlugin;
     };
     /// \}
   }
