@@ -108,11 +108,10 @@ MainWindow::MainWindow()
   this->tabWidget->setMinimumWidth(MINIMUM_TAB_WIDTH);
   this->AddToLeftColumn("default", this->tabWidget);
 
-  this->CreateEditors();
-
   this->toolsWidget = new ToolsWidget();
-
   this->renderWidget = new RenderWidget(mainWidget);
+
+  this->CreateEditors();
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
@@ -266,6 +265,8 @@ void MainWindow::Init()
 
   this->requestMsg = msgs::CreateRequest("scene_info");
   this->requestPub->Publish(*this->requestMsg);
+
+  gui::Events::mainWindowReady();
 }
 
 /////////////////////////////////////////////////
@@ -1648,4 +1649,10 @@ void MainWindow::CreateDisabledIcon(const std::string &_pixmap, QAction *_act)
   p.drawPixmap(0, 0, pixmap);
   icon.addPixmap(disabledPixmap, QIcon::Disabled);
   _act->setIcon(icon);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::AddMenu(QMenu *_menu)
+{
+  this->menuBar->addMenu(_menu);
 }
