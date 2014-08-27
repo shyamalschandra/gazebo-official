@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 
 #include <sdf/sdf.hh>
 
@@ -30,8 +31,11 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Plugin.hh"
 #include "gazebo/common/CommonIface.hh"
+#include "gazebo/common/CommonTypes.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Events.hh"
+
+#include "gazebo/msgs/msgs.hh"
 
 #include "gazebo/sensors/SensorsIface.hh"
 
@@ -97,13 +101,12 @@ bool Server::ParseArgs(int _argc, char **_argv)
      "Compression encoding format for log data (zlib|bz2|txt).")
     ("record_path", po::value<std::string>()->default_value(""),
      "Absolute path in which to store state data")
-    ("seed",  po::value<double>(),
-     "Start with a given random number seed.")
-    ("iters",  po::value<unsigned int>(),
-     "Number of iterations to simulate.")
+    ("seed",  po::value<double>(), "Start with a given random number seed.")
+    ("iters",  po::value<unsigned int>(), "Number of iterations to simulate.")
     ("minimal_comms", "Reduce the TCP/IP traffic output by gzserver")
     ("server-plugin,s", po::value<std::vector<std::string> >(),
-     "Load a plugin.");
+     "Load a plugin.")
+    ("server-logfile", po::value<std::string>(), "Specify a log file.");
 
   po::options_description hiddenDesc("Hidden options");
   hiddenDesc.add_options()
@@ -260,6 +263,13 @@ bool Server::ParseArgs(int _argc, char **_argv)
     // Load the server
     if (!this->LoadFile(configFilename, physics))
       return false;
+  }
+
+  // Set the name of the file where the informational log will store its data.
+  if (this->vm.count("server-logfile"))
+  {
+    this->params["server-logfile"] =
+        this->vm["server-logfile"].as<std::string>();
   }
 
   this->ProcessParams();
@@ -518,6 +528,12 @@ void Server::ProcessParams()
 }
 
 /////////////////////////////////////////////////
+gazebo::common::StrStr_M Server::GetParams()
+{
+  return this->params;
+}
+
+/////////////////////////////////////////////////
 void Server::SetParams(const common::StrStr_M &_params)
 {
   common::StrStr_M::const_iterator iter;
@@ -539,7 +555,80 @@ void Server::ProcessControlMsgs()
   for (iter = this->controlMsgs.begin();
        iter != this->controlMsgs.end(); ++iter)
   {
-    if ((*iter).has_save_world_name())
+    if ((*iter).has_clone() && (*iter).clone())
+    {
+      bool success = true;
+      std::string host;
+      std::string port;
+
+      // Get the world name to be cloned.
+      std::string worldName = "";
+      if ((*iter).has_save_world_name())
+        worldName = (*iter).save_world_name();
+
+      // Get the world pointer.
+      physics::WorldPtr world = physics::get_world(worldName);
+      if (!world)
+      {
+        gzwarn << "Unable to clone a server. Unknown world ["
+               << (*iter).save_world_name() << "]" << std::endl;
+        success = false;
+      }
+
+      // Check that the message contains a port for the new server.
+      if ((*iter).has_new_port())
+        port = boost::lexical_cast<std::string>((*iter).new_port());
+      else
+      {
+        gzwarn << "Unable to clone a server. Port is missing" << std::endl;
+        success = false;
+      }
+
+      if (success)
+      {
+        // Save the world's state in a temporary file (clone.<PORT>.world).
+        boost::filesystem::path tmpDir =
+            boost::filesystem::temp_directory_path();
+        boost::filesystem::path worldFilename = "clone." + port + ".world";
+        boost::filesystem::path worldPath = tmpDir / worldFilename;
+        world->Save(worldPath.string());
+
+        // Get the hostname from the current server's master.
+        unsigned int unused;
+        transport::get_master_uri(host, unused);
+
+        // Command to be executed for cloning the server. The new server will
+        // have its own log file named gzserver.<PORT>.log and will load the
+        // world file /tmp/clone.<PORT>.world
+        std::string cmd = "GAZEBO_MASTER_URI=http://" + host + ":" + port +
+            " gzserver --server-logfile " + "gzserver." + port + ".log " +
+            worldPath.string() + " &";
+
+        // Spawn a new gzserver process and load the saved world.
+        if (std::system(cmd.c_str()) == 0)
+        {
+          gzlog << "Cloning world [" << worldName << "]. "
+                << "Contact the server by typing:\n\tGAZEBO_MASTER_URI=http://"
+                << host << ":" << port << " gzclient --gui-logfile gzclient."
+                << port + ".log" << std::endl;
+        }
+        else
+        {
+          gzerr << "Unable to clone a simulation running the following command:"
+                << std::endl << "\t[" << cmd << "]" << std::endl;
+          success = false;
+        }
+      }
+
+      // Notify the result.
+      msgs::WorldModify worldMsg;
+      worldMsg.set_world_name(worldName);
+      worldMsg.set_cloned(success);
+      if (success)
+        worldMsg.set_cloned_uri("http://" + host + ":" + port);
+      this->worldModPub->Publish(worldMsg);
+    }
+    else if ((*iter).has_save_world_name())
     {
       physics::WorldPtr world = physics::get_world((*iter).save_world_name());
       if ((*iter).has_save_filename())
