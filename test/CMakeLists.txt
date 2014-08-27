@@ -35,6 +35,7 @@ set(ServerFixtureSources
   ${PROJECT_SOURCE_DIR}/gazebo/Master.cc
   ${PROJECT_SOURCE_DIR}/gazebo/gazebo.cc
   ${PROJECT_SOURCE_DIR}/test/ServerFixture.cc
+  ${PROJECT_SOURCE_DIR}/test/ServerFixtureRecord.cc
 )
 add_library(server_fixture STATIC ${ServerFixtureSources})
 add_dependencies(server_fixture gazebo_msgs)
@@ -50,6 +51,8 @@ set(TEST_TYPE "PERFORMANCE")
 add_subdirectory(performance)
 set(TEST_TYPE "INTEGRATION")
 add_subdirectory(integration)
+set(TEST_TYPE "ACCURACY")
+add_subdirectory(accuracy)
 set(TEST_TYPE "EXAMPLE")
 add_subdirectory(examples)
 set(TEST_TYPE "REGRESSION")
