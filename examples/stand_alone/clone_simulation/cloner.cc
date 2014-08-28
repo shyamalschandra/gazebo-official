@@ -23,18 +23,18 @@
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/transport/transport.hh>
 
-
 /////////////////////////////////////////////////
 void OnWorldModify(ConstWorldModifyPtr &_msg)
 {
   if (_msg->has_cloned() && _msg->cloned() && _msg->has_cloned_uri())
   {
-    std::cout << "World cloned. You can connect a client by tiping\n"
+    std::cout << "World cloned. You can connect a client by typing\n"
               << "\tGAZEBO_MASTER_URI=" << _msg->cloned_uri()
               << " gzclient" << std::endl;
   }
 }
 
+/////////////////////////////////////////////////
 void RunServer()
 {
   // Initialize gazebo server.
@@ -45,7 +45,7 @@ void RunServer()
       return;
 
     // Initialize the informational logger. This will log warnings, and errors.
-    gzLogInit("gzserver.log");
+    gzLogInit("server-", "gzserver.log");
 
     server->Run();
     server->Fini();
@@ -84,6 +84,9 @@ int main(int _argc, char **_argv)
   msg.set_clone(true);
   msg.set_new_port(11346);
   serverControlPub->Publish(msg);
+
+  // Wait for the simulation clone before showing the next message.
+  gazebo::common::Time::MSleep(200);
 
   std::cout << "\nPress [ENTER] to exit and kill all the servers." << std::endl;
   getchar();
