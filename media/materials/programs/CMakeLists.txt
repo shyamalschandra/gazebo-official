@@ -32,6 +32,8 @@ set (files
 
   warp.vert
   warpWithChromeAb.frag
+  camera_distortion_fs.glsl  
+  camera_distortion_vs.glsl
 )
 
 install(FILES ${files} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo-${GAZEBO_VERSION}/media/materials/programs/)
