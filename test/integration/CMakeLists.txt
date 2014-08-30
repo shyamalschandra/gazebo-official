@@ -57,6 +57,7 @@ set(tests
   nondefault_world.cc
   physics.cc
   physics_basic_controller_response.cc
+  physics_collision.cc
   physics_friction.cc
   physics_inertia_ratio.cc
   physics_link.cc
@@ -75,6 +76,7 @@ set(tests
   transport.cc
   world.cc
   world_entity_below_point.cc
+  world_population.cc
   worlds_installed.cc
   )
 
