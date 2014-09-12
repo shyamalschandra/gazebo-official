@@ -1,3 +1,27 @@
+## Gazebo 4.X to 5.X
+
+### Additions
+
+1. **gazebo/physics/Population.hh**
+    + ***New class:*** Population
+
+1. **gazebo/math/Kmeans.hh**
+    + ***New class:*** Kmeans
+
+1. **gazebo/gui/SpaceNav.hh**
+    + ***New class:*** SpaceNav, an interface to the space navigator 3D mouse
+
+### Modifications
+
+1. **gazebo/common/Plugin.hh**
+    + ***Removed:*** protected: std::string Plugin::handle
+    + ***Replacement:*** protected: std::string Plugin::handleName
+
+### Deletions
+
+1. **gazebo/physics/Collision.hh**
+    + unsigned int GetShapeType()
+
 ## Gazebo 3.1 to 4.0
 
 ### New Deprecations
@@ -58,7 +82,7 @@
           const LinkPtr &_originalParentLink,
           Link_V &_connectedLinks, bool _fistLink = false);
       + bool ContainsLink(const Link_V &_vector, const LinkPtr &_value);
-      + msgs::Visual GetVisualMessage(const std::string &_name) 
+      + msgs::Visual GetVisualMessage(const std::string &_name)
 
 ### Modifications
 1. **gazebo/physics/Model.hh**
