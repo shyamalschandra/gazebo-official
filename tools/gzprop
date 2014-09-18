@@ -18,7 +18,7 @@ def help
   puts "\n"
   puts "'gzprop' <model_sdf_file>\n"
   puts "\n"
-  puts "Package an existing model SDF, materials, and meshes,\n"
+  puts "Package an existing model SDF, materials, and meshes\n"
   puts "into a zip suitable for upload to thepropshop.org. A \n"
   puts "working instanstance of Gazebo >4.0 is required.\n"
   puts "\n"
