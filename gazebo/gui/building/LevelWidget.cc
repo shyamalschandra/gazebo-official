@@ -26,9 +26,13 @@ using namespace gui;
 LevelWidget::LevelWidget(QWidget *_parent) : QWidget(_parent)
 {
   this->setObjectName("levelWidget");
+  this->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
   QHBoxLayout *levelLayout = new QHBoxLayout;
   this->levelCounter = 0;
+
+  this->hideEditorItemsButton = new QPushButton("Hide");
+  this->hideEditorItemsButton->setToolTip("Hide elements (H)");
 
   this->levelComboBox = new QComboBox;
   this->levelComboBox->addItem(QString("Level 1"));
@@ -36,24 +40,32 @@ LevelWidget::LevelWidget(QWidget *_parent) : QWidget(_parent)
   int comboBoxHeight = levelComboBox->minimumSizeHint().height();
   this->levelComboBox->setMinimumWidth(comboBoxwidth*3);
   this->levelComboBox->setMinimumHeight(comboBoxHeight);
+  this->setMinimumWidth(comboBoxwidth*5);
 
+  QPushButton *deleteLevelButton = new QPushButton("-");
+  deleteLevelButton->setToolTip("Delete this level");
   QPushButton *addLevelButton = new QPushButton("+");
-  this->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+  addLevelButton->setToolTip("Add new level");
 
+  levelLayout->addWidget(hideEditorItemsButton);
   levelLayout->addWidget(this->levelComboBox);
+  levelLayout->addWidget(deleteLevelButton);
   levelLayout->addWidget(addLevelButton);
 
+  connect(hideEditorItemsButton, SIGNAL(clicked()), this,
+      SLOT(OnHideEditorItems()));
   connect(this->levelComboBox, SIGNAL(currentIndexChanged(int)),
       this, SLOT(OnCurrentLevelChanged(int)));
+  connect(deleteLevelButton, SIGNAL(clicked()), this, SLOT(OnDeleteLevel()));
   connect(addLevelButton, SIGNAL(clicked()), this, SLOT(OnAddLevel()));
 
   this->connections.push_back(
-    gui::editor::Events::ConnectDeleteBuildingLevel(
-    boost::bind(&LevelWidget::OnDeleteLevel, this, _1)));
+    gui::editor::Events::ConnectUpdateLevelWidget(
+    boost::bind(&LevelWidget::OnUpdateLevelWidget, this, _1, _2)));
 
   this->connections.push_back(
-    gui::editor::Events::ConnectChangeBuildingLevelName(
-    boost::bind(&LevelWidget::OnChangeLevelName, this, _1, _2)));
+    gui::editor::Events::ConnectTriggerHideEditorItems(
+    boost::bind(&LevelWidget::OnHideEditorItems, this)));
 
   this->connections.push_back(
     gui::editor::Events::ConnectDiscardBuildingModel(
@@ -76,37 +88,53 @@ void LevelWidget::OnCurrentLevelChanged(int _level)
 //////////////////////////////////////////////////
 void LevelWidget::OnAddLevel()
 {
-  std::stringstream levelText;
-//  int count = this->levelComboBox->count();
-  levelText << "Level " << (++this->levelCounter + 1);
-  this->levelComboBox->addItem(QString(levelText.str().c_str()));
-  this->levelComboBox->setCurrentIndex(this->levelComboBox->count()-1);
   gui::editor::Events::addBuildingLevel();
 }
 
 //////////////////////////////////////////////////
-void LevelWidget::OnChangeLevelName(int _level, const std::string &_newName)
+void LevelWidget::OnDeleteLevel()
 {
+  gui::editor::Events::deleteBuildingLevel();
+}
+
+//////////////////////////////////////////////////
+void LevelWidget::OnHideEditorItems()
+{
+  if (this->hideEditorItemsButton->text() == QString("Hide"))
+  {
+    this->hideEditorItemsButton->setText("Show");
+  }
+  else
+  {
+    this->hideEditorItemsButton->setText("Hide");
+  }
+  gui::editor::Events::hideEditorItems();
+}
+
+//////////////////////////////////////////////////
+void LevelWidget::OnUpdateLevelWidget(int _level, const std::string &_newName)
+{
+  // Delete
+  if (_newName.empty())
+  {
+    this->levelComboBox->removeItem(_level);
+    if (_level-1 >= 0)
+      this->levelComboBox->setCurrentIndex(_level-1);
+    return;
+  }
+
+  // Add
   if (_level == this->levelComboBox->count())
   {
-    // Used for responding to addLevel events from context menus
-    // TODO Use a level manager later for managing all events
     this->levelComboBox->addItem(tr(_newName.c_str()));
     this->levelComboBox->setCurrentIndex(_level);
     this->levelCounter++;
   }
+  // Change name
   else
   {
     this->levelComboBox->setItemText(_level, tr(_newName.c_str()));
   }
-}
-
-//////////////////////////////////////////////////
-void LevelWidget::OnDeleteLevel(int _level)
-{
-  this->levelComboBox->removeItem(_level);
-  if (_level-1 >= 0)
-    this->levelComboBox->setCurrentIndex(_level-1);
 }
 
 //////////////////////////////////////////////////
