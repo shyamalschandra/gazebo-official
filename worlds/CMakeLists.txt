@@ -17,6 +17,7 @@ set (files
   heightmap_dem.world
   heightmap.world
   hydra_demo.world
+  initial_velocity.world
   joint_damping_demo.world
   joints.world
   lights.world
@@ -28,6 +29,7 @@ set (files
   plane_demo.world
   plugin.world
   polyline.world
+  population.world
   pr2.world
   presentation.world
   pressure_sensor.world

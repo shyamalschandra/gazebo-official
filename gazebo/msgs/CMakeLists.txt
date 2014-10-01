@@ -12,7 +12,9 @@ set (msgs
   contactsensor.proto
   cylindergeom.proto
   diagnostics.proto
+  diagnostic_control.proto
   factory.proto
+  fluid.proto
   fog.proto
   friction.proto
   geometry.proto
@@ -37,6 +39,7 @@ set (msgs
   joint_cmd.proto
   joint_wrench.proto
   joint_wrench_stamped.proto
+  joystick.proto
   laserscan.proto
   laserscan_stamped.proto
   light.proto
@@ -51,6 +54,11 @@ set (msgs
   model_v.proto
   packet.proto
   physics.proto
+  physics_custom.proto
+  physics_bullet.proto
+  physics_dart.proto
+  physics_ode.proto
+  physics_simbody.proto
   planegeom.proto
   pid.proto
   plugin.proto
