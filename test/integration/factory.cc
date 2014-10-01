@@ -218,14 +218,7 @@ void FactoryTest::Clone(const std::string &_physicsEngine)
     {
       physics::CollisionPtr collision = collisions[j];
       physics::CollisionPtr collisionClone = collisionClones[j];
-      {
-        boost::shared_ptr<const physics::Collision> const_collision
-          = collision;
-        boost::shared_ptr<const physics::Collision> const_collisionClone
-          = collisionClone;
-        EXPECT_EQ(const_collision->GetShapeType(),
-                  const_collisionClone->GetShapeType());
-      }
+      EXPECT_EQ(collision->GetShapeType(), collisionClone->GetShapeType());
       EXPECT_EQ(collision->GetMaxContacts(), collisionClone->GetMaxContacts());
 
       // Check surface

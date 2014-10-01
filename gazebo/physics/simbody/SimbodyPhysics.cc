@@ -226,6 +226,9 @@ void SimbodyPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
     }
   }
 
+  /// Make sure all models get at least on update cycle.
+  this->world->EnableAllModels();
+
   // Parent class handles many generic parameters
   PhysicsEngine::OnPhysicsMsg(_msg);
 }
@@ -1222,12 +1225,7 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
     Transform X_LC =
       SimbodyPhysics::Pose2Transform((*ci)->GetRelativePose());
 
-    // The following is required until the deprecated, non-const version of
-    // Collision::GetShapeType is removed
-    // Otherwise it could be:
-    // (*ci)->GetShapeType()
-    boost::shared_ptr<const Collision> col = *ci;
-    switch (col->GetShapeType() & (~physics::Entity::SHAPE))
+    switch ((*ci)->GetShapeType() & (~physics::Entity::SHAPE))
     {
       case physics::Entity::PLANE_SHAPE:
       {
@@ -1318,7 +1316,7 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
       }
       break;
       default:
-        gzerr << "Collision type [" << col->GetShapeType()
+        gzerr << "Collision type [" << (*ci)->GetShapeType()
               << "] unimplemented\n";
         break;
     }
