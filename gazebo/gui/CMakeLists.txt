@@ -8,6 +8,7 @@ link_directories(
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/deps
+  ${QWT_INCLUDE_DIR}
 )
 
 add_definitions(${QT_DEFINITIONS})
@@ -20,7 +21,9 @@ add_subdirectory(viewers)
 
 set (sources
   Actions.cc
+  AlignWidget.cc
   BoxMaker.cc
+  CloneWindow.cc
   CylinderMaker.cc
   DataLogger.cc
   Editor.cc
@@ -34,7 +37,9 @@ set (sources
   KeyEventHandler.cc
   LightMaker.cc
   MainWindow.cc
+  ModelAlign.cc
   ModelManipulator.cc
+  ModelSnap.cc
   MeshMaker.cc
   ModelEditWidget.cc
   ModelListWidget.cc
@@ -42,14 +47,18 @@ set (sources
   ModelRightMenu.cc
   MouseEventHandler.cc
   SaveDialog.cc
+  SpaceNav.cc
   SphereMaker.cc
   TimePanel.cc
   ToolsWidget.cc
+  TopicPlot.cc
   TopicSelector.cc
 )
 
 set (qt_headers
   Actions.hh
+  AlignWidget.hh
+  CloneWindow.hh
   DataLogger.hh
   Editor.hh
   GLWidget.hh
@@ -63,6 +72,7 @@ set (qt_headers
   SaveDialog.hh
   TimePanel.hh
   ToolsWidget.hh
+  TopicPlot.hh
   TopicSelector.hh
 )
 
@@ -74,12 +84,16 @@ set (headers
   EntityMaker.hh
   GuiIface.hh
   GuiEvents.hh
+  GuiPlugin.hh
   KeyEventHandler.hh
   LightMaker.hh
+  ModelAlign.hh
   ModelManipulator.hh
+  ModelSnap.hh
   MeshMaker.hh
   MouseEventHandler.hh
   ModelMaker.hh
+  SpaceNav.hh
   SphereMaker.hh
 )
 
@@ -92,26 +106,27 @@ if (HAVE_OCULUS)
   )
 endif ()
 
-#if (HAVE_QWT)
-#  set (sources ${sources}
-#    Diagnostics.cc
-#    IncrementalPlot.cc
-#  )
-#  set (qt_headers ${qt_headers}
-#    Diagnostics.hh
-#    IncrementalPlot.hh
-#  )
-#endif()
+if (HAVE_QWT)
+  set (sources ${sources}
+    Diagnostics.cc
+    IncrementalPlot.cc
+  )
+  set (qt_headers ${qt_headers}
+    Diagnostics.hh
+    IncrementalPlot.hh
+  )
+endif()
 
 set (qt_tests
   DataLogger_TEST.cc
   GuiIface_TEST.cc
+  ModelAlign_TEST.cc
   TimePanel_TEST.cc
 )
 
 # MainWindow is using screen rendering
 if (ENABLE_SCREEN_TESTS)
-  set (qt_tests   ${qt_tests} MainWindow_TEST.cc ModelListWidget_TEST.cc)
+  set (qt_tests   ${qt_tests} MainWindow_TEST.cc ModelListWidget_TEST.cc ModelSnap_TEST.cc)
 endif()
 
 # Generate executables for each of the QT unit tests
@@ -143,6 +158,7 @@ target_link_libraries(gazebo_gui
   ${QT_LIBRARIES}
   ${ogre_libraries}
   ${Boost_LIBRARIES}
+  ${QWT_LIBRARY}
   pthread
 )
 
@@ -161,8 +177,15 @@ target_link_libraries(gzclient
   ${QT_LIBRARIES}
   ${ogre_libraries}
   ${Boost_LIBRARIES}
+  ${QWT_LIBRARY}
   pthread
 )
+
+if (SPNAV_LIBRARY)
+  target_link_libraries(gazebo_gui ${SPNAV_LIBRARY})
+  target_link_libraries(gzclient ${SPNAV_LIBRARY})
+endif()
+
 
 add_definitions(${QT_DEFINITIONS})
 

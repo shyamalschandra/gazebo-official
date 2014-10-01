@@ -477,32 +477,44 @@ include (${gazebo_cmake_dir}/Man.cmake)
 add_manpage_target()
 
 ########################################
+# Find Space Navigator header and library
+find_library(SPNAV_LIBRARY NAMES spnav)
+find_file(SPNAV_HEADER NAMES spnav.h)
+if (SPNAV_LIBRARY AND SPNAV_HEADER)
+  message(STATUS "Looking for libspnav and spnav.h - found")
+  set(HAVE_SPNAV TRUE)
+else()
+  message(STATUS "Looking for libspnav and spnav.h - not found")
+  set(HAVE_SPNAV FALSE)
+endif()
+
+########################################
 # Find QWT (QT graphing library)
-#find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
-#  /usr/include
-#  /usr/local/include
-#  "$ENV{LIB_DIR}/include"
-#  "$ENV{INCLUDE}"
-#  PATH_SUFFIXES qwt-qt4 qwt qwt5
-#  )
-#
-#find_library(QWT_LIBRARY NAMES qwt qwt6 qwt5 PATHS
-#  /usr/lib
-#  /usr/local/lib
-#  "$ENV{LIB_DIR}/lib"
-#  "$ENV{LIB}/lib"
-#  )
-#
-#if (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#  set(HAVE_QWT TRUE)
-#endif (QWT_INCLUDE_DIR AND QWT_LIBRARY)
-#
-#if (HAVE_QWT)
-#  if (NOT QWT_FIND_QUIETLY)
-#    message(STATUS "Found Qwt: ${QWT_LIBRARY}")
-#  endif (NOT QWT_FIND_QUIETLY)
-#else ()
-#  if (QWT_FIND_REQUIRED)
-#    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
-#  endif (QWT_FIND_REQUIRED)
-#endif ()
+find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
+  /usr/include
+  /usr/local/include
+  "$ENV{LIB_DIR}/include"
+  "$ENV{INCLUDE}"
+  PATH_SUFFIXES qwt-qt4 qwt qwt5
+  )
+
+find_library(QWT_LIBRARY NAMES qwt qwt6 qwt5 PATHS
+  /usr/lib
+  /usr/local/lib
+  "$ENV{LIB_DIR}/lib"
+  "$ENV{LIB}/lib"
+  )
+
+if (QWT_INCLUDE_DIR AND QWT_LIBRARY)
+  set(HAVE_QWT TRUE)
+endif (QWT_INCLUDE_DIR AND QWT_LIBRARY)
+
+if (HAVE_QWT)
+  if (NOT QWT_FIND_QUIETLY)
+    message(STATUS "Found Qwt: ${QWT_LIBRARY}")
+  endif (NOT QWT_FIND_QUIETLY)
+else ()
+  if (QWT_FIND_REQUIRED)
+    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
+  endif (QWT_FIND_REQUIRED)
+endif ()
