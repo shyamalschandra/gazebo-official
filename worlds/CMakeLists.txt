@@ -1,5 +1,6 @@
 set (files
   actor.world
+  arat.world
   blank.world
   camera.world
   cart_demo.world
@@ -54,5 +55,9 @@ set (files
   willowgarage.world
   wireless_sensors.world
 )
+
+if (HAVE_DART)
+  add_subdirectory(dart)
+endif()
 
 install(FILES ${files} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gazebo-${GAZEBO_VERSION}/worlds/)
