@@ -14,6 +14,9 @@
 1. Change behavior of Joint::SetVelocity, add Joint::SetVelocityLimit(unsigned int, double)
   * [Pull request #1218](https://bitbucket.org/osrf/gazebo/pull-request/1218)
 
+1. Implemented camera lens distortion.
+  * [Pull request #1213](https://bitbucket.org/osrf/gazebo/pull-request/1213)
+
 ## Gazebo 4.0
 
 ### Gazebo 4.x.x (yyyy-mm-dd)
@@ -780,4 +783,3 @@
 *  Numerous bug fixes
 *  APT repository hosted at [http://osrfoundation.org OSRF]
 *  Improved process control prevents zombie processes
-
