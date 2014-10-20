@@ -141,6 +141,7 @@ WindowDoorInspectorDialog::WindowDoorInspectorDialog(int _mode,
   mainLayout->addLayout(buttonsLayout);
 
   this->setLayout(mainLayout);
+  this->layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 /////////////////////////////////////////////////

@@ -177,6 +177,7 @@ JointInspector::JointInspector(JointMaker::JointType _jointType,
   }
   mainLayout->addLayout(buttonsLayout);
   this->setLayout(mainLayout);
+  this->layout()->setSizeConstraint(QLayout::SetFixedSize);
 
   if (this->jointType)
     this->SetType(this->jointType);
