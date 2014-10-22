@@ -10,6 +10,8 @@ set (msgs
   contact.proto
   contacts.proto
   contactsensor.proto
+  control_request.proto
+  control_response.proto
   cylindergeom.proto
   diagnostics.proto
   factory.proto
@@ -47,6 +49,8 @@ set (msgs
   log_control.proto
   log_status.proto
   material.proto
+  mesh.proto
+  mesh_update.proto
   meshgeom.proto
   model.proto
   model_configuration.proto
@@ -84,6 +88,7 @@ set (msgs
   sky.proto
   spheregeom.proto
   spherical_coordinates.proto
+  submesh.proto
   subscribe.proto
   surface.proto
   tactile.proto
