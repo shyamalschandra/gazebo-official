@@ -64,6 +64,12 @@ namespace gazebo
 
       /// \brief Toggle joystick camera move state
       public: bool canJoystickMoveCamera;
+
+      /// \brief Ogre camera for the right Oculus screen.
+      protected: Ogre::Camera *rightCamera;
+
+      /// \brief View port for the right camera.
+      protected: Ogre::Viewport *rightViewport;
     };
   }
 }
