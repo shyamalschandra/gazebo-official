@@ -68,6 +68,12 @@ namespace gazebo
 
       /// \brief Used to detect joystick button release
       public: bool joystickButtonToggleLast;
+
+      /// \brief Ogre camera for the right Oculus screen.
+      protected: Ogre::Camera *rightCamera;
+
+      /// \brief View port for the right camera.
+      protected: Ogre::Viewport *rightViewport;
     };
   }
 }
