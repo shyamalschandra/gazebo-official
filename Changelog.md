@@ -1,3 +1,19 @@
+## Gazebo 5.0
+
+### Gazebo 5.0.0
+
+1. Added ability to read the directory where the log files are stored.
+    * [Pull request #1277](https://bitbucket.org/osrf/gazebo/pull-request/1277)
+
+1. Implemented a simulation cloner
+    * [Pull request #1180](https://bitbucket.org/osrf/gazebo/pull-request/1180/clone-a-simulation)
+
+1. Added GUI overlay plugins. Users can now write a Gazebo + QT plugin that displays widgets over the render window.
+  * [Pull request #1181](https://bitbucket.org/osrf/gazebo/pull-request/1181)
+
+1. Change behavior of Joint::SetVelocity, add Joint::SetVelocityLimit(unsigned int, double)
+  * [Pull request #1218](https://bitbucket.org/osrf/gazebo/pull-request/1218)
+
 ## Gazebo 4.0
 
 ### Gazebo 4.x.x (yyyy-mm-dd)
@@ -66,7 +82,7 @@
     * [Pull request #1074](https://bitbucket.org/osrf/gazebo/pull-request/1074)
     * [Pull request #1136](https://bitbucket.org/osrf/gazebo/pull-request/1136)
     * [Pull request #1139](https://bitbucket.org/osrf/gazebo/pull-request/1139)
-1. Updated Base::GetScopedName 
+1. Updated Base::GetScopedName
     * [Pull request #1104](https://bitbucket.org/osrf/gazebo/pull-request/1104)
 1. Fix collada loader from adding duplicate materials into a Mesh
     * [Pull request #1105](https://bitbucket.org/osrf/gazebo/pull-request/1105)

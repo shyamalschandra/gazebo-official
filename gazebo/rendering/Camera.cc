@@ -1197,6 +1197,7 @@ void Camera::SetCaptureDataOnce()
 //////////////////////////////////////////////////
 void Camera::CreateRenderTexture(const std::string &_textureName)
 {
+  return;
   int fsaa = 4;
 
   // Full-screen anti-aliasing only works correctly in 1.8 and above
@@ -1272,7 +1273,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
     this->viewport = this->renderTarget->addViewport(this->camera);
     this->viewport->setClearEveryFrame(true);
     this->viewport->setShadowsEnabled(true);
-    this->viewport->setOverlaysEnabled(false);
+    this->viewport->setOverlaysEnabled(true);
 
     RTShaderSystem::AttachViewport(this->viewport, this->GetScene());
 
@@ -1290,7 +1291,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
     this->camera->setFOVy(Ogre::Radian(vfov));
 
     // Setup Deferred rendering for the camera
-    if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
+    /*if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
     {
       // Deferred shading GBuffer compositor
       this->dataPtr->dsGBufferInstance =
@@ -1324,11 +1325,12 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
       this->dataPtr->dlMergeInstance->setEnabled(true);
 
       // this->dataPtr->this->ssaoInstance->setEnabled(false);
-    }
+    }*/
 
 
-    if (this->GetScene()->skyx != NULL)
+    /*if (this->GetScene()->skyx != NULL)
       this->renderTarget->addListener(this->GetScene()->skyx);
+      */
   }
 }
 
