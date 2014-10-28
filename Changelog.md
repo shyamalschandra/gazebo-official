@@ -1,3 +1,30 @@
+## Gazebo 5.0
+
+### Gazebo 5.0.0
+
+1. Added ability to read the directory where the log files are stored.
+    * [Pull request #1277](https://bitbucket.org/osrf/gazebo/pull-request/1277)
+
+1. Implemented a simulation cloner
+    * [Pull request #1180](https://bitbucket.org/osrf/gazebo/pull-request/1180/clone-a-simulation)
+
+1. Added GUI overlay plugins. Users can now write a Gazebo + QT plugin that displays widgets over the render window.
+  * [Pull request #1181](https://bitbucket.org/osrf/gazebo/pull-request/1181)
+
+1. Change behavior of Joint::SetVelocity, add Joint::SetVelocityLimit(unsigned int, double)
+  * [Pull request #1218](https://bitbucket.org/osrf/gazebo/pull-request/1218)
+
+1. Implemented camera lens distortion.
+  * [Pull request #1213](https://bitbucket.org/osrf/gazebo/pull-request/1213)
+
+1. Kill rogue gzservers left over from failed INTEGRATION_world_clone tests
+   and improve robustness of `UNIT_gz_TEST`
+  * [Pull request #1232](https://bitbucket.org/osrf/gazebo/pull-request/1232)
+  * [Issue #1299](https://bitbucket.org/osrf/gazebo/issue/1299)
+
+1. Added RenderWidget::ShowToolbar to toggle visibility of top toolbar.
+  * [Pull request #1248](https://bitbucket.org/osrf/gazebo/pull-request/1248)
+
 ## Gazebo 4.0
 
 ### Gazebo 4.x.x (yyyy-mm-dd)
@@ -62,7 +89,7 @@
     * [Pull request #1074](https://bitbucket.org/osrf/gazebo/pull-request/1074)
     * [Pull request #1136](https://bitbucket.org/osrf/gazebo/pull-request/1136)
     * [Pull request #1139](https://bitbucket.org/osrf/gazebo/pull-request/1139)
-1. Updated Base::GetScopedName 
+1. Updated Base::GetScopedName
     * [Pull request #1104](https://bitbucket.org/osrf/gazebo/pull-request/1104)
 1. Fix collada loader from adding duplicate materials into a Mesh
     * [Pull request #1105](https://bitbucket.org/osrf/gazebo/pull-request/1105)
@@ -291,7 +318,7 @@
     * [Pull request #841](https://bitbucket.org/osrf/gazebo/pull-request/841)
 1. Fixed cppcheck warnings.
     * [Pull request #842](https://bitbucket.org/osrf/gazebo/pull-request/842)
- 
+
 ### Gazebo 2.1.0 (2013-11-08)
 1. Fix mainwindow unit test
     * [Pull request #752](https://bitbucket.org/osrf/gazebo/pull-request/752)
@@ -358,7 +385,7 @@
 1. Fix transceiver spawn errors in tests
     * [Pull request #811](https://bitbucket.org/osrf/gazebo/pull-request/811)
     * [Pull request #814](https://bitbucket.org/osrf/gazebo/pull-request/814)
- 
+
 ### Gazebo 2.0.0 (2013-10-08)
 1. Refactor code check tool.
     * [Pull Request #669](https://bitbucket.org/osrf/gazebo/pull-request/669)
@@ -411,12 +438,12 @@
     * [Pull Request #687](https://bitbucket.org/osrf/gazebo/pull-request/687)
 1. Improve timeout error reporting in ServerFixture
     * [Pull Request #705](https://bitbucket.org/osrf/gazebo/pull-request/705)
-1. Fix mouse picking for cases where visuals overlap with the laser 
+1. Fix mouse picking for cases where visuals overlap with the laser
     * [Pull Request #709](https://bitbucket.org/osrf/gazebo/pull-request/709)
-1. Fix string literals for OSX 
+1. Fix string literals for OSX
     * [Pull Request #712](https://bitbucket.org/osrf/gazebo/pull-request/712)
     * Resolves: [Issue #803](https://bitbucket.org/osrf/gazebo/issue/803)
-1. Support for ENABLE_TESTS_COMPILATION cmake parameter 
+1. Support for ENABLE_TESTS_COMPILATION cmake parameter
     * [Pull Request #708](https://bitbucket.org/osrf/gazebo/pull-request/708)
 1. Updated system gui plugin
     * [Pull Request #702](https://bitbucket.org/osrf/gazebo/pull-request/702)
@@ -493,13 +520,13 @@
 ### Gazebo 1.9.2 (2013-11-08)
 1. Fix enable/disable sky and clouds from SDF
     * [Pull request #809](https://bitbucket.org/osrf/gazebo/pull-request/809])
-1. Fix occasional blank GUI screen on startup 
+1. Fix occasional blank GUI screen on startup
     * [Pull request #815](https://bitbucket.org/osrf/gazebo/pull-request/815])
 1. Fix GPU laser when interacting with heightmaps
     * [Pull request #796](https://bitbucket.org/osrf/gazebo/pull-request/796])
 1. Added API/ABI checker command line tool
     * [Pull request #765](https://bitbucket.org/osrf/gazebo/pull-request/765])
-1. Added gtest version information 
+1. Added gtest version information
     * [Pull request #801](https://bitbucket.org/osrf/gazebo/pull-request/801])
 1. Fix GUI world saving
     * [Pull request #806](https://bitbucket.org/osrf/gazebo/pull-request/806])
@@ -687,7 +714,7 @@
  * [https://bitbucket.org/osrf/gazebo/issue/297 Issue #297]
 * Other bugs fixed:
  * [https://bitbucket.org/osrf/gazebo/pull-request/164/ Fix light bounding box to disable properly when deselected]
- * [https://bitbucket.org/osrf/gazebo/pull-request/169/ Determine correct local IP address, to make remote clients work properly] 
+ * [https://bitbucket.org/osrf/gazebo/pull-request/169/ Determine correct local IP address, to make remote clients work properly]
  * Various test fixes
 
 ### Gazebo 1.3.0 (2012-12-03)
@@ -764,4 +791,3 @@
 *  Numerous bug fixes
 *  APT repository hosted at [http://osrfoundation.org OSRF]
 *  Improved process control prevents zombie processes
-
