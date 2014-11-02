@@ -30,6 +30,10 @@ if (PROTOBUF_VERSION LESS 2.3.0)
 endif()
 
 ########################################
+# The Ignition Robotics transport library
+find_package(ignition-transport QUIET REQUIRED)
+
+########################################
 # The Google Protobuf library for message generation + serialization
 find_package(Protobuf REQUIRED)
 if (NOT PROTOBUF_FOUND)
@@ -387,10 +391,10 @@ endif ()
 
 ########################################
 # Find SDFormat
-find_package(SDFormat 2.0.1)
+find_package(SDFormat 2.1.0)
 if (NOT SDFormat_FOUND)
   message (STATUS "Looking for SDFormat - not found")
-  BUILD_ERROR ("Missing: SDF version >=2.0.1. Required for reading and writing SDF files.")
+  BUILD_ERROR ("Missing: SDF version >=2.1.0. Required for reading and writing SDF files.")
 else()
   message (STATUS "Looking for SDFormat - found")
 endif()
@@ -518,3 +522,5 @@ endif()
 #    BUILD_WARNING ("Could not find libqwt-dev. Plotting features will be disabled.")
 #  endif (QWT_FIND_REQUIRED)
 #endif ()
+
+
