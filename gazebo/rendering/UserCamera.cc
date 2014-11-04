@@ -84,6 +84,8 @@ void UserCamera::Load()
   Camera::Load();
   this->dataPtr->node = transport::NodePtr(new transport::Node());
   this->dataPtr->node->Init();
+  this->dataPtr->posePub =
+    this->dataPtr->node->Advertise<msgs::Pose>("~/user_camera/pose", 1, 30.0);
   this->dataPtr->joySubTwist =
     this->dataPtr->node->Subscribe("~/user_camera/joy_twist",
     &UserCamera::OnJoyTwist, this);
@@ -123,7 +125,7 @@ void UserCamera::Init()
     this->sceneNode->attachObject(this->dataPtr->rightCamera);
   }
 
-  this->SetHFOV(GZ_DTOR(60));
+  this->SetHFOV(GZ_DTOR(120));
 
   // Careful when setting this value.
   // A far clip that is too close will have bad side effects on the
@@ -207,6 +209,9 @@ void UserCamera::Update()
 
   if (this->dataPtr->gui)
     this->dataPtr->gui->Update();
+
+  // publish camera pose
+  this->dataPtr->posePub->Publish(msgs::Convert(this->GetWorldPose()));
 }
 
 //////////////////////////////////////////////////
