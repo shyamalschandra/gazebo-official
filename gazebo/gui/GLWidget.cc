@@ -147,6 +147,9 @@ GLWidget::GLWidget(QWidget *_parent)
 
   connect(g_copyAct, SIGNAL(triggered()), this, SLOT(OnCopy()));
   connect(g_pasteAct, SIGNAL(triggered()), this, SLOT(OnPaste()));
+
+  connect(g_editModelAct, SIGNAL(toggled(bool)), this,
+      SLOT(OnModelEditor(bool)));
 }
 
 /////////////////////////////////////////////////
@@ -1138,4 +1141,13 @@ void GLWidget::OnAlignMode(const std::string &_axis, const std::string &_config,
 {
   ModelAlign::Instance()->AlignVisuals(this->selectedVisuals, _axis, _config,
       _target, !_preview);
+}
+
+/////////////////////////////////////////////////
+void GLWidget::OnModelEditor(bool _checked)
+{
+  if (_checked)
+    ModelSnap::Instance()->SetSnapLevel("link");
+  else
+    ModelSnap::Instance()->SetSnapLevel("model");
 }
