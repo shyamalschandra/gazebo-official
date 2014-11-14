@@ -54,8 +54,9 @@ ServerFixture::ServerFixture()
   this->gotImage = 0;
   this->imgData = NULL;
   this->serverThread = NULL;
+  this->uniqueCounter = 0;
 
-  gzLogInit("test.log");
+  gzLogInit("test-", "test.log");
   gazebo::common::Console::SetQuiet(false);
   common::SystemPaths::Instance()->AddGazeboPaths(
       TEST_INTEGRATION_PATH);
@@ -454,14 +455,42 @@ void ServerFixture::GetFrame(const std::string &_cameraName,
 }
 
 /////////////////////////////////////////////////
+physics::ModelPtr ServerFixture::SpawnModel(const msgs::Model &_msg)
+{
+  std::ostringstream stream;
+  stream << "<sdf version='" << SDF_VERSION << "'>"
+         << msgs::ToSDF(_msg)
+         << "</sdf>";
+
+  physics::WorldPtr world = physics::get_world();
+  world->InsertModelString(stream.str());
+
+  common::Time wait(10, 0);
+  common::Time wallStart = common::Time::GetWallTime();
+  unsigned int waitCount = 0;
+  while (wait > (common::Time::GetWallTime() - wallStart) &&
+         !this->HasEntity(_msg.name()))
+  {
+    common::Time::MSleep(10);
+    if (++waitCount % 100 == 0)
+    {
+      gzwarn << "Waiting " << waitCount / 100 << " seconds for "
+             << "box to spawn." << std::endl;
+    }
+  }
+
+  return world->GetModel(_msg.name());
+}
+
+/////////////////////////////////////////////////
 void ServerFixture::SpawnCamera(const std::string &_modelName,
     const std::string &_cameraName,
     const math::Vector3 &_pos, const math::Vector3 &_rpy,
-    unsigned int _width, unsigned int _height,
-    double _rate,
-    const std::string &_noiseType,
-    double _noiseMean,
-    double _noiseStdDev)
+    unsigned int _width, unsigned int _height, double _rate,
+    const std::string &_noiseType, double _noiseMean, double _noiseStdDev,
+    bool _distortion, double _distortionK1, double _distortionK2,
+    double _distortionK3, double _distortionP1, double _distortionP2,
+    double _cx, double _cy)
 {
   msgs::Factory msg;
   std::ostringstream newModelStr;
@@ -494,6 +523,16 @@ void ServerFixture::SpawnCamera(const std::string &_modelName,
     << "        <mean>" << _noiseMean << "</mean>"
     << "        <stddev>" << _noiseStdDev << "</stddev>"
     << "      </noise>";
+
+  if (_distortion)
+    newModelStr << "      <distortion>"
+    << "        <k1>" << _distortionK1 << "</k1>"
+    << "        <k2>" << _distortionK2 << "</k2>"
+    << "        <k3>" << _distortionK3 << "</k3>"
+    << "        <p1>" << _distortionP1 << "</p1>"
+    << "        <p2>" << _distortionP2 << "</p2>"
+    << "        <center>" << _cx << " " << _cy << "</center>"
+    << "      </distortion>";
 
   newModelStr << "    </camera>"
     << "  </sensor>"
@@ -1348,4 +1387,12 @@ void ServerFixture::GetMemInfo(double &_resident, double &_share)
   gzerr << "Unsupported architecture\n";
   return;
 #endif
+}
+
+/////////////////////////////////////////////////
+std::string ServerFixture::GetUniqueString(const std::string &_prefix)
+{
+  std::ostringstream stream;
+  stream << _prefix << this->uniqueCounter++;
+  return stream.str();
 }

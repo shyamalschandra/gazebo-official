@@ -203,6 +203,11 @@ class ServerFixture : public testing::Test
                  unsigned char **_imgData, unsigned int &_width,
                  unsigned int &_height);
 
+  /// \brief Spawn a model from a msgs::Model and return ModelPtr.
+  /// \param[in] _msg Model message.
+  /// \return Pointer to model.
+  protected: physics::ModelPtr SpawnModel(const msgs::Model &_msg);
+
   /// \brief Spawn a camera.
   /// \param[in] _modelName Name of the model.
   /// \param[in] _cameraName Name of the camera.
@@ -214,14 +219,24 @@ class ServerFixture : public testing::Test
   /// \param[in] _noiseType Type of noise to apply.
   /// \param[in] _noiseMean Mean noise value.
   /// \param[in] _noiseStdDev Standard deviation of the noise.
+  /// \param[in] _distortionK1 Distortion coefficient k1.
+  /// \param[in] _distortionK2 Distortion coefficient k2.
+  /// \param[in] _distortionK3 Distortion coefficient k3.
+  /// \param[in] _distortionP1 Distortion coefficient P1.
+  /// \param[in] _distortionP2 Distortion coefficient p2.
+  /// \param[in] _cx Normalized optical center x, used for distortion.
+  /// \param[in] _cy Normalized optical center y, used for distortion.
   protected: void SpawnCamera(const std::string &_modelName,
                  const std::string &_cameraName,
                  const math::Vector3 &_pos, const math::Vector3 &_rpy,
                  unsigned int _width = 320, unsigned int _height = 240,
                  double _rate = 25,
                  const std::string &_noiseType = "",
-                 double _noiseMean = 0.0,
-                 double _noiseStdDev = 0.0);
+                 double _noiseMean = 0.0, double _noiseStdDev = 0.0,
+                 bool _distortion = false, double _distortionK1 = 0.0,
+                 double _distortionK2 = 0.0, double _distortionK3 = 0.0,
+                 double _distortionP1 = 0.0, double _distortionP2 = 0.0,
+                 double _cx = 0.5, double _cy = 0.5);
 
   /// \brief Spawn a laser.
   /// \param[in] _modelName Name of the model.
@@ -513,6 +528,24 @@ class ServerFixture : public testing::Test
   /// \param[out] _share Shared memory.
   protected: void GetMemInfo(double &_resident, double &_share);
 
+  /// \brief Get unique string.
+  protected: std::string GetUniqueString(const std::string &_prefix);
+
+  /// \brief Helper to record data to gtest xml output.
+  /// \param[in] _name Name of data.
+  /// \param[in] _data Floating point number to store.
+  void Record(const std::string &_name, double _data);
+
+  /// \brief Helper to record signal statistics to gtest xml output.
+  /// \param[in] _prefix Prefix string for data names.
+  /// \param[in] _stats Signal statistics to store.
+  void Record(const std::string &_prefix, const math::SignalStats &_stats);
+
+  /// \brief Helper to record Vector3 signal statistics to gtest xml output.
+  /// \param[in] _prefix Prefix string for data names.
+  /// \param[in] _stats Vector3 signal statistics to store.
+  void Record(const std::string &_prefix, const math::Vector3Stats &_stats);
+
   /// \brief Pointer the Gazebo server.
   protected: Server *server;
 
@@ -557,5 +590,8 @@ class ServerFixture : public testing::Test
 
   /// \brief True if server is running.
   private: bool serverRunning;
+
+  /// \brief Counter for unique name generation.
+  private: int uniqueCounter;
 };
 #endif  // define _GAZEBO_SERVER_FIXTURE_HH_
