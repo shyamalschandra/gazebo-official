@@ -595,9 +595,10 @@ void Visual::DetachVisual(const std::string &_name)
   {
     if ((*iter)->GetName() == _name)
     {
-      this->sceneNode->removeChild((*iter)->GetSceneNode());
-      (*iter)->parent.reset();
+      VisualPtr childVis = (*iter);
       this->children.erase(iter);
+      this->sceneNode->removeChild(childVis->GetSceneNode());
+      childVis->GetParent().reset();
       break;
     }
   }
@@ -707,7 +708,7 @@ Ogre::MovableObject *Visual::AttachMesh(const std::string &_meshName,
   this->InsertMesh(_meshName, _subMesh, _centerSubmesh);
 
   obj = (Ogre::MovableObject*)
-    (this->sceneNode->getCreator()->createEntity(objName, meshName));
+      (this->sceneNode->getCreator()->createEntity(objName, meshName));
 
   this->AttachObject(obj);
   return obj;
@@ -1898,6 +1899,10 @@ void Visual::InsertMesh(const common::Mesh *_mesh, const std::string &_subMesh,
       {
         rendering::Material::Update(material);
         ogreSubMesh->setMaterialName(material->GetName());
+      }
+      else
+      {
+        ogreSubMesh->setMaterialName("Gazebo/White");
       }
 
       // Unlock
