@@ -210,10 +210,6 @@ namespace gazebo
       /// \brief Internal init function.
       private: bool Init();
 
-      /// \brief Create an empty model.
-      /// \return Name of the model created.
-      private: std::string CreateModel();
-
       /// \brief Generate SDF with CSG support (to be supported).
       private: void GenerateSDFWithCSG();
 
@@ -254,7 +250,8 @@ namespace gazebo
       private: void OnDone(const std::string &_saveName = "");
 
       /// \brief Callback received when exiting the editor mode.
-      private: void OnExit();
+      /// \param[in] _saveName Name to save the model.
+      private: void OnExit(const std::string &_saveName = "");
 
       /// \brief Conversion scale used by the Convert helper functions.
       public: static double conversionScale;
@@ -269,8 +266,11 @@ namespace gazebo
       /// \brief A template SDF of a simple box model.
       private: sdf::SDFPtr modelTemplateSDF;
 
-      /// \brief Name of the building model.
-      private: std::string modelName;
+      /// \brief Name of the building model when saved.
+      private: std::string modelSaveName;
+
+      /// \brief Name of the temp building model while editing.
+      private: std::string modelTempName;
 
       /// \brief The root visual of the building model.
       private: rendering::VisualPtr modelVisual;

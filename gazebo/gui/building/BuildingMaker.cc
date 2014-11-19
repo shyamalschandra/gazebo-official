@@ -56,7 +56,9 @@ double BuildingMaker::conversionScale;
   BuildingMaker::BuildingMaker() : EntityMaker()
 {
   this->buildingDefaultName = "BuildingDefaultName";
-  this->modelName = this->buildingDefaultName;
+  this->modelTempName = "tempBuilding";
+  this->modelSaveName = this->buildingDefaultName;
+  this->saveLocation = QDir::homePath().toStdString();
 
   this->conversionScale = 0.01;
 
@@ -74,16 +76,16 @@ double BuildingMaker::conversionScale;
 
   this->connections.push_back(
   gui::editor::Events::ConnectSaveBuildingEditor(
-    boost::bind(&BuildingMaker::OnSave, this, _1)));
+      boost::bind(&BuildingMaker::OnSave, this, _1)));
   this->connections.push_back(
   gui::editor::Events::ConnectDiscardBuildingEditor(
-    boost::bind(&BuildingMaker::OnDiscard, this)));
+      boost::bind(&BuildingMaker::OnDiscard, this)));
   this->connections.push_back(
   gui::editor::Events::ConnectDoneBuildingEditor(
-    boost::bind(&BuildingMaker::OnDone, this, _1)));
+      boost::bind(&BuildingMaker::OnDone, this, _1)));
   this->connections.push_back(
   gui::editor::Events::ConnectExitBuildingEditor(
-    boost::bind(&BuildingMaker::OnExit, this)));
+      boost::bind(&BuildingMaker::OnExit, this, _1)));
 
   this->saveDialog =
       new FinishBuildingDialog(FinishBuildingDialog::MODEL_SAVE, 0);
@@ -156,13 +158,6 @@ void BuildingMaker::DetachManip(const std::string &_child,
 }
 
 /////////////////////////////////////////////////
-std::string BuildingMaker::CreateModel()
-{
-  this->Reset();
-  return this->modelName;
-}
-
-/////////////////////////////////////////////////
 std::string BuildingMaker::AddPart(const std::string &_type,
     const QVector3D &_size, const QVector3D &_pos, double _angle)
 {
@@ -190,13 +185,12 @@ std::string BuildingMaker::AddWall(const QVector3D &_size,
   linkNameStream << "Wall_" << wallCounter++;
   std::string linkName = linkNameStream.str();
 
-  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelName + "::" +
-        linkName, this->modelVisual));
+  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelTempName +
+      "::" + linkName, this->modelVisual));
   linkVisual->Load();
 
-
   std::ostringstream visualName;
-  visualName << this->modelName << "::" << linkName << "::Visual";
+  visualName << this->modelTempName << "::" << linkName << "::Visual";
   rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
         linkVisual));
   sdf::ElementPtr visualElem =  this->modelTemplateSDF->root
@@ -213,6 +207,7 @@ std::string BuildingMaker::AddWall(const QVector3D &_size,
   visVisual->SetPosition(math::Vector3(0, 0, scaledSize.z/2.0));
   wallManip->SetPose(_pos.x(), _pos.y(), _pos.z(), 0, 0, _angle);
   this->allItems[linkName] = wallManip;
+  this->saved = false;
 
   linkVisual->SetVisibilityFlags(GZ_VISIBILITY_GUI);
   return linkName;
@@ -231,12 +226,12 @@ std::string BuildingMaker::AddWindow(const QVector3D &_size,
   linkNameStream << "Window_" << this->windowCounter++;
   std::string linkName = linkNameStream.str();
 
-  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelName + "::" +
-        linkName, this->modelVisual));
+  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelTempName +
+      "::" + linkName, this->modelVisual));
   linkVisual->Load();
 
   std::ostringstream visualName;
-  visualName << this->modelName << "::" << linkName << "::Visual";
+  visualName << this->modelTempName << "::" << linkName << "::Visual";
   rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
         linkVisual));
 
@@ -255,6 +250,7 @@ std::string BuildingMaker::AddWindow(const QVector3D &_size,
   visVisual->SetPosition(math::Vector3(0, 0, scaledSize.z/2.0));
   windowManip->SetPose(_pos.x(), _pos.y(), _pos.z(), 0, 0, _angle);
   this->allItems[linkName] = windowManip;
+  this->saved = false;
 
   linkVisual->SetVisibilityFlags(GZ_VISIBILITY_GUI);
   return linkName;
@@ -274,12 +270,12 @@ std::string BuildingMaker::AddDoor(const QVector3D &_size,
   linkNameStream << "Door_" << this->doorCounter++;
   std::string linkName = linkNameStream.str();
 
-  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelName + "::" +
-        linkName, this->modelVisual));
+  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelTempName +
+      "::" + linkName, this->modelVisual));
   linkVisual->Load();
 
   std::ostringstream visualName;
-  visualName << this->modelName << "::" << linkName << "::Visual";
+  visualName << this->modelTempName << "::" << linkName << "::Visual";
   rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
         linkVisual));
 
@@ -298,6 +294,7 @@ std::string BuildingMaker::AddDoor(const QVector3D &_size,
   visVisual->SetPosition(math::Vector3(0, 0, scaledSize.z/2.0));
   doorManip->SetPose(_pos.x(), _pos.y(), _pos.z(), 0, 0, _angle);
   this->allItems[linkName] = doorManip;
+  this->saved = false;
 
   linkVisual->SetVisibilityFlags(GZ_VISIBILITY_GUI);
   return linkName;
@@ -316,12 +313,12 @@ std::string BuildingMaker::AddStairs(const QVector3D &_size,
   linkNameStream << "Stairs_" << this->stairsCounter++;
   std::string linkName = linkNameStream.str();
 
-  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelName + "::" +
-        linkName, this->modelVisual));
+  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelTempName +
+      "::" + linkName, this->modelVisual));
   linkVisual->Load();
 
   std::ostringstream visualName;
-  visualName << this->modelName << "::" << linkName << "::Visual";
+  visualName << this->modelTempName << "::" << linkName << "::Visual";
   rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
         linkVisual));
 
@@ -340,6 +337,7 @@ std::string BuildingMaker::AddStairs(const QVector3D &_size,
   visVisual->SetPosition(math::Vector3(0, 0, scaledSize.z/2.0));
   stairsManip->SetPose(_pos.x(), _pos.y(), _pos.z(), 0, 0, _angle);
   this->allItems[linkName] = stairsManip;
+  this->saved = false;
 
   std::stringstream visualStepName;
   visualStepName << visualName.str() << "step" << 0;
@@ -387,12 +385,12 @@ std::string BuildingMaker::AddFloor(const QVector3D &_size,
   linkNameStream << "Floor_" << this->floorCounter++;
   std::string linkName = linkNameStream.str();
 
-  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelName + "::" +
-        linkName, this->modelVisual));
+  rendering::VisualPtr linkVisual(new rendering::Visual(this->modelTempName +
+      "::" + linkName, this->modelVisual));
   linkVisual->Load();
 
   std::ostringstream visualName;
-  visualName << this->modelName << "::" << linkName << "::Visual";
+  visualName << this->modelTempName << "::" << linkName << "::Visual";
   rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
         linkVisual));
 
@@ -411,6 +409,7 @@ std::string BuildingMaker::AddFloor(const QVector3D &_size,
   visVisual->SetPosition(math::Vector3(0, 0, scaledSize.z/2.0));
   floorManip->SetPose(_pos.x(), _pos.y(), _pos.z(), 0, 0, _angle);
   this->allItems[linkName] = floorManip;
+  this->saved = false;
 
   linkVisual->SetVisibilityFlags(GZ_VISIBILITY_GUI);
   return linkName;
@@ -432,6 +431,7 @@ void BuildingMaker::RemovePart(const std::string &_partName)
   if (visParent)
     scene->RemoveVisual(visParent);
   this->allItems.erase(_partName);
+  this->saved = false;
   delete manip;
 }
 
@@ -451,12 +451,14 @@ void BuildingMaker::Start(const rendering::UserCameraPtr _camera)
 /////////////////////////////////////////////////
 void BuildingMaker::Stop()
 {
-//  rendering::ScenePtr scene = gui::get_active_camera()->GetScene();
-//  scene->RemoveVisual(this->modelVisual);
-//  this->modelVisual.reset();
-//  this->visuals.clear();
-//  this->modelSDF.reset();
-//  this->modelVisual->SetVisible(false);
+  if (this->modelVisual)
+  {
+    rendering::ScenePtr scene = gui::get_active_camera()->GetScene();
+    scene->RemoveVisual(this->modelVisual);
+    this->modelVisual.reset();
+  }
+  if (this->modelSDF)
+    this->modelSDF.reset();
 }
 
 /////////////////////////////////////////////////
@@ -473,9 +475,9 @@ void BuildingMaker::Reset()
 
   this->saved = false;
   this->saveLocation = QDir::homePath().toStdString();
-  this->modelName = this->buildingDefaultName;
+  this->modelSaveName = this->buildingDefaultName;
 
-  this->modelVisual.reset(new rendering::Visual(this->modelName,
+  this->modelVisual.reset(new rendering::Visual(this->modelTempName,
       scene->GetWorldVisual()));
 
   this->modelVisual->Load();
@@ -499,7 +501,7 @@ bool BuildingMaker::IsActive() const
 /////////////////////////////////////////////////
 void BuildingMaker::SetModelName(const std::string &_modelName)
 {
-  this->modelName = _modelName;
+  this->modelSaveName = _modelName;
 }
 
 /////////////////////////////////////////////////
@@ -509,7 +511,7 @@ void BuildingMaker::SaveToSDF(const std::string &_savePath)
   std::ofstream savefile;
   boost::filesystem::path path;
   path = boost::filesystem::operator/(this->saveLocation,
-      this->modelName + ".sdf");
+      this->modelSaveName + ".sdf");
   savefile.open(path.string().c_str());
   savefile << this->modelSDF->ToString();
   savefile.close();
@@ -554,7 +556,7 @@ void BuildingMaker::GenerateSDF()
   std::stringstream visualNameStream;
   std::stringstream collisionNameStream;
 
-  modelElem->GetAttribute("name")->Set(this->modelName);
+  modelElem->GetAttribute("name")->Set(this->modelSaveName);
 
   std::map<std::string, BuildingModelManip *>::iterator itemsIt;
 
@@ -845,7 +847,7 @@ void BuildingMaker::GenerateSDFWithCSG()
   std::stringstream visualNameStream;
   std::stringstream collisionNameStream;
 
-  modelElem->GetAttribute("name")->Set(this->modelName);
+  modelElem->GetAttribute("name")->Set(this->modelSaveName);
 
   std::map<std::string, BuildingModelManip *>::iterator itemsIt;
   for (itemsIt = this->allItems.begin(); itemsIt != this->allItems.end();
@@ -956,7 +958,7 @@ void BuildingMaker::GenerateSDFWithCSG()
       visGeomElem->ClearElements();
       sdf::ElementPtr meshElem = visGeomElem->AddElement("mesh");
       // TODO create the folder
-      std::string uri = "model://" + this->modelName + "/meshes/"
+      std::string uri = "model://" + this->modelSaveName + "/meshes/"
           + booleanMeshName;
       meshElem->GetElement("uri")->Set(uri);
       visualElem->GetElement("pose")->Set(visual->GetPose());
@@ -1002,7 +1004,6 @@ void BuildingMaker::GenerateSDFWithCSG()
 /////////////////////////////////////////////////
 void BuildingMaker::CreateTheEntity()
 {
-  this->GenerateSDF();
   msgs::Factory msg;
   msg.set_sdf(this->modelSDF->ToString());
   this->makerPub->Publish(msg);
@@ -1305,16 +1306,14 @@ void BuildingMaker::OnDiscard()
       QString("Are you sure you want to discard\n"
       "your model? All of your work will\n"
       "be lost."),
-      QMessageBox::Discard | QMessageBox::Cancel,
+      QMessageBox::Yes | QMessageBox::Cancel,
       QMessageBox::Cancel);
 
   switch (ret)
   {
-    case QMessageBox::Discard:
+    case QMessageBox::Yes:
+      this->Reset();
       gui::editor::Events::discardBuildingModel();
-      this->modelName = this->buildingDefaultName;
-      this->saveLocation = QDir::homePath().toStdString();
-      this->saved = false;
       break;
     case QMessageBox::Cancel:
     // Do nothing
@@ -1327,45 +1326,50 @@ void BuildingMaker::OnDiscard()
 /////////////////////////////////////////////////
 void BuildingMaker::OnSave(const std::string &_saveName)
 {
+  if (_saveName != "" && _saveName != this->modelSaveName)
+    this->saved = false;
+
   if (_saveName != "")
-    this->modelName = _saveName;
+    this->SetModelName(_saveName);
 
   if (this->saved)
   {
-    this->SetModelName(this->modelName);
     this->GenerateSDF();
     this->SaveToSDF(this->saveLocation);
   }
   else
   {
-    this->saveDialog->SetModelName(this->modelName);
+    this->saveDialog->SetModelName(this->modelSaveName);
     this->saveDialog->SetSaveLocation(this->saveLocation);
     if (this->saveDialog->exec() == QDialog::Accepted)
     {
-      this->modelName = this->saveDialog->GetModelName();
+      this->SetModelName(this->saveDialog->GetModelName());
       this->saveLocation = this->saveDialog->GetSaveLocation();
-      this->SetModelName(this->modelName);
       this->GenerateSDF();
       this->SaveToSDF(this->saveLocation);
       this->saved = true;
+      // Send confirmation that model has been saved
+      gui::editor::Events::saveBuildingModel(this->modelSaveName,
+          this->saveLocation);
     }
   }
-  gui::editor::Events::saveBuildingModel(this->modelName, this->saveLocation);
 }
 
 /////////////////////////////////////////////////
 void BuildingMaker::OnDone(const std::string &_saveName)
 {
-  if (_saveName != "")
-    this->modelName = _saveName;
+  if (_saveName != "" && _saveName != this->modelSaveName)
+    this->saved = false;
 
-  this->finishDialog->SetModelName(this->modelName);
+  if (_saveName != "")
+    this->SetModelName(_saveName);
+
+  this->finishDialog->SetModelName(this->modelSaveName);
   this->finishDialog->SetSaveLocation(this->saveLocation);
   if (this->finishDialog->exec() == QDialog::Accepted)
   {
-    this->modelName = this->finishDialog->GetModelName();
+    this->SetModelName(this->finishDialog->GetModelName());
     this->saveLocation = this->finishDialog->GetSaveLocation();
-    this->SetModelName(this->modelName);
     this->GenerateSDF();
     this->SaveToSDF(this->saveLocation);
     this->FinishModel();
@@ -1375,34 +1379,55 @@ void BuildingMaker::OnDone(const std::string &_saveName)
 }
 
 /////////////////////////////////////////////////
-void BuildingMaker::OnExit()
+void BuildingMaker::OnExit(const std::string &_saveName)
 {
-  int ret = QMessageBox::warning(0, QString("Exit"),
-      QString("Save Changes before exiting? If you do not\n"
-      "save, all of your work will be lost!\n\n"
-      "Note: Building Editor state is not maintained\n"
-      "between Gazebo sessions. Once you quit\n"
-      "Gazebo, your building will no longer be editable.\n\n"),
-//      "If you are done editing your model, select Done\n"),
-      QMessageBox::Discard | QMessageBox::Cancel | QMessageBox::Save,
-      QMessageBox::Save);
-
-  switch (ret)
+  if (this->allItems.empty())
   {
-    case QMessageBox::Discard:
-      gui::editor::Events::discardBuildingModel();
-      this->modelName = this->buildingDefaultName;
-      this->saveLocation = QDir::homePath().toStdString();
-      this->saved = false;
-      gui::editor::Events::finishBuildingModel();
-      break;
-    case QMessageBox::Cancel:
-      break;
-    case QMessageBox::Save:
-      this->OnSave();
-      gui::editor::Events::finishBuildingModel();
-      break;
-    default:
-      break;
+    gui::editor::Events::finishBuildingModel();
+    return;
+  }
+
+  if (_saveName != "" && _saveName != this->modelSaveName)
+    this->saved = false;
+
+  if (_saveName != "")
+    this->SetModelName(_saveName);
+
+  QMessageBox msgBox;
+  msgBox.setWindowTitle("Exit");
+  QPushButton *doneButton = NULL;
+  QPushButton *discardButton = NULL;
+  if (this->saved)
+  {
+    msgBox.setText("Once you exit the Building Editor, your\n"
+        "building will no longer be editable.\n\n"
+        "Are you ready to exit?");
+    doneButton = msgBox.addButton("Exit", QMessageBox::ActionRole);
+    msgBox.addButton(QMessageBox::Cancel);
+    msgBox.setDefaultButton(doneButton);
+  }
+  else
+  {
+    msgBox.setText("Save changes before exiting? If you do not\n"
+        "save, all of your work will be lost!\n\n"
+        "Note: Once you exit the Building Editor, your\n"
+        "building will no longer be editable.");
+    discardButton = msgBox.addButton("Don't Save, Exit",
+        QMessageBox::ActionRole);
+    msgBox.addButton("Cancel", QMessageBox::ActionRole);
+    doneButton = msgBox.addButton("Save", QMessageBox::ActionRole);
+    msgBox.setDefaultButton(doneButton);
+  }
+
+  msgBox.exec();
+  if (msgBox.clickedButton() == doneButton)
+  {
+    this->OnDone(_saveName);
+  }
+  else if (msgBox.clickedButton() == discardButton)
+  {
+    this->Reset();
+    gui::editor::Events::discardBuildingModel();
+    gui::editor::Events::finishBuildingModel();
   }
 }
