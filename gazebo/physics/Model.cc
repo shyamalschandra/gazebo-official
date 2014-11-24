@@ -23,6 +23,7 @@
 #include <sstream>
 
 #include "gazebo/util/OpenAL.hh"
+#include "gazebo/util/Diagnostics.hh"
 #include "gazebo/common/KeyFrame.hh"
 #include "gazebo/common/Animation.hh"
 #include "gazebo/common/Plugin.hh"
@@ -255,22 +256,83 @@ void Model::Update()
     }
     this->prevAnimationTime = this->world->GetSimTime();
   }
+
+  // diagnostics
+  if (DIAG_ENABLED())
+  {
+    DIAG_VARIABLE("model ["+this->GetName()+"] potential energy",
+      this->GetWorldEnergyPotential());
+    DIAG_VARIABLE("model ["+this->GetName()+"] kinetic energy",
+      this->GetWorldEnergyKinetic());
+    DIAG_VARIABLE("model ["+this->GetName()+"] total energy",
+      this->GetWorldEnergy());
+
+    for (Link_V::iterator liter = this->links.begin();
+         liter != this->links.end(); ++liter)
+    {
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] potential energy",
+        (*liter)->GetWorldEnergyPotential());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] kinetic energy",
+        (*liter)->GetWorldEnergyKinetic());
+      DIAG_VARIABLE("link ["+(*liter)->GetScopedName()+"] total energy",
+        (*liter)->GetWorldEnergy());
+    }
+
+    for (Joint_V::iterator jiter = this->joints.begin();
+         jiter != this->joints.end(); ++jiter)
+    {
+      for(unsigned int i = 0; i < (*jiter)->GetAngleCount(); ++i)
+      {
+        std::ostringstream stream;
+        stream << "joint [" << (*jiter)->GetScopedName() << "] ["
+               << i << "] potential spring energy";
+        DIAG_VARIABLE(stream.str(), (*jiter)->GetWorldEnergyPotentialSpring(i));
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////
 void Model::SetJointPosition(
   const std::string &_jointName, double _position, int _index)
 {
-  if (this->jointController)
-    this->jointController->SetJointPosition(_jointName, _position, _index);
+  JointPtr joint = this->GetJoint(_jointName);
+  if (joint)
+  {
+    joint->SetPosition(_index, _position);
+  }
+  else
+  {
+    gzerr << "Joint [" << _jointName << "] not found.\n";
+  }
 }
 
 //////////////////////////////////////////////////
 void Model::SetJointPositions(
     const std::map<std::string, double> &_jointPositions)
 {
-  if (this->jointController)
-    this->jointController->SetJointPositions(_jointPositions);
+  // go through all joints in this model and update each one
+  //   for each joint update, recursively update all children
+  for (std::map<std::string, double>::const_iterator
+       jiter = _jointPositions.begin();
+       jiter != _jointPositions.end();
+       ++jiter)
+  {
+    // First try name without scope, i.e. joint_name
+    JointPtr joint = this->GetJoint(jiter->first);
+
+    if (joint)
+    {
+      // assume joint index is 0
+      // FIXME: get index from user for multi dof joints.
+      const unsigned int id = 0;
+      joint->SetPosition(id, jiter->second);
+    }
+    else
+    {
+      gzerr << "Joint [" << jiter->first << "] not found.\n";
+    }
+  }
 }
 
 //////////////////////////////////////////////////
