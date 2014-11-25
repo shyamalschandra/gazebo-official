@@ -66,10 +66,10 @@ namespace gazebo
       private slots: void OnAddStair();
 
       /// \brief Qt callback when the discard button is pressed.
-      private slots: void OnDiscard();
+      //private slots: void OnDiscard();
 
       /// \brief Qt callback when the save button is pressed.
-      private slots: void OnSave();
+      //private slots: void OnSave();
 
       /// \brief Callback when user has provided information on where to save
       /// the model to.
@@ -78,12 +78,20 @@ namespace gazebo
       private: void OnSaveModel(const std::string &_saveName,
           const std::string &_saveLocation);
 
+      /// TODO : combine with above
+      /// \brief Callback when user has provided information on where to save
+      /// the model to.
+      /// \param[in] _saveName Name of model being saved.
+      /// \param[in] _saveLocation Location to save the model to.
+      private: void OnSaveAsModel(const std::string &_saveName,
+          const std::string &_saveLocation);
+
       /// \brief Event received when an editor item is selected.
       /// \param[in] _mode Type of item to add or empty for none.
       private: void OnCreateEditorItem(const std::string &_mode);
 
-      /// \brief Event received when a building model has been discarded.
-      private: void OnDiscardModel();
+      /// \brief Event received when the user starts a new building model.
+      private: void OnNewModel();
 
       /// \brief Qt callback when the palette is pressed.
       /// \param[in] _event Event.
@@ -96,10 +104,13 @@ namespace gazebo
       private: QLineEdit *modelNameEdit;
 
       /// \brief Save button.
-      private: QPushButton *saveButton;
+      //private: QPushButton *saveButton;
 
       /// \brief All the brushes (wall, door, window, stair, etc).
       private: QButtonGroup *brushes;
+  
+      /// \brief True if the model has been saved, false otherwise.
+      private: bool saved;
 
       /// \brief Name of model.
       private: std::string modelName;

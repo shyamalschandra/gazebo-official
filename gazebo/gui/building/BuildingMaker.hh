@@ -29,6 +29,9 @@
 #include "gazebo/gui/qt.h"
 #include "gazebo/util/system.hh"
 
+//#include "gazebo/gui/building/Dialogs.hh"
+#include "gazebo/gui/SaveDialog.hh"
+
 namespace gazebo
 {
   namespace msgs
@@ -220,6 +223,9 @@ namespace gazebo
       /// \brief Get a template SDF string of a simple model.
       private: std::string GetTemplateSDFString();
 
+      /// \brief Get a template config file for a simple model.
+      private: std::string GetTemplateConfigString();
+
       /// \brief Internal helper function for QPointF comparison used by the
       /// surface subsivision algorithm.
       private: static bool PointCompareY(const QPointF &_a, const QPointF &_b);
@@ -241,12 +247,24 @@ namespace gazebo
       private: void SubdivideRectSurface(const QRectF &_surface,
         const std::vector<QRectF> &_holes, std::vector<QRectF> &_subdivisions);
 
+      /// \brief Helper function to manage writing files to disk.
+      private: void SaveModelFiles();
+
+      /// \brief Bring up a "File Exists" dialog for the given path.
+      /// \param[in] Path to a file that the user is attempting to overwrite.
+      /// \param[out] Whether or not the user chose to overwrite the file.
+      private: bool FileOverwriteDialog(const std::string _pathName);
+
       /// \brief Callback for saving the model.
       /// \param[in] _saveName Name to save the model.
       private: void OnSave(const std::string &_saveName = "");
 
-      /// \brief Callback for discarding the model.
-      private: void OnDiscard();
+      /// \brief Callback for selecting a folder and saving the model.
+      /// \param[in] _saveName Name to save the model.
+      private: void OnSaveAs(const std::string &_saveName);
+
+      /// \brief Callback for newing the model.
+      private: void OnNew();
 
       /// \brief Callback when the model is to be finished and uploaded on to
       /// the server.
@@ -298,6 +316,21 @@ namespace gazebo
 
       /// \brief Path to where the model is saved.
       private: std::string saveLocation;
+
+      /// \brief Folder name containing model data.
+      private: std::string modelFolderName;
+
+      /// \brief Name of the building model's author.
+      private: std::string authorName;
+
+      /// \brief Name of the building model's author's email.
+      private: std::string authorEmail;
+
+      /// \brief Model description.
+      private: std::string description;
+
+      /// \brief Model version.
+      private: std::string version;
 
       /// \brief A list of gui editor events connected to the building maker.
       private: std::vector<event::ConnectionPtr> connections;

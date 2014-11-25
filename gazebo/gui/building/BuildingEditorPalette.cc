@@ -31,7 +31,7 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
 {
   this->setObjectName("buildingEditorPalette");
 
-  this->buildingDefaultName = "BuildingDefaultName";
+  this->buildingDefaultName = "Building Default Name";
   this->currentMode = std::string();
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -116,17 +116,20 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
   connect(importImageButton, SIGNAL(clicked()), this, SLOT(OnImportImage()));
 
   // Discard button
-  QPushButton *discardButton = new QPushButton(tr("Discard"));
-  connect(discardButton, SIGNAL(clicked()), this, SLOT(OnDiscard()));
+  /*QPushButton *discardButton = new QPushButton(tr("Discard"));
+  connect(discardButton, SIGNAL(clicked()), this, SLOT(OnDiscard()));*/
 
-  // Save (As) button
+  // Save button
+  /*this->saved = false;
   this->saveButton = new QPushButton(tr("Save As"));
-  connect(this->saveButton, SIGNAL(clicked()), this, SLOT(OnSave()));
+  connect(this->saveButton, SIGNAL(clicked()), this, SLOT(OnSave()));*/
 
   QHBoxLayout *buttonsLayout = new QHBoxLayout;
-  buttonsLayout->addWidget(discardButton);
+  //buttonsLayout->addWidget(discardButton);
   buttonsLayout->addWidget(importImageButton);
-  buttonsLayout->addWidget(this->saveButton);
+  buttonsLayout->setAlignment(Qt::AlignHCenter);
+  buttonsLayout->setContentsMargins(30, 11, 30, 11);
+  //buttonsLayout->addWidget(this->saveButton);
 
   // Main layout
   mainLayout->addLayout(modelNameLayout);
@@ -149,8 +152,8 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
       boost::bind(&BuildingEditorPalette::OnSaveModel, this, _1, _2)));
 
   this->connections.push_back(
-      gui::editor::Events::ConnectDiscardBuildingModel(
-      boost::bind(&BuildingEditorPalette::OnDiscardModel, this)));
+      gui::editor::Events::ConnectNewBuildingModel(
+      boost::bind(&BuildingEditorPalette::OnNewModel, this)));
 
   this->connections.push_back(
       gui::editor::Events::ConnectCreateBuildingEditorItem(
@@ -222,22 +225,31 @@ void BuildingEditorPalette::OnAddStair()
 }
 
 /////////////////////////////////////////////////
-void BuildingEditorPalette::OnDiscard()
+/*void BuildingEditorPalette::OnDiscard()
 {
   gui::editor::Events::discardBuildingEditor();
-}
+}*/
 
 /////////////////////////////////////////////////
-void BuildingEditorPalette::OnSave()
+/*void BuildingEditorPalette::OnSave()
 {
+  if (this->saved)
+  {
   gui::editor::Events::saveBuildingEditor(
       this->modelNameEdit->text().toStdString());
-}
+  }
+  else
+  {
+    gui::editor::Events::saveAsBuildingEditor(
+        this->modelNameEdit->text().toStdString());
+  }
+}*/
 
 /////////////////////////////////////////////////
-void BuildingEditorPalette::OnDiscardModel()
+void BuildingEditorPalette::OnNewModel()
 {
-  this->saveButton->setText("&Save As");
+  /*this->saved = false;
+  this->saveButton->setText("&Save As");*/
   this->modelNameEdit->setText(tr(this->buildingDefaultName.c_str()));
 }
 
@@ -245,7 +257,8 @@ void BuildingEditorPalette::OnDiscardModel()
 void BuildingEditorPalette::OnSaveModel(const std::string &_saveName,
     const std::string &/*_saveLocation*/)
 {
-  this->saveButton->setText("Save");
+  /*this->saved = true;
+  this->saveButton->setText("Save");*/
   this->modelNameEdit->setText(tr(_saveName.c_str()));
 }
 
