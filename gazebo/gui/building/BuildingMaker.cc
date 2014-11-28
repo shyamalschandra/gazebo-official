@@ -46,7 +46,6 @@
 #include "gazebo/gui/building/EditorItem.hh"
 #include "gazebo/gui/building/BuildingMaker.hh"
 
-
 using namespace gazebo;
 using namespace gui;
 
@@ -121,6 +120,8 @@ void BuildingMaker::ConnectItem(const std::string &_partName,
       manip, SLOT(OnRotationChanged(double, double, double)));
   QObject::connect(_item, SIGNAL(ColorChanged(QColor)),
       manip, SLOT(OnColorChanged(QColor)));
+  QObject::connect(_item, SIGNAL(TextureChanged(QString)),
+      manip, SLOT(OnTextureChanged(QString)));
   QObject::connect(_item, SIGNAL(TransparencyChanged(float)),
       manip, SLOT(OnTransparencyChanged(float)));
 
@@ -677,10 +678,12 @@ void BuildingMaker::GenerateSDF()
                 wallVis->GetScale().y, subdivisions[i].height());
             visualElem->GetElement("geometry")->GetElement("box")->
                 GetElement("size")->Set(blockSize);
-            visualElem->GetElement("material")->GetElement("ambient")->
-                Set(buildingModelManip->GetColor());
             collisionElem->GetElement("geometry")->GetElement("box")->
                 GetElement("size")->Set(blockSize);
+            visualElem->GetElement("material")->GetElement("ambient")->
+                Set(buildingModelManip->GetColor());
+            visualElem->GetElement("material")->GetElement("script")
+                ->GetElement("name")->Set(buildingModelManip->GetTexture());
             newLinkElem->InsertElement(visualElem);
             newLinkElem->InsertElement(collisionElem);
           }
@@ -694,12 +697,14 @@ void BuildingMaker::GenerateSDF()
               + "_Collision");
           visualElem->GetElement("pose")->Set(visual->GetPose());
           collisionElem->GetElement("pose")->Set(visual->GetPose());
-          visualElem->GetElement("material")->GetElement("ambient")->
-              Set(buildingModelManip->GetColor());
           visualElem->GetElement("geometry")->GetElement("box")->
               GetElement("size")->Set(visual->GetScale());
           collisionElem->GetElement("geometry")->GetElement("box")->
               GetElement("size")->Set(visual->GetScale());
+          visualElem->GetElement("material")->GetElement("ambient")->
+              Set(buildingModelManip->GetColor());
+          visualElem->GetElement("material")->GetElement("script")
+              ->GetElement("name")->Set(buildingModelManip->GetTexture());
         }
       }
       // Floor
@@ -779,6 +784,8 @@ void BuildingMaker::GenerateSDF()
                 GetElement("size")->Set(blockSize);
             visualElem->GetElement("material")->GetElement("ambient")->
                 Set(buildingModelManip->GetColor());
+            visualElem->GetElement("material")->GetElement("script")
+                ->GetElement("name")->Set(buildingModelManip->GetTexture());
             newLinkElem->InsertElement(visualElem);
             newLinkElem->InsertElement(collisionElem);
           }
@@ -830,7 +837,8 @@ void BuildingMaker::GenerateSDF()
             GetElement("size")->Set(visual->GetScale()*childVisual->GetScale());
         visualElem->GetElement("material")->GetElement("ambient")->
               Set(buildingModelManip->GetColor());
-
+        visualElem->GetElement("material")->GetElement("script")
+            ->GetElement("name")->Set(buildingModelManip->GetTexture());
         newLinkElem->InsertElement(visualElem);
         newLinkElem->InsertElement(collisionElem);
       }
