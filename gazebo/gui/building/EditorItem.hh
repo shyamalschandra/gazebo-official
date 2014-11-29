@@ -65,6 +65,10 @@ namespace gazebo
       /// \return Color of the 3D visual.
       public: virtual QColor Get3dColor() const;
 
+      /// \brief Get the associated 3D visual's texture.
+      /// \return Texture of the 3D visual.
+      public: virtual QString Get3dTexture() const;
+
       /// \brief Set the name of this editor item.
       /// \param[in] _name Name to set the editor item to.
       public: virtual void SetName(const std::string &_name);
@@ -73,9 +77,17 @@ namespace gazebo
       /// \param[in] _color Color.
       public: void Set3dColor(QColor _color);
 
+      /// \brief Set the associated 3D visual's texture.
+      /// \param[in] _texture Texture.
+      public: void Set3dTexture(QString _texture);
+
       /// \brief Set the transparency of the associated 3D visual.
       /// \param[in] _transparency Transparency.
       public: void Set3dTransparency(float _transparency);
+
+      /// \brief Set whether this item should be highlighted or not.
+      /// \param[in] _highlighted True for highlighted.
+      public: virtual void SetHighlighted(bool _highlighted);
 
       /// \brief Qt signal emitted when the editor item size has changed.
       /// \param[in] _width Width of item in pixels.
@@ -153,6 +165,11 @@ namespace gazebo
       /// \param[in] _color Color.
       Q_SIGNALS: void ColorChanged(QColor _color);
 
+      /// \brief Qt signal emitted when the editor item's 3D texture has
+      /// changed.
+      /// \param[in] _texture Texture.
+      Q_SIGNALS: void TextureChanged(QString _texture);
+
       /// \brief Qt signal emitted when the editor item's 3D transparency has
       /// changed.
       /// \param[in] _transparency Transparency.
@@ -160,6 +177,9 @@ namespace gazebo
 
       /// \brief Qt signal emitted when the editor item is being deleted.
       Q_SIGNALS: void ItemDeleted();
+
+      /// \brief TODO
+      private slots: void OnColorChanged(QColor _color);
 
       /// \brief Type of editor item.
       protected: std::string editorType;
@@ -169,6 +189,9 @@ namespace gazebo
 
       /// \brief Color of the associated 3D visual.
       protected: QColor visual3dColor;
+
+      /// \brief Texture of the associated 3D visual.
+      protected: QString visual3dTexture;
 
       /// \brief Transparency of the associated 3D visual.
       protected: float visual3dTransparency;
