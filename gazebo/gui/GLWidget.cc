@@ -125,8 +125,15 @@ GLWidget::GLWidget(QWidget *_parent)
   this->modelPub = this->node->Advertise<msgs::Model>("~/model/modify");
 
   this->factoryPub = this->node->Advertise<msgs::Factory>("~/factory");
+
+  // Subscribes to selection messages.
   this->selectionSub = this->node->Subscribe("~/selection",
       &GLWidget::OnSelectionMsg, this);
+
+  // Publishes information about user selections.
+  this->selectionPub =
+    this->node->Advertise<msgs::Selection>("~/selection");
+
   this->requestSub = this->node->Subscribe("~/request",
       &GLWidget::OnRequest, this);
 
@@ -164,6 +171,7 @@ GLWidget::~GLWidget()
   this->node.reset();
   this->modelPub.reset();
   this->selectionSub.reset();
+  this->selectionPub.reset();
 
   this->userCamera.reset();
 }
@@ -899,16 +907,9 @@ void GLWidget::OnOrbit()
 /////////////////////////////////////////////////
 void GLWidget::OnSelectionMsg(ConstSelectionPtr &_msg)
 {
-  if (_msg->has_selected())
+  if (_msg->has_selected() && _msg->selected())
   {
-    if (_msg->selected())
-    {
-      this->SetSelectedVisual(this->scene->GetVisual(_msg->name()));
-    }
-    else
-    {
-      this->SetSelectedVisual(rendering::VisualPtr());
-    }
+    this->OnSetSelectedEntity(_msg->name(), "normal");
   }
 }
 
@@ -921,31 +922,43 @@ void GLWidget::SetSelectedVisual(rendering::VisualPtr _vis)
     for (unsigned int i = 0; i < this->selectedVisuals.size(); ++i)
     {
       this->selectedVisuals[i]->SetHighlighted(false);
+      msg.set_id(this->selectedVis->GetId());
+      msg.set_name(this->selectedVis->GetName());
+      msg.set_selected(false);
+      this->selectionPub->Publish(msg);
     }
     this->selectedVisuals.clear();
   }
 
-  if (_vis && !_vis->IsPlane())
+  if (_vis)
   {
-    _vis->SetHighlighted(true);
+    msg.set_id(_vis->GetId());
+    msg.set_name(_vis->GetName());
+    msg.set_selected(true);
+    this->selectionPub->Publish(msg);
 
-    // enable multi-selection if control is pressed
-    if (this->selectedVisuals.empty() || this->mouseEvent.control)
+    if (!_vis->IsPlane())
     {
-      std::vector<rendering::VisualPtr>::iterator it =
-          std::find(this->selectedVisuals.begin(),
-          this->selectedVisuals.end(), _vis);
-      if (it == this->selectedVisuals.end())
-        this->selectedVisuals.push_back(_vis);
-      else
+      _vis->SetHighlighted(true);
+
+      // enable multi-selection if control is pressed
+      if (this->selectedVisuals.empty() || this->mouseEvent.control)
       {
-        // if element already exists, move to the back of vector
-        rendering::VisualPtr vis = (*it);
-        this->selectedVisuals.erase(it);
-        this->selectedVisuals.push_back(vis);
+        std::vector<rendering::VisualPtr>::iterator it =
+            std::find(this->selectedVisuals.begin(),
+            this->selectedVisuals.end(), _vis);
+        if (it == this->selectedVisuals.end())
+          this->selectedVisuals.push_back(_vis);
+        else
+        {
+          // if element already exists, move to the back of vector
+          rendering::VisualPtr vis = (*it);
+          this->selectedVisuals.erase(it);
+          this->selectedVisuals.push_back(vis);
+        }
       }
+      g_copyAct->setEnabled(true);
     }
-    g_copyAct->setEnabled(true);
   }
   else
   {
@@ -1066,10 +1079,15 @@ void GLWidget::OnSetSelectedEntity(const std::string &_name,
     std::string name = _name;
     boost::replace_first(name, gui::get_world()+"::", "");
 
-    this->SetSelectedVisual(this->scene->GetVisual(name));
-    this->scene->SelectVisual(name, _mode);
+    // Shortcircuit the case when GLWidget published the message about
+    // visual selection.
+    if (!this->selectedVis || name != this->selectedVis->GetName())
+    {
+      this->SetSelectedVisual(this->scene->GetVisual(name));
+      this->scene->SelectVisual(name, _mode);
+    }
   }
-  else
+  else if (this->selectedVis)
   {
     this->SetSelectedVisual(rendering::VisualPtr());
     this->scene->SelectVisual("", _mode);
