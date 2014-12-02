@@ -273,18 +273,19 @@ void EditorView::mouseReleaseEvent(QMouseEvent *_event)
       }
       else if (this->drawMode == STAIRS)
       {
-        StairsItem *stairsItem = dynamic_cast<StairsItem *>(
-            this->currentMouseItem);
-        stairsItem->Set3dColor(Qt::white);
-        this->stairsList.push_back(stairsItem);
+        this->stairsList.push_back(dynamic_cast<StairsItem *>(
+            this->currentMouseItem));
         if ((this->currentLevel) < static_cast<int>(floorList.size()))
         {
-          this->buildingMaker->AttachManip(this->itemToVisualMap[stairsItem],
+          EditorItem *item = dynamic_cast<EditorItem *>(this->currentMouseItem);
+          this->buildingMaker->AttachManip(this->itemToVisualMap[item],
               this->itemToVisualMap[floorList[this->currentLevel]]);
         }
       }
-      dynamic_cast<EditorItem *>(this->currentMouseItem)->
-          SetHighlighted(false);
+
+      // Select -> deselect to trigger change
+      this->currentMouseItem->setSelected(true);
+      this->currentMouseItem->setSelected(false);
 
       this->drawMode = NONE;
       this->drawInProgress = false;
@@ -680,8 +681,9 @@ void EditorView::DrawWall(const QPoint &_pos)
     this->snapGrabberCurrent = NULL;
 
     wallSegmentItem = dynamic_cast<WallSegmentItem*>(this->currentMouseItem);
-    wallSegmentItem->Set3dColor(Qt::white);
-    wallSegmentItem->SetHighlighted(false);
+    // Select -> deselect to trigger change
+    wallSegmentItem->setSelected(true);
+    wallSegmentItem->setSelected(false);
     wallSegmentList.push_back(wallSegmentItem);
     if (wallSegmentItem->GetLevel() > 0)
     {
@@ -1019,8 +1021,10 @@ void EditorView::OnAddLevel()
     this->itemToVisualMap[wallSegmentItem] = wallSegmentName;
 
     floorItem->AttachWallSegment(wallSegmentItem);
-    wallSegmentItem->Set3dColor(Qt::white);
-    wallSegmentItem->SetHighlighted(false);
+
+    // Select -> deselect to trigger change
+    wallSegmentItem->setSelected(true);
+    wallSegmentItem->setSelected(false);
   }
 
   // Clone linked grabber relations
@@ -1064,8 +1068,7 @@ void EditorView::OnAddLevel()
   this->itemToVisualMap[floorItem] = floorName;
   this->scene()->addItem(floorItem);
   this->floorList.push_back(floorItem);
-  floorItem->Set3dColor(Qt::white);
-  floorItem->SetHighlighted(false);
+  floorItem->Set3dTransparency(0.4);
 }
 
 /////////////////////////////////////////////////
@@ -1081,6 +1084,7 @@ void EditorView::DeleteLevel(int _level)
       || _level >= static_cast<int>(this->levels.size()))
     return;
 
+  // Delete current level and move to level below or above
   int newLevelIndex = _level - 1;
   if (newLevelIndex < 0)
     newLevelIndex = _level + 1;
@@ -1231,7 +1235,6 @@ void EditorView::OnLevelApply()
   this->levels[this->currentLevel]->name = newLevelName;
   this->levels[this->currentLevel]->floorItem->Set3dColor(dialog->
       GetFloorColor());
-  this->levels[this->currentLevel]->floorItem->Set3dTransparency(0.4);
   this->levels[this->currentLevel]->floorItem->FloorChanged();
   gui::editor::Events::updateLevelWidget(this->currentLevel, newLevelName);
 }

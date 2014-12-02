@@ -25,6 +25,9 @@ EditorItem::EditorItem()
 {
   this->editorType = "base";
   this->name = "";
+
+  this->level = 0;
+  this->levelBaseHeight = 0;
 }
 
 /////////////////////////////////////////////////
@@ -79,17 +82,36 @@ void EditorItem::SetName(const std::string &_name)
 void EditorItem::Set3dColor(QColor _color)
 {
   this->visual3dColor = _color;
-  emit ColorChanged(this->visual3dColor);
 }
 
 /////////////////////////////////////////////////
 void EditorItem::Set3dTransparency(float _transparency)
 {
   this->visual3dTransparency = _transparency;
-  emit TransparencyChanged(this->visual3dTransparency);
+  this->TransparencyChanged(this->visual3dTransparency);
 }
 
 /////////////////////////////////////////////////
-void EditorItem::SetHighlighted(bool /*_highlighted*/)
+int EditorItem::GetLevel() const
 {
+  return this->level;
+}
+
+/////////////////////////////////////////////////
+void EditorItem::SetLevel(int _level)
+{
+  this->level = _level;
+  this->LevelChanged(this->level);
+}
+
+/////////////////////////////////////////////////
+double EditorItem::GetLevelBaseHeight() const
+{
+  return this->levelBaseHeight;
+}
+
+/////////////////////////////////////////////////
+void EditorItem::SetLevelBaseHeight(double _height)
+{
+  this->levelBaseHeight = _height;
 }
