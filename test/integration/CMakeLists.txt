@@ -27,18 +27,38 @@ if(HAVE_DART)
 endif()
 
 set(tests
+  aero_plugin.cc
   bandwidth.cc
+  concave_mesh.cc
   contact_sensor.cc
+  dem.cc
   factory.cc
   file_handling.cc
   gripper.cc
+  gz_joint.cc
+  gz_log.cc
+  gz_model.cc
+  gz_physics.cc
+  gz_world.cc
   imu.cc
+  joint_controller.cc
+  joint_force_torque.cc
+  joint_gearbox.cc
+  joint_revolute.cc
+  joint_screw.cc
+  joint_set_position_test.cc
+  joint_spawn.cc
+  joint_test.cc
+  joint_universal.cc
   laser.cc
+  model_database.cc
+  noise.cc
   nondefault_world.cc
   physics.cc
   physics_basic_controller_response.cc
   physics_friction.cc
   physics_inertia_ratio.cc
+  physics_link.cc
   physics_msgs.cc
   physics_thread_safe.cc
   pioneer2dx.cc
@@ -52,6 +72,7 @@ set(tests
   transport.cc
   world.cc
   world_entity_below_point.cc
+  worlds_installed.cc
   )
 
 if (MANPAGES_SUPPORT)
@@ -65,6 +86,9 @@ if (ENABLE_TESTS_COMPILATION)
   # Increase timeout, to account for model download time.
   set_tests_properties(${TEST_TYPE}_factory PROPERTIES TIMEOUT 500)
   set_tests_properties(${TEST_TYPE}_physics PROPERTIES TIMEOUT 500)
+
+  # Add plugin dependency
+  add_dependencies(${TEST_TYPE}_joint_test SpringTestPlugin)
 endif()
 
 set(display_tests
@@ -74,10 +98,12 @@ set(display_tests
 gz_build_display_tests(${display_tests})
 
 set(dri_tests
+  camera.cc
   camera_sensor.cc
-  multicamera_sensor.cc
   gpu_laser.cc
+  gz_camera.cc
   heightmap.cc
+  multicamera_sensor.cc
   ogre_log.cc
   pr2.cc
   projector.cc
@@ -96,3 +122,4 @@ if (ENABLE_TESTS_COMPILATION AND VALID_DRI_DISPLAY)
   # Increase timeout, to account for model download time.
   set_tests_properties(${TEST_TYPE}_pioneer2dx PROPERTIES TIMEOUT 500)
 endif()
+
