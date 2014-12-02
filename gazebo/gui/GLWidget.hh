@@ -211,6 +211,10 @@ namespace gazebo
 
       private: transport::NodePtr node;
       private: transport::PublisherPtr modelPub, factoryPub;
+
+      /// \brief Publishes information about user selections.
+      private: transport::PublisherPtr selectionPub;
+
       private: transport::SubscriberPtr selectionSub, requestSub;
 
       private: std::string keyText;

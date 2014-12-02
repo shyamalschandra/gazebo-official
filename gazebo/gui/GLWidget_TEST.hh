@@ -14,25 +14,19 @@
  * limitations under the License.
  *
 */
-#include "plugins/ExceptionModelPluginConstructor.hh"
 
-using namespace gazebo;
-GZ_REGISTER_MODEL_PLUGIN(ExceptionModelPluginConstructor)
+#ifndef _GLWIDGET_TEST_HH_
+#define _GLWIDGET_TEST_HH_
 
-/////////////////////////////////////////////////
-ExceptionModelPluginConstructor::ExceptionModelPluginConstructor()
-: ModelPlugin()
+#include "gazebo/gui/QTestFixture.hh"
+
+/// \brief A test class for the DataLogger widget.
+class GLWidget_TEST : public QTestFixture
 {
-  throw std::runtime_error("Example error");
-}
+  Q_OBJECT
 
-/////////////////////////////////////////////////
-ExceptionModelPluginConstructor::~ExceptionModelPluginConstructor()
-{
-}
+  /// \brief Test selecting an object.
+  private slots: void SelectObject();
+};
 
-/////////////////////////////////////////////////
-void ExceptionModelPluginConstructor::Load(physics::ModelPtr /*_model*/,
-                           sdf::ElementPtr /*_sdf*/)
-{
-}
+#endif
