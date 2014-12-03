@@ -351,6 +351,7 @@ void BuildingModelManip::SetColor(QColor _color)
   common::Color newColor(_color.red(), _color.green(), _color.blue());
   this->color = newColor;
   this->visual->SetAmbient(this->color);
+  emit ColorChanged(_color);
 }
 
 /////////////////////////////////////////////////
@@ -359,12 +360,18 @@ void BuildingModelManip::SetTexture(QString _texture)
   // TODO For now setting existing material scripts.
   // Add support for custom textures.
   this->texture = "Gazebo/Grey";
-  if (_texture == ":/images/wood.jpg")
+  if (_texture == ":/images/wood.png")
     this->texture = "Gazebo/Wood";
-  else if (_texture == ":/images/ceiling_tiled.jpg")
+  else if (_texture == ":/images/ceiling_tiled.png")
     this->texture = "Gazebo/CeilingTiled";
+  else if (_texture == ":/images/bricks.png")
+    this->texture = "Gazebo/Bricks";
 
+  // BuildingModelManip and BuildingMaker handle material names,
+  // Inspectors and palette handle thumbnail uri
   this->visual->SetMaterial(this->texture);
+  this->visual->SetAmbient(this->color);
+  emit TextureChanged(_texture);
 }
 
 /////////////////////////////////////////////////

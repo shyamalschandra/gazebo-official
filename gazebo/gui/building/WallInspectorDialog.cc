@@ -172,8 +172,9 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   this->textureComboBox->setMinimumWidth(50);
   this->textureComboBox->setMinimumHeight(50);
   this->textureComboBox->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-  this->textureList.push_back(":/images/wood.jpg");
-  this->textureList.push_back(":/images/ceiling_tiled.jpg");
+  this->textureList.push_back(":/images/wood.png");
+  this->textureList.push_back(":/images/ceiling_tiled.png");
+  this->textureList.push_back(":/images/bricks.png");
   for (unsigned int i = 0; i < this->textureList.size(); ++i)
   {
     this->textureComboBox->addItem(QPixmap(this->textureList[i]),
@@ -309,17 +310,21 @@ void WallInspectorDialog::SetThickness(double _thickness)
 /////////////////////////////////////////////////
 void WallInspectorDialog::SetColor(const QColor _color)
 {
-  // Find index corresponding to color (only a few colors allowed so far)
-  int index = 0;
   for (unsigned int i = 0; i < this->colorList.size(); ++i)
   {
     if (this->colorList[i] == _color)
     {
-      index = i;
-      break;
+      this->colorComboBox->setCurrentIndex(i);
+      return;
     }
   }
-  this->colorComboBox->setCurrentIndex(index);
+
+  // Add a new color
+  this->colorList.push_back(_color);
+  QPixmap colorIcon(15, 15);
+  colorIcon.fill(this->colorList.back());
+  this->colorComboBox->addItem(colorIcon, QString(""));
+  this->colorComboBox->setCurrentIndex(this->colorComboBox->count()-1);
 }
 
 /////////////////////////////////////////////////

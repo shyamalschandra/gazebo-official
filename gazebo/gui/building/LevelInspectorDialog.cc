@@ -25,6 +25,7 @@ LevelInspectorDialog::LevelInspectorDialog(QWidget *_parent) : QDialog(_parent)
 {
   this->setObjectName("levelInspectorDialog");
   this->setWindowTitle(tr("Level Inspector"));
+  this->setWindowFlags(Qt::WindowStaysOnTopHint);
 
   QLabel *levelLabel = new QLabel(tr("Level Name: "));
   this->levelNameLineEdit = new QLineEdit;
@@ -59,8 +60,9 @@ LevelInspectorDialog::LevelInspectorDialog(QWidget *_parent) : QDialog(_parent)
   this->floorTextureComboBox->setMinimumWidth(50);
   this->floorTextureComboBox->setMinimumHeight(50);
   this->floorTextureComboBox->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-  this->floorTextureList.push_back(":/images/wood.jpg");
-  this->floorTextureList.push_back(":/images/ceiling_tiled.jpg");
+  this->floorTextureList.push_back(":/images/wood.png");
+  this->floorTextureList.push_back(":/images/ceiling_tiled.png");
+  this->floorTextureList.push_back(":/images/bricks.png");
   for (unsigned int i = 0; i < this->floorTextureList.size(); ++i)
   {
     this->floorTextureComboBox->addItem(QPixmap(this->floorTextureList[i]),
@@ -122,6 +124,7 @@ LevelInspectorDialog::LevelInspectorDialog(QWidget *_parent) : QDialog(_parent)
   mainLayout->addLayout(buttonsLayout);
 
   this->setLayout(mainLayout);
+  this->layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 /////////////////////////////////////////////////
@@ -176,17 +179,21 @@ void LevelInspectorDialog::SetHeight(double _height)
 /////////////////////////////////////////////////
 void LevelInspectorDialog::SetFloorColor(const QColor _color)
 {
-  // Find index corresponding to color (only a few colors allowed so far)
-  int index = 0;
   for (unsigned int i = 0; i < this->floorColorList.size(); ++i)
   {
     if (this->floorColorList[i] == _color)
     {
-      index = i;
-      break;
+      this->floorColorComboBox->setCurrentIndex(i);
+      return;
     }
   }
-  this->floorColorComboBox->setCurrentIndex(index);
+
+  // Add a new color
+  this->floorColorList.push_back(_color);
+  QPixmap colorIcon(15, 15);
+  colorIcon.fill(this->floorColorList.back());
+  this->floorColorComboBox->addItem(colorIcon, QString(""));
+  this->floorColorComboBox->setCurrentIndex(this->floorColorComboBox->count()-1);
 }
 
 /////////////////////////////////////////////////
