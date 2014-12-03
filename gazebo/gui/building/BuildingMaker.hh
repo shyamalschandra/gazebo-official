@@ -23,8 +23,10 @@
 #include <map>
 #include <sdf/sdf.hh>
 
+#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/common/Events.hh"
+#include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/EntityMaker.hh"
 #include "gazebo/gui/qt.h"
 #include "gazebo/util/system.hh"
@@ -55,6 +57,9 @@ namespace gazebo
 
       /// \brief Destructor
       public: virtual ~BuildingMaker();
+
+      /// \brief TODO
+      public: void OnEdit(bool _checked);
 
       /// \brief Set the name of this building model.
       /// \param[in] _modelName Name of the model to set to.
@@ -224,6 +229,9 @@ namespace gazebo
       /// \brief Get a template SDF string of a simple model.
       private: std::string GetTemplateSDFString();
 
+      /// \brief Get a template config file for a simple model.
+      private: std::string GetTemplateConfigString();
+
       /// \brief Internal helper function for QPointF comparison used by the
       /// surface subsivision algorithm.
       private: static bool PointCompareY(const QPointF &_a, const QPointF &_b);
@@ -245,20 +253,47 @@ namespace gazebo
       private: void SubdivideRectSurface(const QRectF &_surface,
         const std::vector<QRectF> &_holes, std::vector<QRectF> &_subdivisions);
 
+      /// \brief Helper function to manage writing files to disk.
+      private: void SaveModelFiles();
+
       /// \brief Callback for saving the model.
       /// \param[in] _saveName Name to save the model.
-      private: void OnSave(const std::string &_saveName = "");
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSave(const std::string &_saveName = "");
 
-      /// \brief Callback for discarding the model.
-      private: void OnDiscard();
-
-      /// \brief Callback when the model is to be finished and uploaded on to
-      /// the server.
+      /// \brief Callback for selecting a folder and saving the model.
       /// \param[in] _saveName Name to save the model.
-      private: void OnDone(const std::string &_saveName = "");
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSaveAs(const std::string &_saveName);
+
+      private: void OnNameChanged(const std::string &_modelName);
+
+      /// \brief Callback for newing the model.
+      private: void OnNew();
 
       /// \brief Callback received when exiting the editor mode.
       private: void OnExit();
+
+      /// \brief TODO
+      private: void StopMaterialModes();
+
+      /// \brief TODO
+      private: void OnColorSelected(QColor _color);
+
+      /// \brief TODO
+      private: void OnTextureSelected(QString _texture);
+
+      /// \brief TODO
+      private: bool On3dMouseMove(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dMousePress(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dMouseRelease(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dKeyPress(const common::KeyEvent &_event);
 
       /// \brief Conversion scale used by the Convert helper functions.
       public: static double conversionScale;
@@ -300,8 +335,26 @@ namespace gazebo
       /// \brief Indicate whether the model has been saved before or not.
       private: bool saved;
 
+      /// \brief Indicate whether all the changes to the model have been saved.
+      private: bool savedChanges;
+
+      /// \brief Default directory to save models: ~/building_editor_models
+      private: std::string defaultPath;
+
       /// \brief Path to where the model is saved.
       private: std::string saveLocation;
+
+      /// \brief Name of the building model's author.
+      private: std::string authorName;
+
+      /// \brief Name of the building model's author's email.
+      private: std::string authorEmail;
+
+      /// \brief Model description.
+      private: std::string description;
+
+      /// \brief Model version.
+      private: std::string version;
 
       /// \brief A list of gui editor events connected to the building maker.
       private: std::vector<event::ConnectionPtr> connections;
@@ -312,9 +365,14 @@ namespace gazebo
       /// \brief A dialog for setting building model name and save location.
       private: FinishBuildingDialog *saveDialog;
 
-      /// \brief A dialog that prompts to confirm model completion and uploading
-      /// to the server
-      private: FinishBuildingDialog *finishDialog;
+      /// \brief Visual that is currently hovered over by the mouse
+      private: rendering::VisualPtr hoverVis;
+
+      /// \brief TODO
+      private: QColor selectedColor;
+
+      /// \brief TODO
+      private: QString selectedTexture;
     };
     /// \}
   }
