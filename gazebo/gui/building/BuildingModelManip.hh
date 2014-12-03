@@ -59,6 +59,10 @@ namespace gazebo
       /// \return Color.
       public: common::Color GetColor() const;
 
+      /// \brief Get the texture of the manip.
+      /// \return Texture.
+      public: std::string GetTexture() const;
+
       /// \brief Set the name of the manip object.
       /// \param[in] _name Name to set the manip to.
       public: void SetName(const std::string &_name);
@@ -137,9 +141,19 @@ namespace gazebo
       /// \param[in] _color Color.
       public: void SetColor(QColor _color);
 
+      /// \brief Set the texture of the manip.
+      /// \param[in] _texture Texture.
+      public: void SetTexture(QString _texture);
+
       /// \brief Set the transparency of the manip.
       /// \param[in] _transparency Transparency.
       public: void SetTransparency(float _transparency);
+
+      /// \brief TODO
+      Q_SIGNALS: void ColorChanged(QColor _color);
+
+      /// \brief TODO
+      Q_SIGNALS: void TextureChanged(QString _texture);
 
       /// \brief Qt callback when the pose of the associated editor item has
       /// changed.
@@ -226,6 +240,11 @@ namespace gazebo
       /// \param[in] _color New color.
       private slots: void OnColorChanged(QColor _color);
 
+      /// \brief Qt callback when the 3D visual's texture has been changed from
+      /// the associated editor item.
+      /// \param[in] _texture New texture.
+      private slots: void OnTextureChanged(QString _texture);
+
       /// \brief Qt callback when the 3D visual's transparency has been changed
       /// from the associated editor item.
       /// \param[in] _transparency Transparency.
@@ -257,6 +276,9 @@ namespace gazebo
 
       /// \brief Visual's color.
       private: common::Color color;
+
+      /// \brief Visual's texture.
+      private: std::string texture;
     };
     /// \}
   }

@@ -23,8 +23,10 @@
 #include <map>
 #include <sdf/sdf.hh>
 
+#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/common/Events.hh"
+#include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/EntityMaker.hh"
 #include "gazebo/gui/qt.h"
 #include "gazebo/util/system.hh"
@@ -63,6 +65,9 @@ namespace gazebo
 
       /// \brief Destructor
       public: virtual ~BuildingMaker();
+
+      /// \brief TODO
+      public: void OnEdit(bool _checked);
 
       /// \brief Set the name of this building model.
       /// \param[in] _modelName Name of the model to set to.
@@ -279,6 +284,27 @@ namespace gazebo
       /// \brief Callback received when exiting the editor mode.
       private: void OnExit();
 
+      /// \brief TODO
+      private: void StopMaterialModes();
+
+      /// \brief TODO
+      private: void OnColorSelected(QColor _color);
+
+      /// \brief TODO
+      private: void OnTextureSelected(QString _texture);
+
+      /// \brief TODO
+      private: bool On3dMouseMove(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dMousePress(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dMouseRelease(const common::MouseEvent &_event);
+
+      /// \brief TODO
+      private: bool On3dKeyPress(const common::KeyEvent &_event);
+
       /// \brief Conversion scale used by the Convert helper functions.
       public: static double conversionScale;
 
@@ -348,6 +374,15 @@ namespace gazebo
 
       /// \brief A dialog for setting building model name and save location.
       private: FinishBuildingDialog *saveDialog;
+
+      /// \brief Visual that is currently hovered over by the mouse
+      private: rendering::VisualPtr hoverVis;
+
+      /// \brief TODO
+      private: QColor selectedColor;
+
+      /// \brief TODO
+      private: QString selectedTexture;
     };
     /// \}
   }
