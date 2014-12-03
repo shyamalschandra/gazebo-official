@@ -1144,7 +1144,7 @@ void GLWidget::OnAlignMode(const std::string &_axis, const std::string &_config,
 }
 
 /////////////////////////////////////////////////
-void GLWidget::OnModelEditor(bool /*_checked*/)
+void GLWidget::OnModelEditor(bool _checked)
 {
   g_arrowAct->trigger();
   event::Events::setSelectedEntity("", "normal");
@@ -1155,4 +1155,9 @@ void GLWidget::OnModelEditor(bool /*_checked*/)
     this->selectedVisuals[i]->SetHighlighted(false);
   }
   this->selectedVisuals.clear();
+
+  if (_checked)
+    ModelSnap::Instance()->SetSnapLevel("link");
+  else
+    ModelSnap::Instance()->SetSnapLevel("model");
 }
