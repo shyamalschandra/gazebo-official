@@ -518,7 +518,7 @@ material Gazebo/RedTransparent
       scene_blend alpha_blend
       depth_write off
       lighting off
-
+      
       texture_unit
       {
         colour_op_ex source1 src_manual src_current 1 0 0
@@ -1294,6 +1294,19 @@ material Gazebo/PointCloud
          point_size 3
          point_sprites off
          point_size_attenuation off
+      }
+   }
+}
+
+material Gazebo/PointHandle
+{
+   technique
+   {
+      pass
+      {
+        lighting off
+        scene_blend alpha_blend
+        depth_write off
       }
    }
 }

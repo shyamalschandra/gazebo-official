@@ -250,6 +250,7 @@ void ConfigWidget::SetGeometryWidgetValue(const std::string &_name,
     this->UpdateGeometryWidget(iter->second, _value, _dimensions);
 }
 
+
 /////////////////////////////////////////////////
 int ConfigWidget::GetIntWidgetValue(const std::string &_name) const
 {
@@ -573,9 +574,9 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,
                     geomValueDescriptor->FindFieldByName("radius");
                 double radius = geomValueMsg->GetReflection()->GetDouble(
                     *geomValueMsg, geomRadiusField);
-                dimensions.x = radius;
-                dimensions.y = radius;
-                dimensions.z = radius;
+                dimensions.x = radius * 2.0;
+                dimensions.y = dimensions.x;
+                dimensions.z = dimensions.x;
                 break;
               }
             }
