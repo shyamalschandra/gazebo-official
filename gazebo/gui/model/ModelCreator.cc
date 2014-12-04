@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright 2013-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  *
  */
 
-#include <sstream>
 #include <boost/filesystem.hpp>
+#include <sstream>
+#include <string>
 
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/common/Exception.hh"
@@ -39,6 +40,7 @@
 #include "gazebo/gui/GuiIface.hh"
 #include "gazebo/gui/ModelManipulator.hh"
 
+#include "gazebo/gui/model/ModelData.hh"
 #include "gazebo/gui/model/JointMaker.hh"
 #include "gazebo/gui/model/ModelCreator.hh"
 
@@ -62,6 +64,21 @@ ModelCreator::ModelCreator()
   this->node->Init();
   this->makerPub = this->node->Advertise<msgs::Factory>("~/factory");
   this->requestPub = this->node->Advertise<msgs::Request>("~/request");
+
+  KeyEventHandler::Instance()->AddPressFilter("model_creator",
+      boost::bind(&ModelCreator::OnKeyPress, this, _1));
+
+  MouseEventHandler::Instance()->AddPressFilter("model_creator",
+      boost::bind(&ModelCreator::OnMousePress, this, _1));
+
+  MouseEventHandler::Instance()->AddReleaseFilter("model_creator",
+      boost::bind(&ModelCreator::OnMouseRelease, this, _1));
+
+  MouseEventHandler::Instance()->AddMoveFilter("model_creator",
+      boost::bind(&ModelCreator::OnMouseMove, this, _1));
+
+  MouseEventHandler::Instance()->AddDoubleClickFilter("model_creator",
+      boost::bind(&ModelCreator::OnMouseDoubleClick, this, _1));
 
   this->jointMaker = new JointMaker();
 
@@ -104,6 +121,8 @@ void ModelCreator::OnEdit(bool _checked)
 
     MouseEventHandler::Instance()->AddDoubleClickFilter("model_creator",
         boost::bind(&ModelCreator::OnMouseDoubleClick, this, _1));
+
+    this->jointMaker->EnableEventHandlers();
   }
   else
   {
@@ -112,6 +131,7 @@ void ModelCreator::OnEdit(bool _checked)
     MouseEventHandler::Instance()->RemoveReleaseFilter("model_creator");
     MouseEventHandler::Instance()->RemoveMoveFilter("model_creator");
     MouseEventHandler::Instance()->RemoveDoubleClickFilter("model_creator");
+    this->jointMaker->DisableEventHandlers();
     this->jointMaker->Stop();
 
     if (this->selectedVis)
@@ -130,11 +150,11 @@ std::string ModelCreator::CreateModel()
 }
 
 /////////////////////////////////////////////////
-void ModelCreator::AddJoint(JointMaker::JointType _type)
+void ModelCreator::AddJoint(const std::string &_type)
 {
   this->Stop();
   if (this->jointMaker)
-    this->jointMaker->CreateJoint(_type);
+    this->jointMaker->AddJoint(_type);
 }
 
 /////////////////////////////////////////////////
@@ -321,15 +341,15 @@ std::string ModelCreator::AddCustom(const std::string &_path,
 void ModelCreator::CreatePart(const rendering::VisualPtr &_visual)
 {
   PartData *part = new PartData;
-  part->name = _visual->GetName();
+
+  part->partVisual = _visual->GetParent();
   part->visuals.push_back(_visual);
 
+  part->name = part->partVisual->GetName();
+  part->pose = part->partVisual->GetWorldPose();
   part->gravity = true;
   part->selfCollide = false;
   part->kinematic = false;
-
-  part->inertial = new physics::Inertial;
-  part->sensorData = new SensorData;
 
   this->allParts[part->name] = part;
 }
@@ -350,18 +370,21 @@ void ModelCreator::RemovePart(const std::string &_partName)
   if (!part)
     return;
 
+  if (part->partVisual == this->selectedVis)
+  {
+    this->selectedVis->SetHighlighted(false);
+    this->selectedVis.reset();
+  }
+
+  rendering::ScenePtr scene = part->partVisual->GetScene();
   for (unsigned int i = 0; i < part->visuals.size(); ++i)
   {
     rendering::VisualPtr vis = part->visuals[i];
-    rendering::VisualPtr visParent = vis->GetParent();
-    rendering::ScenePtr scene = vis->GetScene();
     scene->RemoveVisual(vis);
-    if (visParent)
-      scene->RemoveVisual(visParent);
   }
-
-  delete part->inertial;
-  delete part->sensorData;
+  scene->RemoveVisual(part->partVisual);
+  part->visuals.clear();
+  part->partVisual.reset();
 
   this->allParts.erase(_partName);
 }
@@ -531,7 +554,7 @@ void ModelCreator::Stop()
   if (this->addPartType != PART_NONE && this->mouseVisual)
   {
     for (unsigned int i = 0; i < this->mouseVisual->GetChildCount(); ++i)
-        this->RemovePart(this->mouseVisual->GetChild(0)->GetName());
+        this->RemovePart(this->mouseVisual->GetName());
     this->mouseVisual.reset();
   }
   if (this->jointMaker)
@@ -539,18 +562,42 @@ void ModelCreator::Stop()
 }
 
 /////////////////////////////////////////////////
-void ModelCreator::OnDelete(const std::string &_part)
+void ModelCreator::OnDelete(const std::string &_entity)
 {
-  if (_part == this->modelName)
+  // check if it's our model
+  if (_entity == this->modelName)
   {
     this->Reset();
     return;
   }
 
-  if (this->jointMaker)
-    this->jointMaker->RemoveJointsByPart(_part);
+  // if it's a link
+  if (this->allParts.find(_entity) != this->allParts.end())
+  {
+    if (this->jointMaker)
+      this->jointMaker->RemoveJointsByPart(_entity);
+    this->RemovePart(_entity);
+    return;
+  }
 
-  this->RemovePart(_part);
+  // if it's a visual
+  rendering::VisualPtr vis =
+      gui::get_active_camera()->GetScene()->GetVisual(_entity);
+  if (vis)
+  {
+    rendering::VisualPtr parentLink = vis->GetParent();
+    if (this->allParts.find(parentLink->GetName()) != this->allParts.end())
+    {
+      // remove the parent link if it's the only child
+      if (parentLink->GetChildCount() == 1)
+      {
+        if (this->jointMaker)
+          this->jointMaker->RemoveJointsByPart(parentLink->GetName());
+        this->RemovePart(parentLink->GetName());
+        return;
+      }
+    }
+  }
 }
 
 /////////////////////////////////////////////////
@@ -581,7 +628,8 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
   rendering::VisualPtr vis = userCamera->GetVisual(_event.pos);
   if (vis && !vis->IsPlane())
   {
-    if (this->allParts.find(vis->GetName()) == this->allParts.end())
+    if (this->allParts.find(vis->GetParent()->GetName()) ==
+          this->allParts.end())
     {
       // Prevent interaction with other models, send event only to
       // user camera
@@ -595,11 +643,20 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
 /////////////////////////////////////////////////
 bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
 {
-  if (_event.button != common::MouseEvent::LEFT)
+  if (this->jointMaker->GetState() != JointMaker::JOINT_NONE)
     return false;
 
   if (this->mouseVisual)
   {
+    // set the part data pose
+    if (this->allParts.find(this->mouseVisual->GetName()) !=
+        this->allParts.end())
+    {
+      PartData *part = this->allParts[this->mouseVisual->GetName()];
+      part->pose = this->mouseVisual->GetWorldPose();
+    }
+
+    // reset and return
     emit PartAdded();
     this->mouseVisual.reset();
     this->AddPart(PART_NONE);
@@ -616,8 +673,10 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
   if (vis)
   {
     // Is part
-    if (this->allParts.find(vis->GetName()) != this->allParts.end())
+    if (this->allParts.find(vis->GetParent()->GetName()) !=
+        this->allParts.end())
     {
+      // if the model is selected
       // Whole model or another part is selected
       if (userCamera->GetScene()->GetSelectedVisual() == this->modelVisual ||
           this->selectedVis)
@@ -627,15 +686,17 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
           this->selectedVis->SetHighlighted(false);
         // Deselect model
         else
+        {
+          // turn off model selection so we don't end up with
+          // both part and model selected at the same time
           event::Events::setSelectedEntity("", "normal");
+        }
 
-        this->selectedVis = vis;
+        this->selectedVis = vis->GetParent();
         this->selectedVis->SetHighlighted(true);
         return true;
       }
-      // Handle at GLWidget - select whole model
     }
-    // Not part
     else
     {
       // Deselect part and model
@@ -668,7 +729,8 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
     rendering::VisualPtr vis = userCamera->GetVisual(_event.pos);
     if (vis && !vis->IsPlane())
     {
-      if (this->allParts.find(vis->GetName()) == this->allParts.end())
+      if (this->allParts.find(vis->GetParent()->GetName()) ==
+        this->allParts.end())
       {
         // Prevent interaction with other models, send event only to
         // user camera
@@ -698,15 +760,21 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
 /////////////////////////////////////////////////
 bool ModelCreator::OnMouseDoubleClick(const common::MouseEvent &_event)
 {
+  // open the part inspector on double click
   rendering::VisualPtr vis = gui::get_active_camera()->GetVisual(_event.pos);
-  if (vis)
+  if (!vis)
+    return false;
+
+  if (this->allParts.find(vis->GetParent()->GetName()) !=
+      this->allParts.end())
   {
-    if (this->allParts.find(vis->GetName()) != this->allParts.end())
-    {
-      // TODO part inspector code goes here
-      return true;
-    }
+    if (this->selectedVis)
+      this->selectedVis->SetHighlighted(false);
+
+    // TODO open inspector.
+    return true;
   }
+
   return false;
 }
 
@@ -721,8 +789,6 @@ void ModelCreator::GenerateSDF()
 {
   sdf::ElementPtr modelElem;
   sdf::ElementPtr linkElem;
-  sdf::ElementPtr visualElem;
-  sdf::ElementPtr collisionElem;
 
   this->modelSDF.reset(new sdf::SDF);
   this->modelSDF->SetFromString(this->GetTemplateSDFString());
@@ -746,11 +812,10 @@ void ModelCreator::GenerateSDF()
   // set center of all parts to be origin
   math::Vector3 mid;
   for (partsIt = this->allParts.begin(); partsIt != this->allParts.end();
-      ++partsIt)
+       ++partsIt)
   {
     PartData *part = partsIt->second;
-    rendering::VisualPtr visual = part->visuals[0];
-    mid += visual->GetParent()->GetWorldPose().pos;
+    mid += part->pose.pos;
   }
   mid /= this->allParts.size();
   this->origin.pos = mid;
@@ -758,75 +823,72 @@ void ModelCreator::GenerateSDF()
 
   // loop through all parts and generate sdf
   for (partsIt = this->allParts.begin(); partsIt != this->allParts.end();
-      ++partsIt)
+       ++partsIt)
   {
     visualNameStream.str("");
     collisionNameStream.str("");
 
     PartData *part = partsIt->second;
-    rendering::VisualPtr visual = part->visuals[0];
     sdf::ElementPtr newLinkElem = templateLinkElem->Clone();
-    visualElem = newLinkElem->GetElement("visual");
-    collisionElem = newLinkElem->GetElement("collision");
-    newLinkElem->GetAttribute("name")->Set(visual->GetParent()->GetName());
-    newLinkElem->GetElement("pose")->Set(visual->GetParent()->GetWorldPose()
-        - this->origin);
+    newLinkElem->ClearElements();
+    newLinkElem->GetAttribute("name")->Set(part->name);
+    newLinkElem->GetElement("pose")->Set(part->pose - this->origin);
     newLinkElem->GetElement("gravity")->Set(part->gravity);
     newLinkElem->GetElement("self_collide")->Set(part->selfCollide);
     newLinkElem->GetElement("kinematic")->Set(part->kinematic);
-    sdf::ElementPtr inertialElem = newLinkElem->GetElement("inertial");
-    inertialElem->GetElement("mass")->Set(part->inertial->GetMass());
-    inertialElem->GetElement("pose")->Set(part->inertial->GetPose());
-    sdf::ElementPtr inertiaElem = inertialElem->GetElement("inertia");
-    inertiaElem->GetElement("ixx")->Set(part->inertial->GetIXX());
-    inertiaElem->GetElement("iyy")->Set(part->inertial->GetIYY());
-    inertiaElem->GetElement("izz")->Set(part->inertial->GetIZZ());
-    inertiaElem->GetElement("ixy")->Set(part->inertial->GetIXY());
-    inertiaElem->GetElement("ixz")->Set(part->inertial->GetIXZ());
-    inertiaElem->GetElement("iyz")->Set(part->inertial->GetIYZ());
 
     modelElem->InsertElement(newLinkElem);
 
-    visualElem->GetAttribute("name")->Set(visual->GetParent()->GetName()
-        + "_visual");
-    collisionElem->GetAttribute("name")->Set(visual->GetParent()->GetName()
-        + "_collision");
-    visualElem->GetElement("pose")->Set(visual->GetPose());
-    collisionElem->GetElement("pose")->Set(visual->GetPose());
+    for (unsigned int i = 0; i < part->visuals.size(); ++i)
+    {
+      sdf::ElementPtr visualElem = templateVisualElem->Clone();
+      sdf::ElementPtr collisionElem = templateCollisionElem->Clone();
 
-    sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
-    geomElem->ClearElements();
+      rendering::VisualPtr visual = part->visuals[i];
 
-    math::Vector3 scale = visual->GetScale();
-    if (visual->GetParent()->GetName().find("unit_box") != std::string::npos)
-    {
-      sdf::ElementPtr boxElem = geomElem->AddElement("box");
-      (boxElem->GetElement("size"))->Set(scale);
+      visualElem->GetAttribute("name")->Set(visual->GetName());
+      collisionElem->GetAttribute("name")->Set(
+          visual->GetParent()->GetName() + "_collision");
+      visualElem->GetElement("pose")->Set(visual->GetPose());
+      collisionElem->GetElement("pose")->Set(visual->GetPose());
+
+      sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
+      geomElem->ClearElements();
+
+      math::Vector3 scale = visual->GetScale();
+      if (visual->GetParent()->GetName().find("unit_box") != std::string::npos)
+      {
+        sdf::ElementPtr boxElem = geomElem->AddElement("box");
+        (boxElem->GetElement("size"))->Set(scale);
+      }
+      else if (visual->GetParent()->GetName().find("unit_cylinder")
+         != std::string::npos)
+      {
+        sdf::ElementPtr cylinderElem = geomElem->AddElement("cylinder");
+        (cylinderElem->GetElement("radius"))->Set(scale.x/2.0);
+        (cylinderElem->GetElement("length"))->Set(scale.z);
+      }
+      else if (visual->GetParent()->GetName().find("unit_sphere")
+          != std::string::npos)
+      {
+        sdf::ElementPtr sphereElem = geomElem->AddElement("sphere");
+        (sphereElem->GetElement("radius"))->Set(scale.x/2.0);
+      }
+      else if (visual->GetParent()->GetName().find("custom")
+          != std::string::npos)
+      {
+        sdf::ElementPtr customElem = geomElem->AddElement("mesh");
+        (customElem->GetElement("scale"))->Set(scale);
+        (customElem->GetElement("uri"))->Set(visual->GetMeshName());
+      }
+      sdf::ElementPtr geomElemClone = geomElem->Clone();
+      geomElem =  collisionElem->GetElement("geometry");
+      geomElem->ClearElements();
+      geomElem->InsertElement(geomElemClone->GetFirstElement());
+
+      newLinkElem->InsertElement(visualElem);
+      newLinkElem->InsertElement(collisionElem);
     }
-    else if (visual->GetParent()->GetName().find("unit_cylinder")
-       != std::string::npos)
-    {
-      sdf::ElementPtr cylinderElem = geomElem->AddElement("cylinder");
-      (cylinderElem->GetElement("radius"))->Set(scale.x/2.0);
-      (cylinderElem->GetElement("length"))->Set(scale.z);
-    }
-    else if (visual->GetParent()->GetName().find("unit_sphere")
-        != std::string::npos)
-    {
-      sdf::ElementPtr sphereElem = geomElem->AddElement("sphere");
-      (sphereElem->GetElement("radius"))->Set(scale.x/2.0);
-    }
-    else if (visual->GetParent()->GetName().find("custom")
-        != std::string::npos)
-    {
-      sdf::ElementPtr customElem = geomElem->AddElement("mesh");
-      (customElem->GetElement("scale"))->Set(scale);
-      (customElem->GetElement("uri"))->Set(visual->GetMeshName());
-    }
-    sdf::ElementPtr geomElemClone = geomElem->Clone();
-    geomElem =  collisionElem->GetElement("geometry");
-    geomElem->ClearElements();
-    geomElem->InsertElement(geomElemClone->GetFirstElement());
   }
 
   // Add joint sdf elements

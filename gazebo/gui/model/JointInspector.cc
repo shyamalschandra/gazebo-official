@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2013-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,20 @@ JointInspector::JointInspector(JointMaker::JointType _jointType,
   QHBoxLayout *typeLayout = new QHBoxLayout;
   typeLayout->addWidget(typeLabel);
   typeLayout->addWidget(this->jointTypeLabel);
+
+  QLabel *parentLabel = new QLabel(tr("Parent: "));
+  this->jointParentLabel = new QLabel(tr(""));
+
+  QHBoxLayout *parentLayout = new QHBoxLayout;
+  parentLayout->addWidget(parentLabel);
+  parentLayout->addWidget(jointParentLabel);
+
+  QLabel *childLabel = new QLabel(tr("Child: "));
+  this->jointChildLabel = new QLabel(tr(""));
+
+  QHBoxLayout *childLayout = new QHBoxLayout;
+  childLayout->addWidget(childLabel);
+  childLayout->addWidget(jointChildLabel);
 
   QLabel *anchorXLabel = new QLabel(tr("x: "));
   QLabel *anchorYLabel = new QLabel(tr("y: "));
@@ -169,6 +183,8 @@ JointInspector::JointInspector(JointMaker::JointType _jointType,
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->addLayout(nameLayout);
   mainLayout->addLayout(typeLayout);
+  mainLayout->addLayout(parentLayout);
+  mainLayout->addLayout(childLayout);
   mainLayout->addWidget(anchorGroupBox);
   for (unsigned int i = 0; i < axisGroupBoxes.size(); ++i)
   {
@@ -264,6 +280,19 @@ void JointInspector::SetType(JointMaker::JointType _type)
 void JointInspector::SetName(const std::string &_name)
 {
   this->jointNameLabel->setText(tr(_name.c_str()));
+}
+
+
+/////////////////////////////////////////////////
+void JointInspector::SetParent(const std::string &_parent)
+{
+  this->jointParentLabel->setText(tr(_parent.c_str()));
+}
+
+/////////////////////////////////////////////////
+void JointInspector::SetChild(const std::string &_child)
+{
+  this->jointChildLabel->setText(tr(_child.c_str()));
 }
 
 /////////////////////////////////////////////////
