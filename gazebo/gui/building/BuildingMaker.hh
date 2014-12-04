@@ -50,6 +50,15 @@ namespace gazebo
     /// \brief Create and manage 3D visuals of a building.
     class GAZEBO_VISIBLE BuildingMaker : public EntityMaker
     {
+      /// \enum SaveState
+      /// \brief Save states for the building editor.
+      // NEVER_SAVED: The building has never been saved
+      // SAVED: Has been saved through the "Save As" dialog
+      // UNSAVED_CHANGES: Has been saved before, but has unsaved changes
+      // NAME_CHANGED: Has been saved through "Save As" dialog, then the
+      // name was changed, and it has not been saved through "Save As" since.
+      private: enum SaveState { NEVER_SAVED, SAVED, UNSAVED_CHANGES, NAME_CHANGED };
+
       /// \brief Constructor
       public: BuildingMaker();
 
@@ -224,6 +233,9 @@ namespace gazebo
       /// \brief Get a template SDF string of a simple model.
       private: std::string GetTemplateSDFString();
 
+      /// \brief Get a template config file for a simple model.
+      private: std::string GetTemplateConfigString();
+
       /// \brief Internal helper function for QPointF comparison used by the
       /// surface subsivision algorithm.
       private: static bool PointCompareY(const QPointF &_a, const QPointF &_b);
@@ -245,17 +257,25 @@ namespace gazebo
       private: void SubdivideRectSurface(const QRectF &_surface,
         const std::vector<QRectF> &_holes, std::vector<QRectF> &_subdivisions);
 
+      /// \brief Helper function to manage writing files to disk.
+      private: void SaveModelFiles();
+
       /// \brief Callback for saving the model.
       /// \param[in] _saveName Name to save the model.
-      private: void OnSave(const std::string &_saveName = "");
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSave(const std::string &_saveName = "");
 
-      /// \brief Callback for discarding the model.
-      private: void OnDiscard();
-
-      /// \brief Callback when the model is to be finished and uploaded on to
-      /// the server.
+      /// \brief Callback for selecting a folder and saving the model.
       /// \param[in] _saveName Name to save the model.
-      private: void OnDone(const std::string &_saveName = "");
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSaveAs(const std::string &_saveName);
+
+      /// \brief Callback for when the name is changed through the Palette.
+      /// \param[in] _modelName The newly entered building name.
+      private: void OnNameChanged(const std::string &_modelName);
+
+      /// \brief Callback for newing the model.
+      private: void OnNew();
 
       /// \brief Callback received when exiting the editor mode.
       private: void OnExit();
@@ -302,11 +322,26 @@ namespace gazebo
       /// \brief Counter for the number of floors in the model.
       private: int floorCounter;
 
-      /// \brief Indicate whether the model has been saved before or not.
-      private: bool saved;
+      /// \brief Store the save state of the model (pending unsaved changes, etc).
+      private: enum SaveState currentSaveState;
+
+      /// \brief Default directory to save models: ~/building_editor_models
+      private: std::string defaultPath;
 
       /// \brief Path to where the model is saved.
       private: std::string saveLocation;
+
+      /// \brief Name of the building model's author.
+      private: std::string authorName;
+
+      /// \brief Name of the building model's author's email.
+      private: std::string authorEmail;
+
+      /// \brief Model description.
+      private: std::string description;
+
+      /// \brief Model version.
+      private: std::string version;
 
       /// \brief A list of gui editor events connected to the building maker.
       private: std::vector<event::ConnectionPtr> connections;
@@ -316,10 +351,6 @@ namespace gazebo
 
       /// \brief A dialog for setting building model name and save location.
       private: FinishBuildingDialog *saveDialog;
-
-      /// \brief A dialog that prompts to confirm model completion and uploading
-      /// to the server
-      private: FinishBuildingDialog *finishDialog;
 
       /// \brief The current level that is being edited.
       private: int currentLevel;
