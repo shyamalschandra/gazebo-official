@@ -34,17 +34,29 @@ namespace gazebo
       /// \brief Key event types enumeration.
       public: enum EventType {NO_EVENT, PRESS, RELEASE};
 
-      /// \brief Constructor.
-      public: KeyEvent()
-              : type(NO_EVENT), key(0)
-              {}
-
       /// \brief Event type.
       public: EventType type;
 
+      /// \brief The raw value of the key pressed.
       public: int key;
 
+      /// \brief Formatted string of the key pressed (could be uppercase).
       public: std::string text;
+
+      /// \brief Was control held during this key event?
+      public: bool control;
+
+      /// \brief Was shift held during this key event?
+      public: bool shift;
+
+      /// \brief Was alt held during this key event?
+      public: bool alt;
+
+      /// \brief Constructor.
+      public: KeyEvent()
+              : type(NO_EVENT), key(0), text(""),
+                control(false), shift(false), alt(false)
+              {}
     };
     /// \}
   }
