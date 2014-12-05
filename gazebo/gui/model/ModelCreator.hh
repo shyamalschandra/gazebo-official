@@ -186,6 +186,10 @@ namespace gazebo
       /// \return True if the event was handled
       private: bool OnKeyPress(const common::KeyEvent &_event);
 
+      private slots: void OnCopy();
+
+      private slots: void OnPaste();
+
       /// \brief Create part with default properties from a visual
       /// \param[in] _visual Visual used to create the part.
       private: void CreatePart(const rendering::VisualPtr &_visual);
@@ -203,6 +207,16 @@ namespace gazebo
       /// \brief Get a template SDF string of a simple model.
       /// \return Template SDF string of a simple model.
       private: std::string GetTemplateSDFString();
+
+      /// \brief Callback when a specific alignment configuration is set.
+      /// \param[in] _axis Axis of alignment: x, y, or z.
+      /// \param[in] _config Configuration: min, center, or max.
+      /// \param[in] _target Target of alignment: first or last.
+      /// \param[in] _bool True to preview alignment without publishing
+      /// to server.
+      private: void OnAlignMode(const std::string &_axis,
+          const std::string &_config, const std::string &_target,
+          bool _preview);
 
       /// \brief Qt callback when a delete signal has been emitted.
       /// \param[in] _name Name of the part or model to delete.
@@ -253,6 +267,9 @@ namespace gazebo
       /// \brief Counter for generating a unique model name.
       private: int modelCounter;
 
+      /// \brief Transparency value for model being edited.
+      private: double editTransparency;
+
       /// \brief Type of part being added.
       private: PartType addPartType;
 
@@ -276,8 +293,14 @@ namespace gazebo
       /// \brief origin of the model.
       private: math::Pose origin;
 
-      /// \brief Selected partv visual;
-      private: rendering::VisualPtr selectedVis;
+      /// \brief A list of selected visuals.
+      private: std::vector<rendering::VisualPtr> selectedVisuals;
+
+      /// \brief Names of parts copied through g_copyAct
+      private: std::vector<std::string> copiedPartNames;
+
+      /// \brief The last mouse event
+      private: common::MouseEvent lastMouseEvent;
     };
     /// \}
 
