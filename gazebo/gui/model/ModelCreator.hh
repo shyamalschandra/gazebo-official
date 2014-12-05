@@ -186,6 +186,10 @@ namespace gazebo
       /// \return True if the event was handled
       private: bool OnKeyPress(const common::KeyEvent &_event);
 
+      private slots: void OnCopy();
+
+      private slots: void OnPaste();
+
       /// \brief Create part with default properties from a visual
       /// \param[in] _visual Visual used to create the part.
       private: void CreatePart(const rendering::VisualPtr &_visual);
@@ -291,6 +295,12 @@ namespace gazebo
 
       /// \brief A list of selected visuals.
       private: std::vector<rendering::VisualPtr> selectedVisuals;
+
+      /// \brief Names of parts copied through g_copyAct
+      private: std::vector<std::string> copiedPartNames;
+
+      /// \brief The last mouse event
+      private: common::MouseEvent lastMouseEvent;
     };
     /// \}
 

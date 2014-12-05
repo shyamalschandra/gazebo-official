@@ -76,6 +76,12 @@ ModelCreator::ModelCreator()
       gui::Events::ConnectAlignMode(
         boost::bind(&ModelCreator::OnAlignMode, this, _1, _2, _3, _4)));
 
+  g_copyAct->setEnabled(false);
+  g_pasteAct->setEnabled(false);
+
+  connect(g_copyAct, SIGNAL(triggered()), this, SLOT(OnCopy()));
+  connect(g_pasteAct, SIGNAL(triggered()), this, SLOT(OnPaste()));
+
   this->Reset();
 }
 
@@ -177,7 +183,7 @@ std::string ModelCreator::AddBox(const math::Vector3 &_size,
 
   visVisual->Load(visualElem);
 
-  linkVisual->SetTransparency(this->editTransparency);
+  linkVisual->SetTransparency(0.5);
   linkVisual->SetPose(_pose);
   if (_pose == math::Pose::Zero)
   {
@@ -579,6 +585,18 @@ bool ModelCreator::OnKeyPress(const common::KeyEvent &_event)
       }
     }
   }
+  else if (_event.control)
+  {
+    if (_event.key == Qt::Key_C && _event.control)
+    {
+      g_copyAct->trigger();
+      return true;
+    }
+    if (_event.key == Qt::Key_V && _event.control){
+      g_pasteAct->trigger();
+      return true;
+    }
+  }
   return false;
 }
 
@@ -660,7 +678,7 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
           this->selectedVisuals.erase(it);
         }
       }
-
+      g_copyAct->setEnabled(!this->selectedVisuals.empty());
       g_alignAct->setEnabled(this->selectedVisuals.size() > 1);
       return true;
     }
@@ -691,6 +709,7 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
 /////////////////////////////////////////////////
 bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
 {
+  this->lastMouseEvent = _event;
   rendering::UserCameraPtr userCamera = gui::get_active_camera();
   if (!userCamera)
     return false;
@@ -740,6 +759,89 @@ bool ModelCreator::OnMouseDoubleClick(const common::MouseEvent &_event)
     }
   }
   return false;
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::OnCopy()
+{
+  if (!this->selectedVisuals.empty())
+  {
+    for (unsigned int i = 0; i < this->selectedVisuals.size(); i++)
+    {
+      this->copiedPartNames.push_back(this->selectedVisuals[i]->GetName());
+    }
+    g_pasteAct->setEnabled(true);
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::OnPaste()
+{
+  if (this->copiedPartNames.empty())
+  {
+    return;
+  }
+
+  // For now, only copy the last selected model
+  boost::unordered_map<std::string, PartData*>::iterator it =
+    this->allParts.find(this->copiedPartNames.back());
+  if (it != this->allParts.end())
+  {
+    PartData *copiedPart = it->second;
+    if (!copiedPart)
+      return;
+
+    std::string linkName = copiedPart->name + "_clone";
+
+    if (!this->modelVisual)
+    {
+      this->Reset();
+    }
+
+    rendering::VisualPtr linkVisual(new rendering::Visual(
+        linkName, this->modelVisual));
+    linkVisual->Load();
+
+    std::ostringstream visualName;
+    visualName << linkName << "_visual";
+    rendering::VisualPtr visVisual;
+
+    math::Pose clonePose;
+
+    if (copiedPart->visuals.empty())
+    {
+      visVisual = rendering::VisualPtr(new rendering::Visual(visualName.str(),
+                      linkVisual));
+      sdf::ElementPtr visualElem =  this->modelTemplateSDF->root
+        ->GetElement("model")->GetElement("link")->GetElement("visual");
+      visVisual->Load(visualElem);
+    }
+    else
+    {
+      rendering::VisualPtr copiedVisual = copiedPart->visuals.back();
+      visVisual = copiedVisual->Clone(visualName.str(), linkVisual);
+      clonePose = copiedVisual->GetWorldPose();
+    }
+
+    rendering::UserCameraPtr userCamera = gui::get_active_camera();
+    if (userCamera)
+    {
+      math::Vector3 mousePosition =
+        ModelManipulator::GetMousePositionOnPlane(userCamera,
+                                                  this->lastMouseEvent);
+      clonePose.pos.x = mousePosition.x;
+      clonePose.pos.y = mousePosition.y;
+    }
+
+    linkVisual->SetWorldPose(clonePose);
+    linkVisual->SetTransparency(0.5);
+
+    this->CreatePart(visVisual);
+    this->mouseVisual = linkVisual;
+    emit PartAdded();
+  }
+
+  this->copiedPartNames.clear();
 }
 
 /////////////////////////////////////////////////
