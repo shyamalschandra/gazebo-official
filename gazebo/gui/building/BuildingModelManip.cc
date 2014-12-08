@@ -67,6 +67,12 @@ rendering::VisualPtr BuildingModelManip::GetVisual() const
 }
 
 /////////////////////////////////////////////////
+double BuildingModelManip::GetTransparency() const
+{
+  return this->transparency;
+}
+
+/////////////////////////////////////////////////
 common::Color BuildingModelManip::GetColor() const
 {
   return this->color;
@@ -309,6 +315,7 @@ void BuildingModelManip::OnColorChanged(QColor _color)
 void BuildingModelManip::OnTextureChanged(QString _texture)
 {
   this->SetTexture(_texture);
+  this->maker->BuildingChanged();
 }
 
 /////////////////////////////////////////////////
@@ -376,7 +383,8 @@ void BuildingModelManip::SetColor(QColor _color)
 {
   common::Color newColor(_color.red(), _color.green(), _color.blue());
   this->color = newColor;
-  this->visual->GetParent()->SetAmbient(this->color);
+  this->visual->SetAmbient(this->color);
+  emit ColorChanged(_color);
   this->maker->BuildingChanged();
 }
 
@@ -390,14 +398,22 @@ void BuildingModelManip::SetTexture(QString _texture)
     this->texture = "Gazebo/Wood";
   else if (_texture == ":tiles.jpg")
     this->texture = "Gazebo/CeilingTiled";
+  else if (_texture == ":bricks.png")
+    this->texture = "Gazebo/Bricks";
 
-  this->visual->GetParent()->SetMaterial(this->texture);
+  // BuildingModelManip and BuildingMaker handle material names,
+  // Inspectors and palette handle thumbnail uri
+  this->visual->SetMaterial(this->texture);
+  this->visual->SetAmbient(this->color);
+  emit TextureChanged(_texture);
+  this->maker->BuildingChanged();
 }
 
 /////////////////////////////////////////////////
 void BuildingModelManip::SetTransparency(float _transparency)
 {
-  this->visual->GetParent()->SetTransparency(_transparency);
+  this->transparency = _transparency;
+  this->visual->SetTransparency(this->transparency);
 }
 
 /////////////////////////////////////////////////

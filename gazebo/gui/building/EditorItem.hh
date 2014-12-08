@@ -198,6 +198,12 @@ namespace gazebo
       /// \brief Qt signal emitted when the editor item is being deleted.
       Q_SIGNALS: void ItemDeleted();
 
+      /// \brief TODO
+      private slots: void OnColorChanged(QColor _color);
+
+      /// \brief TODO
+      private slots: void OnTextureChanged(QString _texture);
+
       /// \brief Type of editor item.
       protected: std::string editorType;
 
@@ -219,6 +225,13 @@ namespace gazebo
 
       /// \brief Transparency of the associated 3D visual.
       protected: float visual3dTransparency;
+
+      /// \brief Flag to indicate whether this item is currently highlighted or
+      /// not.
+      protected: bool highlighted;
+
+      /// \brief Scale for converting from pixel to metric units.
+      protected: double scale;
     };
     /// \}
   }
