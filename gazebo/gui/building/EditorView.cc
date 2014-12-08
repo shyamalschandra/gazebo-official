@@ -47,8 +47,16 @@ EditorView::EditorView(QWidget *_parent)
   this->elementsVisible = true;
 
   this->connections.push_back(
-  gui::editor::Events::ConnectCreateBuildingEditorItem(
-    boost::bind(&EditorView::OnCreateEditorItem, this, _1)));
+      gui::editor::Events::ConnectCreateBuildingEditorItem(
+      boost::bind(&EditorView::OnCreateEditorItem, this, _1)));
+
+  this->connections.push_back(
+      gui::editor::Events::ConnectColorSelected(
+      boost::bind(&EditorView::OnColorSelected, this, _1)));
+
+  this->connections.push_back(
+      gui::editor::Events::ConnectTextureSelected(
+      boost::bind(&EditorView::OnTextureSelected, this, _1)));
 
   this->connections.push_back(
       gui::editor::Events::ConnectNewBuildingModel(
@@ -113,6 +121,12 @@ EditorView::EditorView(QWidget *_parent)
 
   this->viewScale = 1.0;
   this->levelCounter = 0;
+
+  this->mouseTooltip = new QGraphicsTextItem;
+  this->mouseTooltip->setPlainText(
+      "Oops! Color and texture can only be added in the 3D view.");
+  this->mouseTooltip->setVisible(false);
+  this->mouseTooltip->setZValue(10);
 }
 
 /////////////////////////////////////////////////
@@ -387,6 +401,17 @@ void EditorView::mouseMoveEvent(QMouseEvent *_event)
     case STAIRS:
       this->DrawStairs(_event->pos());
       break;
+    case COLOR:
+    case TEXTURE:
+    {
+      if (!this->mouseTooltip->scene())
+        this->scene()->addItem(this->mouseTooltip);
+
+      this->mouseTooltip->setVisible(true);
+      this->mouseTooltip->setPos(this->mapToScene(_event->pos()) +
+          QPointF(15, 15));
+      break;
+    }
     default:
       break;
   }
@@ -422,6 +447,8 @@ void EditorView::mouseMoveEvent(QMouseEvent *_event)
         if (distance > 30 || t > 1.0 || t < 0.0)
         {
           editorItem->setParentItem(NULL);
+          editorItem->SetPositionOnWall(0);
+          editorItem->SetAngleOnWall(0);
           this->buildingMaker->DetachManip(this->itemToVisualMap[editorItem],
                 this->itemToVisualMap[wallSegmentItem]);
           editorItem->SetRotation(editorItem->GetRotation()
@@ -487,6 +514,12 @@ void EditorView::mouseMoveEvent(QMouseEvent *_event)
   {
     QGraphicsView::mouseMoveEvent(_event);
   }
+}
+
+/////////////////////////////////////////////////
+void EditorView::leaveEvent(QEvent */*_event*/)
+{
+  this->mouseTooltip->setVisible(false);
 }
 
 /////////////////////////////////////////////////
@@ -899,6 +932,20 @@ void EditorView::OnCreateEditorItem(const std::string &_type)
     gui::editor::Events::triggerShowElements();
 
   // this->grabKeyboard();
+}
+
+/////////////////////////////////////////////////
+void EditorView::OnColorSelected(QColor _color)
+{
+  if (_color.isValid())
+    this->drawMode = COLOR;
+}
+
+/////////////////////////////////////////////////
+void EditorView::OnTextureSelected(QString _texture)
+{
+  if (_texture != QString(""))
+    this->drawMode = TEXTURE;
 }
 
 /////////////////////////////////////////////////

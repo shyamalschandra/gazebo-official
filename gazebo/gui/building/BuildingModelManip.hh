@@ -64,6 +64,10 @@ namespace gazebo
       /// \return Texture.
       public: std::string GetTexture() const;
 
+      /// \brief Get the transparency of the manip.
+      /// \return Transparency.
+      public: double GetTransparency() const;
+
       /// \brief Set the name of the manip object.
       /// \param[in] _name Name to set the manip to.
       public: void SetName(const std::string &_name);
@@ -149,6 +153,12 @@ namespace gazebo
       /// \brief Set the transparency of the manip.
       /// \param[in] _transparency Transparency.
       public: void SetTransparency(float _transparency);
+
+      /// \brief TODO
+      Q_SIGNALS: void ColorChanged(QColor _color);
+
+      /// \brief TODO
+      Q_SIGNALS: void TextureChanged(QString _texture);
 
       /// \brief Set the level for this manip.
       /// \param[in] _level The level for this manip.
@@ -287,6 +297,9 @@ namespace gazebo
 
       /// \brief Parent manip.
       private: BuildingModelManip *parent;
+
+      /// \brief Visual's transparency.
+      private: double transparency;
 
       /// \brief Visual's color.
       private: common::Color color;
