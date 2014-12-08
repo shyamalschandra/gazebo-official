@@ -824,8 +824,6 @@ void ModelCreator::OnPaste()
     this->mouseVisual = linkVisual;
     emit PartAdded();
   }
-
-  this->copiedPartNames.clear();
 }
 
 /////////////////////////////////////////////////
