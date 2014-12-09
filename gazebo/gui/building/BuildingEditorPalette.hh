@@ -65,6 +65,17 @@ namespace gazebo
       /// \brief Qt callback when the draw stairs button is pressed.
       private slots: void OnAddStair();
 
+      /// \brief Qt callback when a brush is pressed, if it is a color button,
+      /// it is handled here.
+      /// \param[in] _colorId Id of the button clicked.
+      private slots: void OnColor(int _colorId);
+
+      /// \brief TODO
+      private slots: void OnCustomColor();
+
+      /// \brief TODO
+      private slots: void OnTexture(int _textureId);
+
       /// \brief Qt callback when the Model Name field is changed.
       private slots: void OnNameChanged(const QString &_name);
 
@@ -106,6 +117,12 @@ namespace gazebo
 
       /// \brief The current draw mode, empty for none.
       private: std::string currentMode;
+
+      /// \brief List of default colors to be picked.
+      private: std::vector<QColor> colorList;
+
+      /// \brief TODO
+      private: std::vector<QString> textureList;
     };
     /// \}
   }

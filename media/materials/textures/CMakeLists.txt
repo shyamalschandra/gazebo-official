@@ -1,5 +1,6 @@
 set (files
   beigeWall.jpg
+  bricks.png
   ceiling_tiled.jpg
   clouds.jpg
   dirt_diffusespecular.png
@@ -32,6 +33,7 @@ set (files
   trunk.jpg
   white.bmp
   willowMap.png
+  window_frame.png
   wood.jpg
   WoodPallet.png
 )
