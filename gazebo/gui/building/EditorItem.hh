@@ -198,6 +198,13 @@ namespace gazebo
       /// \brief Qt signal emitted when the editor item is being deleted.
       Q_SIGNALS: void ItemDeleted();
 
+      /// \brief Qt callback when the color has been changed from the 3D view.
+      /// \param[in] _color Color.
+      private slots: void OnColorChanged(QColor _color);
+
+      /// \brief TODO
+      private slots: void OnTextureChanged(QString _texture);
+
       /// \brief Type of editor item.
       protected: std::string editorType;
 
