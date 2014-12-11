@@ -15,7 +15,6 @@
  *
  */
 
-#include <unistd.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <sdf/sdf.hh>
@@ -184,11 +183,16 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
   if (_path.empty())
     return;
 
-  // Unix only: check permissions on this directory
-  int accessStatus = access(_path.c_str(), R_OK);
-  if (accessStatus < 0)
+  boost::filesystem::path dir(_path);
+
+  bool pathExists = false;
+  try
   {
-    gzlog << "Permission denied for path " << _path << std::endl;
+    pathExists = boost::filesystem::exists(dir);
+  }
+  catch(...)
+  {
+    gzlog << "Permission denied for directory: " << _path << std::endl;
     return;
   }
 
@@ -198,8 +202,6 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
   QList<QTreeWidgetItem *> matchList =
     this->dataPtr->fileTreeWidget->findItems(qpath, Qt::MatchExactly);
 
-  boost::filesystem::path dir(_path);
-
   // Create a top-level tree item for the path
   if (matchList.empty())
   {
@@ -208,7 +210,7 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
     this->dataPtr->fileTreeWidget->addTopLevelItem(topItem);
 
     // Add the new path to the directory watcher
-    if (boost::filesystem::exists(dir))
+    if (pathExists)
       this->dataPtr->watcher->addPath(qpath);
   }
   else
@@ -217,7 +219,7 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
   // Remove current items.
   topItem->takeChildren();
 
-  if (boost::filesystem::exists(dir) &&
+  if (pathExists &&
       boost::filesystem::is_directory(dir))
   {
     std::vector<boost::filesystem::path> paths;
@@ -236,14 +238,6 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
       boost::filesystem::path fullPath = _path / dIter->filename();
       boost::filesystem::path manifest = fullPath;
 
-      accessStatus = access(fullPath.string().c_str(), R_OK);
-      if (accessStatus < 0)
-      {
-        gzlog << "Permission denied for path "
-              << fullPath.string() << std::endl;
-        continue;
-      }
-
       if (!boost::filesystem::is_directory(fullPath))
       {
         if (dIter->filename() != "database.config")
@@ -255,14 +249,38 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
         }
         continue;
       }
+      bool manifestExists = false;
+      try
+      {
+        manifestExists =
+          boost::filesystem::exists(manifest/GZ_MODEL_MANIFEST_FILENAME);
+      }
+      catch(...)
+      {
+        gzlog << "Permission denied for "
+              << manifest/GZ_MODEL_MANIFEST_FILENAME << std::endl;
+        continue;
+      }
 
       // Get the GZ_MODEL_MANIFEST_FILENAME.
-      if (boost::filesystem::exists(manifest / GZ_MODEL_MANIFEST_FILENAME))
+      if (manifestExists)
         manifest /= GZ_MODEL_MANIFEST_FILENAME;
-      else if (boost::filesystem::exists(manifest / "manifest.xml"))
+      else
       {
+        try
+        {
+          manifestExists = boost::filesystem::exists(manifest / "manifest.xml");
+        }
+        catch(...)
+        {
+          gzlog << "Permission denied for "
+              << manifest/"manifest.xml" << std::endl;
+          continue;
+        }
+
         gzerr << "Missing " << GZ_MODEL_MANIFEST_FILENAME << " for model "
           << (*dIter) << "\n";
+        manifest = manifest/"manifest.xml";
       }
 
       if (!boost::filesystem::exists(manifest) || manifest == fullPath)
@@ -272,13 +290,6 @@ void InsertModelWidget::UpdateLocalPath(const std::string &_path)
         continue;
       }
 
-      accessStatus = access(manifest.string().c_str(), R_OK);
-      if (accessStatus < 0)
-      {
-        gzlog << "Permission denied for path "
-              << manifest.string() << std::endl;
-        continue;
-      }
       TiXmlDocument xmlDoc;
       if (xmlDoc.LoadFile(manifest.string()))
       {
