@@ -47,23 +47,19 @@ EditorView::EditorView(QWidget *_parent)
   this->elementsVisible = true;
 
   this->connections.push_back(
-  gui::editor::Events::ConnectCreateBuildingEditorItem(
-    boost::bind(&EditorView::OnCreateEditorItem, this, _1)));
+      gui::editor::Events::ConnectCreateBuildingEditorItem(
+      boost::bind(&EditorView::OnCreateEditorItem, this, _1)));
 
   this->connections.push_back(
       gui::editor::Events::ConnectColorSelected(
       boost::bind(&EditorView::OnColorSelected, this, _1)));
 
-/*  this->connections.push_back(
-  gui::editor::Events::ConnectSaveModel(
-    boost::bind(&EditorView::OnSaveModel, this, _1, _2)));*/
-
-/*  this->connections.push_back(
-  gui::editor::Events::ConnectDone(
-    boost::bind(&EditorView::OnDone, this)));*/
+  this->connections.push_back(
+      gui::editor::Events::ConnectTextureSelected(
+      boost::bind(&EditorView::OnTextureSelected, this, _1)));
 
   this->connections.push_back(
-      gui::editor::Events::ConnectDiscardBuildingModel(
+      gui::editor::Events::ConnectNewBuildingModel(
       boost::bind(&EditorView::OnDiscardModel, this)));
 
   this->connections.push_back(
@@ -128,7 +124,7 @@ EditorView::EditorView(QWidget *_parent)
 
   this->mouseTooltip = new QGraphicsTextItem;
   this->mouseTooltip->setPlainText(
-      "Oops! Color can only be added in the 3D view.");
+      "Oops! Color and texture can only be added in the 3D view.");
   this->mouseTooltip->setVisible(false);
   this->mouseTooltip->setZValue(10);
 }
@@ -406,6 +402,7 @@ void EditorView::mouseMoveEvent(QMouseEvent *_event)
       this->DrawStairs(_event->pos());
       break;
     case COLOR:
+    case TEXTURE:
     {
       if (!this->mouseTooltip->scene())
         this->scene()->addItem(this->mouseTooltip);
@@ -952,6 +949,13 @@ void EditorView::OnColorSelected(QColor _color)
 }
 
 /////////////////////////////////////////////////
+void EditorView::OnTextureSelected(QString _texture)
+{
+  if (_texture != QString(""))
+    this->drawMode = TEXTURE;
+}
+
+/////////////////////////////////////////////////
 void EditorView::OnDiscardModel()
 {
   this->wallSegmentList.clear();
@@ -960,7 +964,6 @@ void EditorView::OnDiscardModel()
   this->stairsList.clear();
   this->floorList.clear();
   this->itemToVisualMap.clear();
-  this->buildingMaker->Reset();
 
   for (unsigned int i = 0; i < this->levels.size(); ++i)
     delete this->levels[i];
