@@ -31,18 +31,20 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
 {
   this->setObjectName("buildingEditorPalette");
 
-  this->buildingDefaultName = "BuildingDefaultName";
+  this->buildingDefaultName = "Untitled";
   this->currentMode = std::string();
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
 
   // Model name layout
   QHBoxLayout *modelNameLayout = new QHBoxLayout;
-  QLabel *modelLabel = new QLabel(tr("Model: "));
+  QLabel *modelLabel = new QLabel(tr("Model Name: "));
   this->modelNameEdit = new QLineEdit();
   this->modelNameEdit->setText(tr(this->buildingDefaultName.c_str()));
   modelNameLayout->addWidget(modelLabel);
   modelNameLayout->addWidget(this->modelNameEdit);
+  connect(this->modelNameEdit, SIGNAL(textChanged(QString)), this,
+          SLOT(OnNameChanged(QString)));
 
   // Brushes (button group)
   brushes = new QButtonGroup();
@@ -135,6 +137,62 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
   }
   connect(brushes, SIGNAL(buttonClicked(int)), this, SLOT(OnColor(int)));
 
+  QPushButton *customColor = new QPushButton("More");
+  colorsLayout->addWidget(customColor, 1, 4, 1, 2);
+  connect(customColor, SIGNAL(clicked()), this,
+      SLOT(OnCustomColor()));
+
+  // Textures label
+  QLabel *texturesLabel = new QLabel(tr(
+       "<font size=4 color='white'>Add Texture</font>"));
+
+  // Textures
+  QGridLayout *texturesLayout = new QGridLayout;
+  QSize textureButtonSize(70, 70);
+  QSize textureIconSize(40, 40);
+
+  // wood
+  this->textureList.push_back(":wood.jpg");
+  QToolButton *textureButton = new QToolButton(this);
+  textureButton->setFixedSize(textureButtonSize);
+  textureButton->setCheckable(true);
+  textureButton->setChecked(false);
+  textureButton->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+  textureButton->setIcon(QPixmap(this->textureList.back()).scaled(
+        QSize(30, 30), Qt::IgnoreAspectRatio));
+  textureButton->setText("Wood");
+  textureButton->setIconSize(QSize(textureIconSize));
+  brushes->addButton(textureButton, brushes->buttons().size());
+  texturesLayout->addWidget(textureButton, 0, 0);
+
+  // tiles
+  this->textureList.push_back(":tiles.jpg");
+  textureButton = new QToolButton(this);
+  textureButton->setFixedSize(textureButtonSize);
+  textureButton->setCheckable(true);
+  textureButton->setChecked(false);
+  textureButton->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+  textureButton->setIcon(QPixmap(this->textureList.back()).scaled(
+        QSize(30, 30), Qt::IgnoreAspectRatio));
+  textureButton->setText("Tiles");
+  textureButton->setIconSize(QSize(textureIconSize));
+  brushes->addButton(textureButton, brushes->buttons().size());
+  texturesLayout->addWidget(textureButton, 0, 1);
+
+  // bricks
+  this->textureList.push_back(":bricks.png");
+  textureButton = new QToolButton(this);
+  textureButton->setFixedSize(textureButtonSize);
+  textureButton->setCheckable(true);
+  textureButton->setChecked(false);
+  textureButton->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+  textureButton->setIcon(QPixmap(this->textureList.back()).scaled(
+        QSize(30, 30), Qt::IgnoreAspectRatio));
+  textureButton->setText("Bricks");
+  textureButton->setIconSize(QSize(textureIconSize));
+  brushes->addButton(textureButton, brushes->buttons().size());
+  texturesLayout->addWidget(textureButton, 0, 2);
+
   // Import button
   QPushButton *importImageButton = new QPushButton(tr("Import"),
       this);
@@ -144,18 +202,10 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
       "Import an existing floor plan to use as a guide"));
   connect(importImageButton, SIGNAL(clicked()), this, SLOT(OnImportImage()));
 
-  // Discard button
-  QPushButton *discardButton = new QPushButton(tr("Discard"));
-  connect(discardButton, SIGNAL(clicked()), this, SLOT(OnDiscard()));
-
-  // Save (As) button
-  this->saveButton = new QPushButton(tr("Save As"));
-  connect(this->saveButton, SIGNAL(clicked()), this, SLOT(OnSave()));
-
   QHBoxLayout *buttonsLayout = new QHBoxLayout;
-  buttonsLayout->addWidget(discardButton);
   buttonsLayout->addWidget(importImageButton);
-  buttonsLayout->addWidget(this->saveButton);
+  buttonsLayout->setAlignment(Qt::AlignHCenter);
+  buttonsLayout->setContentsMargins(30, 11, 30, 11);
 
   // Main layout
   mainLayout->addLayout(modelNameLayout);
@@ -167,6 +217,8 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
   mainLayout->addLayout(featuresLayout);
   mainLayout->addWidget(colorsLabel);
   mainLayout->addLayout(colorsLayout);
+  mainLayout->addWidget(texturesLabel);
+  mainLayout->addLayout(texturesLayout);
   mainLayout->addItem(new QSpacerItem(10, 20, QSizePolicy::Expanding,
                       QSizePolicy::Minimum));
   mainLayout->addLayout(buttonsLayout);
@@ -180,14 +232,14 @@ BuildingEditorPalette::BuildingEditorPalette(QWidget *_parent)
       boost::bind(&BuildingEditorPalette::OnSaveModel, this, _1, _2)));
 
   this->connections.push_back(
-      gui::editor::Events::ConnectDiscardBuildingModel(
-      boost::bind(&BuildingEditorPalette::OnDiscardModel, this)));
+      gui::editor::Events::ConnectNewBuildingModel(
+      boost::bind(&BuildingEditorPalette::OnNewModel, this)));
 
   this->connections.push_back(
       gui::editor::Events::ConnectCreateBuildingEditorItem(
     boost::bind(&BuildingEditorPalette::OnCreateEditorItem, this, _1)));
 
-  // All buttons must be added after the color buttons
+  // All buttons must be added after the color and texture buttons
   brushes->addButton(wallButton, brushes->buttons().size());
   brushes->addButton(windowButton, brushes->buttons().size());
   brushes->addButton(doorButton, brushes->buttons().size());
@@ -252,22 +304,8 @@ void BuildingEditorPalette::OnAddStair()
 }
 
 /////////////////////////////////////////////////
-void BuildingEditorPalette::OnDiscard()
+void BuildingEditorPalette::OnNewModel()
 {
-  gui::editor::Events::discardBuildingEditor();
-}
-
-/////////////////////////////////////////////////
-void BuildingEditorPalette::OnSave()
-{
-  gui::editor::Events::saveBuildingEditor(
-      this->modelNameEdit->text().toStdString());
-}
-
-/////////////////////////////////////////////////
-void BuildingEditorPalette::OnDiscardModel()
-{
-  this->saveButton->setText("&Save As");
   this->modelNameEdit->setText(tr(this->buildingDefaultName.c_str()));
 }
 
@@ -275,14 +313,20 @@ void BuildingEditorPalette::OnDiscardModel()
 void BuildingEditorPalette::OnSaveModel(const std::string &_saveName,
     const std::string &/*_saveLocation*/)
 {
-  this->saveButton->setText("Save");
   this->modelNameEdit->setText(tr(_saveName.c_str()));
+}
+
+/////////////////////////////////////////////////
+void BuildingEditorPalette::OnNameChanged(const QString &_name)
+{
+  gui::editor::Events::buildingNameChanged(_name.toStdString());
 }
 
 /////////////////////////////////////////////////
 void BuildingEditorPalette::OnCreateEditorItem(const std::string &_mode)
 {
   gui::editor::Events::colorSelected(QColor::Invalid);
+  gui::editor::Events::textureSelected(QString(""));
 
   if (_mode.empty() || this->currentMode == _mode)
   {
@@ -304,7 +348,19 @@ void BuildingEditorPalette::OnColor(int _buttonId)
 {
   // A button which is not color
   if (_buttonId >= static_cast<int>(colorList.size()))
-    return;
+  {
+    // Textures
+    if (_buttonId < (int)colorList.size() + (int)textureList.size())
+    {
+      this->OnTexture(_buttonId - (int)colorList.size());
+      return;
+    }
+    // Others
+    else
+    {
+      return;
+    }
+  }
 
   std::ostringstream colorStr;
   colorStr << "color_" << _buttonId;
@@ -317,6 +373,49 @@ void BuildingEditorPalette::OnColor(int _buttonId)
     QPixmap colorCursor(30, 30);
     colorCursor.fill(color);
     QApplication::setOverrideCursor(QCursor(colorCursor));
+  }
+  else
+  {
+    gui::editor::Events::createBuildingEditorItem(std::string());
+  }
+}
+
+/////////////////////////////////////////////////
+void BuildingEditorPalette::OnCustomColor()
+{
+  // Cancel draw mode
+  gui::editor::Events::createBuildingEditorItem(std::string());
+
+  QColor color = QColorDialog::getColor(Qt::green, this);
+
+  if (color.isValid())
+  {
+    std::ostringstream colorStr;
+    colorStr << "color_custom";
+
+    gui::editor::Events::colorSelected(color);
+    this->currentMode = colorStr.str();
+
+    QPixmap colorCursor(30, 30);
+    colorCursor.fill(color);
+    QApplication::setOverrideCursor(QCursor(colorCursor));
+  }
+}
+
+/////////////////////////////////////////////////
+void BuildingEditorPalette::OnTexture(int _textureId)
+{
+  std::ostringstream textureStr;
+  textureStr << "texture_" << _textureId;
+  QString texture = this->textureList[_textureId];
+  if (this->currentMode != textureStr.str())
+  {
+    gui::editor::Events::textureSelected(texture);
+    this->currentMode = textureStr.str();
+
+    QPixmap textureCursor(this->textureList[_textureId]);
+    textureCursor = textureCursor.scaled(QSize(30, 30));
+    QApplication::setOverrideCursor(textureCursor);
   }
   else
   {

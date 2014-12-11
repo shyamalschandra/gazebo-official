@@ -93,7 +93,9 @@ namespace gazebo
                   /// \brief Stairs mode
                   STAIRS,
                   /// \brief Color mode
-                  COLOR
+                  COLOR,
+                  /// \brief Texture mode
+                  TEXTURE
                 };
 
       /// \brief Constructor
@@ -185,6 +187,9 @@ namespace gazebo
       /// palette.
       /// \param[in] _color Selected color.
       private: void OnColorSelected(QColor _color);
+
+      /// \brief TODO
+      private: void OnTextureSelected(QString _texture);
 
       // private: void OnSaveModel(const std::string &_modelName,
       //     const std::string &_savePath);
