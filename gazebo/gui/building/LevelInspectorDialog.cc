@@ -193,6 +193,13 @@ void LevelInspectorDialog::SetFloorColor(const QColor _color)
     }
   }
   this->floorColorComboBox->setCurrentIndex(index);
+
+  // Add a new color
+  this->floorColorList.push_back(_color);
+  QPixmap colorIcon(15, 15);
+  colorIcon.fill(this->floorColorList.back());
+  this->floorColorComboBox->addItem(colorIcon, QString(""));
+  this->floorColorComboBox->setCurrentIndex(this->floorColorComboBox->count()-1);
 }
 
 /////////////////////////////////////////////////
