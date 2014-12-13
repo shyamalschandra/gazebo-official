@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2013-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,10 @@
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/DynamicLines.hh"
 #include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/JointVisual.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 #include "gazebo/gui/GuiIface.hh"
 #include "gazebo/gui/KeyEventHandler.hh"
@@ -131,8 +133,11 @@ void JointMaker::RemoveJoint(const std::string &_jointName)
     scene->GetManager()->destroyBillboardSet(joint->handles);
     scene->RemoveVisual(joint->hotspot);
     scene->RemoveVisual(joint->visual);
+    joint->jointVisual->GetParent()->DetachVisual(
+        joint->jointVisual->GetName());
     joint->hotspot.reset();
     joint->visual.reset();
+    joint->jointVisual.reset();
     joint->parent.reset();
     joint->child.reset();
     joint->inspector->hide();
@@ -174,7 +179,6 @@ bool JointMaker::OnMousePress(const common::MouseEvent &_event)
 
   // intercept mouse press events when user clicks on the joint hotspot visual
   rendering::UserCameraPtr camera = gui::get_active_camera();
-  rendering::ScenePtr scene = camera->GetScene();
   rendering::VisualPtr vis = camera->GetVisual(_event.pos);
   if (vis)
   {
@@ -567,6 +571,8 @@ void JointMaker::CreateHotSpot(JointData *_joint)
       GZ_VISIBILITY_SELECTABLE);
   hotspotVisual->GetSceneNode()->setInheritScale(false);
 
+  _joint->UpdateJointVisual();
+
   this->joints[hotSpotName] = _joint;
   camera->GetScene()->AddVisual(hotspotVisual);
 
@@ -806,4 +812,68 @@ void JointData::OnApply()
     this->lowerLimit[i] = this->inspector->GetLowerLimit(i);
     this->upperLimit[i] = this->inspector->GetUpperLimit(i);
   }
+  this->UpdateJointVisual();
+}
+
+/////////////////////////////////////////////////
+void JointData::UpdateJointVisual()
+{
+  gazebo::msgs::JointPtr jointMsg;
+  jointMsg.reset(new gazebo::msgs::Joint);
+  jointMsg->set_parent(this->parent->GetName());
+  jointMsg->set_child(this->child->GetName());
+  jointMsg->set_name(this->name);
+  msgs::Set(jointMsg->mutable_pose(), this->anchor);
+  if (this->type == JointMaker::JOINT_SLIDER)
+  {
+    jointMsg->set_type(msgs::Joint::PRISMATIC);
+  }
+  else if (this->type == JointMaker::JOINT_HINGE)
+  {
+    jointMsg->set_type(msgs::Joint::REVOLUTE);
+  }
+  else if (this->type == JointMaker::JOINT_HINGE2)
+  {
+    jointMsg->set_type(msgs::Joint::REVOLUTE2);
+  }
+  else if (this->type == JointMaker::JOINT_SCREW)
+  {
+    jointMsg->set_type(msgs::Joint::SCREW);
+  }
+  else if (this->type == JointMaker::JOINT_UNIVERSAL)
+  {
+    jointMsg->set_type(msgs::Joint::UNIVERSAL);
+  }
+  else if (this->type == JointMaker::JOINT_BALL)
+  {
+    jointMsg->set_type(msgs::Joint::BALL);
+  }
+
+  int axisCount = JointMaker::GetJointAxisCount(this->type);
+  for (int i = 0; i < axisCount; ++i)
+  {
+    jointMsg->add_angle(0);
+    msgs::Axis *axisMsg;
+    if (i == 0)
+      axisMsg = jointMsg->mutable_axis1();
+    else if (i == 1)
+      axisMsg = jointMsg->mutable_axis2();
+
+    msgs::Set(axisMsg->mutable_xyz(), this->axis[i]);
+  }
+
+  if (this->jointVisual)
+  {
+    rendering::ScenePtr scene = this->jointVisual->GetScene();
+    scene->RemoveVisual(this->jointVisual);
+    this->jointVisual->GetParent()->DetachVisual(this->jointVisual->GetName());
+    this->jointVisual.reset();
+  }
+
+  gazebo::rendering::JointVisualPtr jointVis(
+      new gazebo::rendering::JointVisual(
+      this->name + "__JOINT_VISUAL__", this->child));
+
+  jointVis->Load(jointMsg);
+  this->jointVisual = jointVis;
 }
