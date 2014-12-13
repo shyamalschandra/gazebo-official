@@ -65,8 +65,11 @@ namespace gazebo
       /// \brief Qt callback when the draw stairs button is pressed.
       private slots: void OnAddStair();
 
-      /// \brief Qt callback when the Model Name field is changed.
-      private slots: void OnNameChanged(const QString &_name);
+      /// \brief Qt callback when the discard button is pressed.
+      private slots: void OnDiscard();
+
+      /// \brief Qt callback when the save button is pressed.
+      private slots: void OnSave();
 
       /// \brief Callback when user has provided information on where to save
       /// the model to.
@@ -79,8 +82,8 @@ namespace gazebo
       /// \param[in] _mode Type of item to add or empty for none.
       private: void OnCreateEditorItem(const std::string &_mode);
 
-      /// \brief Event received when the user starts a new building model.
-      private: void OnNewModel();
+      /// \brief Event received when a building model has been discarded.
+      private: void OnDiscardModel();
 
       /// \brief Qt callback when the palette is pressed.
       /// \param[in] _event Event.
@@ -91,6 +94,9 @@ namespace gazebo
 
       /// \brief Edit the name of the building model.
       private: QLineEdit *modelNameEdit;
+
+      /// \brief Save button.
+      private: QPushButton *saveButton;
 
       /// \brief All the brushes (wall, door, window, stair, etc).
       private: QButtonGroup *brushes;
