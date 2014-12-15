@@ -121,7 +121,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
 
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
-  TimePanel *timePanel = new TimePanel(this);
+  this->timePanel = new TimePanel(this);
 
   this->bottomFrame = new QFrame;
   this->bottomFrame->setObjectName("renderBottomFrame");
@@ -142,7 +142,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
   render3DLayout->setSpacing(0);
   render3DFrame->setLayout(render3DLayout);
 
-  QSplitter *splitter = new QSplitter(this);
+  this->splitter = new QSplitter(this);
   splitter->addWidget(this->buildingEditorWidget);
   splitter->addWidget(render3DFrame);
   QList<int> sizes;
@@ -308,6 +308,47 @@ void RenderWidget::ShowEditor(bool _show)
     this->ShowToolbar(true);
   }
 }
+
+/////////////////////////////////////////////////
+void RenderWidget::InsertWidget(unsigned int _index, QWidget *_widget)
+{
+  if (_index < static_cast<unsigned int>(this->splitter->count()))
+  {
+    // set equal size for now. There should always be at least one widget
+    // (render3DFrame) in the splitter.
+    QList<int> sizes = this->splitter->sizes();
+    sizes.insert(_index, sizes[0]);
+
+    this->splitter->insertWidget(_index, _widget);
+    this->splitter->setSizes(sizes);
+    this->splitter->setStretchFactor(_index, 1);
+  }
+  else
+    gzerr << "Unabled to add widget, index out of range " << std::endl;
+}
+
+
+/////////////////////////////////////////////////
+unsigned RenderWidget::GetWidgetCount()
+{
+  return static_cast<unsigned int>(this->splitter->count());
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::ShowTimePanel(bool _show)
+{
+  if (_show)
+    this->bottomFrame->show();
+  else
+    this->bottomFrame->hide();
+}
+
+/////////////////////////////////////////////////
+TimePanel *RenderWidget::GetTimePanel()
+{
+  return this->timePanel;
+}
+
 
 /////////////////////////////////////////////////
 void RenderWidget::RemoveScene(const std::string &_name)
