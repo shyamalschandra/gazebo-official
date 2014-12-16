@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2013-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -225,8 +225,8 @@ void ModelEditor::ToggleToolbar()
         actions[i] == g_screenshotAct ||
         actions[i] == g_copyAct ||
         actions[i] == g_pasteAct ||
-        actions[i] == g_alignButtonAct)
-//        actions[i] == g_snapAct -- issue #1318
+        actions[i] == g_alignButtonAct ||
+        actions[i] == g_snapAct)
     {
       actions[i]->setVisible(true);
       if (i > 0 && actions[i-1]->isSeparator())

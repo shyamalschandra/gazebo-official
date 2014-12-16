@@ -24,8 +24,10 @@
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/DynamicLines.hh"
 #include "gazebo/rendering/Visual.hh"
+#include "gazebo/rendering/JointVisual.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 
 #include "gazebo/gui/GuiIface.hh"
 #include "gazebo/gui/KeyEventHandler.hh"
@@ -131,8 +133,11 @@ void JointMaker::RemoveJoint(const std::string &_jointName)
     scene->GetManager()->destroyBillboardSet(joint->handles);
     scene->RemoveVisual(joint->hotspot);
     scene->RemoveVisual(joint->visual);
+    joint->jointVisual->GetParent()->DetachVisual(
+        joint->jointVisual->GetName());
     joint->hotspot.reset();
     joint->visual.reset();
+    joint->jointVisual.reset();
     joint->parent.reset();
     joint->child.reset();
     joint->inspector->hide();
@@ -180,7 +185,6 @@ bool JointMaker::OnMousePress(const common::MouseEvent &_event)
     return false;
 
   // intercept mouse press events when user clicks on the joint hotspot visual
-  rendering::ScenePtr scene = camera->GetScene();
   rendering::VisualPtr vis = camera->GetVisual(_event.pos);
   if (vis)
   {
@@ -619,6 +623,9 @@ void JointMaker::Update()
         math::Vector3 childCentroid =
             this->GetPartWorldCentroid(joint->child);
 
+        // Joint pose is expressed w.r.t. child link frame
+        //childCentroid = (childCentroid + joint->pose.pos);
+
         // set orientation of joint hotspot
         math::Vector3 dPos = (childCentroid - parentCentroid);
         math::Vector3 center = dPos/2.0;
@@ -658,6 +665,66 @@ void JointMaker::Update()
         joint->handles->_updateBounds();
       }
     }
+
+    // Create / update joint visual
+    gazebo::msgs::JointPtr jointMsg;
+    jointMsg.reset(new gazebo::msgs::Joint);
+    jointMsg->set_parent(joint->parent->GetName());
+    jointMsg->set_child(joint->child->GetName());
+    jointMsg->set_name(joint->name);
+    msgs::Set(jointMsg->mutable_pose(), joint->pose);
+    if (joint->type == JointMaker::JOINT_SLIDER)
+    {
+      jointMsg->set_type(msgs::Joint::PRISMATIC);
+    }
+    else if (joint->type == JointMaker::JOINT_HINGE)
+    {
+      jointMsg->set_type(msgs::Joint::REVOLUTE);
+    }
+    else if (joint->type == JointMaker::JOINT_HINGE2)
+    {
+      jointMsg->set_type(msgs::Joint::REVOLUTE2);
+    }
+    else if (joint->type == JointMaker::JOINT_SCREW)
+    {
+      jointMsg->set_type(msgs::Joint::SCREW);
+    }
+    else if (joint->type == JointMaker::JOINT_UNIVERSAL)
+    {
+      jointMsg->set_type(msgs::Joint::UNIVERSAL);
+    }
+    else if (joint->type == JointMaker::JOINT_BALL)
+    {
+      jointMsg->set_type(msgs::Joint::BALL);
+    }
+
+    int axisCount = JointMaker::GetJointAxisCount(joint->type);
+    for (int i = 0; i < axisCount; ++i)
+    {
+      jointMsg->add_angle(0);
+      msgs::Axis *axisMsg;
+      if (i == 0)
+        axisMsg = jointMsg->mutable_axis1();
+      else if (i == 1)
+        axisMsg = jointMsg->mutable_axis2();
+
+      msgs::Set(axisMsg->mutable_xyz(), joint->axis[i]);
+    }
+
+    if (joint->jointVisual)
+    {
+      rendering::ScenePtr scene = joint->jointVisual->GetScene();
+      scene->RemoveVisual(joint->jointVisual);
+      joint->jointVisual->GetParent()->DetachVisual(joint->jointVisual->GetName());
+      joint->jointVisual.reset();
+    }
+
+    gazebo::rendering::JointVisualPtr jointVis(
+        new gazebo::rendering::JointVisual(
+        joint->name + "__JOINT_VISUAL__", joint->child));
+
+    jointVis->Load(jointMsg);
+    joint->jointVisual = jointVis;
   }
 }
 
@@ -794,9 +861,17 @@ math::Vector3 JointMaker::GetPartWorldCentroid(
     const rendering::VisualPtr _visual)
 {
   math::Vector3 centroid;
+  int count = 0;
   for (unsigned int i = 0; i < _visual->GetChildCount(); ++i)
-    centroid += _visual->GetChild(i)->GetWorldPose().pos;
-  centroid /= _visual->GetChildCount();
+  {
+    if (_visual->GetChild(i)->GetName().find("_JOINT_VISUAL_") ==
+        std::string::npos)
+    {
+      centroid += _visual->GetChild(i)->GetWorldPose().pos;
+      count++;
+    }
+  }
+  centroid /= count;
   return centroid;
 }
 

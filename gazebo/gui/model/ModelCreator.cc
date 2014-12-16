@@ -189,7 +189,6 @@ std::string ModelCreator::AddBox(const math::Vector3 &_size,
   sdf::ElementPtr visualElem =  this->modelTemplateSDF->root
       ->GetElement("model")->GetElement("link")->GetElement("visual");
 
-
   sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
   geomElem->ClearElements();
   ((geomElem->AddElement("box"))->AddElement("size"))->Set(_size);
@@ -373,6 +372,8 @@ void ModelCreator::RemovePart(const std::string &_partName)
   PartData *part = this->allParts[_partName];
   if (!part)
     return;
+
+  this->DeselectAll();
 
   rendering::ScenePtr scene = part->partVisual->GetScene();
   for (unsigned int i = 0; i < part->visuals.size(); ++i)
@@ -652,6 +653,12 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
       userCamera->HandleMouseEvent(_event);
       return true;
     }
+    else
+    {
+      // Handle snap from GLWidget
+      if (g_snapAct->isChecked())
+        return false;
+    }
   }
   return false;
 }
@@ -688,6 +695,10 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
     if (this->allParts.find(partVis->GetName()) !=
         this->allParts.end())
     {
+      // Handle snap from GLWidget
+      if (g_snapAct->isChecked())
+        return false;
+
       // Not in multi-selection mode.
       if (!(QApplication::keyboardModifiers() & Qt::ControlModifier))
       {
@@ -776,10 +787,11 @@ bool ModelCreator::OnMouseDoubleClick(const common::MouseEvent &_event)
   if (this->allParts.find(vis->GetParent()->GetName()) !=
       this->allParts.end())
   {
+    this->DeselectAll();
+
     // TODO open inspector.
     return true;
   }
-
   return false;
 }
 
@@ -909,7 +921,7 @@ void ModelCreator::GenerateSDF()
   // set center of all parts to be origin
   math::Vector3 mid;
   for (partsIt = this->allParts.begin(); partsIt != this->allParts.end();
-       ++partsIt)
+      ++partsIt)
   {
     PartData *part = partsIt->second;
     mid += part->partVisual->GetWorldPose().pos;
@@ -920,7 +932,7 @@ void ModelCreator::GenerateSDF()
 
   // loop through all parts and generate sdf
   for (partsIt = this->allParts.begin(); partsIt != this->allParts.end();
-       ++partsIt)
+      ++partsIt)
   {
     visualNameStream.str("");
     collisionNameStream.str("");
