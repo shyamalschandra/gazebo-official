@@ -39,6 +39,7 @@ set (plugins
   SkidSteerDrivePlugin
   SonarPlugin
   SphereAtlasDemoPlugin
+  TireFrictionPlugin
   VehiclePlugin)
 
 if (HAVE_USB AND UNIX AND NOT APPLE)
