@@ -23,6 +23,7 @@
 #include <map>
 #include <sdf/sdf.hh>
 
+#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/KeyEvent.hh"
@@ -317,6 +318,9 @@ namespace gazebo
       /// \param[in] _color Selected color.
       private: void OnColorSelected(QColor _color);
 
+      /// \brief TODO
+      private: void OnTextureSelected(QString _texture);
+
       /// \brief Mouse event filter callback when mouse is moved.
       /// \param[in] _event The mouse event.
       /// \return True if the event was handled
@@ -413,6 +417,9 @@ namespace gazebo
       /// \brief The color currently selected. If none is selected, it will be
       /// QColor::Invalid.
       private: QColor selectedColor;
+
+      /// \brief TODO
+      private: QString selectedTexture;
 
       /// \brief The current level that is being edited.
       private: int currentLevel;

@@ -291,6 +291,13 @@ void StairsInspectorDialog::SetColor(const QColor _color)
     }
   }
   this->colorComboBox->setCurrentIndex(index);
+
+  // Add a new color
+  this->colorList.push_back(_color);
+  QPixmap colorIcon(15, 15);
+  colorIcon.fill(this->colorList.back());
+  this->colorComboBox->addItem(colorIcon, QString(""));
+  this->colorComboBox->setCurrentIndex(this->colorComboBox->count()-1);
 }
 
 /////////////////////////////////////////////////

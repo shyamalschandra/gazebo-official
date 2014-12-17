@@ -1,7 +1,7 @@
 set (files
   beigeWall.jpg
-  building_frame.png
   bricks.png
+  building_frame.png
   ceiling_tiled.jpg
   clouds.jpg
   dirt_diffusespecular.png
