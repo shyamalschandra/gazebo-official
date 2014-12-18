@@ -15,6 +15,7 @@
  *
  */
 
+#include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <sdf/sdf.hh>
 
@@ -345,20 +346,27 @@ bool InsertModelWidget::IsPathAccessible(const boost::filesystem::path &_path)
 {
   try
   {
-    // Try to read the path. Should throw filesystem_error if permission denied.
-    boost::filesystem::is_empty(_path);
+    if (boost::filesystem::is_directory(_path))
+    {
+      boost::filesystem::directory_iterator iter(_path);
+      iter->status();
+      return true;
+    }
+    else
+    {
+      std::ifstream ifs(_path.string().c_str(), std::ifstream::in);
+      return ifs.good();
+    }
   }
   catch(boost::filesystem::filesystem_error & e)
   {
     gzerr << "Permission denied for directory: " << _path << std::endl;
-    return false;
   }
   catch(std::exception & e)
   {
     gzerr << "Unexpected error while accessing to: " << _path << "."
           << "Error reported: " << e.what() << std::endl;
-    return false;
   }
 
-  return true;
+  return false;
 }
