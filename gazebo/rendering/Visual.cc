@@ -215,10 +215,7 @@ void Visual::Fini()
 
   if (this->dataPtr->sceneNode != NULL)
   {
-    this->DestroyAllAttachedMovableObjects(this->dataPtr->sceneNode);
-    this->dataPtr->sceneNode->removeAndDestroyAllChildren();
     this->dataPtr->sceneNode->detachAllObjects();
-
     this->dataPtr->scene->GetManager()->destroySceneNode(
         this->dataPtr->sceneNode);
     this->dataPtr->sceneNode = NULL;
@@ -1023,6 +1020,9 @@ void Visual::SetMaterial(const std::string &_materialName, bool _unique)
            << ". Object will appear white.\n";
   }
 
+  // Re-apply the transparency filter for the last known transparency value
+  this->SetTransparencyInnerLoop();
+
   // Apply material to all child visuals
   for (std::vector<VisualPtr>::iterator iter = this->dataPtr->children.begin();
        iter != this->dataPtr->children.end(); ++iter)
@@ -1316,20 +1316,8 @@ void Visual::SetWireframe(bool _show)
 }
 
 //////////////////////////////////////////////////
-void Visual::SetTransparency(float _trans)
+void Visual::SetTransparencyInnerLoop()
 {
-  if (math::equal(_trans, this->dataPtr->transparency))
-    return;
-
-  this->dataPtr->transparency = std::min(
-      std::max(_trans, static_cast<float>(0.0)), static_cast<float>(1.0));
-  std::vector<VisualPtr>::iterator iter;
-  for (iter = this->dataPtr->children.begin();
-      iter != this->dataPtr->children.end(); ++iter)
-  {
-    (*iter)->SetTransparency(_trans);
-  }
-
   for (unsigned int i = 0; i < this->dataPtr->sceneNode->numAttachedObjects();
       i++)
   {
@@ -1381,7 +1369,6 @@ void Visual::SetTransparency(float _trans)
             pass->setDepthCheckEnabled(true);
           }
 
-
           dc = pass->getDiffuse();
           dc.a =(1.0f - this->dataPtr->transparency);
           pass->setDiffuse(dc);
@@ -1389,6 +1376,24 @@ void Visual::SetTransparency(float _trans)
       }
     }
   }
+}
+
+//////////////////////////////////////////////////
+void Visual::SetTransparency(float _trans)
+{
+  if (math::equal(_trans, this->dataPtr->transparency))
+    return;
+
+  this->dataPtr->transparency = std::min(
+      std::max(_trans, static_cast<float>(0.0)), static_cast<float>(1.0));
+  std::vector<VisualPtr>::iterator iter;
+  for (iter = this->dataPtr->children.begin();
+      iter != this->dataPtr->children.end(); ++iter)
+  {
+    (*iter)->SetTransparency(_trans);
+  }
+
+  this->SetTransparencyInnerLoop();
 
   if (this->dataPtr->useRTShader && this->dataPtr->scene->GetInitialized())
     RTShaderSystem::Instance()->UpdateShaders();
@@ -1400,13 +1405,6 @@ void Visual::SetHighlighted(bool _highlighted)
   if (_highlighted)
   {
     math::Box bbox = this->GetBoundingBox();
-    // GetBoundingBox returns the box in world coordinates
-    // Invert thes scale of the box before attaching to the visual
-    // so that the new inherited scale after attachment is correct.
-    math::Vector3 scale = Conversions::Convert(
-          this->dataPtr->sceneNode->_getDerivedScale());
-    bbox.min = bbox.min / scale;
-    bbox.max = bbox.max / scale;
 
     // Create the bounding box if it's not already created.
     if (!this->dataPtr->boundingBox)
@@ -1795,6 +1793,7 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
     Ogre::MovableObject *obj = node->getAttachedObject(i);
 
     if (obj->isVisible() && obj->getMovableType() != "gazebo::dynamiclines"
+        && obj->getMovableType() != "BillboardSet"
         && obj->getVisibilityFlags() != GZ_VISIBILITY_GUI)
     {
       Ogre::Any any = obj->getUserAny();
@@ -1826,8 +1825,7 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
         transform[3][3] = 1;
         // get oriented bounding box in object's local space
         bb.transformAffine(transform);
-        if (node->getParentSceneNode())
-          bb.scale(node->getParentSceneNode()->_getDerivedScale());
+
         min = Conversions::Convert(bb.getMinimum());
         max = Conversions::Convert(bb.getMaximum());
       }

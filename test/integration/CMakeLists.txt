@@ -68,6 +68,7 @@ set(tests
   road.cc
   sensor.cc
   server_fixture.cc
+  sim_events.cc
   speed.cc
   stress_spawn_models.cc
   #state_log.cc
@@ -75,7 +76,9 @@ set(tests
   transceiver.cc
   transport.cc
   world.cc
+  world_clone.cc
   world_entity_below_point.cc
+  world_population.cc
   worlds_installed.cc
   )
 
