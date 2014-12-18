@@ -1,12 +1,12 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
-  ${SDFormat_INCLUDE_DIRS}
+  ${SDF_INCLUDE_DIRS}
   ${OGRE_INCLUDE_DIRS}
 )
 
 link_directories(
-  ${SDFormat_LIBRARY_DIRS}
+  ${SDF_LIBRARY_DIRS}
 )
 
 if (HAVE_BULLET)
@@ -17,6 +17,10 @@ set (plugins
   ExceptionModelPluginConstructor
   ExceptionModelPluginInit
   ExceptionModelPluginLoad
+  ForceTorqueModelRemovalTestPlugin
+  Issue1208Plugin
+  ModelTrajectoryTestPlugin
+  SpringTestPlugin
 )
 
 foreach (src ${plugins})
