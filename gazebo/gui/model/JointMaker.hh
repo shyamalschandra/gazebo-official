@@ -257,6 +257,9 @@ namespace gazebo
       /// \brief Visual of the dynamic line
       public: rendering::VisualPtr visual;
 
+      /// \brief Joint visual.
+      public: rendering::JointVisualPtr jointVisual;
+
       /// \brieft Visual of the hotspot
       public: rendering::VisualPtr hotspot;
 
