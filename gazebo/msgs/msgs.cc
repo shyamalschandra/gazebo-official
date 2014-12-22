@@ -220,21 +220,21 @@ namespace gazebo
     }
 
     /////////////////////////////////////////////////
+    msgs::Vector2d Convert(const math::Vector2d &_v)
+    {
+      msgs::Vector2d result;
+      result.set_x(_v.x);
+      result.set_y(_v.y);
+      return result;
+    }
+
+    /////////////////////////////////////////////////
     msgs::Vector3d Convert(const math::Vector3 &_v)
     {
       msgs::Vector3d result;
       result.set_x(_v.x);
       result.set_y(_v.y);
       result.set_z(_v.z);
-      return result;
-    }
-
-    /////////////////////////////////////////////////
-    msgs::Vector2d Convert(const math::Vector2d &_v)
-    {
-      msgs::Vector2d result;
-      result.set_x(_v.x);
-      result.set_y(_v.y);
       return result;
     }
 
@@ -405,33 +405,12 @@ namespace gazebo
           _p.d());
     }
 
-    /////////////////////////////////////////////
     msgs::GUI GUIFromSDF(sdf::ElementPtr _sdf)
     {
       msgs::GUI result;
 
       result.set_fullscreen(_sdf->Get<bool>("fullscreen"));
 
-      // Set gui plugins
-      if (_sdf->HasElement("plugin"))
-      {
-        sdf::ElementPtr pluginElem = _sdf->GetElement("plugin");
-        while (pluginElem)
-        {
-          msgs::Plugin *plgnMsg = result.add_plugin();
-          plgnMsg->set_name(pluginElem->Get<std::string>("name"));
-          plgnMsg->set_filename(pluginElem->Get<std::string>("filename"));
-
-          std::stringstream ss;
-          for (sdf::ElementPtr innerElem = pluginElem->GetFirstElement();
-              innerElem; innerElem = innerElem->GetNextElement(""))
-          {
-            ss << innerElem->ToString("");
-          }
-          plgnMsg->set_innerxml(ss.str());
-          pluginElem = pluginElem->GetNextElement("plugin");
-        }
-      }
 
       if (_sdf->HasElement("camera"))
       {
@@ -970,6 +949,656 @@ namespace gazebo
         elem->GetElement("falloff")->Set(_msg.spot_falloff());
       }
       return lightSDF;
+    }
+
+    ////////////////////////////////////////////////////////
+    void AddBoxLink(msgs::Model &_msg, double _mass,
+                    const math::Vector3 &_size)
+    {
+      _msg.add_link();
+      int linkCount = _msg.link_size();
+      msgs::Link *link = _msg.mutable_link(linkCount-1);
+      {
+        std::ostringstream linkName;
+        linkName << "link" << linkCount;
+        link->set_name(linkName.str());
+      }
+
+      msgs::Inertial *inertial = link->mutable_inertial();
+      inertial->set_mass(_mass);
+      {
+        double dx = _size.x;
+        double dy = _size.y;
+        double dz = _size.z;
+        double ixx = _mass/12.0 * (dy*dy + dz*dz);
+        double iyy = _mass/12.0 * (dz*dz + dx*dx);
+        double izz = _mass/12.0 * (dx*dx + dy*dy);
+        inertial->set_ixx(ixx);
+        inertial->set_iyy(iyy);
+        inertial->set_izz(izz);
+        inertial->set_ixy(0.0);
+        inertial->set_ixz(0.0);
+        inertial->set_iyz(0.0);
+      }
+
+      link->add_collision();
+      msgs::Collision *collision = link->mutable_collision(0);
+      collision->set_name("collision");
+
+      msgs::Geometry *geometry = collision->mutable_geometry();
+      geometry->set_type(Geometry_Type_BOX);
+      msgs::Set(geometry->mutable_box()->mutable_size(), _size);
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Model &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<model name='"
+             << _msg.name()
+             << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      if (_msg.has_is_static())
+      {
+        stream << "<static>" << _msg.is_static() << "</static>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      for (int i = 0; i < _msg.joint_size(); ++i)
+      {
+        stream << msgs::ToSDF(_msg.joint(i));
+      }
+      for (int i = 0; i < _msg.link_size(); ++i)
+      {
+        stream << msgs::ToSDF(_msg.link(i));
+      }
+      // ignore the deleted field, since it's not used in sdformat
+      if (_msg.visual_size() > 0)
+      {
+        gzerr << "Model visuals not yet parsed" << std::endl;
+      }
+      // ignore the scale field, since it's not used in sdformat
+
+      stream << "</model>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Link &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<link name='"
+             << _msg.name()
+             << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      if (_msg.has_self_collide())
+      {
+        stream << "<self_collide>" << _msg.self_collide() << "</self_collide>";
+      }
+      if (_msg.has_gravity())
+      {
+        stream << "<gravity>" << _msg.gravity() << "</gravity>";
+      }
+      if (_msg.has_kinematic())
+      {
+        stream << "<kinematic>" << _msg.kinematic() << "</kinematic>";
+      }
+      // ignore the enabled field, since it's not used in sdformat
+      if (_msg.has_inertial())
+      {
+        stream << msgs::ToSDF(_msg.inertial());
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      if (_msg.visual_size() > 0)
+      {
+        gzerr << "Link visuals not yet parsed" << std::endl;
+      }
+      for (int i = 0; i < _msg.collision_size(); ++i)
+      {
+        stream << msgs::ToSDF(_msg.collision(i));
+      }
+      if (_msg.sensor_size() > 0)
+      {
+        gzerr << "Link sensors not yet parsed" << std::endl;
+      }
+      if (_msg.projector_size() > 0)
+      {
+        gzerr << "Link projectors not yet parsed" << std::endl;
+      }
+      // ignore the canonical field, since it's not used in sdformat
+
+      stream << "</link>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Collision &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<collision name='"
+             << _msg.name()
+             << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      if (_msg.has_laser_retro())
+      {
+        stream << "<laser_retro>" << _msg.laser_retro() << "</laser_retro>";
+      }
+      if (_msg.has_max_contacts())
+      {
+        stream << "<max_contacts>" << _msg.max_contacts() << "</max_contacts>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      if (_msg.has_geometry())
+      {
+        stream << msgs::ToSDF(_msg.geometry());
+      }
+      if (_msg.has_surface())
+      {
+        stream << msgs::ToSDF(_msg.surface());
+      }
+      // also ignore the visual field, since it's not used in sdformat
+
+      stream << "</collision>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Geometry &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<geometry>";
+
+      if (!_msg.has_type())
+      {
+        gzerr << "msgs::Geometry missing type" << std::endl;
+        stream << "</geometry>";
+        return stream.str();
+      }
+
+      if (_msg.type() == Geometry_Type_BOX &&
+          _msg.has_box())
+      {
+        stream << msgs::ToSDF(_msg.box());
+      }
+      else if (_msg.type() == Geometry_Type_CYLINDER &&
+          _msg.has_cylinder())
+      {
+        stream << msgs::ToSDF(_msg.cylinder());
+      }
+      else if (_msg.type() == Geometry_Type_HEIGHTMAP &&
+          _msg.has_heightmap())
+      {
+        gzerr << "ToSDF(msgs::HeightmapGeom not implemented" << std::endl;
+        // stream << msgs::ToSDF(_msg.heightmap());
+      }
+      else if (_msg.type() == Geometry_Type_IMAGE &&
+          _msg.has_image())
+      {
+        stream << msgs::ToSDF(_msg.image());
+      }
+      else if (_msg.type() == Geometry_Type_MESH &&
+          _msg.has_mesh())
+      {
+        gzerr << "ToSDF(msgs::MeshGeom not implemented" << std::endl;
+        // stream << msgs::ToSDF(_msg.mesh());
+      }
+      else if (_msg.type() == Geometry_Type_PLANE &&
+          _msg.has_plane())
+      {
+        stream << msgs::ToSDF(_msg.plane());
+      }
+      else if (_msg.type() == Geometry_Type_SPHERE &&
+          _msg.has_sphere())
+      {
+        stream << msgs::ToSDF(_msg.sphere());
+      }
+      else
+      {
+        gzerr << "Unrecognized geometry type" << std::endl;
+      }
+
+      stream << "</geometry>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::BoxGeom &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<box>"
+             << "<size>"
+             << msgs::Convert(_msg.size())
+             << "</size>"
+             << "</box>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::CylinderGeom &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<cylinder>"
+             << "<radius>" << _msg.radius() << "</radius>"
+             << "<length>" << _msg.length() << "</length>"
+             << "</cylinder>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::ImageGeom &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<image>"
+             << "<uri>" << _msg.uri() << "</uri>";
+      if (_msg.has_scale())
+      {
+        stream << "<scale>" << _msg.scale() << "</scale>";
+      }
+      if (_msg.has_threshold())
+      {
+        stream << "<threshold>" << _msg.threshold() << "</threshold>";
+      }
+      if (_msg.has_height())
+      {
+        stream << "<height>" << _msg.height() << "</height>";
+      }
+      if (_msg.has_granularity())
+      {
+        stream << "<granularity>" << _msg.granularity() << "</granularity>";
+      }
+      stream << "</image>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::PlaneGeom &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<plane>"
+             << "<normal>"
+             << msgs::Convert(_msg.normal())
+             << "</normal>"
+             << "<size>"
+             << msgs::Convert(_msg.size())
+             << "</size>";
+      if (_msg.has_d())
+      {
+        gzerr << "sdformat doesn't have Plane.d variable" << std::endl;
+      }
+      stream << "</plane>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::SphereGeom &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<sphere>"
+             << "<radius>" << _msg.radius() << "</radius>"
+             << "</sphere>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Surface &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<surface>";
+
+      // bounce element block
+      stream << "<bounce>";
+      if (_msg.has_restitution_coefficient())
+      {
+        stream << "<restitution_coefficient>"
+               << _msg.restitution_coefficient()
+               << "</restitution_coefficient>";
+      }
+      if (_msg.has_bounce_threshold())
+      {
+        stream << "<threshold>"
+               << _msg.bounce_threshold()
+               << "</threshold>";
+      }
+      stream << "</bounce>";
+
+      // friction element block
+      if (_msg.has_friction())
+      {
+        stream << msgs::ToSDF(_msg.friction());
+      }
+
+      // contact element block
+      stream << "<contact>";
+      if (_msg.has_collide_without_contact())
+      {
+        stream << "<collide_without_contact>"
+               << _msg.collide_without_contact()
+               << "</collide_without_contact>";
+      }
+      if (_msg.has_collide_without_contact_bitmask())
+      {
+        stream << "<collide_without_contact_bitmask>"
+               << _msg.collide_without_contact_bitmask()
+               << "</collide_without_contact_bitmask>";
+      }
+      {
+        std::ostringstream odeStream, bulletStream;
+        odeStream    << "<ode>";
+        bulletStream << "<bullet>";
+        if (_msg.has_soft_cfm())
+        {
+          odeStream    << "<soft_cfm>" << _msg.soft_cfm() << "</soft_cfm>";
+          bulletStream << "<soft_cfm>" << _msg.soft_cfm() << "</soft_cfm>";
+        }
+        if (_msg.has_soft_erp())
+        {
+          odeStream    << "<soft_erp>" << _msg.soft_erp() << "</soft_erp>";
+          bulletStream << "<soft_erp>" << _msg.soft_erp() << "</soft_erp>";
+        }
+        if (_msg.has_kp())
+        {
+          odeStream    << "<kp>" << _msg.kp() << "</kp>";
+          bulletStream << "<kp>" << _msg.kp() << "</kp>";
+        }
+        if (_msg.has_kd())
+        {
+          odeStream    << "<kd>" << _msg.kd() << "</kd>";
+          bulletStream << "<kd>" << _msg.kd() << "</kd>";
+        }
+        if (_msg.has_max_vel())
+        {
+          odeStream << "<max_vel>" << _msg.max_vel() << "</max_vel>";
+        }
+        if (_msg.has_min_depth())
+        {
+          odeStream << "<min_depth>" << _msg.min_depth() << "</min_depth>";
+        }
+        odeStream    << "</ode>";
+        bulletStream << "</bullet>";
+        stream << odeStream.str() << bulletStream.str();
+      }
+      stream << "</contact>";
+
+      stream << "</surface>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Inertial &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<inertial>";
+
+      if (_msg.has_mass())
+      {
+        stream << "<mass>" << _msg.mass() << "</mass>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>" << msgs::Convert(_msg.pose()) << "</pose>";
+      }
+
+      stream << "<inertia>";
+      if (_msg.has_ixx())
+      {
+        stream << "<ixx>" << _msg.ixx() << "</ixx>";
+      }
+      if (_msg.has_ixy())
+      {
+        stream << "<ixy>" << _msg.ixy() << "</ixy>";
+      }
+      if (_msg.has_ixz())
+      {
+        stream << "<ixz>" << _msg.ixz() << "</ixz>";
+      }
+      if (_msg.has_iyy())
+      {
+        stream << "<iyy>" << _msg.iyy() << "</iyy>";
+      }
+      if (_msg.has_iyz())
+      {
+        stream << "<iyz>" << _msg.iyz() << "</iyz>";
+      }
+      if (_msg.has_izz())
+      {
+        stream << "<izz>" << _msg.izz() << "</izz>";
+      }
+      stream << "</inertia>";
+
+      stream << "</inertial>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Joint &_msg,
+                      int _useParentModelFrame1,
+                      int _useParentModelFrame2)
+    {
+      std::ostringstream stream;
+      stream << "<joint name='"
+             << _msg.name();
+      if (_msg.has_type())
+      {
+        if (_msg.type() == Joint::REVOLUTE)
+        {
+          stream << "' type='revolute";
+        }
+        else if (_msg.type() == Joint::REVOLUTE2)
+        {
+          stream << "' type='revolute2";
+        }
+        else if (_msg.type() == Joint::PRISMATIC)
+        {
+          stream << "' type='prismatic";
+        }
+        else if (_msg.type() == Joint::UNIVERSAL)
+        {
+          stream << "' type='universal";
+        }
+        else if (_msg.type() == Joint::BALL)
+        {
+          stream << "' type='ball";
+        }
+        else if (_msg.type() == Joint::SCREW)
+        {
+          stream << "' type='screw";
+        }
+        else if (_msg.type() == Joint::GEARBOX)
+        {
+          stream << "' type='gearbox";
+        }
+      }
+      stream << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      // ignore the parent_id field, since it's not used in sdformat
+      // ignore the child_id field, since it's not used in sdformat
+      // ignore the angle field, since it's not used in sdformat
+      if (_msg.has_parent())
+      {
+        stream << "<parent>" << _msg.parent() << "</parent>";
+      }
+      if (_msg.has_child())
+      {
+        stream << "<child>" << _msg.child() << "</child>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      if (_msg.has_axis1())
+      {
+        stream << ToSDF(_msg.axis1(), "axis", _useParentModelFrame1);
+      }
+      if (_msg.has_axis2())
+      {
+        stream << ToSDF(_msg.axis2(), "axis2", _useParentModelFrame2);
+      }
+
+      stream << "<physics>"
+             << "<ode>";
+      if (_msg.has_cfm())
+      {
+        stream << "<cfm>" << _msg.cfm() << "</cfm>";
+      }
+      if (_msg.has_bounce())
+      {
+        stream << "<bounce>" << _msg.bounce() << "</bounce>";
+      }
+      if (_msg.has_velocity())
+      {
+        stream << "<velocity>" << _msg.velocity() << "</velocity>";
+      }
+      if (_msg.has_fudge_factor())
+      {
+        stream << "<fudge_factor>" << _msg.fudge_factor() << "</fudge_factor>";
+      }
+
+      stream << "<limit>";
+      if (_msg.has_limit_cfm())
+      {
+        stream << "<cfm>" << _msg.limit_cfm() << "</cfm>";
+      }
+      if (_msg.has_limit_erp())
+      {
+        stream << "<erp>" << _msg.limit_erp() << "</erp>";
+      }
+      stream << "</limit>"
+             << "<suspension>";
+      if (_msg.has_suspension_cfm())
+      {
+        stream << "<cfm>" << _msg.suspension_cfm() << "</cfm>";
+      }
+      if (_msg.has_suspension_erp())
+      {
+        stream << "<erp>" << _msg.suspension_erp() << "</erp>";
+      }
+      stream << "</suspension>"
+             << "</ode>"
+             << "</physics>";
+      // also ignore the sensor field for now
+
+      stream << "</joint>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Axis &_msg,
+                      const std::string &_name,
+                      int _useParentModelFrame)
+    {
+      std::ostringstream stream;
+      stream << "<" << _name << ">";
+
+      if (_msg.has_xyz())
+      {
+        stream << "<xyz>"
+               << msgs::Convert(_msg.xyz())
+               << "</xyz>";
+      }
+      if (_useParentModelFrame >= 0)
+      {
+        stream << "<use_parent_model_frame>"
+               << _useParentModelFrame
+               << "</use_parent_model_frame>";
+      }
+
+      stream << "<dynamics>";
+      if (_msg.has_damping())
+      {
+        stream << "<damping>"
+               << _msg.damping()
+               << "</damping>";
+      }
+      if (_msg.has_friction())
+      {
+        stream << "<friction>"
+               << _msg.friction()
+               << "</friction>";
+      }
+      stream << "</dynamics>";
+
+      stream << "<limit>";
+      if (_msg.has_limit_lower())
+      {
+        stream << "<lower>"
+               << _msg.limit_lower()
+               << "</lower>";
+      }
+      if (_msg.has_limit_upper())
+      {
+        stream << "<upper>"
+               << _msg.limit_upper()
+               << "</upper>";
+      }
+      if (_msg.has_limit_effort())
+      {
+        stream << "<effort>"
+               << _msg.limit_effort()
+               << "</effort>";
+      }
+      if (_msg.has_limit_velocity())
+      {
+        stream << "<velocity>"
+               << _msg.limit_velocity()
+               << "</velocity>";
+      }
+      stream << "</limit>";
+
+      stream << "</" << _name << ">";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Friction &_msg)
+    {
+      std::ostringstream stream;
+      stream
+        << "<friction>"
+        << "<ode>";
+      if (_msg.has_mu())
+      {
+        stream << "<mu>" << _msg.mu() << "</mu>";
+      }
+      if (_msg.has_mu2())
+      {
+        stream << "<mu2>" << _msg.mu2() << "</mu2>";
+      }
+      if (_msg.has_slip1())
+      {
+        stream << "<slip1>" << _msg.slip1() << "</slip1>";
+      }
+      if (_msg.has_slip2())
+      {
+        stream << "<slip2>" << _msg.slip2() << "</slip2>";
+      }
+      if (_msg.has_fdir1())
+      {
+        stream << "<fdir1>" << msgs::Convert(_msg.fdir1()) << "</fdir1>";
+      }
+      stream
+        << "</ode>"
+        << "</friction>";
+      return stream.str();
     }
 
     /////////////////////////////////////////////////

@@ -190,6 +190,9 @@ void World::Load(sdf::ElementPtr _sdf)
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->GetName());
 
+  // Publish clock for diagnostics
+  this->clockPub = this->node->Advertise<msgs::Time>("~/clock", 10);
+
   // pose pub for server side, mainly used for updating and timestamping
   // Scene, which in turn will be used by rendering sensors.
   // TODO: replace local communication with shared memory for efficiency.
@@ -595,9 +598,12 @@ void World::Step()
         util::LogRecord::Instance()->Notify();
       this->pauseTime += stepTime;
     }
+
+    DIAG_TIMER_LAP("World::Step", "update");
   }
 
   this->ProcessMessages();
+  DIAG_TIMER_LAP("World::Step", "processMessages");
 
   DIAG_TIMER_STOP("World::Step");
 
@@ -623,7 +629,7 @@ void World::Step(unsigned int _steps)
   bool wait = true;
   while (wait)
   {
-    common::Time::MSleep(1);
+    common::Time::NSleep(1);
     boost::recursive_mutex::scoped_lock lock(*this->worldUpdateMutex);
     if (this->stepInc == 0 || this->stop)
       wait = false;
@@ -652,6 +658,9 @@ void World::Update()
   event::Events::worldUpdateBegin(this->updateInfo);
 
   DIAG_TIMER_LAP("World::Update", "Events::worldUpdateBegin");
+
+  /// \brief Publish clock
+  this->clockPub->Publish(msgs::Convert(this->updateInfo.simTime));
 
   // Update all the models
   (*this.*modelUpdateFunc)();
@@ -717,6 +726,7 @@ void World::Update()
   DIAG_TIMER_LAP("World::Update", "ContactManager::PublishContacts");
 
   event::Events::worldUpdateEnd();
+  DIAG_TIMER_LAP("World::Update", "endEvent");
 
   DIAG_TIMER_STOP("World::Update");
 }
@@ -750,6 +760,8 @@ void World::Fini()
 #ifdef HAVE_OPENAL
   util::OpenAL::Instance()->Fini();
 #endif
+
+  util::DiagnosticManager::Instance()->Fini();
 }
 
 //////////////////////////////////////////////////
@@ -1063,6 +1075,8 @@ void World::SetPaused(bool _p)
 {
   if (this->pause == _p)
     return;
+
+  DIAG_MARKER("paused");
 
   {
     boost::recursive_mutex::scoped_lock(*this->worldUpdateMutex);
@@ -1829,6 +1843,7 @@ void World::ProcessMessages()
 {
   {
     boost::recursive_mutex::scoped_lock lock(*this->receiveMutex);
+    DIAG_TIMER_START("World::ProcessMessages");
 
     if ((this->posePub && this->posePub->HasConnections()) ||
         (this->poseLocalPub && this->poseLocalPub->HasConnections()))
@@ -1875,17 +1890,24 @@ void World::ProcessMessages()
       }
     }
     this->publishModelPoses.clear();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Pose");
   }
 
   if (common::Time::GetWallTime() - this->prevProcessMsgsTime >
       this->processMsgsPeriod)
   {
     this->ProcessEntityMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Entities");
     this->ProcessRequestMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Requests");
     this->ProcessFactoryMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Factory");
     this->ProcessModelMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Model");
     this->prevProcessMsgsTime = common::Time::GetWallTime();
   }
+
+  DIAG_TIMER_STOP("World::ProcessMessages");
 }
 
 //////////////////////////////////////////////////
