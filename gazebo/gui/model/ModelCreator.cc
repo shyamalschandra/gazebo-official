@@ -43,6 +43,10 @@
 #include "gazebo/gui/ModelAlign.hh"
 
 #include "gazebo/gui/model/ModelData.hh"
+#include "gazebo/gui/model/PartGeneralConfig.hh"
+#include "gazebo/gui/model/PartVisualConfig.hh"
+#include "gazebo/gui/model/PartCollisionConfig.hh"
+#include "gazebo/gui/model/PartInspector.hh"
 #include "gazebo/gui/model/JointMaker.hh"
 #include "gazebo/gui/model/ModelCreator.hh"
 
@@ -56,12 +60,11 @@ ModelCreator::ModelCreator()
   this->modelName = "";
 
   this->modelTemplateSDF.reset(new sdf::SDF);
-  this->modelTemplateSDF->SetFromString(this->GetTemplateSDFString());
+  this->modelTemplateSDF->SetFromString(ModelData::GetTemplateSDFString());
 
   this->manipMode = "";
-  this->boxCounter = 0;
-  this->cylinderCounter = 0;
-  this->sphereCounter = 0;
+  this->partCounter = 0;
+  this->customCounter = 0;
   this->modelCounter = 0;
 
   this->editTransparency = 0.4;
@@ -74,6 +77,10 @@ ModelCreator::ModelCreator()
   this->jointMaker = new JointMaker();
 
   connect(g_editModelAct, SIGNAL(toggled(bool)), this, SLOT(OnEdit(bool)));
+  this->inspectAct = new QAction(tr("Open Part Inspector"), this);
+  connect(this->inspectAct, SIGNAL(triggered()), this,
+      SLOT(OnOpenInspector()));
+
   connect(g_deleteAct, SIGNAL(DeleteSignal(const std::string &)), this,
           SLOT(OnDelete(const std::string &)));
 
@@ -175,7 +182,7 @@ std::string ModelCreator::AddBox(const math::Vector3 &_size,
   }
 
   std::ostringstream linkNameStream;
-  linkNameStream << "unit_box_" << this->boxCounter++;
+  linkNameStream << "part_" << this->partCounter++;
   std::string linkName = linkNameStream.str();
 
   rendering::VisualPtr linkVisual(new rendering::Visual(linkName,
@@ -218,7 +225,7 @@ std::string ModelCreator::AddSphere(double _radius,
     this->Reset();
 
   std::ostringstream linkNameStream;
-  linkNameStream << "unit_sphere_" << this->sphereCounter++;
+  linkNameStream << "part_" << this->partCounter++;
   std::string linkName = linkNameStream.str();
 
   rendering::VisualPtr linkVisual(new rendering::Visual(
@@ -247,6 +254,7 @@ std::string ModelCreator::AddSphere(double _radius,
   }
 
   this->CreatePart(visVisual);
+
   this->mouseVisual = linkVisual;
 
   return linkName;
@@ -260,7 +268,7 @@ std::string ModelCreator::AddCylinder(double _radius, double _length,
     this->Reset();
 
   std::ostringstream linkNameStream;
-  linkNameStream << "unit_cylinder_" << this->cylinderCounter++;
+  linkNameStream << "part_" << this->partCounter++;
   std::string linkName = linkNameStream.str();
 
   rendering::VisualPtr linkVisual(new rendering::Visual(
@@ -291,6 +299,7 @@ std::string ModelCreator::AddCylinder(double _radius, double _length,
   }
 
   this->CreatePart(visVisual);
+
   this->mouseVisual = linkVisual;
 
   return linkName;
@@ -336,26 +345,41 @@ std::string ModelCreator::AddCustom(const std::string &_path,
   }
 
   this->CreatePart(visVisual);
+
   this->mouseVisual = linkVisual;
 
   return linkName;
 }
 
 /////////////////////////////////////////////////
-void ModelCreator::CreatePart(const rendering::VisualPtr &_visual)
+PartData *ModelCreator::CreatePart(const rendering::VisualPtr &_visual)
 {
-  PartData *part = new PartData;
-
+  PartData *part = new PartData();
   part->partVisual = _visual->GetParent();
-  part->visuals.push_back(_visual);
+  part->AddVisual(_visual);
 
-  part->name = part->partVisual->GetName();
-  part->pose = part->partVisual->GetWorldPose();
-  part->gravity = true;
-  part->selfCollide = false;
-  part->kinematic = false;
+  // create collision with identical geometry
+  rendering::VisualPtr collisionVis =
+      _visual->Clone(part->partVisual->GetName() + "_collision",
+      part->partVisual);
 
-  this->allParts[part->name] = part;
+//  collisoinVis->SetMaterial("Gazebo/OrangeTransparent");
+  collisionVis->SetMaterial("Gazebo/Orange");
+  collisionVis->SetTransparency(0.8);
+  // fix for transparency alpha compositing
+  Ogre::MovableObject *colObj = collisionVis->GetSceneNode()->
+      getAttachedObject(0);
+  colObj->setRenderQueueGroup(colObj->getRenderQueueGroup()+1);
+
+//  collisoinVis->SetTransparency(this->editTransparency);
+//  collisoinVis->SetVisible(false);
+  part->AddCollision(collisionVis);
+
+  std::string partName = part->partVisual->GetName();
+  part->SetName(partName);
+  part->SetPose(part->partVisual->GetWorldPose());
+  this->allParts[partName] = part;
+  return part;
 }
 
 /////////////////////////////////////////////////
@@ -375,14 +399,25 @@ void ModelCreator::RemovePart(const std::string &_partName)
     return;
 
   rendering::ScenePtr scene = part->partVisual->GetScene();
-  for (unsigned int i = 0; i < part->visuals.size(); ++i)
+  std::map<rendering::VisualPtr, msgs::Visual>::iterator it;
+  for (it = part->visuals.begin(); it != part->visuals.end(); ++it)
   {
-    rendering::VisualPtr vis = part->visuals[i];
+    rendering::VisualPtr vis = it->first;
     scene->RemoveVisual(vis);
   }
   scene->RemoveVisual(part->partVisual);
-  part->visuals.clear();
+  std::map<rendering::VisualPtr, msgs::Collision>::iterator colIt;
+  for (colIt = part->collisions.begin(); colIt != part->collisions.end();
+      ++colIt)
+  {
+    rendering::VisualPtr vis = colIt->first;
+    scene->RemoveVisual(vis);
+  }
+
+  scene->RemoveVisual(part->partVisual);
+
   part->partVisual.reset();
+  delete part->inspector;
 
   this->allParts.erase(_partName);
 }
@@ -481,36 +516,6 @@ void ModelCreator::CreateTheEntity()
   msgs::Factory msg;
   msg.set_sdf(this->modelSDF->ToString());
   this->makerPub->Publish(msg);
-}
-
-/////////////////////////////////////////////////
-std::string ModelCreator::GetTemplateSDFString()
-{
-  std::ostringstream newModelStr;
-  newModelStr << "<sdf version ='" << SDF_VERSION << "'>"
-    << "<model name='template_model'>"
-    << "<pose>0 0 0.0 0 0 0</pose>"
-    << "<link name ='link'>"
-    <<   "<visual name ='visual'>"
-    <<     "<pose>0 0 0.0 0 0 0</pose>"
-    <<     "<geometry>"
-    <<       "<box>"
-    <<         "<size>1.0 1.0 1.0</size>"
-    <<       "</box>"
-    <<     "</geometry>"
-    <<     "<material>"
-    <<       "<script>"
-    <<         "<uri>file://media/materials/scripts/gazebo.material</uri>"
-    <<         "<name>Gazebo/Grey</name>"
-    <<       "</script>"
-    <<     "</material>"
-    <<   "</visual>"
-    << "</link>"
-    << "<static>true</static>"
-    << "</model>"
-    << "</sdf>";
-
-  return newModelStr.str();
 }
 
 /////////////////////////////////////////////////
@@ -674,7 +679,7 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
         this->allParts.end())
     {
       PartData *part = this->allParts[this->mouseVisual->GetName()];
-      part->pose = this->mouseVisual->GetWorldPose();
+      part->SetPose(this->mouseVisual->GetWorldPose());
     }
 
     // reset and return
@@ -695,6 +700,16 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
       // Handle snap from GLWidget
       if (g_snapAct->isChecked())
         return false;
+
+      // trigger part inspector on right click
+      if (_event.button == common::MouseEvent::RIGHT)
+      {
+        this->inspectVis = vis->GetParent();
+        QMenu menu;
+        menu.addAction(this->inspectAct);
+        menu.exec(QCursor::pos());
+        return true;
+      }
 
       // Not in multi-selection mode.
       if (!(QApplication::keyboardModifiers() & Qt::ControlModifier))
@@ -777,6 +792,8 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
         return true;
       }
     }
+
+
     return false;
   }
 
@@ -799,18 +816,52 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
 bool ModelCreator::OnMouseDoubleClick(const common::MouseEvent &_event)
 {
   // open the part inspector on double click
-  rendering::VisualPtr vis = gui::get_active_camera()->GetVisual(_event.pos);
+ rendering::VisualPtr vis = gui::get_active_camera()->GetVisual(_event.pos);
   if (!vis)
     return false;
 
   if (this->allParts.find(vis->GetParent()->GetName()) !=
       this->allParts.end())
   {
-    // TODO open inspector.
+    this->OpenInspector(vis->GetParent()->GetName());
     return true;
   }
 
   return false;
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::OnOpenInspector()
+{
+  this->OpenInspector(this->inspectVis->GetName());
+  this->inspectVis.reset();
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::OpenInspector(const std::string &_name)
+{
+  PartData *part = this->allParts[_name];
+  part->SetPose(part->partVisual->GetWorldPose());
+/*  PartGeneralConfig *generalConfig = part->inspector->GetGeneralConfig();
+  generalConfig->SetPose(part->GetPose());*/
+
+/*  PartVisualConfig *visualConfig = part->inspector->GetVisualConfig();
+  for (unsigned int i = 0; i < part->visuals.size(); ++i)
+  {
+    if (i >= visualConfig->GetVisualCount())
+      visualConfig->AddVisual();
+
+  }
+
+  PartCollisionConfig *collisionConfig = part->inspector->GetCollisionConfig();
+  for (unsigned int i = 0; i < part->collisions.size(); ++i)
+  {
+    if (i >= collisionConfig->GetCollisionCount())
+      collisionConfig->AddCollision();
+
+  }*/
+
+  part->inspector->show();
 }
 
 /////////////////////////////////////////////////
@@ -850,7 +901,7 @@ void ModelCreator::OnPaste()
     this->Stop();
     this->DeselectAll();
 
-    std::string linkName = copiedPart->name + "_clone";
+    std::string linkName = copiedPart->GetName() + "_clone";
 
     if (!this->modelVisual)
     {
@@ -878,7 +929,7 @@ void ModelCreator::OnPaste()
     }
     else
     {
-      rendering::VisualPtr copiedVisual = copiedPart->visuals.back();
+      rendering::VisualPtr copiedVisual = copiedPart->visuals.rbegin()->first;
       visVisual = copiedVisual->Clone(visualName.str(), linkVisual);
       clonePose = copiedVisual->GetWorldPose();
       cloneScale = copiedVisual->GetParent()->GetScale();
@@ -918,16 +969,12 @@ void ModelCreator::GenerateSDF()
   sdf::ElementPtr linkElem;
 
   this->modelSDF.reset(new sdf::SDF);
-  this->modelSDF->SetFromString(this->GetTemplateSDFString());
+  this->modelSDF->SetFromString(ModelData::GetTemplateSDFString());
 
   modelElem = this->modelSDF->root->GetElement("model");
 
   linkElem = modelElem->GetElement("link");
   sdf::ElementPtr templateLinkElem = linkElem->Clone();
-  sdf::ElementPtr templateVisualElem = templateLinkElem->GetElement(
-      "visual")->Clone();
-  sdf::ElementPtr templateCollisionElem = templateLinkElem->GetElement(
-      "collision")->Clone();
   modelElem->ClearElements();
   std::stringstream visualNameStream;
   std::stringstream collisionNameStream;
@@ -942,7 +989,7 @@ void ModelCreator::GenerateSDF()
        ++partsIt)
   {
     PartData *part = partsIt->second;
-    mid += part->partVisual->GetWorldPose().pos;
+    mid += part->GetPose().pos;
   }
   mid /= this->allParts.size();
   this->origin.pos = mid;
@@ -956,67 +1003,30 @@ void ModelCreator::GenerateSDF()
     collisionNameStream.str("");
 
     PartData *part = partsIt->second;
-    sdf::ElementPtr newLinkElem = templateLinkElem->Clone();
-    newLinkElem->ClearElements();
-    newLinkElem->GetAttribute("name")->Set(part->name);
+    sdf::ElementPtr newLinkElem = part->partSDF->Clone();
     newLinkElem->GetElement("pose")->Set(part->partVisual->GetWorldPose()
         - this->origin);
-    newLinkElem->GetElement("gravity")->Set(part->gravity);
-    newLinkElem->GetElement("self_collide")->Set(part->selfCollide);
-    newLinkElem->GetElement("kinematic")->Set(part->kinematic);
 
     modelElem->InsertElement(newLinkElem);
 
-    for (unsigned int i = 0; i < part->visuals.size(); ++i)
+    // visuals
+    std::map<rendering::VisualPtr, msgs::Visual>::iterator it;
+    for (it = part->visuals.begin(); it != part->visuals.end(); ++it)
     {
-      sdf::ElementPtr visualElem = templateVisualElem->Clone();
-      sdf::ElementPtr collisionElem = templateCollisionElem->Clone();
-
-      rendering::VisualPtr visual = part->visuals[i];
-
-      visualElem->GetAttribute("name")->Set(visual->GetName());
-      collisionElem->GetAttribute("name")->Set(
-          visual->GetParent()->GetName() + "_collision");
-      visualElem->GetElement("pose")->Set(visual->GetPose());
-      collisionElem->GetElement("pose")->Set(visual->GetPose());
-
-      sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
-      geomElem->ClearElements();
-
-    math::Vector3 scale = visual->GetParent()->GetScale();
-      if (visual->GetParent()->GetName().find("unit_box") != std::string::npos)
-      {
-        sdf::ElementPtr boxElem = geomElem->AddElement("box");
-        (boxElem->GetElement("size"))->Set(scale);
-      }
-      else if (visual->GetParent()->GetName().find("unit_cylinder")
-         != std::string::npos)
-      {
-        sdf::ElementPtr cylinderElem = geomElem->AddElement("cylinder");
-        (cylinderElem->GetElement("radius"))->Set(scale.x/2.0);
-        (cylinderElem->GetElement("length"))->Set(scale.z);
-      }
-      else if (visual->GetParent()->GetName().find("unit_sphere")
-          != std::string::npos)
-      {
-        sdf::ElementPtr sphereElem = geomElem->AddElement("sphere");
-        (sphereElem->GetElement("radius"))->Set(scale.x/2.0);
-      }
-      else if (visual->GetParent()->GetName().find("custom")
-          != std::string::npos)
-      {
-        sdf::ElementPtr customElem = geomElem->AddElement("mesh");
-        (customElem->GetElement("scale"))->Set(scale);
-        (customElem->GetElement("uri"))->Set(visual->GetMeshName());
-      }
-      sdf::ElementPtr geomElemClone = geomElem->Clone();
-      geomElem =  collisionElem->GetElement("geometry");
-      geomElem->ClearElements();
-      geomElem->InsertElement(geomElemClone->GetFirstElement());
-
+      rendering::VisualPtr visual = it->first;
+      sdf::ElementPtr visualElem = visual->GetSDF()->Clone();
       newLinkElem->InsertElement(visualElem);
+    }
+
+    // collisions
+    std::map<rendering::VisualPtr, msgs::Collision>::iterator colIt;
+    for (colIt = part->collisions.begin(); colIt != part->collisions.end();
+        ++colIt)
+    {
+      sdf::ElementPtr collisionElem = msgs::CollisionToSDF(colIt->second);
       newLinkElem->InsertElement(collisionElem);
     }
+
   }
 
   // Add joint sdf elements
