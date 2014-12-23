@@ -264,6 +264,8 @@ unsigned int RenderEngine::GetSceneCount() const
 void RenderEngine::PreRender()
 {
   this->root->_fireFrameStarted();
+  // is this still needed since we recovered the same call in PostRender?
+  this->root->_fireFrameRenderingQueued();
 }
 
 //////////////////////////////////////////////////
