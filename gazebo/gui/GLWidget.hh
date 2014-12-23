@@ -215,6 +215,7 @@ namespace gazebo
       /// \brief Publishes information about user selections.
       private: transport::PublisherPtr selectionPub;
 
+      private: transport::PublisherPtr qtKeyEventPub;
       private: transport::SubscriberPtr selectionSub, requestSub;
 
       private: std::string keyText;
