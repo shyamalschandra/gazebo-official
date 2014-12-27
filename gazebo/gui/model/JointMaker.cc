@@ -155,6 +155,7 @@ void JointMaker::RemoveJointsByPart(const std::string &_partName)
   for (it = this->joints.begin(); it != this->joints.end(); ++it)
   {
     JointData *joint = it->second;
+
     if (joint->child->GetName() == _partName ||
         joint->parent->GetName() == _partName)
     {

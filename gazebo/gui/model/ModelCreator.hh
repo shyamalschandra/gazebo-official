@@ -27,6 +27,7 @@
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/model/JointMaker.hh"
+#include "gazebo/gui/model/PartInspector.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
@@ -200,7 +201,7 @@ namespace gazebo
 
       /// \brief Create part with default properties from a visual
       /// \param[in] _visual Visual used to create the part.
-      private: void CreatePart(const rendering::VisualPtr &_visual);
+      private: PartData *CreatePart(const rendering::VisualPtr &_visual);
 
       /// \brief Open the part inspector.
       /// \param[in] _name Name of part.
@@ -215,10 +216,6 @@ namespace gazebo
       /// \brief Create an empty model.
       /// \return Name of the model created.
       private: std::string CreateModel();
-
-      /// \brief Get a template SDF string of a simple model.
-      /// \return Template SDF string of a simple model.
-      private: std::string GetTemplateSDFString();
 
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
@@ -236,6 +233,9 @@ namespace gazebo
       /// \brief Qt callback when a delete signal has been emitted.
       /// \param[in] _name Name of the entity to delete.
       private slots: void OnDelete(const std::string &_name="");
+
+      /// \brief Qt Callback to open part inspector
+      private slots: void OnOpenInspector();
 
       /// \brief Qt signal when the a part has been added.
       Q_SIGNALS: void PartAdded();
@@ -267,14 +267,8 @@ namespace gazebo
       /// \brief A list of gui editor events connected to the model creator.
       private: std::vector<event::ConnectionPtr> connections;
 
-      /// \brief Counter for the number of boxes in the model.
-      private: int boxCounter;
-
-      /// \brief Counter for the number of cylinders in the model.
-      private: int cylinderCounter;
-
-      /// \brief Counter for the number of spheres in the model.
-      private: int sphereCounter;
+      /// \brief Counter for the number of parts in the model.
+      private: int partCounter;
 
       /// \brief Counter for the number of custom parts in the model.
       private: int customCounter;
@@ -310,13 +304,13 @@ namespace gazebo
 
       /// \brief A list of selected visuals.
       private: std::vector<rendering::VisualPtr> selectedVisuals;
-
       /// \brief Names of parts copied through g_copyAct
       private: std::vector<std::string> copiedPartNames;
 
       /// \brief The last mouse event
       private: common::MouseEvent lastMouseEvent;
-
+      /// \brief Qt action for opening the part inspector.
+      private: QAction *inspectAct;
       /// \brief Part visual that is currently being inspected.
       private: rendering::VisualPtr inspectVis;
 

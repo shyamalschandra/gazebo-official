@@ -250,6 +250,7 @@ void ConfigWidget::SetGeometryWidgetValue(const std::string &_name,
     this->UpdateGeometryWidget(iter->second, _value, _dimensions);
 }
 
+
 /////////////////////////////////////////////////
 int ConfigWidget::GetIntWidgetValue(const std::string &_name) const
 {
@@ -395,9 +396,10 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,
       bool newWidget = true;
       std::string scopedName = _name.empty() ? name : _name + "::" + name;
       if (this->configWidgets.find(scopedName) != this->configWidgets.end())
+      {
         newWidget = false;
-      else
         configChildWidget = this->configWidgets[scopedName];
+      }
 
       switch (field->cpp_type())
       {
@@ -573,9 +575,9 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,
                     geomValueDescriptor->FindFieldByName("radius");
                 double radius = geomValueMsg->GetReflection()->GetDouble(
                     *geomValueMsg, geomRadiusField);
-                dimensions.x = radius;
-                dimensions.y = radius;
-                dimensions.z = radius;
+                dimensions.x = radius * 2.0;
+                dimensions.y = dimensions.x;
+                dimensions.z = dimensions.x;
                 break;
               }
             }
@@ -678,12 +680,15 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,
           {
             // parse the message fields recursively
             QWidget *groupBoxWidget = Parse(valueMsg, scopedName);
-            newFieldWidget = new ConfigChildWidget();
-            QVBoxLayout *groupBoxLayout = new QVBoxLayout;
-            groupBoxLayout->addWidget(groupBoxWidget);
-            newFieldWidget->setLayout(groupBoxLayout);
-            qobject_cast<ConfigChildWidget *>(newFieldWidget)->
-                widgets.push_back(groupBoxWidget);
+            if (groupBoxWidget)
+            {
+              newFieldWidget = new ConfigChildWidget();
+              QVBoxLayout *groupBoxLayout = new QVBoxLayout;
+              groupBoxLayout->addWidget(groupBoxWidget);
+              newFieldWidget->setLayout(groupBoxLayout);
+              qobject_cast<ConfigChildWidget *>(newFieldWidget)->
+                  widgets.push_back(groupBoxWidget);
+            }
           }
 
           if (newWidget)
