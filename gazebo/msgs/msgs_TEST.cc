@@ -1128,33 +1128,56 @@ TEST_F(MsgsTest, MeshToSDF)
 /////////////////////////////////////////////////
 TEST_F(MsgsTest, InertialToSDF)
 {
+  const double mass = 3.4;
+  const math::Pose pose = math::Pose(math::Vector3(1.2, 3.4, 5.6),
+      math::Quaternion(0.7071, 0.0, 0.7071, 0.0));
+  const double ixx = 0.0133;
+  const double ixy = -0.0003;
+  const double ixz = -0.0004;
+  const double iyy = 0.0116;
+  const double iyz = 0.0008;
+  const double izz = 0.0038;
+
   msgs::Inertial msg;
-  msg.set_mass(3.4);
-  msgs::Set(msg.mutable_pose(), math::Pose(math::Vector3(1.2, 3.4, 5.6),
-      math::Quaternion(0.7071, 0.0, 0.7071, 0.0)));
-  msg.set_ixx(0.0133);
-  msg.set_ixy(-0.0003);
-  msg.set_ixz(-0.0004);
-  msg.set_iyy(0.0116);
-  msg.set_iyz(0.0008);
-  msg.set_izz(0.0038);
+  msg.set_mass(mass);
+  msgs::Set(msg.mutable_pose(), pose);
+  msg.set_ixx(ixx);
+  msg.set_ixy(ixy);
+  msg.set_ixz(ixz);
+  msg.set_iyy(iyy);
+  msg.set_iyz(iyz);
+  msg.set_izz(izz);
 
   sdf::ElementPtr inertialSDF = msgs::InertialToSDF(msg);
 
-  EXPECT_DOUBLE_EQ(inertialSDF->Get<double>("mass"), 3.4);
+  EXPECT_TRUE(sdf->HasElement("mass"));
+  EXPECT_DOUBLE_EQ(sdf->Get<double>("mass"), mass);
 
-  EXPECT_TRUE(inertialSDF->Get<math::Pose>("pose") ==
-      math::Pose(math::Vector3(1.2, 3.4, 5.6),
-      math::Quaternion(0.7071, 0.0, 0.7071, 0.0)));
+  EXPECT_TRUE(sdf->HasElement("pose"));
+  EXPECT_EQ(sdf->Get<math::Pose>("pose"), pose);
 
-  // inertia
-  sdf::ElementPtr inertiaElem = inertialSDF->GetElement("inertia");
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixx"), 0.0133);
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixy"), -0.0003);
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixz"), -0.0004);
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("iyy"), 0.0116);
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("iyz"), 0.0008);
-  EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("izz"), 0.0038);
+  {
+    ASSERT_TRUE(sdf->HasElement("inertia"));
+    sdf::ElementPtr inertiaElem = sdf->GetElement("inertia");
+
+    EXPECT_TRUE(inertiaElem->HasElement("ixx"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixx"), ixx);
+
+    EXPECT_TRUE(inertiaElem->HasElement("ixy"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixy"), ixy);
+
+    EXPECT_TRUE(inertiaElem->HasElement("ixz"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("ixz"), ixz);
+
+    EXPECT_TRUE(inertiaElem->HasElement("iyy"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("iyy"), iyy);
+
+    EXPECT_TRUE(inertiaElem->HasElement("iyz"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("iyz"), iyz);
+
+    EXPECT_TRUE(inertiaElem->HasElement("izz"));
+    EXPECT_DOUBLE_EQ(inertiaElem->Get<double>("izz"), izz);
+  }
 }
 
 /////////////////////////////////////////////////
@@ -1163,12 +1186,18 @@ TEST_F(MsgsTest, SurfaceToSDF)
   msgs::Surface msg;
 
   // friction
+  const double mu = 0.1;
+  const double mu2 = 0.2;
+  const math::Vector3 fdir1(0.3, 0.4, 0.5);
+  const double slip1 = 0.6;
+  const double slip2 = 0.7;
+
   msgs::Friction *friction = msg.mutable_friction();
-  friction->set_mu(0.1);
-  friction->set_mu2(0.2);
-  msgs::Set(friction->mutable_fdir1(), math::Vector3(0.3, 0.4, 0.5));
-  friction->set_slip1(0.6);
-  friction->set_slip2(0.7);
+  friction->set_mu(mu);
+  friction->set_mu2(mu2);
+  msgs::Set(friction->mutable_fdir1(), fdir1);
+  friction->set_slip1(slip1);
+  friction->set_slip2(slip2);
 
   // bounce
   msg.set_restitution_coefficient(1.1);
@@ -1187,12 +1216,11 @@ TEST_F(MsgsTest, SurfaceToSDF)
   sdf::ElementPtr surfaceSDF = msgs::SurfaceToSDF(msg);
   sdf::ElementPtr frictionElem = surfaceSDF->GetElement("friction");
   sdf::ElementPtr frictionPhysicsElem = frictionElem->GetElement("ode");
-  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("mu"), 0.1);
-  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("mu2"), 0.2);
-  EXPECT_TRUE(frictionPhysicsElem->Get<math::Vector3>("fdir1") ==
-      math::Vector3(0.3, 0.4, 0.5));
-  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("slip1"), 0.6);
-  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("slip2"), 0.7);
+  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("mu"), mu);
+  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("mu2"), mu2);
+  EXPECT_TRUE(frictionPhysicsElem->Get<math::Vector3>("fdir1") == fdir1);
+  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("slip1"), slip1);
+  EXPECT_DOUBLE_EQ(frictionPhysicsElem->Get<double>("slip2"), slip2);
 
   sdf::ElementPtr bounceElem = surfaceSDF->GetElement("bounce");
   EXPECT_DOUBLE_EQ(bounceElem->Get<double>("restitution_coefficient"), 1.1);
@@ -1210,4 +1238,62 @@ TEST_F(MsgsTest, SurfaceToSDF)
   EXPECT_TRUE(contactElem->Get<bool>("collide_without_contact"));
   EXPECT_EQ(contactElem->Get<unsigned int>("collide_without_contact_bitmask"),
       static_cast<unsigned int>(0x0004));
+}
+
+/////////////////////////////////////////////////
+TEST_F(MsgsTest, AddBoxLink)
+{
+  msgs::Model model;
+  EXPECT_EQ(model.link_size(), 0);
+
+  double mass = 1.0;
+  math::Vector3 size(1, 1, 1);
+  msgs::AddBoxLink(model, mass, size);
+  EXPECT_EQ(model.link_size(), 1);
+  {
+    const msgs::Link link = model.link(0);
+    EXPECT_EQ(link.name(), std::string("link1"));
+
+    const msgs::Inertial inertial = link.inertial();
+    EXPECT_DOUBLE_EQ(inertial.mass(), mass);
+    double ixx = inertial.ixx();
+    double iyy = inertial.iyy();
+    double izz = inertial.izz();
+    double ixy = inertial.ixy();
+    double ixz = inertial.ixz();
+    double iyz = inertial.iyz();
+    EXPECT_GT(ixx, 0.0);
+    EXPECT_GT(iyy, 0.0);
+    EXPECT_GT(izz, 0.0);
+    EXPECT_DOUBLE_EQ(ixy, 0.0);
+    EXPECT_DOUBLE_EQ(ixz, 0.0);
+    EXPECT_DOUBLE_EQ(iyz, 0.0);
+    // triangle inequality
+    EXPECT_GT(ixx + iyy, izz);
+    EXPECT_GT(iyy + izz, ixx);
+    EXPECT_GT(izz + ixx, iyy);
+
+    EXPECT_EQ(link.collision_size(), 1);
+    const msgs::Collision collision = link.collision(0);
+    const msgs::Geometry geometry = collision.geometry();
+    EXPECT_EQ(geometry.type(), msgs::Geometry_Type_BOX);
+    EXPECT_EQ(msgs::Convert(geometry.box().size()), size);
+  }
+
+  mass *= 2.0;
+  msgs::AddBoxLink(model, mass, size);
+  EXPECT_EQ(model.link_size(), 2);
+  {
+    msgs::Link link1 = model.link(0);
+    msgs::Link link2 = model.link(1);
+    EXPECT_EQ(link2.name(), std::string("link2"));
+
+    msgs::Inertial inertial1 = link1.inertial();
+    msgs::Inertial inertial2 = link2.inertial();
+
+    EXPECT_NEAR(inertial1.mass() * 2.0, inertial2.mass(), 1e-6);
+    EXPECT_NEAR(inertial1.ixx() * 2.0, inertial2.ixx(), 1e-6);
+    EXPECT_NEAR(inertial1.iyy() * 2.0, inertial2.iyy(), 1e-6);
+    EXPECT_NEAR(inertial1.izz() * 2.0, inertial2.izz(), 1e-6);
+  }
 }
