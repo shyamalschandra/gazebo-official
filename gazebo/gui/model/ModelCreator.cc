@@ -842,6 +842,8 @@ void ModelCreator::OpenInspector(const std::string &_name)
 {
   PartData *part = this->allParts[_name];
   part->SetPose(part->partVisual->GetWorldPose());
+  part->UpdateConfig();
+
 /*  PartGeneralConfig *generalConfig = part->inspector->GetGeneralConfig();
   generalConfig->SetPose(part->GetPose());*/
 
@@ -891,7 +893,7 @@ void ModelCreator::OnPaste()
 
   // For now, only copy the last selected model
   boost::unordered_map<std::string, PartData *>::iterator it =
-    this->allParts.find(this->copiedPartNames.back());
+      this->allParts.find(this->copiedPartNames.back());
   if (it != this->allParts.end())
   {
     PartData *copiedPart = it->second;
@@ -933,7 +935,7 @@ void ModelCreator::OnPaste()
       visVisual = copiedVisual->Clone(visualName.str(), linkVisual);
       clonePose = copiedVisual->GetWorldPose();
       cloneScale = copiedVisual->GetParent()->GetScale();
-      visVisual->SetScale(math::Vector3::One);
+//      visVisual->SetScale(math::Vector3::One);
     }
 
     rendering::UserCameraPtr userCamera = gui::get_active_camera();
