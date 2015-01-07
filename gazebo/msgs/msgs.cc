@@ -1230,19 +1230,36 @@ namespace gazebo
             _msg.collide_without_contact_bitmask());
       }
 
-      sdf::ElementPtr physicsEngElem = contactElem->GetElement("ode");
+      sdf::ElementPtr odeElem = contactElem->GetElement("ode");
+      sdf::ElementPtr bulletElem = contactElem->GetElement("bullet");
       if (_msg.has_soft_cfm())
-        physicsEngElem->GetElement("soft_cfm")->Set(_msg.soft_cfm());
+      {
+        odeElem->GetElement("soft_cfm")->Set(_msg.soft_cfm());
+        bulletElem->GetElement("soft_cfm")->Set(_msg.soft_cfm());
+      }
       if (_msg.has_soft_erp())
-        physicsEngElem->GetElement("soft_erp")->Set(_msg.soft_erp());
+      {
+        odeElem->GetElement("soft_erp")->Set(_msg.soft_erp());
+        bulletElem->GetElement("soft_erp")->Set(_msg.soft_erp());
+      }
       if (_msg.has_kp())
-        physicsEngElem->GetElement("kp")->Set(_msg.kp());
+      {
+        odeElem->GetElement("kp")->Set(_msg.kp());
+        bulletElem->GetElement("kp")->Set(_msg.kp());
+      }
       if (_msg.has_kd())
-        physicsEngElem->GetElement("kd")->Set(_msg.kd());
+      {
+        odeElem->GetElement("kd")->Set(_msg.kd());
+        bulletElem->GetElement("kd")->Set(_msg.kd());
+      }
       if (_msg.has_max_vel())
-        physicsEngElem->GetElement("max_vel")->Set(_msg.max_vel());
+      {
+        odeElem->GetElement("max_vel")->Set(_msg.max_vel());
+      }
       if (_msg.has_min_depth())
-        physicsEngElem->GetElement("min_depth")->Set(_msg.min_depth());
+      {
+        odeElem->GetElement("min_depth")->Set(_msg.min_depth());
+      }
 
       return surfaceSDF;
     }
@@ -1266,14 +1283,16 @@ namespace gazebo
       if (!_msg.has_type())
         return geometrySDF;
 
-      if (_msg.type() == msgs::Geometry::BOX)
+      if (_msg.type() == msgs::Geometry::BOX &&
+          _msg.has_box())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("box");
         msgs::BoxGeom boxGeom = _msg.box();
         if (boxGeom.has_size())
           geom->GetElement("size")->Set(msgs::Convert(boxGeom.size()));
       }
-      else if (_msg.type() == msgs::Geometry::CYLINDER)
+      else if (_msg.type() == msgs::Geometry::CYLINDER &&
+          _msg.has_cylinder())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("cylinder");
         msgs::CylinderGeom cylinderGeom = _msg.cylinder();
@@ -1282,14 +1301,16 @@ namespace gazebo
         if (cylinderGeom.has_length())
           geom->GetElement("length")->Set(cylinderGeom.length());
       }
-      if (_msg.type() == msgs::Geometry::SPHERE)
+      else if (_msg.type() == msgs::Geometry::SPHERE &&
+          _msg.has_sphere())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("sphere");
         msgs::SphereGeom sphereGeom = _msg.sphere();
         if (sphereGeom.has_radius())
           geom->GetElement("radius")->Set(sphereGeom.radius());
       }
-      if (_msg.type() == msgs::Geometry::PLANE)
+      else if (_msg.type() == msgs::Geometry::PLANE &&
+          _msg.has_plane())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("plane");
         msgs::PlaneGeom planeGeom = _msg.plane();
@@ -1300,8 +1321,11 @@ namespace gazebo
         }
         if (planeGeom.has_size())
           geom->GetElement("size")->Set(msgs::Convert(planeGeom.size()));
+        if (planeGeom.has_d())
+          gzerr << "sdformat doesn't have Plane.d variable" << std::endl;
       }
-      if (_msg.type() == msgs::Geometry::IMAGE)
+      else if (_msg.type() == msgs::Geometry::IMAGE &&
+          _msg.has_image())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("image");
         msgs::ImageGeom imageGeom = _msg.image();
@@ -1316,7 +1340,8 @@ namespace gazebo
         if (imageGeom.has_granularity())
           geom->GetElement("granularity")->Set(imageGeom.granularity());
       }
-      if (_msg.type() == msgs::Geometry::HEIGHTMAP)
+      else if (_msg.type() == msgs::Geometry::HEIGHTMAP &&
+          _msg.has_heightmap())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("heightmap");
         msgs::HeightmapGeom heightmapGeom = _msg.heightmap();
@@ -1359,13 +1384,15 @@ namespace gazebo
         if (heightmapGeom.has_filename())
           geom->GetElement("uri")->Set(heightmapGeom.filename());
       }
-      if (_msg.type() == msgs::Geometry::MESH)
+      else if (_msg.type() == msgs::Geometry::MESH &&
+          _msg.has_mesh())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("mesh");
         msgs::MeshGeom meshGeom = _msg.mesh();
         geom = msgs::MeshToSDF(meshGeom, geom);
       }
-      if (_msg.type() == msgs::Geometry::POLYLINE)
+      else if (_msg.type() == msgs::Geometry::POLYLINE &&
+          _msg.has_polyline())
       {
         sdf::ElementPtr geom = geometrySDF->GetElement("polyline");
         gazebo::msgs::Polyline polylineGeom = _msg.polyline();
@@ -1379,6 +1406,10 @@ namespace gazebo
           sdf::ElementPtr pointElem = geom->AddElement("point");
           pointElem->Set(msgs::Convert(polylineGeom.point(i)));
         }
+      }
+      else
+      {
+        gzerr << "Unrecognized geometry type" << std::endl;
       }
       return geometrySDF;
     }
@@ -1439,6 +1470,266 @@ namespace gazebo
       sdf::readString(tmp, pluginSDF);
 
       return pluginSDF;
+    }
+
+    ////////////////////////////////////////////////////////
+    void AddBoxLink(msgs::Model &_msg, double _mass,
+                    const math::Vector3 &_size)
+    {
+      _msg.add_link();
+      int linkCount = _msg.link_size();
+      msgs::Link *link = _msg.mutable_link(linkCount-1);
+      {
+        std::ostringstream linkName;
+        linkName << "link" << linkCount;
+        link->set_name(linkName.str());
+      }
+
+      msgs::Inertial *inertial = link->mutable_inertial();
+      inertial->set_mass(_mass);
+      {
+        double dx = _size.x;
+        double dy = _size.y;
+        double dz = _size.z;
+        double ixx = _mass/12.0 * (dy*dy + dz*dz);
+        double iyy = _mass/12.0 * (dz*dz + dx*dx);
+        double izz = _mass/12.0 * (dx*dx + dy*dy);
+        inertial->set_ixx(ixx);
+        inertial->set_iyy(iyy);
+        inertial->set_izz(izz);
+        inertial->set_ixy(0.0);
+        inertial->set_ixz(0.0);
+        inertial->set_iyz(0.0);
+      }
+
+      link->add_collision();
+      msgs::Collision *collision = link->mutable_collision(0);
+      collision->set_name("collision");
+
+      msgs::Geometry *geometry = collision->mutable_geometry();
+      geometry->set_type(Geometry_Type_BOX);
+      msgs::Set(geometry->mutable_box()->mutable_size(), _size);
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Model &_msg)
+    {
+      std::ostringstream stream;
+      stream << "<model name='"
+             << _msg.name()
+             << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      if (_msg.has_is_static())
+      {
+        stream << "<static>" << _msg.is_static() << "</static>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      for (int i = 0; i < _msg.joint_size(); ++i)
+      {
+        stream << msgs::ToSDF(_msg.joint(i));
+      }
+      for (int i = 0; i < _msg.link_size(); ++i)
+      {
+        stream << msgs::LinkToSDF(_msg.link(i))->ToString("");
+      }
+      // ignore the deleted field, since it's not used in sdformat
+      if (_msg.visual_size() > 0)
+      {
+        gzerr << "Model visuals not yet parsed" << std::endl;
+      }
+      // ignore the scale field, since it's not used in sdformat
+
+      stream << "</model>";
+      return stream.str();
+    }
+
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Joint &_msg,
+                      int _useParentModelFrame1,
+                      int _useParentModelFrame2)
+    {
+      std::ostringstream stream;
+      stream << "<joint name='"
+             << _msg.name();
+      if (_msg.has_type())
+      {
+        if (_msg.type() == Joint::REVOLUTE)
+        {
+          stream << "' type='revolute";
+        }
+        else if (_msg.type() == Joint::REVOLUTE2)
+        {
+          stream << "' type='revolute2";
+        }
+        else if (_msg.type() == Joint::PRISMATIC)
+        {
+          stream << "' type='prismatic";
+        }
+        else if (_msg.type() == Joint::UNIVERSAL)
+        {
+          stream << "' type='universal";
+        }
+        else if (_msg.type() == Joint::BALL)
+        {
+          stream << "' type='ball";
+        }
+        else if (_msg.type() == Joint::SCREW)
+        {
+          stream << "' type='screw";
+        }
+        else if (_msg.type() == Joint::GEARBOX)
+        {
+          stream << "' type='gearbox";
+        }
+      }
+      stream << "'>";
+
+      // ignore the id field, since it's not used in sdformat
+      // ignore the parent_id field, since it's not used in sdformat
+      // ignore the child_id field, since it's not used in sdformat
+      // ignore the angle field, since it's not used in sdformat
+      if (_msg.has_parent())
+      {
+        stream << "<parent>" << _msg.parent() << "</parent>";
+      }
+      if (_msg.has_child())
+      {
+        stream << "<child>" << _msg.child() << "</child>";
+      }
+      if (_msg.has_pose())
+      {
+        stream << "<pose>"
+               << msgs::Convert(_msg.pose())
+               << "</pose>";
+      }
+      if (_msg.has_axis1())
+      {
+        stream << ToSDF(_msg.axis1(), "axis", _useParentModelFrame1);
+      }
+      if (_msg.has_axis2())
+      {
+        stream << ToSDF(_msg.axis2(), "axis2", _useParentModelFrame2);
+      }
+
+      stream << "<physics>"
+             << "<ode>";
+      if (_msg.has_cfm())
+      {
+        stream << "<cfm>" << _msg.cfm() << "</cfm>";
+      }
+      if (_msg.has_bounce())
+      {
+        stream << "<bounce>" << _msg.bounce() << "</bounce>";
+      }
+      if (_msg.has_velocity())
+      {
+        stream << "<velocity>" << _msg.velocity() << "</velocity>";
+      }
+      if (_msg.has_fudge_factor())
+      {
+        stream << "<fudge_factor>" << _msg.fudge_factor() << "</fudge_factor>";
+      }
+
+      stream << "<limit>";
+      if (_msg.has_limit_cfm())
+      {
+        stream << "<cfm>" << _msg.limit_cfm() << "</cfm>";
+      }
+      if (_msg.has_limit_erp())
+      {
+        stream << "<erp>" << _msg.limit_erp() << "</erp>";
+      }
+      stream << "</limit>"
+             << "<suspension>";
+      if (_msg.has_suspension_cfm())
+      {
+        stream << "<cfm>" << _msg.suspension_cfm() << "</cfm>";
+      }
+      if (_msg.has_suspension_erp())
+      {
+        stream << "<erp>" << _msg.suspension_erp() << "</erp>";
+      }
+      stream << "</suspension>"
+             << "</ode>"
+             << "</physics>";
+      // also ignore the sensor field for now
+
+      stream << "</joint>";
+      return stream.str();
+    }
+
+    ////////////////////////////////////////////////////////
+    std::string ToSDF(const msgs::Axis &_msg,
+                      const std::string &_name,
+                      int _useParentModelFrame)
+    {
+      std::ostringstream stream;
+      stream << "<" << _name << ">";
+
+      if (_msg.has_xyz())
+      {
+        stream << "<xyz>"
+               << msgs::Convert(_msg.xyz())
+               << "</xyz>";
+      }
+      if (_useParentModelFrame >= 0)
+      {
+        stream << "<use_parent_model_frame>"
+               << _useParentModelFrame
+               << "</use_parent_model_frame>";
+      }
+
+      stream << "<dynamics>";
+      if (_msg.has_damping())
+      {
+        stream << "<damping>"
+               << _msg.damping()
+               << "</damping>";
+      }
+      if (_msg.has_friction())
+      {
+        stream << "<friction>"
+               << _msg.friction()
+               << "</friction>";
+      }
+      stream << "</dynamics>";
+
+      stream << "<limit>";
+      if (_msg.has_limit_lower())
+      {
+        stream << "<lower>"
+               << _msg.limit_lower()
+               << "</lower>";
+      }
+      if (_msg.has_limit_upper())
+      {
+        stream << "<upper>"
+               << _msg.limit_upper()
+               << "</upper>";
+      }
+      if (_msg.has_limit_effort())
+      {
+        stream << "<effort>"
+               << _msg.limit_effort()
+               << "</effort>";
+      }
+      if (_msg.has_limit_velocity())
+      {
+        stream << "<velocity>"
+               << _msg.limit_velocity()
+               << "</velocity>";
+      }
+      stream << "</limit>";
+
+      stream << "</" << _name << ">";
+      return stream.str();
     }
   }
 }
