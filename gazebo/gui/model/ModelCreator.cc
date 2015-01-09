@@ -189,7 +189,6 @@ std::string ModelCreator::AddBox(const math::Vector3 &_size,
   sdf::ElementPtr visualElem =  this->modelTemplateSDF->root
       ->GetElement("model")->GetElement("link")->GetElement("visual");
 
-
   sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
   geomElem->ClearElements();
   ((geomElem->AddElement("box"))->AddElement("size"))->Set(_size);
@@ -356,6 +355,9 @@ void ModelCreator::CreatePart(const rendering::VisualPtr &_visual)
   part->kinematic = false;
 
   this->allParts[part->name] = part;
+
+  rendering::ScenePtr scene = part->partVisual->GetScene();
+  scene->AddVisual(part->partVisual);
 }
 
 /////////////////////////////////////////////////
@@ -373,6 +375,8 @@ void ModelCreator::RemovePart(const std::string &_partName)
   PartData *part = this->allParts[_partName];
   if (!part)
     return;
+
+  this->DeselectAll();
 
   rendering::ScenePtr scene = part->partVisual->GetScene();
   for (unsigned int i = 0; i < part->visuals.size(); ++i)
@@ -608,8 +612,8 @@ bool ModelCreator::OnKeyPress(const common::KeyEvent &_event)
           = this->selectedVisuals.begin(); it != this->selectedVisuals.end();)
       {
         (*it)->SetHighlighted(false);
-        this->OnDelete((*it)->GetName());
         it = this->selectedVisuals.erase(it);
+        this->OnDelete((*it)->GetName());
       }
     }
   }
@@ -647,14 +651,16 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
   {
     if (!vis->IsPlane() && gui::get_entity_id(vis->GetRootVisual()->GetName()))
     {
-      // Handle snap from GLWidget
-      if (g_snapAct->isChecked())
-        return false;
-
       // Prevent interaction with other models, send event only to
       // user camera
       userCamera->HandleMouseEvent(_event);
       return true;
+    }
+    else
+    {
+      // Handle snap from GLWidget
+      if (g_snapAct->isChecked())
+        return false;
     }
   }
   return false;
@@ -726,7 +732,6 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
       }
       g_copyAct->setEnabled(!this->selectedVisuals.empty());
       g_alignAct->setEnabled(this->selectedVisuals.size() > 1);
-
       return true;
     }
     // Not part
@@ -806,10 +811,11 @@ bool ModelCreator::OnMouseDoubleClick(const common::MouseEvent &_event)
   if (this->allParts.find(vis->GetParent()->GetName()) !=
       this->allParts.end())
   {
+    this->DeselectAll();
+
     // TODO open inspector.
     return true;
   }
-
   return false;
 }
 
@@ -983,7 +989,7 @@ void ModelCreator::GenerateSDF()
       sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
       geomElem->ClearElements();
 
-    math::Vector3 scale = visual->GetParent()->GetScale();
+      math::Vector3 scale = visual->GetParent()->GetScale();
       if (visual->GetParent()->GetName().find("unit_box") != std::string::npos)
       {
         sdf::ElementPtr boxElem = geomElem->AddElement("box");
