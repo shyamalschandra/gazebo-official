@@ -35,6 +35,7 @@ set (plugins
   InitialVelocityPlugin
   JointTrajectoryPlugin
   LiftDragPlugin
+  ModelControlPlugin
   ModelPropShop
   MudPlugin
   PressurePlugin
@@ -75,3 +76,10 @@ install (TARGETS TimerGUIPlugin DESTINATION ${GAZEBO_PLUGIN_INSTALL_DIR})
 
 add_subdirectory(events)
 
+# Find the Ignition_Transport library for ModelControlPlugin
+find_package(ignition-transport QUIET REQUIRED)
+include_directories(${IGNITION-TRANSPORT_INCLUDE_DIRS})  # how to make this target specific?
+link_directories(${IGNITION-TRANSPORT_LIBRARY_DIRS})  # how to make this target specific?
+set_target_properties(ModelControlPlugin PROPERTIES
+  COMPILE_FLAGS ${IGNITION-TRANSPORT_CXX_FLAGS})
+target_link_libraries(ModelControlPlugin ${IGNITION-TRANSPORT_LIBRARIES})
