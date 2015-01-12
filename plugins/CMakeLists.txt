@@ -19,6 +19,7 @@ if (HAVE_BULLET)
 endif()
 
 set (plugins
+  ActuatorPlugin
   ArrangePlugin
   BreakableJointPlugin
   CameraPlugin
