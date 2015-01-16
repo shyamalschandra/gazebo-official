@@ -70,6 +70,12 @@ namespace gazebo
       /// \param[in] _colorId Id of the button clicked.
       private slots: void OnColor(int _colorId);
 
+      /// \brief TODO
+      private slots: void OnCustomColor();
+
+      /// \brief TODO
+      private slots: void OnTexture(int _textureId);
+
       /// \brief Qt callback when the Model Name field is changed.
       private slots: void OnNameChanged(const QString &_name);
 
@@ -114,6 +120,9 @@ namespace gazebo
 
       /// \brief List of default colors to be picked.
       private: std::vector<QColor> colorList;
+
+      /// \brief TODO
+      private: std::vector<QString> textureList;
     };
     /// \}
   }
