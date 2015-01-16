@@ -9,6 +9,7 @@ include_directories(
 # which uses tinxyml. Not defining the link directory here will end up
 # failures in clang.
 link_directories(
+  ${CCD_LIBRARY_DIRS}
   ${SDF_LIBRARY_DIRS}
   ${tinyxml_LIBRARY_DIRS}
 )
@@ -20,7 +21,7 @@ endif()
 set (plugins
   BreakableJointPlugin
   CameraPlugin
-  CartTestPlugin
+  CartDemoPlugin
   ContactPlugin
   DepthCameraPlugin
   DiffDrivePlugin
@@ -28,16 +29,16 @@ set (plugins
   GpuRayPlugin
   ImuSensorPlugin
   JointTrajectoryPlugin
+  LiftDragPlugin
   ModelPropShop
-  ModelTrajectoryTestPlugin
   MudPlugin
   PressurePlugin
   RayPlugin
+  RaySensorNoisePlugin
   RubblePlugin
   SkidSteerDrivePlugin
   SonarPlugin
-  SpringTestPlugin
-  SphereAtlasTestPlugin
+  SphereAtlasDemoPlugin
   VehiclePlugin)
 
 set(GAZEBO_PLUGIN_INSTALL_DIR
