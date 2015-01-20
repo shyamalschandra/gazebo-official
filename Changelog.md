@@ -5,6 +5,8 @@
 ## Gazebo 5.0
 
 ### Gazebo 5.0.0
+1. Implemented private data pointer for ODEPhysics.
+
 1. Implemented private data pointer for the World class.
     * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
 
