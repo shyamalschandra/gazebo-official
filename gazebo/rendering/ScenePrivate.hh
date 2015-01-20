@@ -99,13 +99,14 @@ namespace gazebo
     /// \brief List of request messages.
     typedef std::list<boost::shared_ptr<msgs::Request const> > RequestMsgs_L;
 
-    /// \def Light_M
-    /// \brief Map of lights
-    typedef std::map<std::string, LightPtr> Light_M;
     /// \def SkeletonPoseMsgs_L
     /// \brief List of skeleton messages.
     typedef std::list<boost::shared_ptr<msgs::PoseAnimation const> >
                                                         SkeletonPoseMsgs_L;
+
+    /// \def Light_M
+    /// \brief Map of lights
+    typedef std::map<std::string, LightPtr> Light_M;
 
     /// \def JointMsgs_M
     /// \brief Map of joint names to joint messages.
