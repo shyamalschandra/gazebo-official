@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/model/JointMaker.hh"
+#include "gazebo/gui/model/PartInspector.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
@@ -41,6 +42,7 @@ namespace gazebo
   namespace gui
   {
     class PartData;
+    class SaveDialog;
 
     /// \addtogroup gazebo_gui
     /// \{
@@ -67,6 +69,20 @@ namespace gazebo
         PART_CUSTOM
       };
 
+      /// \enum SaveState
+      /// \brief Save states for the building editor.
+      private: enum SaveState
+      {
+        // NEVER_SAVED: The building has never been saved.
+        NEVER_SAVED,
+
+        // ALL_SAVED: All changes have been saved.
+        ALL_SAVED,
+
+        // UNSAVED_CHANGES: Has been saved before, but has unsaved changes.
+        UNSAVED_CHANGES
+      };
+
       /// \brief Constructor
       public: ModelCreator();
 
@@ -80,6 +96,26 @@ namespace gazebo
       /// \brief Get the name of the model.
       /// \return Name of model.
       public: std::string GetModelName() const;
+
+      /// \brief Set save state upon a change to the model.
+      public: void ModelChanged();
+
+      /// \brief Callback for newing the model.
+      private: void OnNew();
+
+      /// \brief Helper function to manage writing files to disk.
+      private: void SaveModelFiles();
+
+      /// \brief Callback for saving the model.
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSave();
+
+      /// \brief Callback for selecting a folder and saving the model.
+      /// \return True if the user chose to save, false if the user cancelled.
+      private: bool OnSaveAs();
+
+      /// \brief Callback received when exiting the editor mode.
+      private: void OnExit();
 
       /// \brief Finish the model and create the entity on the gzserver.
       public: void FinishModel();
@@ -131,10 +167,6 @@ namespace gazebo
       /// \brief Set the model to allow auto disable at rest.
       /// \param[in] _auto True to allow the model to auto disable.
       public: void SetAutoDisable(bool _auto);
-
-      /// \brief Save model to SDF format.
-      /// \param[in] _savePath Path to save the SDF to.
-      public: void SaveToSDF(const std::string &_savePath);
 
       /// \brief Reset the model creator and the SDF.
       public: void Reset();
@@ -200,7 +232,7 @@ namespace gazebo
 
       /// \brief Create part with default properties from a visual
       /// \param[in] _visual Visual used to create the part.
-      private: void CreatePart(const rendering::VisualPtr &_visual);
+      private: PartData *CreatePart(const rendering::VisualPtr &_visual);
 
       /// \brief Open the part inspector.
       /// \param[in] _name Name of part.
@@ -215,10 +247,6 @@ namespace gazebo
       /// \brief Create an empty model.
       /// \return Name of the model created.
       private: std::string CreateModel();
-
-      /// \brief Get a template SDF string of a simple model.
-      /// \return Template SDF string of a simple model.
-      private: std::string GetTemplateSDFString();
 
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
@@ -237,6 +265,9 @@ namespace gazebo
       /// \param[in] _name Name of the entity to delete.
       private slots: void OnDelete(const std::string &_name="");
 
+      /// \brief Qt Callback to open part inspector
+      private slots: void OnOpenInspector();
+
       /// \brief Qt signal when the a part has been added.
       Q_SIGNALS: void PartAdded();
 
@@ -249,8 +280,14 @@ namespace gazebo
       /// \brief Name of the model.
       private: std::string modelName;
 
+      /// \brief TODO
+      private: std::string folderName;
+
+      /// \brief Name of the model preview.
+      private: static const std::string previewName;
+
       /// \brief The root visual of the model.
-      private: rendering::VisualPtr modelVisual;
+      private: rendering::VisualPtr previewVisual;
 
       /// \brief The root visual of the model.
       private: rendering::VisualPtr mouseVisual;
@@ -267,23 +304,11 @@ namespace gazebo
       /// \brief A list of gui editor events connected to the model creator.
       private: std::vector<event::ConnectionPtr> connections;
 
-      /// \brief Counter for the number of boxes in the model.
-      private: int boxCounter;
-
-      /// \brief Counter for the number of cylinders in the model.
-      private: int cylinderCounter;
-
-      /// \brief Counter for the number of spheres in the model.
-      private: int sphereCounter;
-
-      /// \brief Counter for the number of custom parts in the model.
-      private: int customCounter;
+      /// \brief Counter for the number of parts in the model.
+      private: int partCounter;
 
       /// \brief Counter for generating a unique model name.
       private: int modelCounter;
-
-      /// \brief Transparency value for model being edited.
-      private: double editTransparency;
 
       /// \brief Type of part being added.
       private: PartType addPartType;
@@ -317,6 +342,9 @@ namespace gazebo
       /// \brief The last mouse event
       private: common::MouseEvent lastMouseEvent;
 
+      /// \brief Qt action for opening the part inspector.
+      private: QAction *inspectAct;
+
       /// \brief Part visual that is currently being inspected.
       private: rendering::VisualPtr inspectVis;
 
@@ -325,6 +353,15 @@ namespace gazebo
 
       /// \brief Current model manipulation mode.
       private: std::string manipMode;
+
+      /// \brief Default name of model model
+      private: static const std::string modelDefaultName;
+
+      /// \brief A dialog for setting model model name and save location.
+      private: SaveDialog *saveDialog;
+
+      /// \brief Store the current save state of the model.
+      private: enum SaveState currentSaveState;
     };
     /// \}
   }
