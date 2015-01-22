@@ -23,6 +23,7 @@
 
 #ifdef HAVE_GDAL
 # include <gdalwarper.h>
+# include <gdal_priv.h>
 #endif
 
 #include <algorithm>

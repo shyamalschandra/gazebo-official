@@ -22,7 +22,6 @@
 #include <gazebo/util/system.hh>
 
 #ifdef HAVE_GDAL
-# include <gdal_priv.h>
 # include <string>
 # include <vector>
 
