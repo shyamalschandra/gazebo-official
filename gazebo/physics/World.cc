@@ -148,6 +148,7 @@ World::World(const std::string &_name)
 //////////////////////////////////////////////////
 World::~World()
 {
+  delete this->dataPtr->presetManager;
   delete this->dataPtr->receiveMutex;
   this->dataPtr->receiveMutex = NULL;
   delete this->dataPtr->loadModelMutex;
@@ -249,6 +250,9 @@ void World::Load(sdf::ElementPtr _sdf)
 
   // This should come before loading of entities
   this->dataPtr->physicsEngine->Load(this->dataPtr->sdf->GetElement("physics"));
+
+  this->dataPtr->presetManager =
+    new PresetManager(WorldPtr(this), this->dataPtr->sdf->GetElement("physics"));
 
   // This should also come before loading of entities
   {
@@ -813,6 +817,12 @@ std::string World::GetName() const
 PhysicsEnginePtr World::GetPhysicsEngine() const
 {
   return this->dataPtr->physicsEngine;
+}
+
+//////////////////////////////////////////////////
+PresetManager* World::GetPresetManager() const
+{
+  return this->dataPtr->presetManager;
 }
 
 //////////////////////////////////////////////////
