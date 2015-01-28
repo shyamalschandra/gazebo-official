@@ -610,9 +610,11 @@ uint32_t Scene::GetOculusCameraCount() const
 #endif
 
 //////////////////////////////////////////////////
-UserCameraPtr Scene::CreateUserCamera(const std::string &_name)
+UserCameraPtr Scene::CreateUserCamera(const std::string &_name,
+                                      bool _stereoEnabled)
 {
-  UserCameraPtr camera(new UserCamera(_name, shared_from_this()));
+  UserCameraPtr camera(new UserCamera(_name, shared_from_this(),
+        _stereoEnabled));
   camera->Load();
   camera->Init();
   this->dataPtr->userCameras.push_back(camera);

@@ -41,7 +41,10 @@ namespace gazebo
       /// \brief Constructor
       /// \param[in] _name Name of the camera.
       /// \param[in] _scene Scene to put the camera in.
-      public: UserCamera(const std::string &_name, ScenePtr _scene);
+      /// \param[in] _stereoEnabled True to enable stereo rendering. This is
+      /// here for compatibility with 3D monitors/TVs.
+      public: UserCamera(const std::string &_name, ScenePtr _scene,
+                  bool _stereoEnabled = false);
 
       /// \brief Destructor
       public: virtual ~UserCamera();
@@ -49,6 +52,9 @@ namespace gazebo
       /// \brief Load the user camera.
       /// \param[in] _sdf Parameters for the camera.
       public: void Load(sdf::ElementPtr _sdf);
+
+      // Documentation inherited
+      public: virtual void SetClipDist(float _near, float _far);
 
       /// \brief Generic load function
       public: void Load();
