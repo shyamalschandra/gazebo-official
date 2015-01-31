@@ -565,16 +565,14 @@ void Visual::Load()
 
       if (!matName.empty())
         this->SetMaterial(matName);
-    }
-
-    if (matElem->HasElement("ambient"))
-      this->SetAmbient(matElem->Get<common::Color>("ambient"));
-    if (matElem->HasElement("diffuse"))
-      this->SetDiffuse(matElem->Get<common::Color>("diffuse"));
-    if (matElem->HasElement("specular"))
-      this->SetSpecular(matElem->Get<common::Color>("specular"));
-    if (matElem->HasElement("emissive"))
-      this->SetEmissive(matElem->Get<common::Color>("emissive"));
+      if (matElem->HasElement("ambient"))
+        this->SetAmbient(matElem->Get<common::Color>("ambient"));
+      if (matElem->HasElement("diffuse"))
+        this->SetDiffuse(matElem->Get<common::Color>("diffuse"));
+      if (matElem->HasElement("specular"))
+        this->SetSpecular(matElem->Get<common::Color>("specular"));
+      if (matElem->HasElement("emissive"))
+        this->SetEmissive(matElem->Get<common::Color>("emissive"));
 
     if (matElem->HasElement("lighting"))
     {
@@ -585,6 +583,12 @@ void Visual::Load()
   if (this->dataPtr->sdf->HasElement("transparency"))
   {
     this->SetTransparency(this->dataPtr->sdf->Get<float>("transparency"));
+    }
+
+    if (matElem->HasElement("lighting"))
+    {
+      this->SetLighting(matElem->Get<bool>("lighting"));
+    }
   }
 
   // Allow the mesh to cast shadows
@@ -864,6 +868,7 @@ void Visual::UpdateGeomSize(const math::Vector3 &_scale)
   }
   else if (geomElem->HasElement("mesh"))
     geomElem->GetElement("mesh")->GetElement("scale")->Set(_scale);
+
 }
 
 //////////////////////////////////////////////////
@@ -944,8 +949,6 @@ void Visual::SetLighting(bool _lighting)
     (*iter)->SetLighting(this->dataPtr->lighting);
   }
 
-  // only set the sdf element if this is a visual sdf element or it has
-  // a geometry attached. Verify by checking if it has a geometry child element.
 
   this->dataPtr->sdf->GetElement("material")
       ->GetElement("lighting")->Set(this->dataPtr->lighting);
@@ -1574,6 +1577,9 @@ bool Visual::GetHighlighted() const
 }
 
 //////////////////////////////////////////////////
+
+  this->dataPtr->sdf->GetElement("material")
+      ->GetElement("emissive")->Set(_color);
 float Visual::GetTransparency()
 {
   return this->dataPtr->transparency;
