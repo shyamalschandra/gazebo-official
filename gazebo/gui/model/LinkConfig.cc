@@ -67,6 +67,30 @@ void LinkConfig::SetPose(const math::Pose &_pose)
 }
 
 /////////////////////////////////////////////////
+void LinkConfig::SetMass(double _mass)
+{
+  this->configWidget->SetDoubleWidgetValue("inertial::mass", _mass);
+}
+
+/////////////////////////////////////////////////
+void LinkConfig::SetInertialPose(const math::Pose &_pose)
+{
+  this->configWidget->SetPoseWidgetValue("inertial::inertial::pose", _pose);
+}
+
+/////////////////////////////////////////////////
+void LinkConfig::SetInertiaMatrix(double _ixx, double _ixy, double _ixz,
+    double _iyy, double _iyz, double _izz)
+{
+  this->configWidget->SetDoubleWidgetValue("inertial::ixx", _ixx);
+  this->configWidget->SetDoubleWidgetValue("inertial::ixy", _ixy);
+  this->configWidget->SetDoubleWidgetValue("inertial::ixz", _ixz);
+  this->configWidget->SetDoubleWidgetValue("inertial::iyy", _iyy);
+  this->configWidget->SetDoubleWidgetValue("inertial::iyz", _iyz);
+  this->configWidget->SetDoubleWidgetValue("inertial::izz", _izz);
+}
+
+/////////////////////////////////////////////////
 msgs::Link *LinkConfig::GetData() const
 {
   return dynamic_cast<msgs::Link *>(this->configWidget->GetMsg());

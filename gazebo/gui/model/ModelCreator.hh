@@ -29,6 +29,7 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/rendering/Visual.hh"
+#include "gazebo/gui/model/LinkInspector.hh"
 #include "gazebo/gui/qt.h"
 
 #include "gazebo/util/system.hh"
@@ -198,6 +199,10 @@ namespace gazebo
       /// \param[in] _checked True if the menu item is checked
       private slots: void OnEdit(bool _checked);
 
+      /// \brief QT callback when there's a request to edit an existing model.
+      /// \param[in] _modelName Name of model to be edited.
+      private slots: void OnEditModel(const std::string &_modelName);
+
       /// \brief Qt callback when the copy action is triggered.
       private slots: void OnCopy();
 
@@ -243,6 +248,9 @@ namespace gazebo
       /// \param[in] _visual Visual used to create the part.
       private: PartData *CreatePart(const rendering::VisualPtr &_visual);
 
+      /// \brief TODO
+      private: void CreatePartFromSDF(sdf::ElementPtr _linkElem);
+
       /// \brief Open the part inspector.
       /// \param[in] _name Name of part.
       private: void OpenInspector(const std::string &_name);
@@ -257,6 +265,8 @@ namespace gazebo
       /// \return Name of the model created.
       private: std::string CreateModel();
 
+      /// \brief TODO
+      private: void LoadSDF(sdf::ElementPtr _sdf);
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
       /// \param[in] _config Configuration: min, center, or max.
