@@ -56,7 +56,6 @@ Link::Link(EntityPtr _parent)
   this->publishDataMutex = new boost::recursive_mutex();
 }
 
-
 //////////////////////////////////////////////////
 Link::~Link()
 {
@@ -104,6 +103,7 @@ Link::~Link()
 
   this->requestPub.reset();
   this->dataPub.reset();
+  this->wrenchSub.reset();
   this->connections.clear();
 
   delete this->publishDataMutex;
@@ -216,6 +216,10 @@ void Link::Load(sdf::ElementPtr _sdf)
   if (needUpdate)
     this->connections.push_back(event::Events::ConnectWorldUpdateBegin(
           boost::bind(&Link::Update, this, _1)));
+
+  std::string topicName = "~/" + this->GetScopedName() + "/wrench";
+  boost::replace_all(topicName, "::", "/");
+  this->wrenchSub = this->node->Subscribe(topicName, &Link::OnWrenchMsg, this);
 }
 
 //////////////////////////////////////////////////
@@ -1325,4 +1329,19 @@ msgs::Visual Link::GetVisualMessage(const std::string &_name) const
     result = iter->second;
 
   return result;
+}
+
+//////////////////////////////////////////////////
+void Link::OnWrenchMsg(ConstWrenchPtr &_msg)
+{
+  if (_msg->has_force())
+  {
+    const math::Vector3 force = msgs::Convert(_msg->force());
+    this->AddRelativeForce(force);
+  }
+  if (_msg->has_torque())
+  {
+    const math::Vector3 torque = msgs::Convert(_msg->torque());
+    this->AddRelativeTorque(torque);
+  }
 }
