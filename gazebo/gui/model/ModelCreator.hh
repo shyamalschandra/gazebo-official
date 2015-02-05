@@ -17,18 +17,20 @@
 #ifndef _MODEL_CREATOR_HH_
 #define _MODEL_CREATOR_HH_
 
-#include <boost/unordered/unordered_map.hpp>
 #include <sdf/sdf.hh>
 
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "gazebo/common/KeyEvent.hh"
-#include "gazebo/gui/qt.h"
-#include "gazebo/gui/model/JointMaker.hh"
+#include "gazebo/common/MouseEvent.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/rendering/Visual.hh"
+#include "gazebo/gui/qt.h"
+
 #include "gazebo/util/system.hh"
 
 namespace gazebo
@@ -42,6 +44,7 @@ namespace gazebo
   {
     class PartData;
     class SaveDialog;
+    class JointMaker;
 
     /// \addtogroup gazebo_gui
     /// \{
@@ -236,7 +239,10 @@ namespace gazebo
       private: void OnSetSelectedEntity(const std::string &_name,
           const std::string &_mode);
 
-      /// \brief Create part with default properties from a visual
+      /// \brief Create part with default properties from a visual. This
+      /// function creates a link that will become the parent of the
+      /// input visual. A collision visual with the same geometry as the input
+      /// visual will also be added to the link.
       /// \param[in] _visual Visual used to create the part.
       private: void CreatePart(const rendering::VisualPtr &_visual);
 
@@ -254,10 +260,6 @@ namespace gazebo
       /// \return Name of the model created.
       private: std::string CreateModel();
 
-      /// \brief Get a template SDF string of a simple model.
-      /// \return Template SDF string of a simple model.
-      private: std::string GetTemplateSDFString();
-
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
       /// \param[in] _config Configuration: min, center, or max.
@@ -274,6 +276,9 @@ namespace gazebo
       /// \brief Qt callback when a delete signal has been emitted.
       /// \param[in] _name Name of the entity to delete.
       private slots: void OnDelete(const std::string &_name="");
+
+      /// \brief Qt Callback to open part inspector
+      private slots: void OnOpenInspector();
 
       /// \brief Qt signal when the a part has been added.
       Q_SIGNALS: void PartAdded();
@@ -311,29 +316,17 @@ namespace gazebo
       /// \brief A list of gui editor events connected to the model creator.
       private: std::vector<event::ConnectionPtr> connections;
 
-      /// \brief Counter for the number of boxes in the model.
-      private: int boxCounter;
-
-      /// \brief Counter for the number of cylinders in the model.
-      private: int cylinderCounter;
-
-      /// \brief Counter for the number of spheres in the model.
-      private: int sphereCounter;
-
-      /// \brief Counter for the number of custom parts in the model.
-      private: int customCounter;
+      /// \brief Counter for the number of parts in the model.
+      private: int partCounter;
 
       /// \brief Counter for generating a unique model name.
       private: int modelCounter;
-
-      /// \brief Transparency value for model being edited.
-      private: double editTransparency;
 
       /// \brief Type of part being added.
       private: PartType addPartType;
 
       /// \brief A map of model part names to and their visuals.
-      private: boost::unordered_map<std::string, PartData *> allParts;
+      private: std::map<std::string, PartData *> allParts;
 
       /// \brief Transport node
       private: transport::NodePtr node;
@@ -360,6 +353,9 @@ namespace gazebo
 
       /// \brief The last mouse event
       private: common::MouseEvent lastMouseEvent;
+
+      /// \brief Qt action for opening the part inspector.
+      private: QAction *inspectAct;
 
       /// \brief Part visual that is currently being inspected.
       private: rendering::VisualPtr inspectVis;
