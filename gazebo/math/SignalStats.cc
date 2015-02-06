@@ -121,6 +121,37 @@ void SignalMaxAbsoluteValue::InsertData(const double _data)
 }
 
 //////////////////////////////////////////////////
+double SignalVarianceValue::Value() const
+{
+  return this->dataPtr->data;
+}
+
+//////////////////////////////////////////////////
+std::string SignalVarianceValue::ShortName() const
+{
+  return "variance";
+}
+
+//////////////////////////////////////////////////
+void SignalVarianceValue::InsertData(double _data)
+{
+  // from nfs-uxsup.csx.cam.ac.uk/~fanf2/hermes/doc/antiforgery/stats.pdf
+  double oldMean = this->sum / (this->dataPtr->count + 1.0);
+  this->dataPtr->count++;
+  this->sum += _data;
+  double newMean = this->sum / (this->dataPtr->count + 1.0);
+  this->dataPtr->data += this->dataPtr->count * (this->dataPtr->count - 1.0)
+    * (newMean - oldMean) * (newMean - oldMean);
+}
+
+//////////////////////////////////////////////////
+void SignalVarianceValue::Reset()
+{
+  SignalStatistic::Reset();
+  this->sum = 0;
+}
+
+//////////////////////////////////////////////////
 SignalStats::SignalStats()
   : dataPtr(new SignalStatsPrivate)
 {
@@ -182,6 +213,11 @@ bool SignalStats::InsertStatistic(const std::string &_name)
   if (_name == "maxAbs")
   {
     stat.reset(new SignalMaxAbsoluteValue());
+    this->dataPtr->stats.push_back(stat);
+  }
+  else if (_name == "variance")
+  {
+    stat.reset(new SignalVarianceValue());
     this->dataPtr->stats.push_back(stat);
   }
   else if (_name == "mean")
