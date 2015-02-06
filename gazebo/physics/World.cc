@@ -196,6 +196,9 @@ void World::Load(sdf::ElementPtr _sdf)
   this->dataPtr->node = transport::NodePtr(new transport::Node());
   this->dataPtr->node->Init(this->GetName());
 
+  // Publish clock for diagnostics
+  this->clockPub = this->node->Advertise<msgs::Time>("~/clock", 10);
+
   // pose pub for server side, mainly used for updating and timestamping
   // Scene, which in turn will be used by rendering sensors.
   // TODO: replace local communication with shared memory for efficiency.
@@ -619,9 +622,12 @@ void World::Step()
         util::LogRecord::Instance()->Notify();
       this->dataPtr->pauseTime += stepTime;
     }
+
+    DIAG_TIMER_LAP("World::Step", "update");
   }
 
   this->ProcessMessages();
+  DIAG_TIMER_LAP("World::Step", "processMessages");
 
   DIAG_TIMER_STOP("World::Step");
 
@@ -647,7 +653,7 @@ void World::Step(unsigned int _steps)
   bool wait = true;
   while (wait)
   {
-    common::Time::MSleep(1);
+    common::Time::NSleep(1);
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->worldUpdateMutex);
     if (this->dataPtr->stepInc == 0 || this->dataPtr->stop)
       wait = false;
@@ -676,6 +682,9 @@ void World::Update()
   event::Events::worldUpdateBegin(this->dataPtr->updateInfo);
 
   DIAG_TIMER_LAP("World::Update", "Events::worldUpdateBegin");
+
+  /// \brief Publish clock
+  this->clockPub->Publish(msgs::Convert(this->updateInfo.simTime));
 
   // Update all the models
   (*this.*dataPtr->modelUpdateFunc)();
@@ -742,6 +751,7 @@ void World::Update()
   DIAG_TIMER_LAP("World::Update", "ContactManager::PublishContacts");
 
   event::Events::worldUpdateEnd();
+  DIAG_TIMER_LAP("World::Update", "endEvent");
 
   DIAG_TIMER_STOP("World::Update");
 }
@@ -775,6 +785,8 @@ void World::Fini()
 #ifdef HAVE_OPENAL
   util::OpenAL::Instance()->Fini();
 #endif
+
+  util::DiagnosticManager::Instance()->Fini();
 }
 
 //////////////////////////////////////////////////
@@ -1097,6 +1109,8 @@ void World::SetPaused(bool _p)
 {
   if (this->dataPtr->pause == _p)
     return;
+
+  DIAG_MARKER("paused");
 
   {
     boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
@@ -1879,6 +1893,7 @@ void World::ProcessMessages()
 {
   {
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->receiveMutex);
+    DIAG_TIMER_START("World::ProcessMessages");
 
     if ((this->dataPtr->posePub && this->dataPtr->posePub->HasConnections()) ||
         (this->dataPtr->poseLocalPub &&
@@ -1927,17 +1942,24 @@ void World::ProcessMessages()
       }
     }
     this->dataPtr->publishModelPoses.clear();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Pose");
   }
 
   if (common::Time::GetWallTime() - this->dataPtr->prevProcessMsgsTime >
       this->dataPtr->processMsgsPeriod)
   {
     this->ProcessEntityMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Entities");
     this->ProcessRequestMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Requests");
     this->ProcessFactoryMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Factory");
     this->ProcessModelMsgs();
+    DIAG_TIMER_LAP("World::ProcessMessages", "Model");
     this->dataPtr->prevProcessMsgsTime = common::Time::GetWallTime();
   }
+
+  DIAG_TIMER_STOP("World::ProcessMessages");
 }
 
 //////////////////////////////////////////////////
