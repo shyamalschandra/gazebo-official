@@ -759,9 +759,14 @@ void GLWidget::OnMouseReleaseNormal()
       if (rightButton)
       {
         if (selectVis == modelVis)
-          g_modelRightMenu->Run(selectVis->GetName(), QCursor::pos());
-        // else if (selectVis == linkVis)
+        {
+          g_modelRightMenu->Run(selectVis->GetName(), QCursor::pos(),
+              ModelRightMenu::EntityTypes::MODEL);
+        }
+        else if (selectVis == linkVis)
+        {
           // TODO: Open link right menu
+        }
       }
     }
     else
@@ -1248,6 +1253,7 @@ void GLWidget::OnRequest(ConstRequestPtr &_msg)
       {
         if ((*it)->GetName() == _msg->data())
         {
+          ModelManipulator::Instance()->Detach();
           this->selectedVisuals.erase(it);
           break;
         }
