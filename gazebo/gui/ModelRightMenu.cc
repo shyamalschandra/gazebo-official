@@ -24,6 +24,7 @@
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/GuiIface.hh"
+#include "gazebo/gui/ApplyWrenchDialog.hh"
 #include "gazebo/gui/ModelRightMenu.hh"
 
 using namespace gazebo;
@@ -43,6 +44,9 @@ ModelRightMenu::ModelRightMenu()
   this->followAct->setStatusTip(tr("Follow the selection"));
   connect(this->followAct, SIGNAL(triggered()), this, SLOT(OnFollow()));
 
+  this->applyWrenchAct = new QAction(tr("Apply Force/Torque"), this);
+  this->applyWrenchAct->setStatusTip(tr("Apply force and torque to the model"));
+  connect(this->applyWrenchAct, SIGNAL(triggered()), this, SLOT(OnApplyWrench()));
 
   // \todo Reimplement
   // this->snapBelowAct = new QAction(tr("Snap"), this);
@@ -129,18 +133,35 @@ bool ModelRightMenu::OnKeyRelease(const common::KeyEvent &_event)
 ModelRightMenu::~ModelRightMenu()
 {
   this->node->Fini();
+  delete this->applyWrenchDialog;
+  this->applyWrenchDialog = NULL;
 }
 
 /////////////////////////////////////////////////
 void ModelRightMenu::Run(const std::string &_modelName, const QPoint &_pt,
     EntityTypes _type)
 {
-  this->modelName = _modelName.substr(0, _modelName.find("::"));
+  this->entityType = _type;
+
+  if (_type == EntityTypes::MODEL || _type == EntityTypes::LIGHT)
+  {
+    this->modelName = _modelName.substr(0, _modelName.find("::"));
+  }
+  else if (_type == EntityTypes::LINK)
+  {
+    this->modelName = _modelName;
+  }
 
   QMenu menu;
 
-  menu.addAction(this->moveToAct);
-  menu.addAction(this->followAct);
+  if (_type == EntityTypes::MODEL || _type == EntityTypes::LIGHT)
+  {
+    menu.addAction(this->moveToAct);
+    menu.addAction(this->followAct);
+  }
+
+  if (_type == EntityTypes::MODEL || _type == EntityTypes::LINK)
+    menu.addAction(this->applyWrenchAct);
 
   if (_type == EntityTypes::MODEL)
   {
@@ -163,15 +184,18 @@ void ModelRightMenu::Run(const std::string &_modelName, const QPoint &_pt,
     }
   }
 
-  if (g_copyAct && g_pasteAct)
+  if (_type == EntityTypes::MODEL || _type == EntityTypes::LIGHT)
   {
-    menu.addSeparator();
-    menu.addAction(g_copyAct);
-    menu.addAction(g_pasteAct);
-  }
+      if (g_copyAct && g_pasteAct)
+      {
+        menu.addSeparator();
+        menu.addAction(g_copyAct);
+        menu.addAction(g_pasteAct);
+      }
 
-  menu.addSeparator();
-  menu.addAction(g_deleteAct);
+      menu.addSeparator();
+      menu.addAction(g_deleteAct);
+  }
 
   // \todo Reimplement these features.
   // menu.addAction(this->skeletonAction);
@@ -192,6 +216,45 @@ void ModelRightMenu::OnFollow()
   rendering::UserCameraPtr cam = gui::get_active_camera();
   cam->TrackVisual(this->modelName);
   gui::Events::follow(this->modelName);
+}
+
+/////////////////////////////////////////////////
+void ModelRightMenu::OnApplyWrench()
+{
+  this->applyWrenchDialog = new ApplyWrenchDialog();
+
+  std::string linkName;
+  if (this->entityType == MODEL)
+  {
+    // Get the canonical link
+    // For now getting the first link that comes up
+    rendering::VisualPtr vis = gui::get_active_camera()->GetScene()->
+        GetVisual(this->modelName);
+
+    if (vis && vis == vis->GetRootVisual())
+    {
+      linkName = vis->GetChild(0)->GetName();
+    }
+    else
+    {
+      gzerr << "Can't find model " << this->modelName
+          << std::endl;
+      return;
+    }
+  }
+  else if (this->entityType == LINK)
+  {
+    linkName = this->modelName;
+  }
+  else
+  {
+    gzerr << "Wrench can only be applied to a link." << std::endl;
+    return;
+  }
+
+  this->applyWrenchDialog->SetLink(linkName);
+  this->applyWrenchDialog->move(QCursor::pos());
+  this->applyWrenchDialog->show();
 }
 
 /////////////////////////////////////////////////
