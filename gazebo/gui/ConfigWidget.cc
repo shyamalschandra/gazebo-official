@@ -694,8 +694,13 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,  bool _update,
             {
               const google::protobuf::FieldDescriptor *valueField =
                   valueDescriptor->field(j);
-              values.push_back(
-                  valueMsg->GetReflection()->GetFloat(*valueMsg, valueField));
+              if (valueMsg->GetReflection()->HasField(*valueMsg, valueField))
+              {
+                values.push_back(valueMsg->GetReflection()->GetFloat(
+                    *valueMsg, valueField));
+              }
+              else
+                values.push_back(0);
             }
             color.r = values[0];
             color.g = values[1];
@@ -860,6 +865,8 @@ ConfigChildWidget *ConfigWidget::CreateDoubleWidget(const std::string &_key)
   widgetLayout->addWidget(keyLabel);
   QDoubleSpinBox *valueSpinBox = new QDoubleSpinBox;
   valueSpinBox->setRange(-1e6, 1e6);
+  valueSpinBox->setSingleStep(0.01);
+  valueSpinBox->setDecimals(6);
   valueSpinBox->setAlignment(Qt::AlignRight);
   widgetLayout->addWidget(valueSpinBox);
   ConfigChildWidget *widget = new ConfigChildWidget();

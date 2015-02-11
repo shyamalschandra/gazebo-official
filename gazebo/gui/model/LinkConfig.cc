@@ -61,6 +61,12 @@ LinkConfig::~LinkConfig()
 }
 
 /////////////////////////////////////////////////
+void LinkConfig::Update(const msgs::Link *_linkMsg)
+{
+  this->configWidget->UpdateFromMsg(_linkMsg);
+}
+
+/////////////////////////////////////////////////
 void LinkConfig::SetPose(const math::Pose &_pose)
 {
   this->configWidget->SetPoseWidgetValue("pose", _pose);

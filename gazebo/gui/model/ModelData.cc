@@ -17,6 +17,7 @@
 
 #include <boost/thread/recursive_mutex.hpp>
 
+#include "gazebo/rendering/Material.hh"
 #include "gazebo/rendering/Scene.hh"
 #include "gazebo/rendering/ogre_gazebo.h"
 
@@ -47,9 +48,6 @@ std::string ModelData::GetTemplateSDFString()
     <<     "</geometry>"
     <<     "<material>"
     <<       "<lighting>true</lighting>"
-    <<       "<ambient>0.3 0.3 0.3 1</ambient>"
-    <<       "<diffuse>0.7 0.7 0.7 1</diffuse>"
-    <<       "<specular>0.01 0.01 0.01 1</specular>"
     <<       "<script>"
     <<         "<uri>file://media/materials/scripts/gazebo.material</uri>"
     <<         "<name>Gazebo/Grey</name>"
@@ -173,6 +171,58 @@ math::Vector3 PartData::GetScale() const
 }
 
 /////////////////////////////////////////////////
+void PartData::Load(sdf::ElementPtr _sdf)
+{
+  LinkConfig *linkConfig = this->inspector->GetLinkConfig();
+
+  this->SetName(_sdf->Get<std::string>("name"));
+  this->SetPose(_sdf->Get<math::Pose>("pose"));
+
+  if (_sdf->HasElement("inertial"))
+  {
+    sdf::ElementPtr inertialElem = _sdf->GetElement("inertial");
+    this->partSDF->GetElement("inertial")->Copy(inertialElem);
+
+    msgs::Link linkMsg;
+    msgs::Inertial *inertialMsg = linkMsg.mutable_inertial();
+
+    if (inertialElem->HasElement("mass"))
+    {
+      double mass = inertialElem->Get<double>("mass");
+      inertialMsg->set_mass(mass);
+    }
+
+    if (inertialElem->HasElement("pose"))
+    {
+      math::Pose inertialPose = inertialElem->Get<math::Pose>("pose");
+      msgs::Set(inertialMsg->mutable_pose(), inertialPose);
+    }
+
+    if (inertialElem->HasElement("inertia"))
+    {
+      sdf::ElementPtr inertiaElem = inertialElem->GetElement("inertia");
+      inertialMsg->set_ixx(inertiaElem->Get<double>("ixx"));
+      inertialMsg->set_ixy(inertiaElem->Get<double>("ixy"));
+      inertialMsg->set_ixz(inertiaElem->Get<double>("ixz"));
+      inertialMsg->set_iyy(inertiaElem->Get<double>("iyy"));
+      inertialMsg->set_iyz(inertiaElem->Get<double>("iyz"));
+      inertialMsg->set_izz(inertiaElem->Get<double>("izz"));
+    }
+    linkConfig->Update(&linkMsg);
+  }
+
+  if (_sdf->HasElement("sensor"))
+  {
+    sdf::ElementPtr sensorElem = _sdf->GetElement("sensor");
+    while (sensorElem)
+    {
+      this->partSDF->InsertElement(sensorElem->Clone());
+      sensorElem = sensorElem->GetNextElement("sensor");
+    }
+  }
+}
+
+/////////////////////////////////////////////////
 void PartData::UpdateConfig()
 {
   // set new geom size if scale has changed.
@@ -180,17 +230,31 @@ void PartData::UpdateConfig()
   for (auto &it : this->visuals)
   {
     std::string name = it.first->GetName();
-    std::string partName = this->partVisual->GetName();
-    std::string leafName =
-        name.substr(name.find(partName)+partName.size()+1);
+    std::string leafName = name;
+    size_t idx = name.find_last_of("::");
+    if (idx != std::string::npos)
+      leafName = name.substr(idx+1);
     visualConfig->SetGeometry(leafName, it.first->GetScale(),
         it.first->GetMeshName());
 
     msgs::Visual *updateMsg = visualConfig->GetData(leafName);
     msgs::Visual visualMsg = it.second;
     updateMsg->clear_scale();
-    msgs::Color *diffuse = updateMsg->mutable_material()->mutable_diffuse();
-    diffuse->set_a(1.0-updateMsg->transparency());
+    msgs::Material *matMsg = updateMsg->mutable_material();
+    // clear empty colors so they are not used by visual updates
+    common::Color emptyColor;
+    if (msgs::Convert(matMsg->ambient()) == emptyColor)
+      matMsg->clear_ambient();
+    if (msgs::Convert(matMsg->diffuse()) == emptyColor)
+      matMsg->clear_diffuse();
+    if (msgs::Convert(matMsg->specular()) == emptyColor)
+      matMsg->clear_specular();
+    if (msgs::Convert(matMsg->emissive()) == emptyColor)
+      matMsg->clear_emissive();
+
+    if (matMsg->has_diffuse())
+      matMsg->mutable_diffuse()->set_a(1.0-updateMsg->transparency());
+
     visualMsg.CopyFrom(*updateMsg);
     it.second = visualMsg;
   }
@@ -198,9 +262,10 @@ void PartData::UpdateConfig()
   for (auto &colIt : this->collisions)
   {
     std::string name = colIt.first->GetName();
-    std::string partName = this->partVisual->GetName();
-    std::string leafName =
-        name.substr(name.find(partName)+partName.size()+1);
+    std::string leafName = name;
+    size_t idx = name.find_last_of("::");
+    if (idx != std::string::npos)
+      leafName = name.substr(idx+1);
     collisionConfig->SetGeometry(leafName, colIt.first->GetScale(),
         colIt.first->GetMeshName());
 
@@ -221,10 +286,11 @@ void PartData::AddVisual(rendering::VisualPtr _visual)
   visualMsg.set_transparency(0.0);
   this->visuals[_visual] = visualMsg;
 
-  std::string partName = this->partVisual->GetName();
   std::string visName = _visual->GetName();
-  std::string leafName =
-      visName.substr(visName.find(partName)+partName.size()+1);
+  std::string leafName = visName;
+  size_t idx = visName.find_last_of("::");
+  if (idx != std::string::npos)
+    leafName = visName.substr(idx+1);
 
   visualConfig->AddVisual(leafName, &visualMsg);
 }
@@ -238,19 +304,79 @@ void PartData::AddCollision(rendering::VisualPtr _collisionVis)
   sdf::ElementPtr collisionSDF(new sdf::Element);
   sdf::initFile("collision.sdf", collisionSDF);
 
+  std::string visName = _collisionVis->GetName();
+  std::string leafName = visName;
+  size_t idx = visName.find_last_of("::");
+  if (idx != std::string::npos)
+    leafName = visName.substr(idx+1);
+
   msgs::Collision collisionMsg;
-  collisionMsg.set_name(_collisionVis->GetName());
+  collisionMsg.set_name(leafName);
   msgs::Geometry *geomMsg = collisionMsg.mutable_geometry();
   geomMsg->CopyFrom(visualMsg.geometry());
+  msgs::Pose *poseMsg = collisionMsg.mutable_pose();
+  poseMsg->CopyFrom(visualMsg.pose());
 
   this->collisions[_collisionVis] = collisionMsg;
-
-  std::string partName = this->partVisual->GetName();
-  std::string visName = _collisionVis->GetName();
-  std::string leafName =
-      visName.substr(visName.find(partName)+partName.size()+1);
-
   collisionConfig->AddCollision(leafName, &collisionMsg);
+}
+
+/////////////////////////////////////////////////
+PartData* PartData::Clone(const std::string &_newName)
+{
+  PartData *clonePart = new PartData();
+
+  clonePart->Load(this->partSDF);
+  clonePart->SetName(_newName);
+
+  std::string partVisualName = this->partVisual->GetName();
+  std::string cloneVisName = _newName;
+  size_t partIdx = partVisualName.find("::");
+  if (partIdx != std::string::npos)
+    cloneVisName = partVisualName.substr(0, partIdx+2) + _newName;
+
+  // clone partVisual;
+  rendering::VisualPtr linkVisual(new rendering::Visual(cloneVisName,
+      this->partVisual->GetParent()));
+  linkVisual->Load();
+
+  clonePart->partVisual = linkVisual;
+
+  std::map<rendering::VisualPtr, msgs::Visual>::iterator visIt;
+  for (visIt = this->visuals.begin(); visIt != this->visuals.end(); ++visIt)
+  {
+    std::string newVisName = visIt->first->GetName();
+    size_t idx = newVisName.find_last_of("::");
+    if (idx != std::string::npos)
+      newVisName = cloneVisName + newVisName.substr(idx-1);
+    else
+      newVisName = cloneVisName + "::" + newVisName;
+    clonePart->AddVisual(visIt->first->Clone(newVisName,
+        clonePart->partVisual));
+  }
+
+  linkVisual->SetTransparency(ModelData::GetEditTransparency());
+  std::map<rendering::VisualPtr, msgs::Collision>::iterator colIt;
+  for (colIt = this->collisions.begin(); colIt != this->collisions.end();
+      ++colIt)
+  {
+    std::string newColName = colIt->first->GetName();
+    size_t idx = newColName.find_last_of("::");
+    if (idx != std::string::npos)
+      newColName = cloneVisName + newColName.substr(idx-1);
+    else
+      newColName = cloneVisName + "::" + newColName;
+    rendering::VisualPtr collisionVis = colIt->first->Clone(newColName,
+        clonePart->partVisual);
+    collisionVis->SetTransparency(
+       math::clamp(ModelData::GetEditTransparency() * 2.0, 0.0, 0.8));
+    // fix for transparency alpha compositing
+    Ogre::MovableObject *colObj = collisionVis->GetSceneNode()->
+        getAttachedObject(0);
+    colObj->setRenderQueueGroup(colObj->getRenderQueueGroup()+1);
+    clonePart->AddCollision(collisionVis);
+  }
+  return clonePart;
 }
 
 /////////////////////////////////////////////////
@@ -269,10 +395,10 @@ void PartData::OnApply()
     for (auto &it : this->visuals)
     {
       std::string name = it.first->GetName();
-      std::string partName = this->partVisual->GetName();
-      std::string leafName =
-          name.substr(name.find(partName)+partName.size()+1);
-
+      std::string leafName = name;
+      size_t idx = name.find_last_of("::");
+      if (idx != std::string::npos)
+        leafName = name.substr(idx+1);
       msgs::Visual *updateMsg = visualConfig->GetData(leafName);
       if (updateMsg)
       {
@@ -280,8 +406,68 @@ void PartData::OnApply()
 
         // update the visualMsg that will be used to generate the sdf.
         updateMsg->clear_scale();
-        msgs::Color *diffuse = updateMsg->mutable_material()->mutable_diffuse();
-        diffuse->set_a(1.0-updateMsg->transparency());
+        msgs::Material *matMsg = updateMsg->mutable_material();
+        msgs::Material::Script *scriptMsg = matMsg->mutable_script();
+
+        common::Color emptyColor;
+        bool matScriptChanged = false;
+        bool colorChanged = false;
+        common::Color ambient;
+        common::Color diffuse;
+        common::Color specular;
+        common::Color emissive;
+
+        std::string matName = it.first->GetMaterialName();
+        std::string uniqueMatName = name + "_MATERIAL_";
+        size_t visMatIdx = matName.find(uniqueMatName);
+        if (visMatIdx != std::string::npos)
+          matName = matName.substr(visMatIdx + uniqueMatName.size());
+
+        if (matName != scriptMsg->name() && !scriptMsg->name().empty())
+        {
+          rendering::Material::GetMaterialAsColor(scriptMsg->name(), ambient,
+              diffuse, specular, emissive);
+          visualConfig->SetMaterial(leafName, scriptMsg->name(), ambient,
+              diffuse, specular, emissive);
+
+          matScriptChanged = true;
+        }
+        else
+        {
+          ambient = msgs::Convert(matMsg->ambient());
+          diffuse = msgs::Convert(matMsg->diffuse());
+          specular = msgs::Convert(matMsg->specular());
+          emissive = msgs::Convert(matMsg->emissive());
+          if (ambient != it.first->GetAmbient()
+              || diffuse != it.first->GetDiffuse()
+              || specular != it.first->GetSpecular()
+              || emissive != it.first->GetEmissive())
+          {
+            colorChanged = true;
+          }
+
+          if (colorChanged)
+            scriptMsg->clear_name();
+        }
+
+        // update material or color, but not both
+        // clear empty colors so they are not used by visual updates
+        if (matScriptChanged || !colorChanged ||
+            msgs::Convert(matMsg->ambient()) == emptyColor)
+          matMsg->clear_ambient();
+        if (matScriptChanged || !colorChanged ||
+            msgs::Convert(matMsg->diffuse()) == emptyColor)
+          matMsg->clear_diffuse();
+        if (matScriptChanged || !colorChanged ||
+            msgs::Convert(matMsg->specular()) == emptyColor)
+          matMsg->clear_specular();
+        if (matScriptChanged || !colorChanged ||
+            msgs::Convert(matMsg->emissive()) == emptyColor)
+          matMsg->clear_emissive();
+
+        if (matMsg->has_diffuse())
+          matMsg->mutable_diffuse()->set_a(1.0-updateMsg->transparency());
+
         visualMsg.CopyFrom(*updateMsg);
         it.second = visualMsg;
 
@@ -298,10 +484,10 @@ void PartData::OnApply()
     for (auto &it : this->collisions)
     {
       std::string name = it.first->GetName();
-      std::string partName = this->partVisual->GetName();
-      std::string leafName =
-          name.substr(name.find(partName)+partName.size()+1);
-
+      std::string leafName = name;
+      size_t idx = name.find_last_of("::");
+      if (idx != std::string::npos)
+        leafName = name.substr(idx+1);
       msgs::Collision *updateMsg = collisionConfig->GetData(leafName);
       if (updateMsg)
       {
@@ -322,7 +508,7 @@ void PartData::OnAddVisual(const std::string &_name)
   VisualConfig *visualConfig = this->inspector->GetVisualConfig();
 
   std::ostringstream visualName;
-  visualName << this->partVisual->GetName() << "_" << _name;
+  visualName << this->partVisual->GetName() << "::" << _name;
 
   rendering::VisualPtr visVisual;
   rendering::VisualPtr refVisual;
@@ -366,8 +552,8 @@ void PartData::OnAddCollision(const std::string &_name)
   // collision tab
   CollisionConfig *collisionConfig = this->inspector->GetCollisionConfig();
 
-  std::ostringstream collisionName;
-  collisionName << this->partVisual->GetName() << "_" << _name;
+  std::stringstream collisionName;
+  collisionName << this->partVisual->GetName() << "::" << _name;
 
   rendering::VisualPtr collisionVis;
   if (!this->collisions.empty())
@@ -389,15 +575,22 @@ void PartData::OnAddCollision(const std::string &_name)
         ->GetElement("model")->GetElement("link")->GetElement("visual");
     collisionVis->Load(collisionElem);
     // orange
-    collisionVis->SetAmbient(common::Color(1.0, 0.5, 0.05));
-    collisionVis->SetDiffuse(common::Color(1.0, 0.5, 0.05));
-    collisionVis->SetSpecular(common::Color(0.5, 0.5, 0.5));
+    common::Color ambient;
+    common::Color diffuse;
+    common::Color specular;
+    common::Color emissive;
+    rendering::Material::GetMaterialAsColor("Gazebo/Orange", ambient, diffuse,
+        specular, emissive);
+    collisionVis->SetAmbient(ambient);
+    collisionVis->SetDiffuse(diffuse);
+    collisionVis->SetSpecular(specular);
+    collisionVis->SetEmissive(emissive);
     this->partVisual->GetScene()->AddVisual(collisionVis);
   }
 
   msgs::Visual visualMsg = msgs::VisualFromSDF(collisionVis->GetSDF());
   msgs::Collision collisionMsg;
-  collisionMsg.set_name(collisionVis->GetName());
+  collisionMsg.set_name(_name);
   msgs::Geometry *geomMsg = collisionMsg.mutable_geometry();
   geomMsg->CopyFrom(visualMsg.geometry());
 
@@ -419,7 +612,7 @@ void PartData::OnRemoveVisual(const std::string &_name)
   // find and remove visual when the user removes it in the
   // inspector's visual tab
   std::ostringstream name;
-  name << this->partVisual->GetName() << "_" << _name;
+  name << this->partVisual->GetName() << "::" << _name;
   std::string visualName = name.str();
 
   for (auto it = this->visuals.begin(); it != this->visuals.end(); ++it)
@@ -440,7 +633,7 @@ void PartData::OnRemoveCollision(const std::string &_name)
   // find and remove collision visual when the user removes it in the
   // inspector's collision tab
   std::ostringstream name;
-  name << this->partVisual->GetName() << "_" << _name;
+  name << this->partVisual->GetName() << "::" << _name;
   std::string collisionName = name.str();
 
   for (auto it = this->collisions.begin(); it != this->collisions.end(); ++it)

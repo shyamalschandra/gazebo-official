@@ -1283,6 +1283,8 @@ void GLWidget::OnModelEditor(bool _checked)
   g_arrowAct->trigger();
   event::Events::setSelectedEntity("", "normal");
 
-  // Manually deselect, in case the editor was opened with Ctrl
+  {
+    // Manually deselect, in case the editor was opened with Ctrl
   this->DeselectAllVisuals();
+  }
 }
