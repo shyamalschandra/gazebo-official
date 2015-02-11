@@ -215,10 +215,7 @@ void Visual::Fini()
 
   if (this->dataPtr->sceneNode != NULL)
   {
-    this->DestroyAllAttachedMovableObjects(this->dataPtr->sceneNode);
-    this->dataPtr->sceneNode->removeAndDestroyAllChildren();
     this->dataPtr->sceneNode->detachAllObjects();
-
     this->dataPtr->scene->GetManager()->destroySceneNode(
         this->dataPtr->sceneNode);
     this->dataPtr->sceneNode = NULL;
@@ -243,13 +240,12 @@ VisualPtr Visual::Clone(const std::string &_name, VisualPtr _newParent)
   for (iter = this->dataPtr->children.begin();
       iter != this->dataPtr->children.end(); ++iter)
   {
-    result->dataPtr->children.push_back(
-        (*iter)->Clone((*iter)->GetName(), result));
+    (*iter)->Clone((*iter)->GetName(), result);
   }
 
-  result->SetWorldPose(this->GetWorldPose());
+  if (_newParent == this->dataPtr->scene->GetWorldVisual())
+    result->SetWorldPose(this->GetWorldPose());
   result->ShowCollision(false);
-
   return result;
 }
 
@@ -329,6 +325,16 @@ void Visual::LoadFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
       sdf::ElementPtr elem = geomElem->AddElement("plane");
       elem->GetElement("normal")->Set(plane.normal);
       elem->GetElement("size")->Set(plane.size);
+    }
+    else if (_msg->geometry().type() == msgs::Geometry::POLYLINE)
+    {
+      sdf::ElementPtr elem = geomElem->AddElement("polyline");
+      elem->GetElement("height")->Set(_msg->geometry().polyline().height());
+      for (int i = 0; i < _msg->geometry().polyline().point_size(); ++i)
+      {
+        elem->AddElement("point")->Set(
+            msgs::Convert(_msg->geometry().polyline().point(i)));
+      }
     }
     else if (_msg->geometry().type() == msgs::Geometry::MESH)
     {
@@ -689,7 +695,7 @@ void Visual::AttachObject(Ogre::MovableObject *_obj)
     {
       RTShaderSystem::Instance()->UpdateShaders();
     }
-    _obj->setUserAny(Ogre::Any(this->GetName()));
+    _obj->getUserObjectBindings().setUserAny(Ogre::Any(this->GetName()));
   }
   else
     gzerr << "Visual[" << this->GetName() << "] already has object["
@@ -1014,6 +1020,9 @@ void Visual::SetMaterial(const std::string &_materialName, bool _unique)
            << ". Object will appear white.\n";
   }
 
+  // Re-apply the transparency filter for the last known transparency value
+  this->SetTransparencyInnerLoop();
+
   // Apply material to all child visuals
   for (std::vector<VisualPtr>::iterator iter = this->dataPtr->children.begin();
        iter != this->dataPtr->children.end(); ++iter)
@@ -1022,7 +1031,7 @@ void Visual::SetMaterial(const std::string &_materialName, bool _unique)
   }
 
   if (this->dataPtr->useRTShader && this->dataPtr->scene->GetInitialized()
-      && !this->dataPtr->lighting &&
+      && this->dataPtr->lighting &&
       this->GetName().find("__COLLISION_VISUAL__") == std::string::npos)
   {
     RTShaderSystem::Instance()->UpdateShaders();
@@ -1307,20 +1316,8 @@ void Visual::SetWireframe(bool _show)
 }
 
 //////////////////////////////////////////////////
-void Visual::SetTransparency(float _trans)
+void Visual::SetTransparencyInnerLoop()
 {
-  if (math::equal(_trans, this->dataPtr->transparency))
-    return;
-
-  this->dataPtr->transparency = std::min(
-      std::max(_trans, static_cast<float>(0.0)), static_cast<float>(1.0));
-  std::vector<VisualPtr>::iterator iter;
-  for (iter = this->dataPtr->children.begin();
-      iter != this->dataPtr->children.end(); ++iter)
-  {
-    (*iter)->SetTransparency(_trans);
-  }
-
   for (unsigned int i = 0; i < this->dataPtr->sceneNode->numAttachedObjects();
       i++)
   {
@@ -1372,7 +1369,6 @@ void Visual::SetTransparency(float _trans)
             pass->setDepthCheckEnabled(true);
           }
 
-
           dc = pass->getDiffuse();
           dc.a =(1.0f - this->dataPtr->transparency);
           pass->setDiffuse(dc);
@@ -1380,6 +1376,24 @@ void Visual::SetTransparency(float _trans)
       }
     }
   }
+}
+
+//////////////////////////////////////////////////
+void Visual::SetTransparency(float _trans)
+{
+  if (math::equal(_trans, this->dataPtr->transparency))
+    return;
+
+  this->dataPtr->transparency = std::min(
+      std::max(_trans, static_cast<float>(0.0)), static_cast<float>(1.0));
+  std::vector<VisualPtr>::iterator iter;
+  for (iter = this->dataPtr->children.begin();
+      iter != this->dataPtr->children.end(); ++iter)
+  {
+    (*iter)->SetTransparency(_trans);
+  }
+
+  this->SetTransparencyInnerLoop();
 
   if (this->dataPtr->useRTShader && this->dataPtr->scene->GetInitialized())
     RTShaderSystem::Instance()->UpdateShaders();
@@ -1391,13 +1405,6 @@ void Visual::SetHighlighted(bool _highlighted)
   if (_highlighted)
   {
     math::Box bbox = this->GetBoundingBox();
-    // GetBoundingBox returns the box in world coordinates
-    // Invert thes scale of the box before attaching to the visual
-    // so that the new inherited scale after attachment is correct.
-    math::Vector3 scale = Conversions::Convert(
-          this->dataPtr->sceneNode->_getDerivedScale());
-    bbox.min = bbox.min / scale;
-    bbox.max = bbox.max / scale;
 
     // Create the bounding box if it's not already created.
     if (!this->dataPtr->boundingBox)
@@ -1786,9 +1793,10 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
     Ogre::MovableObject *obj = node->getAttachedObject(i);
 
     if (obj->isVisible() && obj->getMovableType() != "gazebo::dynamiclines"
+        && obj->getMovableType() != "BillboardSet"
         && obj->getVisibilityFlags() != GZ_VISIBILITY_GUI)
     {
-      Ogre::Any any = obj->getUserAny();
+      Ogre::Any any = obj->getUserObjectBindings().getUserAny();
       if (any.getType() == typeid(std::string))
       {
         std::string str = Ogre::any_cast<std::string>(any);
@@ -1817,8 +1825,7 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
         transform[3][3] = 1;
         // get oriented bounding box in object's local space
         bb.transformAffine(transform);
-        if (node->getParentSceneNode())
-          bb.scale(node->getParentSceneNode()->_getDerivedScale());
+
         min = Conversions::Convert(bb.getMinimum());
         max = Conversions::Convert(bb.getMaximum());
       }
@@ -2243,6 +2250,8 @@ void Visual::UpdateFromMsg(const boost::shared_ptr< msgs::Visual const> &_msg)
     }
     else if (_msg->geometry().type() == msgs::Geometry::EMPTY)
       geomScale.x = geomScale.y = geomScale.z = 1.0;
+    else if (_msg->geometry().type() == msgs::Geometry::POLYLINE)
+      geomScale.x = geomScale.y = geomScale.z = 1.0;
     else
       gzerr << "Unknown geometry type[" << _msg->geometry().type() << "]\n";
 
@@ -2309,6 +2318,30 @@ std::string Visual::GetMeshName() const
       return "unit_cylinder";
     else if (geomElem->HasElement("plane"))
       return "unit_plane";
+    else if (geomElem->HasElement("polyline"))
+    {
+      std::string polyLineName = this->GetName();
+      common::MeshManager *meshManager = common::MeshManager::Instance();
+
+      if (!meshManager->IsValidFilename(polyLineName))
+      {
+        std::vector<math::Vector2d> vertices;
+        sdf::ElementPtr pointElem =
+          geomElem->GetElement("polyline")->GetElement("point");
+
+        while (pointElem)
+        {
+          math::Vector2d point = pointElem->Get<math::Vector2d>();
+          vertices.push_back(point);
+          pointElem = pointElem->GetNextElement("point");
+        }
+
+        meshManager->CreateExtrudedPolyline(polyLineName, vertices,
+            geomElem->GetElement("polyline")->Get<double>("height"),
+            math::Vector2d(1, 1));
+       }
+      return polyLineName;
+    }
     else if (geomElem->HasElement("mesh") || geomElem->HasElement("heightmap"))
     {
       sdf::ElementPtr tmpElem = geomElem->GetElement("mesh");

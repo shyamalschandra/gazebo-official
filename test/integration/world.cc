@@ -26,7 +26,7 @@ TEST_F(WorldTest, ClearEmptyWorld)
 {
   Load("worlds/blank.world");
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   EXPECT_EQ(world->GetModelCount(), 0u);
 
@@ -48,7 +48,7 @@ TEST_F(WorldTest, Clear)
 {
   Load("worlds/pioneer2dx.world");
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   EXPECT_EQ(world->GetModelCount(), 2u);
 
@@ -68,50 +68,74 @@ TEST_F(WorldTest, ModifyLight)
 {
   Load("worlds/empty.world");
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
-  msgs::Scene sceneMsg = world->GetSceneMsg();
+  ASSERT_TRUE(world != NULL);
 
   // Make sure there is only one light, and it is named "sun"
-  EXPECT_EQ(sceneMsg.light_size(), 1);
-  EXPECT_STREQ(sceneMsg.light(0).name().c_str(), "sun");
+  {
+    msgs::Scene sceneMsg = world->GetSceneMsg();
+    EXPECT_EQ(sceneMsg.light_size(), 1);
+    EXPECT_STREQ(sceneMsg.light(0).name().c_str(), "sun");
+  }
 
   transport::PublisherPtr lightPub = this->node->Advertise<msgs::Light>(
         "~/light");
 
   // Set the light to be green
-  msgs::Light lightMsg;
-  lightMsg.set_name("sun");
-  msgs::Set(lightMsg.mutable_diffuse(), common::Color(0, 1, 0));
-  lightPub->Publish(lightMsg);
+  {
+    msgs::Light lightMsg;
+    lightMsg.set_name("sun");
+    msgs::Set(lightMsg.mutable_diffuse(), common::Color(0, 1, 0));
+    lightPub->Publish(lightMsg);
+  }
 
   // Allow the world time to process the messages
   world->Step(10);
 
   // Get the new scene, and make sure the color of the "sun" light is
   // correct.
-  msgs::Scene sceneMsg2 = world->GetSceneMsg();
-  EXPECT_EQ(sceneMsg2.light_size(), 1);
-  EXPECT_STREQ(sceneMsg2.light(0).name().c_str(), "sun");
-  EXPECT_EQ(sceneMsg2.light(0).diffuse().r(), 0);
-  EXPECT_EQ(sceneMsg2.light(0).diffuse().g(), 1);
-  EXPECT_EQ(sceneMsg2.light(0).diffuse().b(), 0);
+  {
+    msgs::Scene sceneMsg = world->GetSceneMsg();
+    EXPECT_EQ(sceneMsg.light_size(), 1);
+    EXPECT_STREQ(sceneMsg.light(0).name().c_str(), "sun");
+    EXPECT_EQ(sceneMsg.light(0).diffuse().r(), 0);
+    EXPECT_EQ(sceneMsg.light(0).diffuse().g(), 1);
+    EXPECT_EQ(sceneMsg.light(0).diffuse().b(), 0);
+  }
 
   // Add a new light
-  lightMsg.set_name("test_light");
-  msgs::Set(lightMsg.mutable_diffuse(), common::Color(1, 0, 1));
-  lightMsg.set_type(msgs::Light::POINT);
-  lightPub->Publish(lightMsg);
+  {
+    msgs::Light lightMsg;
+    lightMsg.set_name("test_light");
+    msgs::Set(lightMsg.mutable_diffuse(), common::Color(1, 0, 1));
+    lightMsg.set_type(msgs::Light::POINT);
+    lightPub->Publish(lightMsg);
+  }
 
   // Allow the world time to process the messages
   world->Step(10);
 
-  sceneMsg2 = world->GetSceneMsg();
-  EXPECT_EQ(sceneMsg2.light_size(), 2);
-  EXPECT_STREQ(sceneMsg2.light(1).name().c_str(), "test_light");
-  EXPECT_EQ(sceneMsg2.light(1).diffuse().r(), 1);
-  EXPECT_EQ(sceneMsg2.light(1).diffuse().g(), 0);
-  EXPECT_EQ(sceneMsg2.light(1).diffuse().b(), 1);
-  EXPECT_EQ(sceneMsg2.light(1).type(), msgs::Light::POINT);
+  {
+    msgs::Scene sceneMsg = world->GetSceneMsg();
+    EXPECT_EQ(sceneMsg.light_size(), 2);
+    EXPECT_STREQ(sceneMsg.light(1).name().c_str(), "test_light");
+    EXPECT_EQ(sceneMsg.light(1).diffuse().r(), 1);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().g(), 0);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().b(), 1);
+    EXPECT_EQ(sceneMsg.light(1).type(), msgs::Light::POINT);
+  }
+
+  // Delete the test_light
+  ServerFixture::RemoveModel("test_light");
+
+  // Allow the world time to process the messages
+  world->Step(1000);
+
+  // Verify that the test_light is gone and that the sun remains
+  {
+    msgs::Scene sceneMsg = world->GetSceneMsg();
+    EXPECT_EQ(sceneMsg.light_size(), 1);
+    EXPECT_STREQ(sceneMsg.light(0).name().c_str(), "sun");
+  }
 
   // Add a new spot light
   {
@@ -127,12 +151,12 @@ TEST_F(WorldTest, ModifyLight)
 
   {
     msgs::Scene sceneMsg = world->GetSceneMsg();
-    EXPECT_EQ(sceneMsg.light_size(), 3);
-    EXPECT_STREQ(sceneMsg.light(2).name().c_str(), "test_spot_light");
-    EXPECT_EQ(sceneMsg.light(2).diffuse().r(), 1);
-    EXPECT_EQ(sceneMsg.light(2).diffuse().g(), 1);
-    EXPECT_EQ(sceneMsg.light(2).diffuse().b(), 0);
-    EXPECT_EQ(sceneMsg.light(2).type(), msgs::Light::SPOT);
+    EXPECT_EQ(sceneMsg.light_size(), 2);
+    EXPECT_STREQ(sceneMsg.light(1).name().c_str(), "test_spot_light");
+    EXPECT_EQ(sceneMsg.light(1).diffuse().r(), 1);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().g(), 1);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().b(), 0);
+    EXPECT_EQ(sceneMsg.light(1).type(), msgs::Light::SPOT);
   }
 
   // Modify spot light pose
@@ -150,21 +174,21 @@ TEST_F(WorldTest, ModifyLight)
   // Verify the light gets the new pose and retains values of other properties
   {
     msgs::Scene sceneMsg = world->GetSceneMsg();
-    EXPECT_EQ(sceneMsg.light_size(), 3);
-    EXPECT_STREQ(sceneMsg.light(2).name().c_str(), "test_spot_light");
-    EXPECT_EQ(sceneMsg.light(2).diffuse().r(), 1);
-    EXPECT_EQ(sceneMsg.light(2).diffuse().g(), 1);
-    EXPECT_EQ(sceneMsg.light(2).diffuse().b(), 0);
+    EXPECT_EQ(sceneMsg.light_size(), 2);
+    EXPECT_STREQ(sceneMsg.light(1).name().c_str(), "test_spot_light");
+    EXPECT_EQ(sceneMsg.light(1).diffuse().r(), 1);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().g(), 1);
+    EXPECT_EQ(sceneMsg.light(1).diffuse().b(), 0);
 
-    EXPECT_EQ(sceneMsg.light(2).pose().position().x(), 3);
-    EXPECT_EQ(sceneMsg.light(2).pose().position().y(), 2);
-    EXPECT_EQ(sceneMsg.light(2).pose().position().z(), 1);
-    EXPECT_EQ(sceneMsg.light(2).pose().orientation().w(), 0);
-    EXPECT_EQ(sceneMsg.light(2).pose().orientation().x(), 1);
-    EXPECT_EQ(sceneMsg.light(2).pose().orientation().y(), 0);
-    EXPECT_EQ(sceneMsg.light(2).pose().orientation().z(), 0);
+    EXPECT_EQ(sceneMsg.light(1).pose().position().x(), 3);
+    EXPECT_EQ(sceneMsg.light(1).pose().position().y(), 2);
+    EXPECT_EQ(sceneMsg.light(1).pose().position().z(), 1);
+    EXPECT_EQ(sceneMsg.light(1).pose().orientation().w(), 0);
+    EXPECT_EQ(sceneMsg.light(1).pose().orientation().x(), 1);
+    EXPECT_EQ(sceneMsg.light(1).pose().orientation().y(), 0);
+    EXPECT_EQ(sceneMsg.light(1).pose().orientation().z(), 0);
 
-    EXPECT_EQ(sceneMsg.light(2).type(), msgs::Light::SPOT);
+    EXPECT_EQ(sceneMsg.light(1).type(), msgs::Light::SPOT);
   }
 }
 
@@ -174,13 +198,13 @@ TEST_F(WorldTest, RemoveModelPaused)
 {
   Load("worlds/shapes.world", true);
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   physics::ModelPtr sphereModel = world->GetModel("sphere");
   physics::ModelPtr boxModel = world->GetModel("box");
 
-  EXPECT_TRUE(sphereModel);
-  EXPECT_TRUE(boxModel);
+  EXPECT_TRUE(sphereModel != NULL);
+  EXPECT_TRUE(boxModel != NULL);
 
   world->RemoveModel(sphereModel);
   world->RemoveModel("box");
@@ -188,8 +212,8 @@ TEST_F(WorldTest, RemoveModelPaused)
   sphereModel = world->GetModel("sphere");
   boxModel = world->GetModel("box");
 
-  EXPECT_FALSE(sphereModel);
-  EXPECT_FALSE(boxModel);
+  EXPECT_FALSE(sphereModel != NULL);
+  EXPECT_FALSE(boxModel != NULL);
 }
 
 /////////////////////////////////////////////////
@@ -197,13 +221,13 @@ TEST_F(WorldTest, RemoveModelUnPaused)
 {
   Load("worlds/shapes.world");
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   physics::ModelPtr sphereModel = world->GetModel("sphere");
   physics::ModelPtr boxModel = world->GetModel("box");
 
-  EXPECT_TRUE(sphereModel);
-  EXPECT_TRUE(boxModel);
+  EXPECT_TRUE(sphereModel != NULL);
+  EXPECT_TRUE(boxModel != NULL);
 
   world->RemoveModel(sphereModel);
   world->RemoveModel("box");
@@ -211,8 +235,8 @@ TEST_F(WorldTest, RemoveModelUnPaused)
   sphereModel = world->GetModel("sphere");
   boxModel = world->GetModel("box");
 
-  EXPECT_FALSE(sphereModel);
-  EXPECT_FALSE(boxModel);
+  EXPECT_FALSE(sphereModel != NULL);
+  EXPECT_FALSE(boxModel != NULL);
 }
 
 /////////////////////////////////////////////////

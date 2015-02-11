@@ -72,8 +72,9 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
                                         const std::string &_jointType)
 {
   /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")  // &&
-  //    _jointType != "revolute" && _jointType != "prismatic")
+  if (_physicsEngine == "simbody" && (
+      _jointType == "gearbox" ||
+      _jointType == "revolute2"))
   {
     gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
     return;
@@ -105,6 +106,7 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
     ASSERT_TRUE(parent != NULL);
     EXPECT_EQ(parent->GetChildJoints().size(), 1u);
     EXPECT_EQ(parent->GetParentJoints().size(), 0u);
+    EXPECT_EQ(_jointType, msgs::ConvertJointType(joint->GetMsgType()));
     for (unsigned int i = 0; i < joint->GetAngleCount(); ++i)
     {
       CheckJointProperties(i, joint);
@@ -144,10 +146,10 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
     gzerr << "Skip tests for child world link cases "
           << "since DART does not allow joint with world as child. "
           << "Please see issue #914. "
-          << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-    return;
+          << "(https://bitbucket.org/osrf/gazebo/issue/914)"
+          << std::endl;
   }
-
+  else
   {
     gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
     physics::JointPtr joint = SpawnJoint(_jointType, true, false);
@@ -172,13 +174,6 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
 void JointSpawningTest::SpawnJointRotational(const std::string &_physicsEngine,
                                              const std::string &_jointType)
 {
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody" && _jointType != "revolute")
-  {
-    gzerr << "Aborting test for Simbody, see issue #859.\n";
-    return;
-  }
-
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -254,7 +249,7 @@ void JointSpawningTest::SpawnJointRotationalWorld(
             << "since DART does not allow joint with world as child. "
             << "Please see issue #914. "
             << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-      return;
+      continue;
     }
     bool worldChild = (i == 0);
     bool worldParent = (i == 1);
@@ -292,18 +287,11 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
   ASSERT_TRUE(physics != NULL);
   bool isOde = physics->GetType().compare("ode") == 0;
   bool isBullet = physics->GetType().compare("bullet") == 0;
-  bool isDart = physics->GetType().compare("dart") == 0;
   double dt = physics->GetMaxStepSize();
 
-  if (_joint->HasType(physics::Base::SCREW_JOINT) && isDart)
-  {
-    gzerr << "This portion of the test fails for DARTScrewJoint" << std::endl;
-    return;
-  }
   if (_joint->HasType(physics::Base::HINGE2_JOINT) ||
       _joint->HasType(physics::Base::GEARBOX_JOINT) ||
-      _joint->HasType(physics::Base::SCREW_JOINT) ||
-      _joint->HasType(physics::Base::UNIVERSAL_JOINT))
+      _joint->HasType(physics::Base::SCREW_JOINT))
   {
     gzerr << "This portion of the test fails for this joint type" << std::endl;
     return;
@@ -314,8 +302,10 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     return;
   }
 
+  // Reset world prior to testing SetVelocity
+  // This is needed for SimbodyUniversalJoint
+  world->Reset();
   double velocityMagnitude = 1.0;
-  double maxForce = velocityMagnitude / dt * 10.1;
   std::vector<double> velocities;
   velocities.push_back(velocityMagnitude);
   velocities.push_back(0.0);
@@ -327,16 +317,10 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     double vel = *iter;
     _joint->SetVelocity(_index, vel);
 
-    // ODE requires maxForce to be non-zero for SetVelocity to work
-    // See issue #964 for discussion of consistent API
-    if (isOde)
-      _joint->SetMaxForce(_index, maxForce);
-
-    // Take a step and verify that Joint::GetVelocity returns the same value
-    world->Step(1);
+    // Verify that Joint::GetVelocity returns the same value
     EXPECT_NEAR(_joint->GetVelocity(_index), vel, g_tolerance);
 
-    // Take more steps and verify that it keeps spinning at same speed
+    // Take some steps and verify that it keeps spinning at same speed
     world->Step(50);
     EXPECT_NEAR(_joint->GetVelocity(_index), vel, g_tolerance);
   }
@@ -373,16 +357,55 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     EXPECT_LT(_joint->GetAngle(_index).Radian(), angleStart);
   }
 
-  if (isBullet && _joint->HasType(physics::Base::SLIDER_JOINT))
+  // Test Coloumb friction
+  if (isBullet && !_joint->HasType(physics::Base::HINGE_JOINT))
   {
-    gzerr << "BulletSliderJoint fails the joint limit tests" << std::endl;
-    return;
+    gzerr << "Skipping friction test for "
+          << physics->GetType()
+          << " "
+          << msgs::ConvertJointType(_joint->GetMsgType())
+          << " joint"
+          << std::endl;
   }
-
-  if (isBullet && _joint->HasType(physics::Base::HINGE_JOINT))
+  else if (!isOde && !isBullet)
   {
-    gzerr << "BulletHingeJoint fails the joint limit tests" << std::endl;
-    return;
+    gzerr << "Skipping friction test for "
+          << physics->GetType()
+          << std::endl;
+  }
+  else
+  {
+    // reset world and expect joint to be stopped at home position
+    world->Reset();
+    EXPECT_NEAR(_joint->GetAngle(_index).Radian(), 0.0, g_tolerance);
+    EXPECT_NEAR(_joint->GetVelocity(_index), 0.0, g_tolerance);
+
+    // set friction to 1.0
+    const double friction = 1.0;
+    EXPECT_TRUE(_joint->SetParam("friction", _index, friction));
+    EXPECT_NEAR(_joint->GetParam("friction", _index), friction, g_tolerance);
+
+    for (unsigned int i = 0; i < 500; ++i)
+    {
+      // Apply force with smaller magnitude than friction
+      _joint->SetForce(_index, friction * 0.5);
+      world->Step(1);
+    }
+
+    // Expect no motion
+    EXPECT_NEAR(_joint->GetVelocity(_index), 0.0, g_tolerance);
+    EXPECT_NEAR(_joint->GetAngle(_index).Radian(), 0.0, g_tolerance);
+
+    for (unsigned int i = 0; i < 500; ++i)
+    {
+      // Apply force with larger magnitude than friction
+      _joint->SetForce(_index, friction * 1.5);
+      world->Step(1);
+    }
+
+    // Expect motion
+    EXPECT_GT(_joint->GetVelocity(_index), 0.2 * friction);
+    EXPECT_GT(_joint->GetAngle(_index).Radian(), 0.05 * friction);
   }
 
   // SetHighStop
@@ -397,11 +420,13 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     math::Angle limit = math::Angle(steps * dt * vel * 0.5);
     _joint->SetHighStop(_index, limit);
     _joint->SetVelocity(_index, vel);
-    if (isOde)
-      _joint->SetMaxForce(_index, maxForce);
     world->Step(steps);
-    EXPECT_NEAR(limit.Radian(), _joint->GetAngle(_index).Radian(), g_tolerance);
+    EXPECT_LT(_joint->GetAngle(_index).Radian(), limit.Radian() + g_tolerance);
     EXPECT_EQ(_joint->GetHighStop(_index), limit);
+    {
+      boost::any value = _joint->GetParam("hi_stop", _index);
+      EXPECT_NEAR(boost::any_cast<double>(value), limit.Radian(), g_tolerance);
+    }
   }
 
   // SetLowStop
@@ -416,11 +441,13 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     math::Angle limit = math::Angle(steps * dt * vel * 0.5);
     _joint->SetLowStop(_index, limit);
     _joint->SetVelocity(_index, vel);
-    if (isOde)
-      _joint->SetMaxForce(_index, maxForce);
     world->Step(steps);
-    EXPECT_NEAR(limit.Radian(), _joint->GetAngle(_index).Radian(), g_tolerance);
+    EXPECT_GT(_joint->GetAngle(_index).Radian(), limit.Radian() - g_tolerance);
     EXPECT_EQ(_joint->GetLowStop(_index), limit);
+    {
+      boost::any value = _joint->GetParam("lo_stop", _index);
+      EXPECT_NEAR(boost::any_cast<double>(value), limit.Radian(), g_tolerance);
+    }
   }
 }
 
@@ -463,10 +490,10 @@ INSTANTIATE_TEST_CASE_P(TestRuns, JointSpawningTest_Rotational,
                   , "ball")));
 
 // Skip prismatic, screw, and revolute2 because they allow translation
-// Skip universal because it can't be connected to world in bullet.
 INSTANTIATE_TEST_CASE_P(TestRuns, JointSpawningTest_RotationalWorld,
   ::testing::Combine(PHYSICS_ENGINE_VALUES,
   ::testing::Values("revolute"
+                  , "universal"
                   , "ball")));
 
 int main(int argc, char **argv)

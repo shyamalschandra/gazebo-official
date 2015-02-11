@@ -24,7 +24,7 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
-
+#include "gazebo/gazebo_config.h"
 #include "gazebo/rendering/Road2d.hh"
 #include "gazebo/rendering/Projector.hh"
 #include "gazebo/rendering/Heightmap.hh"
@@ -64,6 +64,10 @@
 #include "gazebo/transport/Node.hh"
 
 #include "gazebo/rendering/Scene.hh"
+
+#ifdef HAVE_OCULUS
+#include "gazebo/rendering/OculusCamera.hh"
+#endif
 
 using namespace gazebo;
 using namespace rendering;
@@ -565,6 +569,29 @@ CameraPtr Scene::GetCamera(const std::string &_name) const
 }
 
 //////////////////////////////////////////////////
+#ifdef HAVE_OCULUS
+OculusCameraPtr Scene::CreateOculusCamera(const std::string &_name)
+{
+  OculusCameraPtr camera(new OculusCamera(_name, shared_from_this()));
+
+  if (camera->Ready())
+  {
+    camera->Load();
+    camera->Init();
+    this->oculusCameras.push_back(camera);
+  }
+
+  return camera;
+}
+
+//////////////////////////////////////////////////
+uint32_t Scene::GetOculusCameraCount() const
+{
+  return this->oculusCameras.size();
+}
+#endif
+
+//////////////////////////////////////////////////
 UserCameraPtr Scene::CreateUserCamera(const std::string &_name)
 {
   UserCameraPtr camera(new UserCamera(_name, shared_from_this()));
@@ -712,11 +739,13 @@ VisualPtr Scene::GetVisualAt(CameraPtr _camera,
   {
     // Make sure we set the _mod only if we have found a selection object
     if (closestEntity->getName().substr(0, 15) == "__SELECTION_OBJ" &&
-        closestEntity->getUserAny().getType() == typeid(std::string))
+        closestEntity->getUserObjectBindings().getUserAny().getType()
+        == typeid(std::string))
     {
       try
       {
-        _mod = Ogre::any_cast<std::string>(closestEntity->getUserAny());
+        _mod = Ogre::any_cast<std::string>(
+            closestEntity->getUserObjectBindings().getUserAny());
       }
       catch(boost::bad_any_cast &e)
       {
@@ -727,7 +756,7 @@ VisualPtr Scene::GetVisualAt(CameraPtr _camera,
     try
     {
       visual = this->GetVisual(Ogre::any_cast<std::string>(
-            closestEntity->getUserAny()));
+            closestEntity->getUserObjectBindings().getUserAny()));
     }
     catch(boost::bad_any_cast &e)
     {
@@ -871,7 +900,7 @@ void Scene::GetVisualsBelowPoint(const math::Vector3 &_pt,
         try
         {
           VisualPtr v = this->GetVisual(Ogre::any_cast<std::string>(
-                                        ogreEntity->getUserAny()));
+                ogreEntity->getUserObjectBindings().getUserAny()));
           if (v)
             _visuals.push_back(v);
         }
@@ -897,7 +926,7 @@ VisualPtr Scene::GetVisualAt(CameraPtr _camera,
     try
     {
       visual = this->GetVisual(Ogre::any_cast<std::string>(
-            closestEntity->getUserAny()));
+            closestEntity->getUserObjectBindings().getUserAny()));
     }
     catch(boost::bad_any_cast &e)
     {
@@ -1798,15 +1827,18 @@ void Scene::PreRender()
       for (int i = 0; i < (*spIter)->pose_size(); i++)
       {
         const msgs::Pose& pose_msg = (*spIter)->pose(i);
-        Visual_M::iterator iter2 = this->visuals.find(pose_msg.id());
-        if (iter2 != this->visuals.end())
+        if (pose_msg.has_id())
         {
-          // If an object is selected, don't let the physics engine move it.
-          if (!this->selectedVis || this->selectionMode != "move" ||
-              iter->first != this->selectedVis->GetId())
+          Visual_M::iterator iter2 = this->visuals.find(pose_msg.id());
+          if (iter2 != this->visuals.end())
           {
-            math::Pose pose = msgs::Convert(pose_msg);
-            iter2->second->SetPose(pose);
+            // If an object is selected, don't let the physics engine move it.
+            if (!this->selectedVis || this->selectionMode != "move" ||
+              iter->first != this->selectedVis->GetId())
+            {
+              math::Pose pose = msgs::Convert(pose_msg);
+              iter2->second->SetPose(pose);
+            }
           }
         }
       }
@@ -1924,11 +1956,8 @@ bool Scene::ProcessSensorMsg(ConstSensorPtr &_msg)
         parentVis->AttachVisual(cameraVis);
 
         cameraVis->SetPose(msgs::Convert(_msg->pose()));
-
         cameraVis->SetId(_msg->id());
-        cameraVis->Load(_msg->camera().image_size().x(),
-            _msg->camera().image_size().y());
-
+        cameraVis->Load(_msg->camera());
         this->visuals[cameraVis->GetId()] = cameraVis;
       }
     }
@@ -2037,7 +2066,7 @@ bool Scene::ProcessJointMsg(ConstJointPtr &_msg)
     return false;
 
   JointVisualPtr jointVis(new JointVisual(
-        _msg->name() + "_JOINT_VISUAL__", childVis));
+      _msg->name() + "_JOINT_VISUAL__", childVis));
   jointVis->Load(_msg);
   jointVis->SetVisible(this->showJoints);
   if (_msg->has_id())
@@ -2438,7 +2467,6 @@ bool Scene::ProcessLightMsg(ConstLightPtr &_msg)
   {
     LightPtr light(new Light(shared_from_this()));
     light->LoadFromMsg(_msg);
-    this->lightPub->Publish(*_msg);
     this->lights[_msg->name()] = light;
     RTShaderSystem::Instance()->UpdateShaders();
   }
@@ -2708,6 +2736,28 @@ void Scene::RemoveVisual(VisualPtr _vis)
 }
 
 /////////////////////////////////////////////////
+void Scene::AddLight(LightPtr _light)
+{
+  std::string n = this->StripSceneName(_light->GetName());
+  Light_M::iterator iter = this->lights.find(n);
+  if (iter != this->lights.end())
+    gzerr << "Duplicate lights detected[" << _light->GetName() << "]\n";
+
+  this->lights[n] = _light;
+}
+
+/////////////////////////////////////////////////
+void Scene::RemoveLight(LightPtr _light)
+{
+  if (_light)
+  {
+    // Delete the light
+    std::string n = this->StripSceneName(_light->GetName());
+    this->lights.erase(n);
+  }
+}
+
+/////////////////////////////////////////////////
 void Scene::SetGrid(bool _enabled)
 {
   if (_enabled && this->grids.empty())
@@ -2763,13 +2813,6 @@ void Scene::CreateCOMVisual(sdf::ElementPtr _elem, VisualPtr _linkVisual)
   comVis->Load(_elem);
   comVis->SetVisible(false);
   this->visuals[comVis->GetId()] = comVis;
-}
-
-/////////////////////////////////////////////////
-VisualPtr Scene::CloneVisual(const std::string & /*_visualName*/,
-                             const std::string & /*_newName*/)
-{
-  return VisualPtr();
 }
 
 /////////////////////////////////////////////////

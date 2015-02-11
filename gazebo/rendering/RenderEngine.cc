@@ -274,7 +274,9 @@ void RenderEngine::Render()
 //////////////////////////////////////////////////
 void RenderEngine::PostRender()
 {
-  // _fireFrameRenderingQueued needs to be here for CEGUI to work
+  // _fireFrameRenderingQueued was here for CEGUI to work. Leaving because
+  // it shouldn't harm anything, and we don't want to introduce
+  // a regression.
   this->root->_fireFrameRenderingQueued();
   this->root->_fireFrameEnded();
 }
@@ -418,6 +420,10 @@ void RenderEngine::LoadPlugins()
     plugins.push_back(path+"/"+prefix+"Plugin_ParticleFX");
     plugins.push_back(path+"/"+prefix+"Plugin_BSPSceneManager");
     plugins.push_back(path+"/"+prefix+"Plugin_OctreeSceneManager");
+
+#ifdef HAVE_OCULUS
+    plugins.push_back(path+"/Plugin_CgProgramManager");
+#endif
 
     for (piter = plugins.begin(); piter != plugins.end(); ++piter)
     {

@@ -26,6 +26,12 @@
 
 #include <sdf/sdf.hh>
 
+#include <deque>
+#include <list>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "gazebo/sensors/SensorManager.hh"
 #include "gazebo/math/Rand.hh"
 
@@ -43,6 +49,10 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Plugin.hh"
 
+#include "gazebo/math/Vector3.hh"
+
+#include "gazebo/msgs/msgs.hh"
+
 #include "gazebo/util/OpenAL.hh"
 #include "gazebo/util/Diagnostics.hh"
 #include "gazebo/util/LogRecord.hh"
@@ -59,6 +69,7 @@
 
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/ContactManager.hh"
+#include "gazebo/physics/Population.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -66,7 +77,6 @@ using namespace physics;
 /// \brief Flag used to say if/when to clear all models.
 /// This will be replaced with a class member variable in Gazebo 3.0
 bool g_clearModels;
-boost::mutex g_deprecatedMutexReplaceInGazebo4;
 
 class ModelUpdate_TBB
 {
@@ -128,9 +138,6 @@ World::World(const std::string &_name)
 
   this->connections.push_back(
      event::Events::ConnectStep(boost::bind(&World::OnStep, this)));
-  this->connections.push_back(
-     event::Events::ConnectSetSelectedEntity(
-       boost::bind(&World::SetSelectedEntityCB, this, _1)));
   this->connections.push_back(
      event::Events::ConnectPause(
        boost::bind(&World::SetPaused, this, _1)));
@@ -214,7 +221,6 @@ void World::Load(sdf::ElementPtr _sdf)
   this->responsePub = this->node->Advertise<msgs::Response>("~/response");
   this->statPub =
     this->node->Advertise<msgs::WorldStatistics>("~/world_stats", 100, 5);
-  this->selectionPub = this->node->Advertise<msgs::Selection>("~/selection", 1);
   this->modelPub = this->node->Advertise<msgs::Model>("~/model/info");
   this->lightPub = this->node->Advertise<msgs::Light>("~/light");
 
@@ -342,6 +348,13 @@ void World::Init()
 
   util::LogRecord::Instance()->Add(this->GetName(), "state.log",
       boost::bind(&World::OnLog, this, _1));
+
+  // Check if we have to insert an object population.
+  if (this->sdf->HasElement("population"))
+  {
+    Population population(this->sdf, shared_from_this());
+    population.PopulateAll();
+  }
 
   this->initialized = true;
 
@@ -590,12 +603,6 @@ void World::Step()
 
   if (g_clearModels)
     this->ClearModels();
-}
-
-//////////////////////////////////////////////////
-void World::StepWorld(int _steps)
-{
-  this->Step(_steps);
 }
 
 //////////////////////////////////////////////////
@@ -969,7 +976,7 @@ void World::ResetEntities(Base::EntityType _type)
 //////////////////////////////////////////////////
 void World::Reset()
 {
-  bool currently_paused = this->IsPaused();
+  bool currentlyPaused = this->IsPaused();
   this->SetPaused(true);
 
   {
@@ -984,56 +991,18 @@ void World::Reset()
         iter != this->plugins.end(); ++iter)
       (*iter)->Reset();
     this->physicsEngine->Reset();
+
+    // Signal a reset has occurred
+    event::Events::worldReset();
   }
 
-  this->SetPaused(currently_paused);
+  this->SetPaused(currentlyPaused);
 }
 
 //////////////////////////////////////////////////
 void World::OnStep()
 {
   this->stepInc = 1;
-}
-
-//////////////////////////////////////////////////
-void World::SetSelectedEntityCB(const std::string &_name)
-{
-  msgs::Selection msg;
-  BasePtr base = this->GetByName(_name);
-  EntityPtr ent = boost::dynamic_pointer_cast<Entity>(base);
-
-  // unselect selectedEntity
-  if (this->selectedEntity)
-  {
-    msg.set_id(this->selectedEntity->GetId());
-    msg.set_name(this->selectedEntity->GetScopedName());
-    msg.set_selected(false);
-    this->selectionPub->Publish(msg);
-
-    this->selectedEntity->SetSelected(false);
-  }
-
-  // if a different entity is selected, show bounding box and SetSelected(true)
-  if (ent && this->selectedEntity != ent)
-  {
-    // set selected entity to ent
-    this->selectedEntity = ent;
-    this->selectedEntity->SetSelected(true);
-
-    msg.set_id(this->selectedEntity->GetId());
-    msg.set_name(this->selectedEntity->GetScopedName());
-    msg.set_selected(true);
-
-    this->selectionPub->Publish(msg);
-  }
-  else
-    this->selectedEntity.reset();
-}
-
-//////////////////////////////////////////////////
-EntityPtr World::GetSelectedEntity() const
-{
-  return this->selectedEntity;
 }
 
 //////////////////////////////////////////////////
@@ -1668,7 +1637,7 @@ void World::ProcessFactoryMsgs()
   {
     try
     {
-      boost::mutex::scoped_lock lock(g_deprecatedMutexReplaceInGazebo4);
+      boost::mutex::scoped_lock lock(this->factoryDeleteMutex);
 
       ModelPtr model = this->LoadModel(*iter2, this->rootElement);
       model->Init();
@@ -2001,7 +1970,7 @@ uint32_t World::GetIterations() const
 //////////////////////////////////////////////////
 void World::RemoveModel(const std::string &_name)
 {
-  boost::mutex::scoped_lock flock(g_deprecatedMutexReplaceInGazebo4);
+  boost::mutex::scoped_lock flock(this->factoryDeleteMutex);
 
   // Remove all the dirty poses from the delete entity.
   {
@@ -2025,6 +1994,28 @@ void World::RemoveModel(const std::string &_name)
       childElem = childElem->GetNextElement("model");
     if (childElem)
       this->sdf->RemoveChild(childElem);
+  }
+
+  if (this->sdf->HasElement("light"))
+  {
+    sdf::ElementPtr childElem = this->sdf->GetElement("light");
+    while (childElem && childElem->Get<std::string>("name") != _name)
+      childElem = childElem->GetNextElement("light");
+    if (childElem)
+    {
+      this->sdf->RemoveChild(childElem);
+      // Find the light by name in the scene msg, and remove it.
+      for (int i = 0; i < this->sceneMsg.light_size(); ++i)
+      {
+        if (this->sceneMsg.light(i).name() == _name)
+        {
+          this->sceneMsg.mutable_light()->SwapElements(i,
+              this->sceneMsg.light_size()-1);
+          this->sceneMsg.mutable_light()->RemoveLast();
+          break;
+        }
+      }
+    }
   }
 
   {
@@ -2073,6 +2064,12 @@ void World::OnLightMsg(ConstLightPtr &_msg)
     {
       lightExists = true;
       this->sceneMsg.mutable_light(i)->MergeFrom(*_msg);
+
+      sdf::ElementPtr childElem = this->sdf->GetElement("light");
+      while (childElem && childElem->Get<std::string>("name") != _msg->name())
+        childElem = childElem->GetNextElement("light");
+      if (childElem)
+        msgs::LightToSDF(*_msg, childElem);
       break;
     }
   }
@@ -2081,6 +2078,11 @@ void World::OnLightMsg(ConstLightPtr &_msg)
   if (!lightExists)
   {
     this->sceneMsg.add_light()->CopyFrom(*_msg);
+
+    // add to the world sdf
+    sdf::ElementPtr lightSDF = msgs::LightToSDF(*_msg);
+    lightSDF->SetParent(this->sdf);
+    lightSDF->GetParent()->InsertElement(lightSDF);
   }
 }
 

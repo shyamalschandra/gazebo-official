@@ -471,20 +471,6 @@ math::Vector3 SimbodyJoint::GetLinkTorque(unsigned int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-void SimbodyJoint::SetAttribute(Attribute, unsigned int /*_index*/,
-    double /*_value*/)
-{
-  gzerr << "Not implement in Simbody\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyJoint::SetAttribute(const std::string &_key,
-    unsigned int _index, const boost::any &_value)
-{
-  this->SetParam(_key, _index, _value);
-}
-
-//////////////////////////////////////////////////
 bool SimbodyJoint::SetParam(const std::string &/*_key*/,
     unsigned int /*_index*/, const boost::any &/*_value*/)
 {
@@ -493,16 +479,9 @@ bool SimbodyJoint::SetParam(const std::string &/*_key*/,
 }
 
 //////////////////////////////////////////////////
-double SimbodyJoint::GetAttribute(const std::string &_key, unsigned int _index)
+double SimbodyJoint::GetParam(const std::string &_key, unsigned int _index)
 {
-  return this->GetParam(_key, _index);
-}
-//////////////////////////////////////////////////
-double SimbodyJoint::GetParam(const std::string &/*_key*/,
-    unsigned int /*_index*/)
-{
-  gzerr << "Not implement in Simbody\n";
-  return 0;
+  return Joint::GetParam(_key, _index);
 }
 
 //////////////////////////////////////////////////

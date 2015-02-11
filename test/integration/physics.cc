@@ -314,9 +314,9 @@ void PhysicsTest::SpawnDrop(const std::string &_physicsEngine)
   // Compute and check link pose of link_offset_box
   gzdbg << "Check link pose of link_offset_box\n";
   model = world->GetModel("link_offset_box");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
   physics::LinkPtr link = model->GetLink();
-  ASSERT_TRUE(link);
+  ASSERT_TRUE(link != NULL);
   // relative pose of link in linkOffsetPose2
   for (int i = 0; i < 20; ++i)
   {
@@ -352,6 +352,14 @@ TEST_P(PhysicsTest, SpawnDrop)
 ////////////////////////////////////////////////////////////////////////
 void PhysicsTest::SpawnDropCoGOffset(const std::string &_physicsEngine)
 {
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Skipping SpawnDropCoGOffset for physics engine ["
+          << _physicsEngine
+          << "] due to issue #1209.\n";
+    return;
+  }
+
   // load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -1061,9 +1069,9 @@ void PhysicsTest::SphereAtlasLargeError(const std::string &_physicsEngine)
     gzthrow("Unable to get sphere_atlas");
 
   physics::ModelPtr model = world->GetModel("sphere_atlas");
-  EXPECT_TRUE(model);
+  EXPECT_TRUE(model != NULL);
   physics::LinkPtr head = model->GetLink("head");
-  EXPECT_TRUE(head);
+  EXPECT_TRUE(head != NULL);
 
   {
     gzdbg << "Testing large perturbation with PID controller active.\n";
@@ -1334,7 +1342,7 @@ TEST_F(PhysicsTest, ZeroMaxContactsODE)
   ASSERT_TRUE(world != NULL);
 
   physics::ModelPtr model = world->GetModel("ground_plane");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
 }
 
 INSTANTIATE_TEST_CASE_P(PhysicsEngines, PhysicsTest, PHYSICS_ENGINE_VALUES);
