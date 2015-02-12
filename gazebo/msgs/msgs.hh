@@ -396,6 +396,26 @@ namespace gazebo
     sdf::ElementPtr MeshToSDF(const msgs::MeshGeom &_msg,
         sdf::ElementPtr _sdf = sdf::ElementPtr());
 
+    /// \brief Add a simple box link to a Model message.
+    /// The size and mass of the box are specified, and a
+    /// single collision is added, along with an inertial
+    /// block corresponding to box of uniform density.
+    /// \param[out] _msg The msgs::Model to which the link is added.
+    /// \param[in] _mass Mass of the box.
+    /// \param[in] _size Size of the box.
+    GAZEBO_VISIBLE
+    void AddBoxLink(msgs::Model &_msg, double _mass,
+                    const math::Vector3 &_size);
+
+    /// \brief Create an SDF element from msgs::Model.
+    /// \param[in] _msg The msgs::Model object.
+    /// \param[in] _sdf if supplied, performs an update from _sdf instead of
+    /// creating a new sdf element.
+    /// \return The new SDF element.
+    GAZEBO_VISIBLE
+    sdf::ElementPtr ModelToSDF(const msgs::Model &_msg,
+        sdf::ElementPtr _sdf = sdf::ElementPtr());
+
     /// \brief Create an SDF element from msgs::Joint.
     /// \param[in] _msg The msgs::Joint object.
     /// \param[in] _sdf if supplied, performs an update from _sdf instead of
