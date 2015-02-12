@@ -51,9 +51,9 @@ namespace gazebo
       public: virtual ~GUIPlugin() {}
 
       /// \brief The Load function is called when the plugin is created.
-      /// \param _elem Pointer to an SDF element. This parameter could be NULL,
-      /// particularly in the case when a plugin is a loaded from the gui.ini
-      /// file.
+      /// \param[in] _elem Pointer to an SDF element. This parameter could be
+      /// NULL, particularly in the case when a plugin is a loaded from
+      /// the gui.ini file.
       public: virtual void Load(sdf::ElementPtr _elem) = 0;
     };
   }

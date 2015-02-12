@@ -360,33 +360,6 @@ void RenderWidget::OnFollow(const std::string &_modelName)
 }
 
 /////////////////////////////////////////////////
-void RenderWidget::AddPlugin(const std::string &_filename,
-                             sdf::ElementPtr _elem)
-{
-  std::cout << "Add plugin[" << _filename << "\n";
-  QPluginLoader pluginLoader(_filename.c_str());
-  QObject *plugin = pluginLoader.instance();
-  std::cout << pluginLoader.errorString().toStdString() << "\n";
-  if (plugin)
-  {
-    GUIPluginPtr guiPlugin(qobject_cast<GUIPlugin*>(plugin));
-    guiPlugin->Load(_elem);
-    // plugin->setParent(this->glWidget);
-    // guiPlugin->show();
-    this->plugins.push_back(guiPlugin);
-  }
-
-  /*// Set the plugin's parent and store the plugin
-    _plugin->setParent(this->glWidget);
-    this->plugins.push_back(_plugin);
-
-  // Load the plugin.
-  _plugin->Load(_elem);
-
-  */
-}
-
-/////////////////////////////////////////////////
 void RenderWidget::LoadPlugins()
 {
   // Load all GUI Plugins
@@ -404,24 +377,32 @@ void RenderWidget::LoadPlugins()
     // Make sure the string is not empty
     if (!(*iter).empty())
     {
-      this->AddPlugin(*iter);
-
-      // Try to create the plugin
-      //gazebo::GUIPluginPtr plugin = gazebo::GUIPlugin::Create(*iter, *iter);
-
-      //if (!plugin)
-      //{
-      //  gzerr << "Unable to create gui overlay plugin with filename["
-      //    << *iter << "]\n";
-      //}
-      //else
-      //{
-      //  gzlog << "Loaded GUI plugin[" << *iter << "]\n";
-
-      //  // Set the plugin's parent and store the plugin
-      //  plugin->setParent(this->glWidget);
-      //  this->plugins.push_back(plugin);
-      //}
+      this->LoadPlugin(*iter);
     }
+  }
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::LoadPlugin(const std::string &_filename,
+                             sdf::ElementPtr _elem)
+{
+  QPluginLoader pluginLoader(_filename.c_str());//, this->glWidget);
+  QObject *plugin = pluginLoader.instance();
+
+  if (plugin)
+  {
+    GUIPluginPtr guiPlugin(qobject_cast<GUIPlugin*>(plugin));
+
+    // Load the plugin.
+    guiPlugin->Load(_elem);
+    this->plugins.push_back(guiPlugin);
+    gzlog << "Loaded GUI plugin[" << _filename << "]\n";
+  }
+  else
+  {
+    gzerr << "Failed to load GUI plugin with filename["
+      << _filename << "] because ["
+      << pluginLoader.errorString().toStdString() << "]"
+      << std::endl;
   }
 }

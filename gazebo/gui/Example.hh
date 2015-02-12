@@ -10,10 +10,10 @@ namespace gazebo
     class MyExample : public QWidget, GUIPlugin
     {
       Q_OBJECT
-      Q_INTERFACES(GUIPlugin)
+      Q_INTERFACES(gazebo::gui::GUIPlugin)
 
       public: virtual ~MyExample();
-      public: virtual void Load();
+      public: virtual void Load(sdf::ElementPtr _elem);
     };
   }
 }

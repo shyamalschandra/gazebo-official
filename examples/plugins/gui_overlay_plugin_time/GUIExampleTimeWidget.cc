@@ -14,19 +14,30 @@
  * limitations under the License.
  *
 */
-#include <sstream>
+#include "GUIExampleTimeWidget.hh"
+#include "gazebo/gui/GuiIface.hh"
+
+using namespace gazebo;
+using namespace gui;
+
+MyExample::~MyExample()
+{
+}
+
+void MyExample::Load(sdf::ElementPtr /*_elem*/)
+{
+  printf("Loaded\n");
+  // gui::get_active_camera();
+}
+
+Q_EXPORT_PLUGIN2(myexample, gazebo::gui::MyExample)
+
+/*#include <sstream>
 #include <gazebo/msgs/msgs.hh>
 #include "GUIExampleTimeWidget.hh"
 
 using namespace gazebo;
-
-// Register this plugin with the simulator
-//GZ_REGISTER_GUI_PLUGIN(GUIExampleTimeWidget)
-
-/////////////////////////////////////////////////
-/*GUIExampleTimeWidget::GUIExampleTimeWidget()
-  : QObject()
-  */
+using namespace gui;
 
 /////////////////////////////////////////////////
 GUIExampleTimeWidget::~GUIExampleTimeWidget()
@@ -34,7 +45,7 @@ GUIExampleTimeWidget::~GUIExampleTimeWidget()
 }
 
 /////////////////////////////////////////////////
-void GUIExampleTimeWidget::Load()
+void GUIExampleTimeWidget::Load(sdf::ElementPtr _elem)
 {
   // Set the frame background and foreground colors
   this->setStyleSheet(
@@ -125,4 +136,6 @@ std::string GUIExampleTimeWidget::FormatTime(const msgs::Time &_msg) const
 
   return stream.str();
 }
-Q_EXPORT_PLUGIN2(example, GUIExampleTimeWidget)
+
+Q_EXPORT_PLUGIN2(gui_example_time_widget, gazebo::gui::GUIExampleTimeWidget)
+  */

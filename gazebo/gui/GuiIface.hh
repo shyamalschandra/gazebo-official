@@ -53,6 +53,9 @@ namespace gazebo
     GAZEBO_VISIBLE
     rendering::UserCameraPtr get_active_camera();
     GAZEBO_VISIBLE
+    rendering::UserCamera *get_active_camera2();
+
+    GAZEBO_VISIBLE
     void clear_active_camera();
 
     /// \brief Return a pointer to the main graphical window.
