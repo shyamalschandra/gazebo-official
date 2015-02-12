@@ -82,8 +82,8 @@ set (headers
   CylinderMaker.hh
   EntityMaker.hh
   GuiIface.hh
+  GUIPlugin.hh
   GuiEvents.hh
-  GuiPlugin.hh
   KeyEventHandler.hh
   LightMaker.hh
   ModelAlign.hh
@@ -205,3 +205,8 @@ gz_install_library(gazebo_gui)
 gz_install_includes("gui" ${headers} ${qt_headers} ${CMAKE_CURRENT_BINARY_DIR}/gui.hh)
 gz_install_executable(gzclient)
 manpage(gzclient 1)
+
+
+QT4_WRAP_CPP(example_headers_MOC Example.hh)
+add_library(example SHARED ${example_headers_MOC} Example.cc)
+

@@ -21,11 +21,20 @@
 using namespace gazebo;
 
 // Register this plugin with the simulator
-GZ_REGISTER_GUI_PLUGIN(GUIExampleTimeWidget)
+//GZ_REGISTER_GUI_PLUGIN(GUIExampleTimeWidget)
 
 /////////////////////////////////////////////////
-GUIExampleTimeWidget::GUIExampleTimeWidget()
-  : GUIPlugin()
+/*GUIExampleTimeWidget::GUIExampleTimeWidget()
+  : QObject()
+  */
+
+/////////////////////////////////////////////////
+GUIExampleTimeWidget::~GUIExampleTimeWidget()
+{
+}
+
+/////////////////////////////////////////////////
+void GUIExampleTimeWidget::Load()
 {
   // Set the frame background and foreground colors
   this->setStyleSheet(
@@ -72,11 +81,12 @@ GUIExampleTimeWidget::GUIExampleTimeWidget()
   this->node->Init("default");
   this->statsSub = this->node->Subscribe("~/world_stats",
       &GUIExampleTimeWidget::OnStats, this);
-}
 
-/////////////////////////////////////////////////
-GUIExampleTimeWidget::~GUIExampleTimeWidget()
-{
+  printf("A Thread[%ld]\n", pthread_self());
+  this->cam = gui::get_active_camera();
+  printf("B\n");
+  if (!this->cam)
+    printf("Camera is NULL\n");
 }
 
 /////////////////////////////////////////////////
@@ -115,3 +125,4 @@ std::string GUIExampleTimeWidget::FormatTime(const msgs::Time &_msg) const
 
   return stream.str();
 }
+Q_EXPORT_PLUGIN2(example, GUIExampleTimeWidget)

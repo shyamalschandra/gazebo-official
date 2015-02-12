@@ -38,6 +38,7 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
   : Camera(_name, _scene),
     dataPtr(new UserCameraPrivate)
 {
+  printf("New user camera\n");
   this->dataPtr->orbitViewController = NULL;
   this->dataPtr->fpsViewController = NULL;
   this->dataPtr->viewController = NULL;
@@ -55,6 +56,7 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
 //////////////////////////////////////////////////
 UserCamera::~UserCamera()
 {
+  printf("delete user camera\n");
   delete this->dataPtr->orbitViewController;
   delete this->dataPtr->fpsViewController;
 

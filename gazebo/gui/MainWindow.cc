@@ -19,7 +19,7 @@
 
 #include "gazebo/gazebo_config.h"
 
-#include "gazebo/gui/GuiPlugin.hh"
+#include "gazebo/gui/GUIPlugin.hh"
 #include "gazebo/gui/CloneWindow.hh"
 #include "gazebo/gui/TopicSelector.hh"
 #include "gazebo/gui/DataLogger.hh"
@@ -249,6 +249,8 @@ void MainWindow::Init()
   // Get the size properties from the INI file.
   int winWidth = getINIProperty<int>("geometry.width", winSize.width());
   int winHeight = getINIProperty<int>("geometry.height", winSize.height());
+
+  printf("WxH[%dx%d] Thread[%ld]\n", winWidth, winHeight, pthread_self());
 
   winWidth = winWidth < 0 ? winSize.width() : winWidth;
   winHeight = winHeight < 0 ? winSize.height() : winHeight;
@@ -672,6 +674,7 @@ void MainWindow::Snap()
 /////////////////////////////////////////////////
 void MainWindow::CreateBox()
 {
+  printf("Create box\n");
   g_arrowAct->setChecked(true);
   gui::Events::createEntity("box", "");
 }
@@ -1516,7 +1519,10 @@ void MainWindow::OnAddPlugins()
     // Make sure the filename string is not empty
     if (!(*iter)->filename().empty())
     {
-      // Try to create the plugin
+      this->renderWidget->AddPlugin((*iter)->filename(),
+          msgs::PluginToSDF(**iter));
+
+      /*// Try to create the plugin
       gazebo::GUIPluginPtr plugin = gazebo::GUIPlugin::Create(
           (*iter)->filename(), (*iter)->name());
 
@@ -1531,7 +1537,7 @@ void MainWindow::OnAddPlugins()
 
         // Attach the plugin to the render widget.
         this->renderWidget->AddPlugin(plugin, msgs::PluginToSDF(**iter));
-      }
+      }*/
     }
   }
   this->pluginMsgs.clear();

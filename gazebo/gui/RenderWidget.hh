@@ -22,6 +22,7 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/gui/qt.h"
+#include "gazebo/gui/GuiTypes.hh"
 #include "gazebo/common/Event.hh"
 #include "gazebo/util/system.hh"
 
@@ -62,9 +63,10 @@ namespace gazebo
       public: std::string GetOverlayMsg() const;
 
       /// \brief Add a plugin to the render widget.
-      /// \param[in] _plugin Plugin pointer to add.
+      /// \param[in] _filename Filename of the plugin library to load.
       /// \param[in] _elem Plugin sdf parameters.
-      public: void AddPlugin(GUIPluginPtr _plugin, sdf::ElementPtr _elem);
+      public: void AddPlugin(const std::string &_filename,
+                             sdf::ElementPtr _elem = sdf::ElementPtr());
 
       /// \brief Get the toolbar on top of the render widget
       /// \return Toolbar
@@ -88,6 +90,8 @@ namespace gazebo
 
       /// \brief Handle align model user event.
       private: void OnAlign();
+
+      private: void LoadPlugins();
 
       /// \brief Widget used to draw the scene.
       private: GLWidget *glWidget;
@@ -134,7 +138,7 @@ namespace gazebo
       private: std::string baseOverlayMsg;
 
       /// \brief All the gui plugins
-      private: std::vector<gazebo::GUIPluginPtr> plugins;
+      private: std::vector<gazebo::gui::GUIPluginPtr> plugins;
     };
   }
 }

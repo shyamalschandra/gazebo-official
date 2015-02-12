@@ -53,9 +53,11 @@ gui::ModelRightMenu *g_modelRightMenu = NULL;
 
 std::string g_worldname = "default";
 
+boost::mutex g_activeCameraMutex;
+
 QApplication *g_app;
 gui::MainWindow *g_main_win = NULL;
-rendering::UserCameraPtr g_active_camera;
+static rendering::UserCameraPtr g_active_camera;
 bool g_fullscreen = false;
 
 //////////////////////////////////////////////////
@@ -169,6 +171,7 @@ void gui::init()
 /////////////////////////////////////////////////
 bool gui::loadINI(boost::filesystem::path _file)
 {
+  printf("LoadINI Thread[%ld]\n", pthread_self());
   bool result = true;
 
   // Only use the environment variables if _file is empty.
@@ -300,7 +303,10 @@ bool gui::run(int _argc, char **_argv)
 void gui::stop()
 {
   gazebo::shutdown();
-  g_active_camera.reset();
+  {
+    boost::mutex::scoped_lock lock(g_activeCameraMutex);
+    g_active_camera.reset();
+  }
   g_app->quit();
 }
 
@@ -319,18 +325,21 @@ std::string gui::get_world()
 /////////////////////////////////////////////////
 void gui::set_active_camera(rendering::UserCameraPtr _cam)
 {
+  boost::mutex::scoped_lock lock(g_activeCameraMutex);
   g_active_camera = _cam;
 }
 
 /////////////////////////////////////////////////
 void gui::clear_active_camera()
 {
+  boost::mutex::scoped_lock lock(g_activeCameraMutex);
   g_active_camera.reset();
 }
 
 /////////////////////////////////////////////////
 rendering::UserCameraPtr gui::get_active_camera()
 {
+  boost::mutex::scoped_lock lock(g_activeCameraMutex);
   return g_active_camera;
 }
 
