@@ -16,7 +16,7 @@
 */
 #ifndef _GUI_EXAMPLE_TIME_WIDGET_HH_
 #define _GUI_EXAMPLE_TIME_WIDGET_HH_
-
+/*
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/GUIPlugin.hh"
 namespace gazebo
@@ -33,8 +33,9 @@ namespace gazebo
     };
   }
 }
+*/
 
-/*#include <string>
+#include <string>
 
 #include <gazebo/gui/GUIPlugin.hh>
 #ifndef Q_MOC_RUN  // See: https://bugreports.qt-project.org/browse/QTBUG-22829
@@ -82,5 +83,4 @@ namespace gazebo
     };
   }
 }
-*/
 #endif

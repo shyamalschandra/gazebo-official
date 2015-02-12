@@ -52,8 +52,6 @@ namespace gazebo
     void set_active_camera(rendering::UserCameraPtr _cam);
     GAZEBO_VISIBLE
     rendering::UserCameraPtr get_active_camera();
-    GAZEBO_VISIBLE
-    rendering::UserCamera *get_active_camera2();
 
     GAZEBO_VISIBLE
     void clear_active_camera();

@@ -344,12 +344,6 @@ rendering::UserCameraPtr gui::get_active_camera()
 }
 
 /////////////////////////////////////////////////
-rendering::UserCamera *gui::get_active_camera2()
-{
-  return g_active_camera.get();
-}
-
-/////////////////////////////////////////////////
 bool gui::has_entity_name(const std::string &_name)
 {
   return g_main_win->HasEntityName(_name);
