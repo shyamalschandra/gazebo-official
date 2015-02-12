@@ -84,6 +84,7 @@ set (headers
   GuiIface.hh
   GUIPlugin.hh
   GuiEvents.hh
+  GuiTypes.hh
   KeyEventHandler.hh
   LightMaker.hh
   ModelAlign.hh

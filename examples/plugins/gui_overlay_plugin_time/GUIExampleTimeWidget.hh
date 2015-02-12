@@ -17,10 +17,26 @@
 #ifndef _GUI_EXAMPLE_TIME_WIDGET_HH_
 #define _GUI_EXAMPLE_TIME_WIDGET_HH_
 
-#include <string>
+#include "gazebo/gui/qt.h"
+#include "gazebo/gui/GUIPlugin.hh"
+namespace gazebo
+{
+  namespace gui
+  {
+    class MyExample : public QWidget, GUIPlugin
+    {
+      Q_OBJECT
+      Q_INTERFACES(gazebo::gui::GUIPlugin)
 
-#include <gazebo/common/Plugin.hh>
-#include <gazebo/gui/GuiInterface.hh>
+      public: virtual ~MyExample();
+      public: virtual void Load(sdf::ElementPtr _elem);
+    };
+  }
+}
+
+/*#include <string>
+
+#include <gazebo/gui/GUIPlugin.hh>
 #ifndef Q_MOC_RUN  // See: https://bugreports.qt-project.org/browse/QTBUG-22829
 # include <gazebo/transport/transport.hh>
 # include <gazebo/gui/gui.hh>
@@ -28,39 +44,43 @@
 
 namespace gazebo
 {
-  class GUIExampleTimeWidget : public QWidget, GUIInterface
+  namespace gui
   {
-    Q_OBJECT
-    Q_INTERFACES(GUIInterface)
+    class GUIExampleTimeWidget : public QWidget, GUIPlugin
+    {
+      Q_OBJECT
+      Q_INTERFACES(gazebo::gui::GUIPlugin)
 
-    /// \brief Constructor
-    // public: GUIExampleTimeWidget();
+      /// \brief Destructor
+      public: virtual ~GUIExampleTimeWidget();
 
-    /// \brief Destructor
-    public: virtual ~GUIExampleTimeWidget();
+      /// \brief The Load function is called when the plugin is created.
+      /// \param _elem Pointer to an SDF element. This parameter could be NULL,
+      /// particularly in the case when a plugin is a loaded from the gui.ini
+      /// file.
+      public: virtual void Load(sdf::ElementPtr _elem);
 
-    public: virtual void Load();
+      /// \brief A signal used to set the sim time line edit.
+      /// \param[in] _string String representation of sim time.
+      signals: void SetSimTime(QString _string);
 
-    /// \brief A signal used to set the sim time line edit.
-    /// \param[in] _string String representation of sim time.
-    signals: void SetSimTime(QString _string);
+      /// \brief Callback that received world statistics messages.
+      /// \param[in] _msg World statistics message that is received.
+      private: void OnStats(ConstWorldStatisticsPtr &_msg);
 
-    /// \brief Callback that received world statistics messages.
-    /// \param[in] _msg World statistics message that is received.
-    protected: void OnStats(ConstWorldStatisticsPtr &_msg);
+      /// \brief Helper function to format time string.
+      /// \param[in] _msg Time message.
+      /// \return Time formatted as a string.
+      private: std::string FormatTime(const msgs::Time &_msg) const;
 
-    /// \brief Helper function to format time string.
-    /// \param[in] _msg Time message.
-    /// \return Time formatted as a string.
-    private: std::string FormatTime(const msgs::Time &_msg) const;
+      /// \brief Node used to establish communication with gzserver.
+      private: transport::NodePtr node;
 
-    /// \brief Node used to establish communication with gzserver.
-    private: transport::NodePtr node;
-
-    /// \brief Subscriber to world statistics messages.
-    private: transport::SubscriberPtr statsSub;
-    private: rendering::UserCameraPtr cam;
-  };
+      /// \brief Subscriber to world statistics messages.
+      private: transport::SubscriberPtr statsSub;
+      private: rendering::UserCameraPtr cam;
+    };
+  }
 }
-
+*/
 #endif

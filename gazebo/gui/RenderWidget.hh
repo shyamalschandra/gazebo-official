@@ -65,8 +65,8 @@ namespace gazebo
       /// \brief Add a plugin to the render widget.
       /// \param[in] _filename Filename of the plugin library to load.
       /// \param[in] _elem Plugin sdf parameters.
-      public: void AddPlugin(const std::string &_filename,
-                             sdf::ElementPtr _elem = sdf::ElementPtr());
+      public: void LoadPlugin(const std::string &_filename,
+                              sdf::ElementPtr _elem = sdf::ElementPtr());
 
       /// \brief Get the toolbar on top of the render widget
       /// \return Toolbar
@@ -91,6 +91,7 @@ namespace gazebo
       /// \brief Handle align model user event.
       private: void OnAlign();
 
+      /// \brief Load all plugins specified in gui.ini
       private: void LoadPlugins();
 
       /// \brief Widget used to draw the scene.
