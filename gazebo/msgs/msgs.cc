@@ -1678,6 +1678,114 @@ namespace gazebo
     }
 
     ////////////////////////////////////////////////////////
+    void AddBoxLink(msgs::Model &_msg, double _mass,
+                    const math::Vector3 &_size)
+    {
+      _msg.add_link();
+      int linkCount = _msg.link_size();
+      auto link = _msg.mutable_link(linkCount-1);
+      {
+        std::ostringstream linkName;
+        linkName << "link" << linkCount;
+        link->set_name(linkName.str());
+      }
+
+      auto inertial = link->mutable_inertial();
+      inertial->set_mass(_mass);
+      {
+        double dx = _size.x;
+        double dy = _size.y;
+        double dz = _size.z;
+        double ixx = _mass/12.0 * (dy*dy + dz*dz);
+        double iyy = _mass/12.0 * (dz*dz + dx*dx);
+        double izz = _mass/12.0 * (dx*dx + dy*dy);
+        inertial->set_ixx(ixx);
+        inertial->set_iyy(iyy);
+        inertial->set_izz(izz);
+        inertial->set_ixy(0.0);
+        inertial->set_ixz(0.0);
+        inertial->set_iyz(0.0);
+      }
+
+      {
+        link->add_collision();
+        auto collision = link->mutable_collision(0);
+        collision->set_name("collision");
+
+        auto geometry = collision->mutable_geometry();
+        geometry->set_type(Geometry_Type_BOX);
+        msgs::Set(geometry->mutable_box()->mutable_size(), _size);
+      }
+
+      {
+        link->add_visual();
+        auto visual = link->mutable_visual(0);
+        visual->set_name("visual");
+
+        auto geometry = visual->mutable_geometry();
+        geometry->set_type(Geometry_Type_BOX);
+        msgs::Set(geometry->mutable_box()->mutable_size(), _size);
+
+        auto script = visual->mutable_material()->mutable_script();
+        script->add_uri();
+        script->set_uri(0, "file://media/materials/scripts/gazebo.material");
+        script->set_name("Gazebo/Grey");
+      }
+    }
+
+    ////////////////////////////////////////////////////////
+    sdf::ElementPtr ModelToSDF(const msgs::Model &_msg, sdf::ElementPtr _sdf)
+    {
+      sdf::ElementPtr modelSDF;
+
+      if (_sdf)
+      {
+        modelSDF = _sdf;
+      }
+      else
+      {
+        modelSDF.reset(new sdf::Element);
+        sdf::initFile("model.sdf", modelSDF);
+      }
+
+      if (_msg.has_name())
+        modelSDF->GetAttribute("name")->Set(_msg.name());
+      // ignore the id field, since it's not used in sdformat
+      if (_msg.has_is_static())
+        modelSDF->GetElement("static")->Set(_msg.is_static());
+      if (_msg.has_pose())
+        modelSDF->GetElement("pose")->Set(msgs::Convert(_msg.pose()));
+
+      while (modelSDF->HasElement("joint"))
+        modelSDF->GetElement("joint")->RemoveFromParent();
+      for (int i = 0; i < _msg.joint_size(); ++i)
+      {
+        sdf::ElementPtr jointElem = modelSDF->AddElement("joint");
+        jointElem = JointToSDF(_msg.joint(i), jointElem);
+      }
+
+      while (modelSDF->HasElement("link"))
+        modelSDF->GetElement("link")->RemoveFromParent();
+      for (int i = 0; i < _msg.link_size(); ++i)
+      {
+        sdf::ElementPtr linkElem = modelSDF->AddElement("link");
+        linkElem = LinkToSDF(_msg.link(i), linkElem);
+      }
+
+      // ignore the deleted field, since it's not used in sdformat
+      if (_msg.visual_size() > 0)
+      {
+        // model element in SDF cannot store visuals,
+        // so ignore them for now
+        gzerr << "Model visuals not yet parsed" << std::endl;
+      }
+      // ignore the scale field, since it's not used in sdformat
+
+      return modelSDF;
+    }
+
+
+    ////////////////////////////////////////////////////////
     sdf::ElementPtr JointToSDF(const msgs::Joint &_msg, sdf::ElementPtr _sdf)
     {
       sdf::ElementPtr jointSDF;
