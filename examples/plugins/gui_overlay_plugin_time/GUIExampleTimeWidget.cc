@@ -19,20 +19,21 @@
 
 using namespace gazebo;
 using namespace gui;
-
+/*
 MyExample::~MyExample()
 {
 }
 
-void MyExample::Load(sdf::ElementPtr /*_elem*/)
+void MyExample::Load(sdf::ElementPtr _elem)
 {
   printf("Loaded\n");
-  // gui::get_active_camera();
+  gui::get_active_camera();
 }
 
 Q_EXPORT_PLUGIN2(myexample, gazebo::gui::MyExample)
+  */
 
-/*#include <sstream>
+#include <sstream>
 #include <gazebo/msgs/msgs.hh>
 #include "GUIExampleTimeWidget.hh"
 
@@ -93,16 +94,20 @@ void GUIExampleTimeWidget::Load(sdf::ElementPtr _elem)
   this->statsSub = this->node->Subscribe("~/world_stats",
       &GUIExampleTimeWidget::OnStats, this);
 
-  printf("A Thread[%ld]\n", pthread_self());
+  /*printf("A Thread[%ld]\n", pthread_self());
   this->cam = gui::get_active_camera();
   printf("B\n");
   if (!this->cam)
     printf("Camera is NULL\n");
+    */
+
+  this->show();
 }
 
 /////////////////////////////////////////////////
 void GUIExampleTimeWidget::OnStats(ConstWorldStatisticsPtr &_msg)
 {
+  printf("On Stats\n");
   this->SetSimTime(QString::fromStdString(
         this->FormatTime(_msg->sim_time())));
 }
@@ -138,4 +143,3 @@ std::string GUIExampleTimeWidget::FormatTime(const msgs::Time &_msg) const
 }
 
 Q_EXPORT_PLUGIN2(gui_example_time_widget, gazebo::gui::GUIExampleTimeWidget)
-  */

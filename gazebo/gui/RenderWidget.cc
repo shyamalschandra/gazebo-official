@@ -386,7 +386,7 @@ void RenderWidget::LoadPlugins()
 void RenderWidget::LoadPlugin(const std::string &_filename,
                              sdf::ElementPtr _elem)
 {
-  QPluginLoader pluginLoader(_filename.c_str());//, this->glWidget);
+  QPluginLoader pluginLoader(_filename.c_str(), this->glWidget);
   QObject *plugin = pluginLoader.instance();
 
   if (plugin)
