@@ -749,7 +749,10 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
     gzerr << "Unable to connect to a running Gazebo master.\n";
 
   if (_scene->GetUserCameraCount() == 0)
+  {
+    printf("CreateUserCamera Thread[%ld]\n", pthread_self());
     this->userCamera = _scene->CreateUserCamera(cameraName);
+  }
   else
     this->userCamera = _scene->GetUserCamera(0);
 
@@ -859,6 +862,7 @@ void GLWidget::OnMoveMode(bool _mode)
 void GLWidget::OnCreateEntity(const std::string &_type,
                               const std::string &_data)
 {
+  printf("GLWidget::OnCreateEntity\n");
   this->ClearSelection();
 
   if (this->entityMaker)

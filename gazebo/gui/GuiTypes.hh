@@ -32,6 +32,11 @@ namespace gazebo
     class ImageView;
     class TextView;
     class LaserView;
+    class GUIPlugin;
+
+    /// \def GUIPluginPtr
+    /// \brief Boost shared pointer to a GUIPlugin object
+    typedef boost::shared_ptr<GUIPlugin> GUIPluginPtr;
 
     /// \def TopicViewPtr
     /// \brief Boost shared pointer to a TopicView object

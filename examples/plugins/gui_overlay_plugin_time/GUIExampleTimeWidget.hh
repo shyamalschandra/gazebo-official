@@ -20,7 +20,7 @@
 #include <string>
 
 #include <gazebo/common/Plugin.hh>
-#include <gazebo/gui/GuiPlugin.hh>
+#include <gazebo/gui/GuiInterface.hh>
 #ifndef Q_MOC_RUN  // See: https://bugreports.qt-project.org/browse/QTBUG-22829
 # include <gazebo/transport/transport.hh>
 # include <gazebo/gui/gui.hh>
@@ -28,15 +28,18 @@
 
 namespace gazebo
 {
-  class GAZEBO_VISIBLE GUIExampleTimeWidget : public GUIPlugin
+  class GUIExampleTimeWidget : public QWidget, GUIInterface
   {
     Q_OBJECT
+    Q_INTERFACES(GUIInterface)
 
     /// \brief Constructor
-    public: GUIExampleTimeWidget();
+    // public: GUIExampleTimeWidget();
 
     /// \brief Destructor
     public: virtual ~GUIExampleTimeWidget();
+
+    public: virtual void Load();
 
     /// \brief A signal used to set the sim time line edit.
     /// \param[in] _string String representation of sim time.
@@ -56,6 +59,7 @@ namespace gazebo
 
     /// \brief Subscriber to world statistics messages.
     private: transport::SubscriberPtr statsSub;
+    private: rendering::UserCameraPtr cam;
   };
 }
 
