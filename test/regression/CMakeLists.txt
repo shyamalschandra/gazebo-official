@@ -49,10 +49,20 @@ set(dri_tests
   846_typo_in_camera.cc
 )
 
+include ( ${QT_USE_FILE} )
+
 gz_build_dri_tests(${dri_tests})
+
+add_definitions(${QT_DEFINITIONS})
 
 if (ENABLE_TESTS_COMPILATION)
   add_dependencies(${TEST_TYPE}_1112_force_torque_model_removal
                    ForceTorqueModelRemovalTestPlugin)
   add_dependencies(${TEST_TYPE}_1208_world_plugin_init Issue1208Plugin)
 endif()
+
+set(qt_tests
+  1434_gui_plugin.cc
+)
+
+gz_build_qt_tests(${qt_tests})
