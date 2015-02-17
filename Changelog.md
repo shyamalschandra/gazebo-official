@@ -1,3 +1,5 @@
+## Gazebo 6.0
+
 1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
     * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
 
@@ -19,6 +21,9 @@
 
     1. Saving, exiting, generalizing SaveDialog.
         * [Pull request #1401](https://bitbucket.org/osrf/gazebo/pull-request/1401)
+
+1. Added ERB parsing to the `gz sdf` command line tool.
+    * [Pull request #1182](https://bitbucket.org/osrf/gazebo/pull-request/1182)
 
 ## Gazebo 5.0
 
