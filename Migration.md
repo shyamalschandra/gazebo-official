@@ -1,3 +1,18 @@
+
+1. **gazebo/gui/RenderWidget.hh**
+      + void InsertWidget(unsigned int _index, QWidget *_widget)
+      + unsigned int GetWidgetCount()
+      + void ShowTimePanel(bool _show)
+
+### Deletions
+
+1. **gazebo/physics/RenderWidget.hh**
+    + void ShowEditor(bool _show)
+    + ***Note:*** The render widget no longer supports just one editor. Instead
+    a more generic InsertWidget function is added to allow custom QWidgets to
+    be added to the render widget.
+
+
 ## Gazebo 4.X to 5.X
 
 ### C++11 compiler required
@@ -47,8 +62,7 @@ Gazebo 5.x uses features from the new c++11 standard. This requires to have a co
                                         Ogre::Node::TransformSpace _relativeTo = Ogre::Node::TS_LOCAL);
     + ***Deprecation:*** public: void RotateYaw(math::Angle _angle);
     + ***Replacement:*** public: void Yaw(const math::Angle &_angle,
-                                        Ogre::Node::TransformSpace _relativeTo = Ogre::Node::TS_LOCAL);
-
+                                        Ogre::Node::TransformSpace _relativeTo = Ogre::Node::TS_LOCAL);         
 1. **gazebo/rendering/AxisVisual.hh**
     + ***Removed:*** public: void ShowRotation(unsigned int _axis)
     + ***Replacement:*** public: void ShowAxisRotation(unsigned int _axis, bool _show)
@@ -56,8 +70,7 @@ Gazebo 5.x uses features from the new c++11 standard. This requires to have a co
 1. **gazebo/rendering/ArrowVisual.hh**
     + ***Removed:*** public: void ShowRotation()
     + ***Replacement:*** public: void ShowRotation(bool _show)
-
-### Deletions
+    
 
 1. **gazebo/physics/Collision.hh**
     + unsigned int GetShapeType()
