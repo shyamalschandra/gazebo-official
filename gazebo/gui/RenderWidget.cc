@@ -27,7 +27,6 @@
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/TimePanel.hh"
 #include "gazebo/gui/RenderWidget.hh"
-#include "gazebo/gui/building/BuildingEditorWidget.hh"
 
 using namespace gazebo;
 using namespace gui;
@@ -109,29 +108,28 @@ RenderWidget::RenderWidget(QWidget *_parent)
   this->glWidget = new GLWidget(this->mainFrame);
   rendering::ScenePtr scene = rendering::create_scene(gui::get_world(), true);
 
-  this->buildingEditorWidget = new BuildingEditorWidget(this);
-  this->buildingEditorWidget->setSizePolicy(QSizePolicy::Expanding,
-      QSizePolicy::Expanding);
-  this->buildingEditorWidget->hide();
-
   this->msgOverlayLabel = new QLabel(this->glWidget);
   this->msgOverlayLabel->setStyleSheet(
       "QLabel { background-color : white; color : gray; }");
   this->msgOverlayLabel->setVisible(false);
 
+
+  this->bottomRow = new QStackedWidget(this);
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
-  TimePanel *timePanel = new TimePanel(this);
+  this->timePanel = new TimePanel(this);
+//  this->AddToBottomRow("default", timePanel);
 
   this->bottomFrame = new QFrame;
   this->bottomFrame->setObjectName("renderBottomFrame");
   this->bottomFrame->setSizePolicy(QSizePolicy::Expanding,
       QSizePolicy::Minimum);
 
-  bottomPanelLayout->addWidget(timePanel, 0);
+  bottomPanelLayout->addWidget(this->timePanel, 0);
   bottomPanelLayout->setSpacing(0);
   bottomPanelLayout->setContentsMargins(0, 0, 0, 0);
   this->bottomFrame->setLayout(bottomPanelLayout);
+
 
   QFrame *render3DFrame = new QFrame;
   render3DFrame->setObjectName("render3DFrame");
@@ -142,18 +140,15 @@ RenderWidget::RenderWidget(QWidget *_parent)
   render3DLayout->setSpacing(0);
   render3DFrame->setLayout(render3DLayout);
 
-  QSplitter *splitter = new QSplitter(this);
-  splitter->addWidget(this->buildingEditorWidget);
-  splitter->addWidget(render3DFrame);
+  this->splitter = new QSplitter(this);
+  this->splitter->addWidget(render3DFrame);
   QList<int> sizes;
   sizes.push_back(300);
-  sizes.push_back(300);
-  splitter->setSizes(sizes);
-  splitter->setStretchFactor(0, 1);
-  splitter->setStretchFactor(1, 1);
-  splitter->setOrientation(Qt::Vertical);
+  this->splitter->setSizes(sizes);
+  this->splitter->setStretchFactor(0, 1);
+  this->splitter->setOrientation(Qt::Vertical);
 
-  frameLayout->addWidget(splitter);
+  frameLayout->addWidget(this->splitter);
   frameLayout->addWidget(this->bottomFrame);
   frameLayout->setContentsMargins(0, 0, 0, 0);
   frameLayout->setSpacing(0);
@@ -290,24 +285,42 @@ void RenderWidget::update()
 }
 
 /////////////////////////////////////////////////
-void RenderWidget::ShowEditor(bool _show)
+void RenderWidget::InsertWidget(unsigned int _index, QWidget *_widget)
 {
-  if (_show)
+  if (_index < static_cast<unsigned int>(this->splitter->count()))
   {
-    this->buildingEditorWidget->show();
-    this->baseOverlayMsg = "Building is view-only";
-    this->OnClearOverlayMsg();
-    this->bottomFrame->hide();
-    this->ShowToolbar(false);
+    // set equal size for now. There should always be at least one widget
+    // (render3DFrame) in the splitter.
+    QList<int> sizes = this->splitter->sizes();
+    sizes.insert(_index, sizes[0]);
+
+    this->splitter->insertWidget(_index, _widget);
+    this->splitter->setSizes(sizes);
+    this->splitter->setStretchFactor(_index, 1);
   }
   else
-  {
-    this->buildingEditorWidget->hide();
-    this->baseOverlayMsg = "";
-    this->OnClearOverlayMsg();
+    gzerr << "Unabled to add widget, index out of range " << std::endl;
+}
+
+/////////////////////////////////////////////////
+unsigned RenderWidget::GetWidgetCount()
+{
+  return static_cast<unsigned int>(this->splitter->count());
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::ShowTimePanel(bool _show)
+{
+  if (_show)
     this->bottomFrame->show();
-    this->ShowToolbar(true);
-  }
+  else
+    this->bottomFrame->hide();
+}
+
+/////////////////////////////////////////////////
+TimePanel *RenderWidget::GetTimePanel()
+{
+  return this->timePanel;
 }
 
 /////////////////////////////////////////////////
@@ -391,6 +404,26 @@ void RenderWidget::OnFollow(const std::string &_modelName)
     g_translateAct->setEnabled(false);
     g_rotateAct->setEnabled(false);
   }
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::AddToBottomRow(const std::string &_name, QWidget *_widget)
+{
+  this->bottomRow->addWidget(_widget);
+  this->bottomRowStack[_name] = this->bottomRow->count()-1;
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::ShowBottomRow(const std::string &_name)
+{
+  std::map<std::string, int>::iterator iter =
+      this->bottomRowStack.find(_name);
+
+  if (iter != this->bottomRowStack.end())
+    this->bottomRow->setCurrentIndex(iter->second);
+  else
+    gzerr << "Widget with name[" << _name << "] has not been added to the"
+      << " bottom row stack.\n";
 }
 
 /////////////////////////////////////////////////
