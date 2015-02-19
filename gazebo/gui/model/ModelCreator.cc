@@ -224,8 +224,8 @@ void ModelCreator::OnNew()
     {
       msg.append("You have unsaved changes. Do you want to save this model "
                  "and open a new canvas?\n\n");
-      msgBox.addButton(saveButton, QMessageBox::AcceptRole);
       msgBox.addButton("Don't Save", QMessageBox::DestructiveRole);
+      msgBox.addButton(saveButton, QMessageBox::AcceptRole);
       msgBox.setDefaultButton(saveButton);
       break;
     }

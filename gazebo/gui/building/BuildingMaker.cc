@@ -1637,8 +1637,8 @@ void BuildingMaker::OnExit()
       msgBox.addButton("Don't Save, Exit", QMessageBox::DestructiveRole);
       QPushButton *saveButton = msgBox.addButton("Save and Exit",
           QMessageBox::AcceptRole);
+      msgBox.setDefaultButton(cancelButton);
       msgBox.setDefaultButton(saveButton);
-      msgBox.setEscapeButton(cancelButton);
 
       msgBox.exec();
       if (msgBox.clickedButton() == cancelButton)
