@@ -117,12 +117,6 @@ TEST_P(ContactSensor, MultipleSensors)
 ////////////////////////////////////////////////////////////////////////
 void ContactSensor::StackTest(const std::string &_physicsEngine)
 {
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "Aborting test for Simbody, see issue #865.\n";
-    return;
-  }
-
   if (_physicsEngine == "dart")
   {
     gzerr << "Aborting test for DART, see issue #1173.\n";
@@ -208,8 +202,10 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
   msgs::Contacts contacts02;
 
   // let objects stablize
+  gzerr << "before"; getchar();
   world->Step(1000);
 
+  gzerr << "1000 steps"; getchar();
   int steps = 1000;
   while ((contacts01.contact_size() == 0 || contacts02.contact_size() == 0)
       && --steps > 0)
@@ -217,8 +213,13 @@ void ContactSensor::StackTest(const std::string &_physicsEngine)
     world->Step(1);
     contacts01 = contactSensor01->GetContacts();
     contacts02 = contactSensor02->GetContacts();
+    gzerr << "steps[" << steps
+          << "] contacts01[" << contacts01.contact_size()
+          << "] contacts02[" << contacts02.contact_size()
+          << "] to be > 0\n";
   }
   EXPECT_GT(steps, 0);
+  gzerr << "steps test"; getchar();
 
   std::vector<msgs::Contacts> contacts;
   contacts.push_back(contacts01);
@@ -361,12 +362,6 @@ TEST_P(ContactSensor, StackTest)
 ////////////////////////////////////////////////////////////////////////
 void ContactSensor::TorqueTest(const std::string &_physicsEngine)
 {
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "Aborting test for Simbody, see issue #865.\n";
-    return;
-  }
-
   // Load an empty world
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
@@ -476,6 +471,7 @@ void ContactSensor::TorqueTest(const std::string &_physicsEngine)
           contacts.contact(i).wrench(j).body_2_wrench().torque().z();
       }
 
+      gzerr << j << " : " << actualTorque << "\n";
       // dart doesn't pass this portion of the test (#910)
       if (_physicsEngine != "dart")
       {

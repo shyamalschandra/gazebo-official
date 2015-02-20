@@ -40,6 +40,7 @@
 #include "gazebo/physics/simbody/SimbodyHinge2Joint.hh"
 #include "gazebo/physics/simbody/SimbodyScrewJoint.hh"
 
+#include "gazebo/physics/ContactManager.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/PhysicsFactory.hh"
 #include "gazebo/physics/World.hh"
@@ -403,6 +404,167 @@ void SimbodyPhysics::InitForThread()
 //////////////////////////////////////////////////
 void SimbodyPhysics::UpdateCollision()
 {
+  this->contactManager->ResetCount();
+
+  // Get all contacts from Simbody
+  const SimTK::State &state = this->integ->getState();
+
+  // get contact snapshot
+  const SimTK::ContactSnapshot& contactSnapshot =
+    this->tracker.getActiveContacts(state);
+
+  int numc = contactSnapshot.getNumContacts();
+
+  int count = 0;
+  for (int j = 0; j < numc; ++j)
+  {
+    // get contact stuff from Simbody
+    const SimTK::Contact &simbodyContact = contactSnapshot.getContact(j);
+    {
+      SimTK::ContactSurfaceIndex csi1 = simbodyContact.getSurface1();
+      SimTK::ContactSurfaceIndex csi2 = simbodyContact.getSurface2();
+      const SimTK::ContactSurface &cs1 = this->tracker.getContactSurface(csi1);
+      const SimTK::ContactSurface &cs2 = this->tracker.getContactSurface(csi2);
+
+      /// \TODO: below, get collision data from simbody contacts
+      Collision *collision1 = NULL;
+      Collision *collision2 = NULL;
+
+      /// \TODO: get SimTK::ContactGeometry* from ContactForce somehow
+      const SimTK::ContactGeometry &cg1 = cs1.getShape();
+      const SimTK::ContactGeometry &cg2 = cs2.getShape();
+
+      /// \TODO: proof of concept only
+      /// loop through all link->all collisions and find
+      /// this is going to be very very slow, we'll need
+      /// something with a void* pointer in simbody
+      /// to support something like this.
+      physics::Model_V models = this->world->GetModels();
+      for (physics::Model_V::iterator mi = models.begin();
+           mi != models.end(); ++mi)
+      {
+        physics::Link_V links = (*mi)->GetLinks();
+        for (Link_V::iterator li = links.begin(); li != links.end(); ++li)
+        {
+          Collision_V collisions = (*li)->GetCollisions();
+          for (Collision_V::iterator ci = collisions.begin();
+               ci != collisions.end(); ++ci)
+          {
+            /// compare SimbodyCollision::GetCollisionShape() to
+            /// ContactGeometry from SimTK::ContactForce
+            SimbodyCollisionPtr sc =
+              boost::dynamic_pointer_cast<physics::SimbodyCollision>(*ci);
+            if (sc->GetCollisionShape() == &cg1)
+            {
+              collision1 = (*ci).get();
+            }
+            else if (sc->GetCollisionShape() == &cg2)
+            {
+              collision2 = (*ci).get();
+            }
+          }
+        }
+      }
+
+      // add contacts to the manager. This will return NULL if no one is
+      // listening for contact information.
+      Contact *contactFeedback = this->contactManager->NewContact(collision1,
+          collision2, this->world->GetSimTime());
+
+      if (contactFeedback)
+      {
+        const bool useContactPatch = true;
+        if (useContactPatch)
+        {
+          // get contact patch to get detailed contacts
+          SimTK::ContactPatch patch;
+          const bool found =
+             this->contact.calcContactPatchDetailsById(
+               state, simbodyContact.getContactId(), patch);
+
+          // loop through detials of patch
+          if (found)
+          {
+            for (int i=0; i < patch.getNumDetails(); ++i)
+            {
+              // get detail
+              const SimTK::ContactDetail &detail = patch.getContactDetail(i);
+              // get contact information from simbody and
+              // add them to contactFeedback.
+              // Store the contact depth
+              contactFeedback->depths[count] = detail.getDeformation();
+
+              // Store the contact position
+              contactFeedback->positions[count].Set(
+                detail.getContactPoint()[0],
+                detail.getContactPoint()[1],
+                detail.getContactPoint()[2]);
+
+              // Store the contact normal
+              contactFeedback->normals[j].Set(
+                detail.getContactNormal()[0],
+                detail.getContactNormal()[1],
+                detail.getContactNormal()[2]);
+
+              // Store the contact forces
+              const SimTK::Vec3 f2 = detail.getForceOnSurface2();
+              const SimTK::SpatialVec s2 =
+                SimTK::SpatialVec(SimTK::Vec3(0, 0, 0), f2);
+              /// \TODO: get transform from point to CG, for now, assume
+              /// detail.getContactPoint() returns in body frame
+              // per gazebo contact feedback convention, pending more testing.
+              SimTK::SpatialVec s2cg = SimTK::shiftForceBy(s2,
+                -detail.getContactPoint());
+              gzerr << "offset: " << detail.getContactPoint() << "\n";
+              gzerr << "s2: " << s2 << "\n";
+              gzerr << "s2cg: " << s2cg << "\n";
+              SimTK::Vec3 t2cg = s2cg[0];
+              SimTK::Vec3 f2cg = s2cg[1];
+
+              // copy.
+              contactFeedback->wrench[j].body1Force.Set(
+                -f2cg[0], -f2cg[1], -f2cg[2]);
+              contactFeedback->wrench[j].body2Force.Set(
+                f2cg[0], f2cg[1], f2cg[2]);
+              contactFeedback->wrench[j].body1Torque.Set(
+                -t2cg[0], -t2cg[1], -t2cg[2]);
+              contactFeedback->wrench[j].body2Torque.Set(
+                t2cg[0], t2cg[1], t2cg[2]);
+                  
+              // Increase the counters
+              ++count;
+              contactFeedback->count = count;
+            }
+          }
+        }
+        else  // use single ContactForce
+        {
+          // // get contact information from simbody ContactForce and
+          // // add it to contactFeedback.
+
+          // /// \TODO: confirm the contact depth is zero?
+          // contactFeedback->depths[count] = 0.0;
+
+          // // Store the contact position
+          // contactFeedback->positions[count].Set(
+          //   contactForce.getContactPoint()[0],
+          //   contactForce.getContactPoint()[1],
+          //   contactForce.getContactPoint()[2]);
+
+          // // Store the contact normal
+          // contactFeedback->normals[j].Set(
+          //   0, 0, 0);
+          //   // contactForce.getContactNormal()[0],
+          //   // contactForce.getContactNormal()[1],
+          //   // contactForce.getContactNormal()[2]);
+
+          // // Increase the counters
+          // ++count;
+          // contactFeedback->count = count;
+        }
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////
@@ -1173,6 +1335,10 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
     Transform X_LC =
       SimbodyPhysics::Pose2Transform((*ci)->GetRelativePose());
 
+    // use pointer to store CollisionGeometry
+    SimbodyCollisionPtr sc =
+      boost::dynamic_pointer_cast<physics::SimbodyCollision>(*ci);
+
     switch ((*ci)->GetShapeType() & (~physics::Entity::SHAPE))
     {
       case physics::Entity::PLANE_SHAPE:
@@ -1182,15 +1348,20 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
 
         // Add a contact surface to represent the ground.
         // Half space normal is -x; must rotate about y to make it +z.
-        this->matter.Ground().updBody().addContactSurface(Rotation(Pi/2, YAxis),
+        int surfNum = this->matter.Ground().updBody().addContactSurface(
+           Rotation(Pi/2, YAxis),
            ContactSurface(ContactGeometry::HalfSpace(), material));
 
-        Vec3 normal = SimbodyPhysics::Vector3ToVec3(p->GetNormal());
+        // store ContactGeometry pointer in SimbodyCollision object
+        // SimTK::ContactSurface &groundContactSurf =
+        //   this->matter.Ground().updBody().updContactSurface(surfNum);
+        // sc->SetCollisionShape(&groundContactSurf.updShape());
 
         // by default, simbody HalfSpace normal is in the -X direction
         // rotate it based on normal vector specified by user
         // Create a rotation whos x-axis is in the
         // negative normal vector direction
+        Vec3 normal = SimbodyPhysics::Vector3ToVec3(p->GetNormal());
         Rotation R_XN(-UnitVec3(normal), XAxis);
 
         ContactSurface surface(ContactGeometry::HalfSpace(), material);
@@ -1198,7 +1369,12 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
         if (addModelClique)
             surface.joinClique(_modelClique);
 
-        _mobod.updBody().addContactSurface(R_XN, surface);
+        surfNum = _mobod.updBody().addContactSurface(R_XN, surface);
+
+        // store ContactGeometry pointer in SimbodyCollision object
+        SimTK::ContactSurface &contactSurf =
+          _mobod.updBody().updContactSurface(surfNum);
+        sc->SetCollisionShape(&contactSurf.updShape());
       }
       break;
 
@@ -1210,7 +1386,13 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
         ContactSurface surface(ContactGeometry::Sphere(r), material);
         if (addModelClique)
             surface.joinClique(_modelClique);
-        _mobod.updBody().addContactSurface(X_LC, surface);
+        int surfNum = _mobod.updBody().addContactSurface(X_LC, surface);
+
+        // store ContactGeometry pointer in SimbodyCollision object
+        SimTK::ContactSurface &contactSurf =
+          _mobod.updBody().updContactSurface(surfNum);
+        sc->SetCollisionShape(&contactSurf.updShape());
+
       }
       break;
 
@@ -1235,7 +1417,12 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
 
         if (addModelClique)
             surface.joinClique(_modelClique);
-        _mobod.updBody().addContactSurface(X_LC, surface);
+        int surfNum = _mobod.updBody().addContactSurface(X_LC, surface);
+
+        // store ContactGeometry pointer in SimbodyCollision object
+        SimTK::ContactSurface &contactSurf =
+          _mobod.updBody().updContactSurface(surfNum);
+        sc->SetCollisionShape(&contactSurf.updShape());
       }
       break;
 
@@ -1260,7 +1447,12 @@ void SimbodyPhysics::AddCollisionsToLink(const physics::SimbodyLink *_link,
 
         if (addModelClique)
             surface.joinClique(_modelClique);
-        _mobod.updBody().addContactSurface(X_LC, surface);
+        int surfNum = _mobod.updBody().addContactSurface(X_LC, surface);
+
+        // store ContactGeometry pointer in SimbodyCollision object
+        SimTK::ContactSurface &contactSurf =
+          _mobod.updBody().updContactSurface(surfNum);
+        sc->SetCollisionShape(&contactSurf.updShape());
       }
       break;
       default:
