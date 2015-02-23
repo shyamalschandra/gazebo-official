@@ -18,6 +18,8 @@
 #include <boost/filesystem.hpp>
 #include "ServerFixture.hh"
 #include "gazebo/physics/physics.hh"
+#include "gazebo/rendering/rendering.hh"
+#include "gazebo/sensors/sensors.hh"
 #include "helper_physics_generator.hh"
 
 using namespace gazebo;
@@ -70,7 +72,7 @@ void PR2Test::LoadPR2(std::string _physicsEngine)
 
   physics::get_world("default")->GetPhysicsEngine()->SetGravity(
       math::Vector3(-0.5, 0, -0.1));
-  for (int i = 11; i < 200; i++)
+  for (i = 11; i < 200; i++)
   {
     std::ostringstream filename;
     filename << paths->GetDefaultTestPath() << "/frame_" << i << ".jpg";

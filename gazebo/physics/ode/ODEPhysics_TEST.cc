@@ -17,10 +17,12 @@
 
 #include <gtest/gtest.h>
 
+#include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/ode/ODEPhysics.hh"
 #include "gazebo/physics/ode/ODETypes.hh"
+#include "gazebo/transport/transport.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -195,7 +197,7 @@ void ODEPhysics_TEST::PhysicsMsgParam()
 
   transport::PublisherPtr physicsPub
        = phyNode->Advertise<msgs::Physics>("~/physics");
-  transport::PublisherPtr requestPub
+  transport::PublisherPtr localRequestPub
       = phyNode->Advertise<msgs::Request>("~/request");
   transport::SubscriberPtr responseSub = phyNode->Subscribe("~/response",
       &ODEPhysics_TEST::OnPhysicsMsgResponse, this);
@@ -217,7 +219,7 @@ void ODEPhysics_TEST::PhysicsMsgParam()
   physicsPub->Publish(physicsPubMsg);
 
   msgs::Request *requestMsg = msgs::CreateRequest("physics_info", "");
-  requestPub->Publish(*requestMsg);
+  localRequestPub->Publish(*requestMsg);
 
   int waitCount = 0, maxWaitCount = 3000;
   while (physicsResponseMsg.ByteSize() == 0 && ++waitCount < maxWaitCount)

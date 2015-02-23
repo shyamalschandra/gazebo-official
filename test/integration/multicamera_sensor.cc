@@ -21,6 +21,7 @@
 #include "gazebo/common/Timer.hh"
 #include "gazebo/rendering/Camera.hh"
 #include "gazebo/rendering/Conversions.hh"
+#include "gazebo/rendering/rendering.hh"
 #include "gazebo/sensors/MultiCameraSensor.hh"
 
 #include "ServerFixture.hh"

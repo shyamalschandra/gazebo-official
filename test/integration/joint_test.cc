@@ -110,7 +110,7 @@ void JointTest::JointCreationDestructionTest(const std::string &_physicsEngine)
 
     // remove the joint
     {
-      bool paused = world->IsPaused();
+      bool isPaused = world->IsPaused();
       world->SetPaused(true);
       if (joint)
       {
@@ -125,7 +125,7 @@ void JointTest::JointCreationDestructionTest(const std::string &_physicsEngine)
         joint->Detach();
         joint.reset();
       }
-      world->SetPaused(paused);
+      world->SetPaused(isPaused);
     }
 
     world->Step(200);
@@ -413,8 +413,6 @@ TEST_F(JointTest, joint_SDF14)
   if (i > 20)
     gzthrow("Unable to get joint14_model");
 
-  physics::PhysicsEnginePtr physicsEngine = world->GetPhysicsEngine();
-  EXPECT_TRUE(physicsEngine);
   physics::ModelPtr model = world->GetModel("joint14_model");
   EXPECT_TRUE(model);
   physics::LinkPtr link1 = model->GetLink("body1");

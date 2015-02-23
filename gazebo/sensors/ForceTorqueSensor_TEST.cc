@@ -16,6 +16,7 @@
 */
 
 #include <gtest/gtest.h>
+#include "gazebo/sensors/sensors.hh"
 #include "test/ServerFixture.hh"
 #include "test/integration/helper_physics_generator.hh"
 
