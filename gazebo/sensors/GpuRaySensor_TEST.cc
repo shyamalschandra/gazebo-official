@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include "gazebo/math/Angle.hh"
+#include "gazebo/sensors/sensors.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -81,13 +82,15 @@ TEST_F(GPURaySensor_TEST, CreateLaser)
           _1, _2, _3, _4, _5));
 
   // wait for a few laser scans
-  int i = 0;
-  while (scanCount < 10 && i < 300)
   {
-    common::Time::MSleep(10);
-    i++;
+    int i = 0;
+    while (scanCount < 10 && i < 300)
+    {
+      common::Time::MSleep(10);
+      i++;
+    }
+    EXPECT_LT(i, 300);
   }
-  EXPECT_LT(i, 300);
 
   // Get all the range values
   std::vector<double> ranges;

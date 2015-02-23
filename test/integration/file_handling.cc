@@ -15,8 +15,10 @@
  *
 */
 
+#include <boost/filesystem.hpp>
 #include "ServerFixture.hh"
 #include "gazebo/common/common.hh"
+#include "gazebo/transport/transport.hh"
 
 using namespace gazebo;
 class FileHandling : public ServerFixture
@@ -33,10 +35,6 @@ TEST_F(FileHandling, Save)
 
   transport::PublisherPtr serverControlPub =
     node->Advertise<msgs::ServerControl>("/gazebo/server/control");
-
-  transport::PublisherPtr requestPub =
-    node->Advertise<msgs::Request>("~/request");
-
 
   // Find a valid filename
   FILE *file = NULL;
