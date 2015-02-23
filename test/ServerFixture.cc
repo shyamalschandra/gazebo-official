@@ -15,10 +15,42 @@
  *
 */
 
-#include <stdio.h>
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wshadow"
+
+// The following is needed to enable the GetMemInfo function for OSX
+#ifdef __MACH__
+# include <mach/mach.h>
+#endif  // __MACH__
+
+#include <sdf/sdf.hh>
+
+#include <gtest/gtest.h>
+#include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
+
+#include <map>
 #include <string>
+#include <stdio.h>
+
+#include "gazebo/transport/transport.hh"
+
+#include "gazebo/common/CommonIface.hh"
+#include "gazebo/common/SystemPaths.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/physics/World.hh"
+#include "gazebo/physics/PhysicsTypes.hh"
+#include "gazebo/physics/PhysicsIface.hh"
+#include "gazebo/sensors/sensors.hh"
+#include "gazebo/rendering/rendering.hh"
+#include "gazebo/msgs/msgs.hh"
+
+#include "gazebo/gazebo_config.h"
+#include "gazebo/Server.hh"
 
 #include "ServerFixture.hh"
+#include "test_config.h"
 
 using namespace gazebo;
 
@@ -350,8 +382,8 @@ void ServerFixture::FloatCompare(float *_scanA, float *_scanB,
   _diffAvg = 0;
   for (unsigned int i = 0; i < _sampleCount; ++i)
   {
-    double diff = fabs(math::precision(_scanA[i], 10) -
-                math::precision(_scanB[i], 10));
+    float diff = fabs(math::precision(_scanA[i], 10) -
+                      math::precision(_scanB[i], 10));
     _diffSum += diff;
     if (diff > _diffMax)
     {
@@ -372,7 +404,7 @@ void ServerFixture::DoubleCompare(double *_scanA, double *_scanB,
   for (unsigned int i = 0; i < _sampleCount; ++i)
   {
     double diff = fabs(math::precision(_scanA[i], 10) -
-                math::precision(_scanB[i], 10));
+                       math::precision(_scanB[i], 10));
     _diffSum += diff;
     if (diff > _diffMax)
     {

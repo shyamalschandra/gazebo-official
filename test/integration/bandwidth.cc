@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 
+#include "gazebo/transport/transport.hh"
 #include "ServerFixture.hh"
 #include "helper_physics_generator.hh"
 
@@ -52,12 +53,12 @@ void BandwidthTest::Bandwidth(const std::string &_physicsEngine)
 
   Load("worlds/pr2.world", false, _physicsEngine);
 
-  transport::NodePtr node(new transport::Node());
-  node->Init("default");
+  transport::NodePtr localNode(new transport::Node());
+  localNode->Init("default");
 
   std::string topic = "/gazebo/default/pose/info";
 
-  transport::SubscriberPtr sub = node->Subscribe(topic, BandwidthMsg);
+  transport::SubscriberPtr sub = localNode->Subscribe(topic, BandwidthMsg);
 
   while (true)
   {

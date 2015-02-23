@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 #include "gazebo/physics/PhysicsIface.hh"
 #include "gazebo/common/Time.hh"
+#include "gazebo/sensors/sensors.hh"
+#include "gazebo/transport/transport.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -53,19 +55,21 @@ TEST_F(SensorManager_TEST, Data)
   size_t sensorCount = 4;
   sensors::Sensor_V sensors = mgr->GetSensors();
 
-  int i = 0;
-  while (sensors.size() != sensorCount && i < 100)
   {
-    gazebo::common::Time::MSleep(100);
-    sensors.clear();
-    sensors = mgr->GetSensors();
-    gzdbg << "Sensor Count. Actual[" << sensors.size() << "] Expected["
-          << sensorCount << "]\n";
-    ++i;
-  }
+    int i = 0;
+    while (sensors.size() != sensorCount && i < 100)
+    {
+      gazebo::common::Time::MSleep(100);
+      sensors.clear();
+      sensors = mgr->GetSensors();
+      gzdbg << "Sensor Count. Actual[" << sensors.size() << "] Expected["
+            << sensorCount << "]\n";
+      ++i;
+    }
 
-  EXPECT_LT(i, 100);
-  EXPECT_EQ(sensors.size(), sensorCount);
+    EXPECT_LT(i, 100);
+    EXPECT_EQ(sensors.size(), sensorCount);
+  }
 
   // Get the current simulation time
   common::Time time = physics::get_world()->GetSimTime();
