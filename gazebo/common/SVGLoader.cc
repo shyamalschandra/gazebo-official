@@ -18,6 +18,9 @@
 #include <algorithm>
 #include <tinyxml.h>
 
+#include <gazebo/common/Console.hh>
+#include <gazebo/common/Assert.hh>
+
 #include "SVGLoaderPrivate.hh"
 #include "SVGLoader.hh"
 
@@ -104,76 +107,76 @@ math::Vector2d SVGLoader::SubpathToPolyline(
 {
   for (SVGCommand cmd: _subpath)
   {
-    if (cmd.cmd == 'm' || cmd.cmd == 'l')
+    size_t i = 0;
+    size_t count = cmd.numbers.size();
+
+    switch (cmd.cmd)
     {
-      size_t i =0;
-      size_t count = cmd.numbers.size();
-      while (i < count)
-      {
-        math::Vector2d p;
-        p.x = cmd.numbers[i+0];
-        p.y = cmd.numbers[i+1];
-        // m and l cmds are relative to the last point
-        p.x += _last.x;
-        p.y += _last.y;
-        _polyline.push_back(p);
-        _last = p;
-        i += 2;
-      }
-    }
-    else if (cmd.cmd == 'M' || cmd.cmd == 'L')
-    {
-      size_t i = 0;
-      size_t count = cmd.numbers.size();
-      while (i < count)
-      {
-        math::Vector2d p;
-        p.x = cmd.numbers[i+0];
-        p.y = cmd.numbers[i+1];
-        _polyline.push_back(p);
-        _last = p;
-        i += 2;
-      }
-    }
-    else if (cmd.cmd == 'C')
-    {
-      size_t i = 0;
-      size_t count = cmd.numbers.size();
-      while (i < count)
-      {
-        math::Vector2d p0 = _last;
-        math::Vector2d p1, p2, p3;
-        p1.x = cmd.numbers[i+0];
-        p1.y = cmd.numbers[i+1];
-        p2.x = cmd.numbers[i+2];
-        p2.y = cmd.numbers[i+3];
-        p3.x = cmd.numbers[i+4];
-        p3.y = cmd.numbers[i+5];
-        cubicBezier(p0, p1, p2, p3, this->dataPtr->resolution, _polyline);
-        _last = p3;
-        i += 6;
-      }
-    }
-    else if (cmd.cmd == 'c')
-    {
-      size_t i = 0;
-      size_t count = cmd.numbers.size();
-      while (i < count)
-      {
-        math::Vector2d p0 = _last;
-        math::Vector2d p1, p2, p3;
-        p1.x = cmd.numbers[i+0] + _last.x;
-        p1.y = cmd.numbers[i+1] + _last.y;
-        p2.x = cmd.numbers[i+2] + _last.x;
-        p2.y = cmd.numbers[i+3] + _last.y;
-        p3.x = cmd.numbers[i+4] + _last.x;
-        p3.y = cmd.numbers[i+5] + _last.y;
-        cubicBezier(p0, p1, p2, p3, this->dataPtr->resolution, _polyline);
-        _last = p3;
-        i += 6;
-      }
+      case 'm':
+      case 'l':
+        while (i < count)
+        {
+          math::Vector2d p;
+          p.x = cmd.numbers[i+0];
+          p.y = cmd.numbers[i+1];
+          // m and l cmds are relative to the last point
+          p.x += _last.x;
+          p.y += _last.y;
+          _polyline.push_back(p);
+          _last = p;
+          i += 2;
+        }
+        break;
+     
+      case 'M':
+      case 'L':
+        while (i < count)
+        {
+          math::Vector2d p;
+          p.x = cmd.numbers[i+0];
+          p.y = cmd.numbers[i+1];
+          _polyline.push_back(p);
+          _last = p;
+          i += 2;
+        }
+        break;
+      case 'C':
+        while (i < count)
+        {
+          math::Vector2d p0 = _last;
+          math::Vector2d p1, p2, p3;
+          p1.x = cmd.numbers[i+0];
+          p1.y = cmd.numbers[i+1];
+          p2.x = cmd.numbers[i+2];
+          p2.y = cmd.numbers[i+3];
+          p3.x = cmd.numbers[i+4];
+          p3.y = cmd.numbers[i+5];
+          cubicBezier(p0, p1, p2, p3, this->dataPtr->resolution, _polyline);
+          _last = p3;
+          i += 6;
+        }
+        break;
+      case 'c':
+        while (i < count)
+        {
+          math::Vector2d p0 = _last;
+          math::Vector2d p1, p2, p3;
+          p1.x = cmd.numbers[i+0] + _last.x;
+          p1.y = cmd.numbers[i+1] + _last.y;
+          p2.x = cmd.numbers[i+2] + _last.x;
+          p2.y = cmd.numbers[i+3] + _last.y;
+          p3.x = cmd.numbers[i+4] + _last.x;
+          p3.y = cmd.numbers[i+5] + _last.y;
+          cubicBezier(p0, p1, p2, p3, this->dataPtr->resolution, _polyline);
+          _last = p3;
+          i += 6;
+        }
+        break;
+      default:
+        gzerr << "Unexpected SVGCommand value: " << cmd.cmd;
     }
   }
+
   return _last;
 }
 
@@ -334,8 +337,7 @@ void SVGLoader::GetPathCommands(const std::vector<std::string> &_tokens,
 /////////////////////////////////////////////////
 void SVGLoader::GetPathAttribs(TiXmlElement *_pElement, SVGPath &_path)
 {
-  if ( !_pElement ) return;
-
+  GZ_ASSERT(_pElement, "empty XML element where a path was expected");
   TiXmlAttribute *pAttrib = _pElement->FirstAttribute();
   while (pAttrib)
   {
@@ -352,6 +354,7 @@ void SVGLoader::GetPathAttribs(TiXmlElement *_pElement, SVGPath &_path)
     else if (name == "transform")
     {
       _path.transform = value;
+      gzwarn << "transform attribute \"" << name  << "\" not implemented yet"  << std::endl;
     }
     else if (name == "d")
     {
@@ -359,6 +362,10 @@ void SVGLoader::GetPathAttribs(TiXmlElement *_pElement, SVGPath &_path)
       std::vector<std::string> tokens;
       split(value, ' ', tokens);
       this->GetPathCommands(tokens, _path);
+    }
+    else
+    {
+      gzwarn << "Ignoring attribute \"" << name  << "\" in path"  << std::endl;
     }
     pAttrib = pAttrib->Next();
   }
@@ -373,20 +380,16 @@ void SVGLoader::GetSvgPaths(TiXmlNode *_pParent, std::vector<SVGPath> &_paths)
   TiXmlNode *pChild;
   int t = _pParent->Type();
   std::string name;
-  switch ( t )
+  if ( t == TiXmlNode::TINYXML_ELEMENT)
   {
-    case TiXmlNode::TINYXML_ELEMENT:
-      name = lowercase(_pParent->Value());
-      if (name == "path")
-      {
-        SVGPath p;
-        this->GetPathAttribs(_pParent->ToElement(), p);
-        _paths.push_back(p);
-      }
-      break;
-
-    default:
-      break;
+    name = lowercase(_pParent->Value());
+    if (name == "path")
+    {
+      TiXmlElement *element = _pParent->ToElement();
+      SVGPath p;
+      this->GetPathAttribs(element, p);
+      _paths.push_back(p);
+    }
   }
 
   for (pChild = _pParent->FirstChild();
@@ -398,21 +401,29 @@ void SVGLoader::GetSvgPaths(TiXmlNode *_pParent, std::vector<SVGPath> &_paths)
 }
 
 /////////////////////////////////////////////////
-void SVGLoader::Parse(const std::string &_filename,
+bool SVGLoader::Parse(const std::string &_filename,
     std::vector<SVGPath> &_paths)
 {
-  // load the named file and dump its structure to STDOUT
-  TiXmlDocument doc(_filename.c_str());
-  bool loadOkay = doc.LoadFile();
-  if (!loadOkay)
+  try
   {
-    std::ostringstream os;
-    os << "Failed to load file " <<  _filename;
-    SvgError x(os.str());
-    throw x;
-  }
+    // load the named file and dump its structure to STDOUT
+    TiXmlDocument doc(_filename.c_str());
+    bool loadOkay = doc.LoadFile();
+    if (!loadOkay)
+    {
+      std::ostringstream os;
+      gzerr << "Failed to load file " <<  _filename << std::endl;
+      gzerr << os.str() << std::endl;
+    }
 
-  this->GetSvgPaths(&doc, _paths);
+    this->GetSvgPaths(&doc, _paths);
+    return true;
+  }
+  catch(SvgError &e)
+  {
+    gzerr << e.what() << std::endl;
+  }
+  return false;
 }
 
 /////////////////////////////////////////////////
