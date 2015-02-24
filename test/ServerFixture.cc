@@ -54,6 +54,7 @@ ServerFixture::ServerFixture()
   this->gotImage = 0;
   this->imgData = NULL;
   this->serverThread = NULL;
+  this->uniqueCounter = 0;
 
   gzLogInit("test-", "test.log");
   gazebo::common::Console::SetQuiet(false);
@@ -451,6 +452,32 @@ void ServerFixture::GetFrame(const std::string &_cameraName,
     common::Time::MSleep(100);
 
   camSensor->GetCamera()->DisconnectNewImageFrame(c);
+}
+
+/////////////////////////////////////////////////
+physics::ModelPtr ServerFixture::SpawnModel(const msgs::Model &_msg)
+{
+  physics::WorldPtr world = physics::get_world();
+  world->InsertModelString(
+    "<sdf version='" + std::string(SDF_VERSION) + "'>"
+    + msgs::ModelToSDF(_msg)->ToString("")
+    + "</sdf>");
+
+  common::Time wait(10, 0);
+  common::Time wallStart = common::Time::GetWallTime();
+  unsigned int waitCount = 0;
+  while (wait > (common::Time::GetWallTime() - wallStart) &&
+         !this->HasEntity(_msg.name()))
+  {
+    common::Time::MSleep(10);
+    if (++waitCount % 100 == 0)
+    {
+      gzwarn << "Waiting " << waitCount / 100 << " seconds for "
+             << "box to spawn." << std::endl;
+    }
+  }
+
+  return world->GetModel(_msg.name());
 }
 
 /////////////////////////////////////////////////
@@ -1075,34 +1102,7 @@ void ServerFixture::SpawnSphere(const std::string &_name,
     const math::Vector3 &_pos, const math::Vector3 &_rpy,
     bool _wait, bool _static)
 {
-  msgs::Factory msg;
-  std::ostringstream newModelStr;
-
-  newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "  <collision name ='geom'>"
-    << "    <geometry>"
-    << "      <sphere><radius>.5</radius></sphere>"
-    << "    </geometry>"
-    << "  </collision>"
-    << "  <visual name ='visual'>"
-    << "    <geometry>"
-    << "      <sphere><radius>.5</radius></sphere>"
-    << "    </geometry>"
-    << "  </visual>"
-    << "</link>"
-    << "</model>"
-    << "</sdf>";
-
-  msg.set_sdf(newModelStr.str());
-  this->factoryPub->Publish(msg);
-
-  // Wait for the entity to spawn
-  while (_wait && !this->HasEntity(_name))
-    common::Time::MSleep(100);
+  SpawnSphere(_name, _pos, _rpy, math::Vector3(), 0.5, _wait, _static);
 }
 
 /////////////////////////////////////////////////
@@ -1333,4 +1333,12 @@ void ServerFixture::GetMemInfo(double &_resident, double &_share)
   gzerr << "Unsupported architecture\n";
   return;
 #endif
+}
+
+/////////////////////////////////////////////////
+std::string ServerFixture::GetUniqueString(const std::string &_prefix)
+{
+  std::ostringstream stream;
+  stream << _prefix << this->uniqueCounter++;
+  return stream.str();
 }
