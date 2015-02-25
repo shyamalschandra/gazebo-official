@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,146 +17,170 @@
 
 #include <boost/bind.hpp>
 
-#include "gazebo_config.h"
+#include "gazebo/gazebo_config.h"
 #include "gazebo/common/Console.hh"
-#include "gazebo/common/Exception.hh"
-
 #include "gazebo/physics/Link.hh"
 #include "gazebo/physics/dart/DARTSliderJoint.hh"
 
 using namespace gazebo;
 using namespace physics;
 
-
 //////////////////////////////////////////////////
 DARTSliderJoint::DARTSliderJoint(BasePtr _parent)
-    : SliderJoint<DARTJoint>(_parent)
+    : SliderJoint<DARTJoint>(_parent),
+      dtPrismaticJoint(new dart::dynamics::PrismaticJoint())
 {
+  this->dtJoint = this->dtPrismaticJoint;
 }
 
 //////////////////////////////////////////////////
 DARTSliderJoint::~DARTSliderJoint()
 {
+  delete dtPrismaticJoint;
 }
 
 //////////////////////////////////////////////////
 void DARTSliderJoint::Load(sdf::ElementPtr _sdf)
 {
-  //
   SliderJoint<DARTJoint>::Load(_sdf);
-
-  gzwarn << "Not implemented!\n";
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTSliderJoint::GetGlobalAxis(int /*_index*/) const
+void DARTSliderJoint::Init()
 {
-  gzwarn << "Not implemented!\n";
-
-  return math::Vector3(0, 0, 0);
+  SliderJoint<DARTJoint>::Init();
 }
 
 //////////////////////////////////////////////////
-math::Angle DARTSliderJoint::GetAngleImpl(int /*_index*/) const
+math::Vector3 DARTSliderJoint::GetAnchor(unsigned int /*_index*/) const
 {
-   math::Angle result;
+  Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                        this->dtJoint->getTransformFromChildBodyNode();
+  Eigen::Vector3d worldOrigin = T.translation();
 
-   gzwarn << "Not implemented!\n";
-
-   return result;
+  return DARTTypes::ConvVec3(worldOrigin);
 }
 
 //////////////////////////////////////////////////
-double DARTSliderJoint::GetVelocity(int /*index*/) const
+math::Vector3 DARTSliderJoint::GetGlobalAxis(unsigned int _index) const
 {
-  gzwarn << "Not implemented!\n";
+  Eigen::Vector3d globalAxis = Eigen::Vector3d::UnitX();
 
-  return 0;
+  if (_index == 0)
+  {
+    Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                          this->dtJoint->getTransformFromChildBodyNode();
+    Eigen::Vector3d axis = this->dtPrismaticJoint->getAxis();
+    globalAxis = T.linear() * axis;
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
+
+  return DARTTypes::ConvVec3(globalAxis);
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::SetVelocity(int /*index*/, double /*_angle*/)
+void DARTSliderJoint::SetAxis(unsigned int _index, const math::Vector3 &_axis)
 {
-  gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    Eigen::Vector3d dartVec3 = DARTTypes::ConvVec3(
+        this->GetAxisFrameOffset(0).RotateVector(_axis));
+    Eigen::Isometry3d dartTransfJointLeftToParentLink
+        = this->dtJoint->getTransformFromParentBodyNode().inverse();
+    dartVec3 = dartTransfJointLeftToParentLink.linear() * dartVec3;
+
+    this->dtPrismaticJoint->setAxis(dartVec3);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::SetAxis(int /*index*/, const math::Vector3 &_axis)
+math::Angle DARTSliderJoint::GetAngleImpl(unsigned int _index) const
 {
-  // TODO: check whether below code is needed.
-   if (this->childLink)
-     this->childLink->SetEnabled(true);
-   if (this->parentLink)
-     this->parentLink->SetEnabled(true);
+  math::Angle result;
 
-//  // Slider joint has only one degree of freedom.
-//  // _axis must have a value of (1, 0, 0), (0, 1, 0), and (0, 0, 1)
-//  if (_axis == math::Vector3(1, 0, 0))
-//  {
-//    // When dart's 'Joint' is destroied, it deletes all 'Transform's.
-//    // When 'Transform' is destroied, it deletes all 'Dof's.
-//    dart::dynamics::Dof* dofs = new dart::dynamicskinematics::Dof;
-//    dart::dynamics::TrfmTranslateX* trans = new kinematics::TrfmTranslateX(dofs);
-//    this->dartJoint->addTransform(trans);
-//  }
-//  else if (_axis == math::Vector3(1, 0, 0))
-//  {
-//    // When dart's 'Joint' is destroied, it deletes all 'Transform's.
-//    // When 'Transform' is destroied, it deletes all 'Dof's.
-//    kinematics::Dof* dofs = new kinematics::Dof;
-//    kinematics::TrfmTranslateY* trans = new kinematics::TrfmTranslateY(dofs);
-//    this->dartJoint->addTransform(trans);
-//  }
-//  else if (_axis == math::Vector3(1, 0, 0))
-//  {
-//    // When dart's 'Joint' is destroied, it deletes all 'Transform's.
-//    // When 'Transform' is destroied, it deletes all 'Dof's.
-//    kinematics::Dof* dofs = new kinematics::Dof;
-//    kinematics::TrfmTranslateZ* trans = new kinematics::TrfmTranslateZ(dofs);
-//    this->dartJoint->addTransform(trans);
-//  }
-//  else
-//  {
-//    // We assume that the axis has the value among these:
-//    // (1, 0, 0), (0, 1, 0), (0, 0, 1)
-//    gzthrow("Axis must be one of these: (1, 0, 0), (0, 1, 0), (0, 0, 1)\n");
-//  }
-   gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    double radianAngle = this->dtJoint->getPosition(0);
+    result.SetFromRadian(radianAngle);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
+
+  return result;
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::SetDamping(int /*index*/, double /*_damping*/)
+void DARTSliderJoint::SetVelocity(unsigned int _index, double _vel)
 {
-  gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    this->dtJoint->setVelocity(0, _vel);
+    this->dtJoint->getSkeleton()->computeForwardKinematics(false, true, false);
+  }
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::ApplyDamping()
+double DARTSliderJoint::GetVelocity(unsigned int _index) const
 {
-  gzwarn << "Not implemented!\n";
+  double result = 0.0;
+
+  if (_index == 0)
+    result = this->dtJoint->getVelocity(0);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
+
+  return result;
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::SetForce(int /*index*/, double /*_force*/)
+void DARTSliderJoint::SetMaxForce(unsigned int _index, double _force)
 {
-  gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    this->dtJoint->setForceLowerLimit(0, -_force);
+    this->dtJoint->setForceUpperLimit(0, _force);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void DARTSliderJoint::SetMaxForce(int /*_index*/, double /*_t*/)
+double DARTSliderJoint::GetMaxForce(unsigned int _index)
 {
-  gzwarn << "Not implemented!\n";
+  double result = 0.0;
+
+  if (_index == 0)
+  {
+    // Assume that the lower limit and upper limit has equal magnitute
+    // result = this->dtJoint->getForceLowerLimit(0);
+    result = this->dtJoint->getForceUpperLimit(0);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
+
+  return result;
 }
 
 //////////////////////////////////////////////////
-double DARTSliderJoint::GetMaxForce(int /*_index*/)
+void DARTSliderJoint::SetForceImpl(unsigned int _index, double _effort)
 {
-  gzwarn << "Not implemented!\n";
-
-  return 0;
+  if (_index == 0)
+    this->dtJoint->setForce(0, _effort);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }
-
-
-
-
-

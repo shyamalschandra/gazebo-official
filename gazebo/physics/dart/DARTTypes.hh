@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,17 @@
  *
 */
 
-#ifndef _DARTTYPES_H_
-#define _DARTTYPES_H_
+#ifndef _GAZEBO_DARTTYPES_HH_
+#define _GAZEBO_DARTTYPES_HH_
 
 #include <boost/shared_ptr.hpp>
+#include "gazebo/math/Pose.hh"
+#include "gazebo/physics/dart/dart_inc.h"
+#include "gazebo/util/system.hh"
 
 /// \file
 /// \ingroup gazebo_physics
-/// \ingroup gazebo_physics_DART
+/// \ingroup gazebo_physics_dart
 /// \brief DART wrapper forward declarations and typedefs
 namespace gazebo
 {
@@ -35,29 +38,69 @@ namespace gazebo
     class DARTCollision;
     class DARTRayShape;
 
-    /// \def DARTPhysicsPtr
-    /// \brief Boost shared pointer for DARTPhysics.
-    typedef boost::shared_ptr<DARTPhysics> DARTPhysicsPtr;
-
-    /// \def DARTLinkPtr
-    /// \brief Boost shared point to DARTLink
-    typedef boost::shared_ptr<DARTModel> DARTModelPtr;
-
-    /// \def DARTLinkPtr
-    /// \brief Boost shared point to DARTLink
-    typedef boost::shared_ptr<DARTLink> DARTLinkPtr;
-
-    /// \def DARTJointPtr
-    /// \brief Boost shared point to DARTJoint
-    typedef boost::shared_ptr<DARTJoint> DARTJointPtr;
-
-    /// \def DARTCollisionPtr
-    /// \brief Boost shared point to DARTCollision
+    typedef boost::shared_ptr<DARTPhysics>   DARTPhysicsPtr;
+    typedef boost::shared_ptr<DARTModel>     DARTModelPtr;
+    typedef boost::shared_ptr<DARTLink>      DARTLinkPtr;
+    typedef boost::shared_ptr<DARTJoint>     DARTJointPtr;
     typedef boost::shared_ptr<DARTCollision> DARTCollisionPtr;
+    typedef boost::shared_ptr<DARTRayShape>  DARTRayShapePtr;
 
-    /// \def DARTRayShapePtr
-    /// \brief Boost shared point to DARTRayShape
-    typedef boost::shared_ptr<DARTRayShape> DARTRayShapePtr;
+    /// \addtogroup gazebo_physics_dart
+    /// \{
+
+    /// \class DARTTypes DARTTypes.hh
+    /// \brief A set of functions for converting between the math types used
+    ///        by gazebo and dart.
+    class GAZEBO_VISIBLE DARTTypes
+    {
+      /// \brief
+      public: static Eigen::Vector3d ConvVec3(const math::Vector3 &_vec3)
+        {
+            return Eigen::Vector3d(_vec3.x, _vec3.y, _vec3.z);
+        }
+
+        /// \brief
+      public: static math::Vector3 ConvVec3(const Eigen::Vector3d &_vec3)
+        {
+            return math::Vector3(_vec3.x(), _vec3.y(), _vec3.z());
+        }
+
+        /// \brief
+      public: static Eigen::Quaterniond ConvQuat(const math::Quaternion &_quat)
+        {
+            return Eigen::Quaterniond(_quat.w, _quat.x, _quat.y, _quat.z);
+        }
+
+        /// \brief
+      public: static math::Quaternion ConvQuat(const Eigen::Quaterniond &_quat)
+        {
+            return math::Quaternion(_quat.w(), _quat.x(), _quat.y(), _quat.z());
+        }
+
+        /// \brief
+      public: static Eigen::Isometry3d ConvPose(const math::Pose &_pose)
+        {
+            // Below line doesn't work with 'libeigen3-dev is 3.0.5-1'
+            // return Eigen::Translation3d(ConvVec3(_pose.pos)) *
+            //        ConvQuat(_pose.rot);
+
+            Eigen::Isometry3d res;
+
+            res.translation() = ConvVec3(_pose.pos);
+            res.linear() = Eigen::Matrix3d(ConvQuat(_pose.rot));
+
+            return res;
+        }
+
+        /// \brief
+      public: static math::Pose ConvPose(const Eigen::Isometry3d &_T)
+        {
+            math::Pose pose;
+            pose.pos = ConvVec3(_T.translation());
+            pose.rot = ConvQuat(Eigen::Quaterniond(_T.linear()));
+            return pose;
+        }
+    };
   }
 }
 
