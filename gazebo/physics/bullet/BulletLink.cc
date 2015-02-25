@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,8 +108,11 @@ void BulletLink::Init()
       collision = boost::static_pointer_cast<BulletCollision>(*iter);
       btCollisionShape *shape = collision->GetCollisionShape();
 
-      hackMu1 = collision->GetBulletSurface()->frictionPyramid.GetMuPrimary();
-      hackMu2 = collision->GetBulletSurface()->frictionPyramid.GetMuSecondary();
+      BulletSurfaceParamsPtr surface = collision->GetBulletSurface();
+      GZ_ASSERT(surface, "Surface pointer for is invalid");
+
+      hackMu1 = surface->frictionPyramid.GetMuPrimary();
+      hackMu2 = surface->frictionPyramid.GetMuSecondary();
       // gzerr << "link[" << this->GetName()
       //       << "] mu[" << hackMu1
       //       << "] mu2[" << hackMu2 << "]\n";
@@ -189,6 +192,7 @@ void BulletLink::Init()
       this->GetModel()->GetJointCount() == 0 &&
       this->GetSensorCount() == 0)
   {
+    this->rigidLink->setActivationState(ACTIVE_TAG);
     this->rigidLink->setSleepingThresholds(0.1, 0.1);
     this->rigidLink->setDeactivationTime(1.0);
   }
