@@ -606,22 +606,7 @@ material Gazebo/YellowTransparent
       texture_unit
       {
         colour_op_ex source1 src_current src_current 0 1 0
-        alpha_op_ex source1 src_manual src_current 0.4
-      }
-    }
-
-    pass
-    {
-      depth_write on
-
-      ambient 1.0 1.0 0.0 1
-      diffuse 1.0 1.0 0.0 1
-      polygon_mode points
-
-      texture_unit
-      {
-        colour_op_ex source1 src_current src_current 0 1 0
-        alpha_op_ex source1 src_manual src_current 0.4
+        alpha_op_ex source1 src_manual src_current 0.5
       }
     }
   }
@@ -939,6 +924,25 @@ material Gazebo/Wood
   }
 }
 
+material Gazebo/Bricks
+{
+  technique
+  {
+    pass
+    {
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      specular 0.2 0.2 0.2 1.0 12.5
+
+      texture_unit
+      {
+        texture bricks.png
+        filtering trilinear
+      }
+    }
+  }
+}
+
 material Gazebo/Road
 {
   technique
@@ -957,7 +961,6 @@ material Gazebo/Road
     }
   }
 }
-
 
 material Gazebo/Residential
 {
@@ -1311,4 +1314,36 @@ material Gazebo/PointCloud
          point_size_attenuation off
       }
    }
+}
+
+material Gazebo/PointHandle
+{
+   technique
+   {
+      pass
+      {
+        lighting off
+        scene_blend alpha_blend
+        depth_write off
+      }
+   }
+}
+
+material Gazebo/BuildingFrame
+{
+  technique
+  {
+    pass
+    {
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      specular 0.2 0.2 0.2 1.0 12.5
+
+      texture_unit
+      {
+        texture building_frame.png
+        filtering trilinear
+      }
+    }
+  }
 }
