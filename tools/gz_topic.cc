@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,8 +238,10 @@ void TopicCommand::BwCB(const std::string &_data)
   this->bwBytes.push_back(_data.size());
   this->bwTime.push_back(common::Time::GetWallTime());
 
+  // One second time window
   if (curTime - this->prevMsgTime > common::Time(1, 0))
   {
+    // Make sure we have received at least 10 bytes of data.
     if (this->bwBytes.size() >= 10)
     {
       std::sort(this->bwBytes.begin(), this->bwBytes.end());
@@ -366,6 +368,9 @@ void TopicCommand::View(const std::string &_topic)
   }
 
   app->exec();
+
+  delete app;
+  app = NULL;
 
   gazebo::shutdown();
 }

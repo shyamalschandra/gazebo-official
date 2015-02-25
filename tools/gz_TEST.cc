@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2013-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,10 @@
 #include <stdlib.h>
 #include <string>
 
+#include "test/util.hh"
 #include "test_config.h"
+
+class gzTest : public gazebo::testing::AutoLogFixture { };
 
 std::string g_msgDebugOut;
 boost::mutex g_mutex;
@@ -92,7 +95,13 @@ void init()
 
   if (!g_pid)
   {
-    execlp("gzserver", "-q", "worlds/simple_arm.world", NULL);
+    boost::filesystem::path worldFilePath = TEST_PATH;
+    worldFilePath = worldFilePath / "worlds" / "simple_arm_test.world";
+    if (execlp("gzserver", worldFilePath.string().c_str(),
+        "--iters", "60000", NULL) < 0)
+    {
+      gzerr << "Failed to start the gazebo server.\n";
+    }
     return;
   }
 
@@ -103,7 +112,8 @@ void init()
 void fini()
 {
   gazebo::transport::fini();
-  kill(g_pid, SIGINT);
+  if (kill(g_pid, SIGINT) < 0)
+    gzerr << "Failed to kill the gazebo server.\n";
 
   int status;
   int p1 = 0;
@@ -176,7 +186,7 @@ void CameraCB(ConstCameraCmdPtr &_msg)
 
 /////////////////////////////////////////////////
 /// Check to make sure that 'gz' exists
-TEST(gz, Alive)
+TEST_F(gzTest, Alive)
 {
   std::string rawOutput = custom_exec_str("gz");
   std::string helpOutput = custom_exec_str("gz help");
@@ -187,7 +197,7 @@ TEST(gz, Alive)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Joint)
+TEST_F(gzTest, Joint)
 {
   init();
 
@@ -252,7 +262,7 @@ TEST(gz, Joint)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Model)
+TEST_F(gzTest, Model)
 {
   init();
 
@@ -291,9 +301,6 @@ TEST(gz, Model)
 
     waitForMsg("gz model -w default -m my_box -f " + filename);
 
-    std::ifstream ifs(filename.c_str());
-    EXPECT_TRUE(ifs);
-
     boost::shared_ptr<sdf::SDF> sdf(new sdf::SDF());
     EXPECT_TRUE(sdf::init(sdf));
 
@@ -316,9 +323,6 @@ TEST(gz, Model)
     cmd += filename + " | gz model -w default -m my_box -s";
     waitForMsg(cmd);
 
-    std::ifstream ifs(filename.c_str());
-    EXPECT_TRUE(ifs);
-
     boost::shared_ptr<sdf::SDF> sdf(new sdf::SDF());
     EXPECT_TRUE(sdf::init(sdf));
 
@@ -333,6 +337,47 @@ TEST(gz, Model)
     EXPECT_EQ(g_msgDebugOut, msg.DebugString());
   }
 
+  // Test model info and pose
+  {
+    // Make sure the error message is output.
+    std::string modelInfo = custom_exec_str("gz model -m does_not_exist -i");
+    EXPECT_EQ(gazebo::common::get_sha1<std::string>(modelInfo),
+        "7b5a9ab178ce5fa6ae74c80a33a99b84183ae600");
+
+    // Get info for a model that exists.
+    modelInfo = custom_exec_str("gz model -m my_box -i");
+
+    // Check that a few values exist. We don't check the sha1 value
+    // because a few values, such as pose, are dynamic.
+    EXPECT_TRUE(modelInfo.find("name: \"my_box\"") != std::string::npos);
+    EXPECT_TRUE(modelInfo.find("id: 9") != std::string::npos);
+    EXPECT_TRUE(modelInfo.find("name: \"my_box::link::collision\"")
+        != std::string::npos);
+
+    // Get the pose of the model.
+    modelInfo = custom_exec_str("gz model -m my_box -p");
+    boost::algorithm::trim(modelInfo);
+
+    // Split the string into parts p.
+    std::vector<std::string> p;
+    boost::split(p, modelInfo, boost::is_any_of(" "));
+
+    // Make sure we have the right number of parts.
+    // Don't ASSERT_EQ, because we need to run fini at end of test
+    EXPECT_EQ(p.size(), 6u);
+
+    // Make sure the pose is correct.
+    if (p.size() == 6u)
+    {
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[0]), 0.0));
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[1]), 0.0));
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[2]), 0.5));
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[3]), 0.0));
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[4]), 0.0));
+      EXPECT_NO_THROW(EXPECT_DOUBLE_EQ(boost::lexical_cast<double>(p[5]), 0.0));
+    }
+  }
+
   // Test model delete
   {
     waitForMsg("gz model -w default -m simple_arm -d");
@@ -345,7 +390,7 @@ TEST(gz, Model)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, World)
+TEST_F(gzTest, World)
 {
   init();
 
@@ -418,7 +463,7 @@ TEST(gz, World)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Physics)
+TEST_F(gzTest, Physics)
 {
   init();
 
@@ -479,7 +524,7 @@ TEST(gz, Physics)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Camera)
+TEST_F(gzTest, Camera)
 {
   init();
 
@@ -508,7 +553,7 @@ TEST(gz, Camera)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Stats)
+TEST_F(gzTest, Stats)
 {
   init();
 
@@ -527,7 +572,7 @@ TEST(gz, Stats)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Topic)
+TEST_F(gzTest, Topic)
 {
   init();
 
@@ -562,33 +607,7 @@ TEST(gz, Topic)
 }
 
 /////////////////////////////////////////////////
-TEST(gz, Stress)
-{
-  init();
-
-  gazebo::transport::NodePtr node(new gazebo::transport::Node());
-  node->Init();
-  gazebo::transport::SubscriberPtr sub =
-    node->Subscribe("~/world_control", &WorldControlCB, true);
-
-  // Run the transport loop: starts a new thread
-  gazebo::transport::run();
-
-  // Test world reset time
-  for (unsigned int i = 0; i < 100; ++i)
-  {
-    waitForMsg("gz world -w default -t");
-
-    gazebo::msgs::WorldControl msg;
-    msg.mutable_reset()->set_time_only(true);
-    ASSERT_EQ(g_msgDebugOut, msg.DebugString());
-  }
-
-  fini();
-}
-
-/////////////////////////////////////////////////
-TEST(gz, SDF)
+TEST_F(gzTest, SDF)
 {
   boost::filesystem::path path;
 
@@ -596,63 +615,44 @@ TEST(gz, SDF)
   std::string helpOutput = custom_exec_str("gz help sdf");
   EXPECT_NE(helpOutput.find("gz sdf"), std::string::npos);
 
-  // Note that the sdf descriptions are currently identical
-  // compare the shasum's in the three blocks below
-  // gazebo issue #1003
-  // https://bitbucket.org/osrf/gazebo/issue/1003
+  // Regenerate each sum using:
+  // gz sdf -d -v <major.minor> | sha1sum'
+  std::map<std::string, std::string> descSums;
+  descSums["1.0"] = "5235eb8464a96505c2a31fe96327d704e45c9cc4";
+  descSums["1.2"] = "27973b2542d7a0f7582a615b245d81797718c89a";
+  descSums["1.3"] = "30ffce1c662c17185d23f30ef3af5c110d367e10";
+  descSums["1.4"] = "eb1798699f1926e6e75083970528c598bfa6d7f7";
+  descSums["1.5"] = "15fc37c57a9f970fc999cef62c8d2f821a20c7f7";
+
+  // Test each descSum
+  for (std::map<std::string, std::string>::iterator iter = descSums.begin();
+       iter != descSums.end(); ++iter)
   {
-    // 1.0 description
-    // Regenerate using:
-    // gz sdf -d -v 1.0 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -d -v 1.0");
+    std::string cmd = std::string("gz sdf -d -v ") + iter->first;
+    std::string output = custom_exec_str(cmd);
     std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "a917916d211b711c6cba42ffd6811f9a659fce75");
+    EXPECT_EQ(shasum, iter->second);
   }
 
+  // Regenerate each sum using:
+  // gz sdf -o -v <major.minor> | sha1sum'
+  std::map<std::string, std::string> docSums;
+  docSums["1.0"] = "4cf955ada785adf72503744604ffadcdf13ec0d2";
+  docSums["1.2"] = "f84c1cf1b1ba04ab4859e96f6aea881134fb5a9b";
+  docSums["1.3"] = "f3dd699687c8922710e4492aadedd1c038d678c1";
+  docSums["1.4"] = "31082d3b9fda88b1ac25588323e31c305937a548";
+  docSums["1.5"] = "dcf9b27cc6ab1117f941c5d19683c60a7bd42e36";
+
+  // Test each docSum
+  for (std::map<std::string, std::string>::iterator iter = docSums.begin();
+       iter != docSums.end(); ++iter)
   {
-    // 1.2 description
-    // Regenerate using:
-    // gz sdf -d -v 1.2 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -d -v 1.2");
+    std::string cmd = std::string("gz sdf -o -v ") + iter->first;
+    std::string output = custom_exec_str(cmd);
     std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "a917916d211b711c6cba42ffd6811f9a659fce75");
+    EXPECT_EQ(shasum, iter->second);
   }
 
-  {
-    // 1.3 description
-    // Regenerate using:
-    // gz sdf -d -v 1.3 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -d -v 1.3");
-    std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "a917916d211b711c6cba42ffd6811f9a659fce75");
-  }
-
-  {
-    // 1.0 doc
-    // Regenerate using:
-    // gz sdf -o -v 1.0 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -o -v 1.0");
-    std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "681f5be73178de73076ffe6571466e45fb86d44c");
-  }
-
-  {
-    // 1.2 doc
-    // Regenerate using:
-    // gz sdf -o -v 1.2 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -o -v 1.2");
-    std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "4f803940d155c42778f2fc4b2ccaa57f8a79b12e");
-  }
-
-  {
-    // 1.3 doc
-    // Regenerate using:
-    // gz sdf -o -v 1.3 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'
-    std::string output = custom_exec_str("gz sdf -o -v 1.3");
-    std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "05762541824fea8ce9ee56c6cad29c866bc83424");
-  }
 
   path = TEST_PATH;
   path /= "worlds/empty_different_name.world";
@@ -672,7 +672,7 @@ TEST(gz, SDF)
     std::string output =
       custom_exec_str(std::string("gz sdf -p ") + path.string());
     std::string shasum = gazebo::common::get_sha1<std::string>(output);
-    EXPECT_EQ(shasum, "c8095b0510a12a6dcb3f0e50d57f7c757ee960e5");
+    EXPECT_EQ(shasum, "1da2108b86f3b4aa194ab5c22527759e012b6393");
   }
 
   path = PROJECT_BINARY_PATH;
