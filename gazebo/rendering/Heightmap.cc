@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,7 +179,6 @@ void Heightmap::SplitHeights(const std::vector<float> &_heightmap, int _n,
       "Invalid number of terrain divisions (it should be 4 or 16)");
 
   int count = 0;
-  int tileIndex = 0;
   int width = sqrt(_heightmap.size());
   int newWidth = 1 + (width - 1) / sqrt(_n);
 
@@ -188,7 +187,7 @@ void Heightmap::SplitHeights(const std::vector<float> &_heightmap, int _n,
 
   for (int tileR = 0; tileR < sqrt(_n); ++tileR)
   {
-    tileIndex = tileR * sqrt(_n);
+    int tileIndex = tileR * sqrt(_n);
     for (int row = 0; row < newWidth - 1; ++row)
     {
       for (int tileC = 0; tileC < sqrt(_n); ++tileC)
@@ -296,6 +295,13 @@ void Heightmap::Load()
 
   this->terrainGlobals = new Ogre::TerrainGlobalOptions();
 
+#if (OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 8) || \
+    OGRE_VERSION_MAJOR > 1
+  // Vertex compression breaks anything, e.g. Gpu laser, that tries to build
+  // a depth map.
+  this->terrainGlobals->setUseVertexCompressionWhenAvailable(false);
+#endif
+
   msgs::Geometry geomMsg;
   boost::filesystem::path imgPath;
   boost::filesystem::path terrainName;
@@ -310,13 +316,12 @@ void Heightmap::Load()
     geomMsg.ParseFromString(response->serialized_data());
 
     // Copy the height data.
+    this->terrainSize = msgs::Convert(geomMsg.heightmap().size());
     this->heights.resize(geomMsg.heightmap().heights().size());
     memcpy(&this->heights[0], geomMsg.heightmap().heights().data(),
         sizeof(this->heights[0])*geomMsg.heightmap().heights().size());
 
     this->dataSize = geomMsg.heightmap().width();
-
-    this->useTerrainPaging = false;
 
     if (geomMsg.heightmap().has_filename())
     {
@@ -378,6 +383,29 @@ void Heightmap::Load()
   this->terrainGroup->setOrigin(Conversions::Convert(origin));
   this->ConfigureTerrainDefaults();
   this->SetupShadows(true);
+
+  if (!this->heights.empty())
+  {
+    UserCameraPtr userCam = this->scene->GetUserCamera(0);
+
+    // Move the camera above the terrain only if the user did not modify the
+    // camera position in the world file
+    if (userCam && !userCam->IsCameraSetInWorldFile())
+    {
+      double h = *std::max_element(
+        &this->heights[0], &this->heights[0] + this->heights.size());
+
+      math::Vector3 camPos(5, -5, h + 200);
+      math::Vector3 lookAt(0, 0, h);
+      math::Vector3 delta = lookAt - camPos;
+
+      double yaw = atan2(delta.y, delta.x);
+      double pitch = atan2(-delta.z,
+                           sqrt(delta.x * delta.x + delta.y * delta.y));
+
+      userCam->SetWorldPose(math::Pose(camPos, math::Vector3(0, pitch, yaw)));
+    }
+  }
 
   if (this->useTerrainPaging)
   {
@@ -451,6 +479,13 @@ void Heightmap::ConfigureTerrainDefaults()
   // CompositeMapDistance: decides how far the Ogre terrain will render
   // the lightmapped terrain.
   this->terrainGlobals->setCompositeMapDistance(2000);
+
+#if (OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 8) || \
+    OGRE_VERSION_MAJOR > 1
+  // Vertex compression breaks anything, e.g. Gpu laser, that tries to build
+  // a depth map.
+  this->terrainGlobals->setUseVertexCompressionWhenAvailable(false);
+#endif
 
   // Get the first directional light
   LightPtr directionalLight;
@@ -1211,7 +1246,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVertexProgram(
   Ogre::HighLevelGpuProgramPtr ret =
     this->createVertexProgram(_prof, _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
   this->generateVertexProgramSource(_prof, _terrain, _tt, sourceStr);
 
   ret->setSource(sourceStr.str());
@@ -1229,7 +1264,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFragmentProgram(
   Ogre::HighLevelGpuProgramPtr ret = this->createFragmentProgram(_prof,
       _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
 
   this->generateFragmentProgramSource(_prof, _terrain, _tt, sourceStr);
 
@@ -1338,7 +1373,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::updateParams(
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::
 generateVertexProgramSource(const SM2Profile *_prof,
     const Ogre::Terrain* _terrain, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   this->generateVpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -1362,7 +1397,7 @@ generateVertexProgramSource(const SM2Profile *_prof,
 // virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   bool compression = false;
 
@@ -1555,7 +1590,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpHeader(
 // but is needed because generateVpDynamicShadows() is not declared virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "  gl_Position = viewProjMatrix * worldPos;\n"
              << "  uvMisc.xy = uv.xy;\n";
@@ -1586,7 +1621,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpFooter(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   unsigned int numTextures = 1;
 
@@ -1676,7 +1711,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::defaultVpParams(
 unsigned int GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::
 generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType /*_tt*/,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   // out semantics & params
   unsigned int numTextures = 1;
@@ -1705,7 +1740,7 @@ generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "#version 130\n\n";
 
@@ -1931,7 +1966,7 @@ void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsParams(
     Ogre::uint *_texCoord, Ogre::uint *_sampler, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   if (_tt == HIGH_LOD)
     this->mShadowSamplerStartHi = *_sampler;
@@ -1967,7 +2002,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsParams(
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpLayer(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
     TechniqueType _tt, Ogre::uint _layer,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   Ogre::uint uvIdx = _layer / 2;
   Ogre::String uvChannels = (_layer % 2) ? ".zw" : ".xy";
@@ -2044,7 +2079,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpLayer(
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   if (_tt == LOW_LOD)
   {
@@ -2120,7 +2155,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpFooter(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsHelpers(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   // TODO make filtering configurable
   _outStream <<
@@ -2249,7 +2284,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsHelpers(
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   if (_prof->getReceiveDynamicShadowsPSSM())
   {
@@ -2307,7 +2342,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadows(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFragmentProgramSource(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   this->generateFpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -2398,7 +2433,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVertexProgram(
   Ogre::HighLevelGpuProgramPtr ret =
     this->createVertexProgram(_prof, _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
   this->generateVertexProgramSource(_prof, _terrain, _tt, sourceStr);
 
   ret->setSource(sourceStr.str());
@@ -2466,7 +2501,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::defaultVpParams(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   unsigned int numTextures = 1;
 
@@ -2502,7 +2537,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpDynamicShadows(
 unsigned int GzTerrainMatGen::SM2Profile::ShaderHelperCg::
 generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType /*_tt*/,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   // out semantics & params
   unsigned int numTextures = 1;
@@ -2536,7 +2571,7 @@ generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
 // virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "void main_vp(\n";
 
@@ -2718,7 +2753,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpHeader(
 // but is needed because generateVpDynamicShadows() is not declared virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "  oPos = mul(viewProjMatrix, worldPos);\n"
              << "  oUVMisc.xy = uv.xy;\n";
@@ -2749,7 +2784,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpFooter(
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::
 generateVertexProgramSource(const SM2Profile *_prof,
     const Ogre::Terrain* _terrain, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   this->generateVpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -2774,7 +2809,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateFragmentProgram(
   Ogre::HighLevelGpuProgramPtr ret = this->createFragmentProgram(_prof,
       _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
 
   this->generateFragmentProgramSource(_prof, _terrain, _tt, sourceStr);
 
@@ -2786,4 +2821,3 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateFragmentProgram(
 
   return ret;
 }
-
