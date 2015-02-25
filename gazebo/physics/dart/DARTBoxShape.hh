@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,14 @@
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/BoxShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief DART Box shape
-    class DARTBoxShape : public BoxShape
+    class GAZEBO_VISIBLE DARTBoxShape : public BoxShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.
