@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ void PhysicsTest::TrikeyWheelResponse(const std::string &_physicsEngine,
                 joint2->GetAngle(0).Radian(), TOL);
     EXPECT_NEAR(joint1->GetAngle(0).Radian(),
                 joint3->GetAngle(0).Radian(), TOL);
-    world->StepWorld(1);
+    world->Step(1);
   }
 }
 

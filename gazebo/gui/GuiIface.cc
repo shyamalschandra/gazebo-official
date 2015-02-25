@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 
 #include <signal.h>
 #include <boost/program_options.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
 #include "gazebo/gui/qt.h"
 #include "gazebo/gazebo.hh"
 
@@ -28,6 +30,12 @@
 #include "gazebo/gui/ModelRightMenu.hh"
 #include "gazebo/gui/GuiIface.hh"
 
+#ifdef WIN32
+# define HOMEDIR "HOMEPATH"
+#else
+# define HOMEDIR "HOME"
+#endif  // WIN32
+
 // These are needed by QT. They need to stay valid during the entire
 // lifetime of the application, and argc > 0 and argv must contain one valid
 // character string
@@ -37,6 +45,8 @@ char **g_argv;
 namespace po = boost::program_options;
 po::variables_map vm;
 
+boost::property_tree::ptree g_propTree;
+
 using namespace gazebo;
 
 gui::ModelRightMenu *g_modelRightMenu = NULL;
@@ -44,7 +54,7 @@ gui::ModelRightMenu *g_modelRightMenu = NULL;
 std::string g_worldname = "default";
 
 QApplication *g_app;
-gui::MainWindow *g_main_win;
+gui::MainWindow *g_main_win = NULL;
 rendering::UserCameraPtr g_active_camera;
 bool g_fullscreen = false;
 
@@ -69,7 +79,8 @@ bool parse_args(int _argc, char **_argv)
 {
   po::options_description v_desc("Options");
   v_desc.add_options()
-    ("quiet,q", "Reduce output to stdout.")
+    ("version,v", "Output version information.")
+    ("verbose", "Increase the messages written to the terminal.")
     ("help,h", "Produce this help message.")
     ("gui-plugin,g", po::value<std::vector<std::string> >(), "Load a plugin.");
 
@@ -87,6 +98,12 @@ bool parse_args(int _argc, char **_argv)
     return false;
   }
 
+  if (vm.count("version"))
+  {
+    std::cout << GAZEBO_VERSION_HEADER << std::endl;
+    return false;
+  }
+
   if (vm.count("help"))
   {
     print_usage();
@@ -94,11 +111,11 @@ bool parse_args(int _argc, char **_argv)
     return false;
   }
 
-  if (!vm.count("quiet"))
+  if (vm.count("verbose"))
+  {
     gazebo::printVersion();
-  else
-    gazebo::common::Console::Instance()->SetQuiet(true);
-
+    gazebo::common::Console::SetQuiet(false);
+  }
 
   /// Load all the plugins specified on the command line
   if (vm.count("gui-plugin"))
@@ -150,8 +167,66 @@ void gui::init()
 }
 
 /////////////////////////////////////////////////
-void gui::load()
+bool gui::loadINI(boost::filesystem::path _file)
 {
+  bool result = true;
+
+  // Only use the environment variables if _file is empty.
+  if (_file.empty())
+  {
+    // Get the gui.ini path environment variable
+    char *guiINIFile = getenv("GAZEBO_GUI_INI_FILE");
+    char *home = getenv(HOMEDIR);
+
+    // If the environment variable was specified
+    if (guiINIFile)
+    {
+      _file = guiINIFile;
+      if (!boost::filesystem::exists(_file))
+      {
+        gzerr << "GAZEBO_GUI_INI_FILE does not exist: " << _file << std::endl;
+        return false;
+      }
+    }
+    else if (home)
+    {
+      // Check the home directory
+      // Construct the path to gui.ini
+      _file = home;
+      _file = _file / ".gazebo" / "gui.ini";
+    }
+  }
+
+  // Create the gui.ini file if it doesn't exist.
+  if (!boost::filesystem::exists(_file))
+  {
+    gui::setINIProperty("geometry.x", 0);
+    gui::setINIProperty("geometry.y", 0);
+    gui::saveINI(_file);
+    gzwarn << "Couldn't locate specified .ini. Creating file at " << _file
+          << std::endl;
+  }
+
+  try
+  {
+    // Read all configuration properties
+    boost::property_tree::ini_parser::read_ini(_file.string(), g_propTree);
+  }
+  catch(...)
+  {
+    gzerr << "Unable to read configuration file " << _file << "\n";
+    result = false;
+  }
+
+  gzlog << "Loaded .ini file from: " << _file << std::endl;
+  return result;
+}
+
+/////////////////////////////////////////////////
+bool gui::load()
+{
+  gui::loadINI();
+
   g_modelRightMenu = new gui::ModelRightMenu();
 
   rendering::load();
@@ -171,19 +246,24 @@ void gui::load()
 
   g_main_win->Load();
   g_main_win->resize(1024, 768);
+
+  return true;
 }
 
 /////////////////////////////////////////////////
 unsigned int gui::get_entity_id(const std::string &_name)
 {
-  return g_main_win->GetEntityId(_name);
+  if (g_main_win)
+    return g_main_win->GetEntityId(_name);
+  else
+    return 0;
 }
 
 /////////////////////////////////////////////////
 bool gui::run(int _argc, char **_argv)
 {
   // Initialize the informational logger. This will log warnings, and errors.
-  gazebo::common::Console::Instance()->Init("gzclient.log");
+  gzLogInit("client-", "gzclient.log");
 
   // Make sure the model database has started
   gazebo::common::ModelDatabase::Instance()->Start();
@@ -194,7 +274,9 @@ bool gui::run(int _argc, char **_argv)
   if (!gazebo::setupClient(_argc, _argv))
     return false;
 
-  gazebo::gui::load();
+  if (!gazebo::gui::load())
+    return false;
+
   gazebo::gui::init();
 
   // Now that we're about to run, install a signal handler to allow for
@@ -256,4 +338,26 @@ rendering::UserCameraPtr gui::get_active_camera()
 bool gui::has_entity_name(const std::string &_name)
 {
   return g_main_win->HasEntityName(_name);
+}
+
+/////////////////////////////////////////////////
+bool gui::saveINI(const boost::filesystem::path &_file)
+{
+  bool result = true;
+  try
+  {
+    boost::property_tree::ini_parser::write_ini(_file.string(), g_propTree);
+  }
+  catch(...)
+  {
+    gzerr << "Unable to save INI file[" << _file << "]\n";
+    result = false;
+  }
+  return result;
+}
+
+/////////////////////////////////////////////////
+gui::MainWindow *gui::get_main_window()
+{
+  return g_main_win;
 }
