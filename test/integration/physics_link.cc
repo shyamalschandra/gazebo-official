@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 #include <string.h>
 
 #include "gazebo/physics/physics.hh"
-#include "test/PhysicsFixture.hh"
+#include "test/ServerFixture.hh"
 #include "helper_physics_generator.hh"
 
 using namespace gazebo;
 
 const double g_tolerance = 1e-4;
 
-class PhysicsLinkTest : public PhysicsFixture,
+class PhysicsLinkTest : public ServerFixture,
                         public testing::WithParamInterface<const char*>
 {
   /// \brief Test GetWorldEnergy* functions.
@@ -39,9 +39,14 @@ class PhysicsLinkTest : public PhysicsFixture,
 /////////////////////////////////////////////////
 void PhysicsLinkTest::GetWorldEnergy(const std::string &_physicsEngine)
 {
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
-  // check the time step
+  // check the physics engine
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
   double dt = physics->GetMaxStepSize();
   EXPECT_GT(dt, 0);
 
@@ -76,22 +81,14 @@ void PhysicsLinkTest::GetWorldEnergy(const std::string &_physicsEngine)
 /////////////////////////////////////////////////
 void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
 {
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "SimbodyLink::SetLinearVel, SetAngularVel aren't working (#1080)"
-          << std::endl;
-    return;
-  }
-  if (_physicsEngine == "dart")
-  {
-    gzerr << "DARTLink::SetLinearVel, SetAngularVel aren't working (#1079)"
-          << std::endl;
-    return;
-  }
+  Load("worlds/empty.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
-
-  // check the time step
+  // check the physics engine
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
   double dt = physics->GetMaxStepSize();
   EXPECT_GT(dt, 0);
 
@@ -122,13 +119,6 @@ void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
 
   // check position
   math::Vector3 pos = link->GetWorldPose().pos;
-  if (_physicsEngine.compare("bullet") == 0)
-  {
-    /// \TODO skipping bullet, see issue #1081
-    gzerr << "Bullet seems to be off by one time step (#1081)"
-          << std::endl;
-    time -= dt;
-  }
   EXPECT_EQ(pos0 + time*vel, pos);
 
   // Set velocity to zero
@@ -157,12 +147,6 @@ void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
   EXPECT_NEAR(vel3.z, 0.0, g_tolerance);
 
   // check rotation
-  if (_physicsEngine.compare("bullet") == 0)
-  {
-    gzerr << "Bullet seems to be off by one time step (#1081)"
-          << std::endl;
-    world->Step(1);
-  }
   math::Vector3 rpy = link->GetWorldPose().rot.GetAsEuler();
   EXPECT_NEAR(rpy.x, 0.0, g_tolerance);
   EXPECT_NEAR(rpy.y, vel2.y*dt, g_tolerance);

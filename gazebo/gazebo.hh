@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,49 +24,6 @@
 
 namespace gazebo
 {
-  /// \brief Deprecated.
-  /// \sa gazebo::printVersion.
-  GAZEBO_VISIBLE
-  void print_version() GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::addPlugin.
-  GAZEBO_VISIBLE
-  void add_plugin(const std::string &_filename) GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Not implemented.
-  /// \sa gazebo::common::findFile.
-  GAZEBO_VISIBLE
-  std::string find_file(const std::string &_file) GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::setupClient.
-  /// \sa gazebo::setupServer.
-  GAZEBO_VISIBLE
-  bool load(int _argc = 0, char **_argv = 0) GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::setupClient.
-  /// \sa gazebo::setupServer.
-  GAZEBO_VISIBLE
-  bool init() GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::setupClient.
-  /// \sa gazebo::setupServer.
-  GAZEBO_VISIBLE
-  void run() GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::shutdown.
-  GAZEBO_VISIBLE
-  void stop() GAZEBO_DEPRECATED(2.3);
-
-  /// \brief Deprecated.
-  /// \sa gazebo::shutdown.
-  GAZEBO_VISIBLE
-  void fini() GAZEBO_DEPRECATED(2.3);
-
   /// \brief Output version information to the terminal.
   GAZEBO_VISIBLE
   void printVersion();

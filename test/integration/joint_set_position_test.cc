@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,21 +27,21 @@ using namespace gazebo;
 class JointKinematicTest : public PhysicsFixture,
                            public testing::WithParamInterface<const char*>
 {
-  /// \brief Test setting joint position.  Joint::SetAngle is called
+  /// \brief Test setting joint position.  Joint::SetPosition is called
   /// in series with World::Step(1) with physics paused to avoid race
   /// conditions between physics updating link poses and Joint::Angle setting
   /// link poses.
   /// \param[in] _physicsEngine physics engine type [bullet|dart|ode|simbody]
   public: void SetJointPositionTest(const std::string &_physicsEngine);
 
-  /// \brief Test setting joint position.  Joint::SetAngle is called
+  /// \brief Test setting joint position.  Joint::SetPosition is called
   /// in parallel with World::Step(1) with physics running to check for race
   /// conditions between physics updating link poses and Joint::Angle setting
   /// link poses.
   /// \param[in] _physicsEngine physics engine type [bullet|dart|ode|simbody]
   public: void SetJointPositionThreadedTest(const std::string &_physicsEngine);
 
-  /// \brief Test setting joint position.  Joint::SetAngle is called
+  /// \brief Test setting joint position.  Joint::SetPosition is called
   /// in series with World::Step(1) with physics paused to avoid race
   /// conditions between physics updating link poses and Joint::Angle setting
   /// link poses.
@@ -60,7 +60,7 @@ void JointKinematicTest::SetJointPositionTest(const std::string &_physicsEngine)
 
   if (_physicsEngine == "bullet")
   {
-    gzerr << "Bullet Joint::SetAngle affected by issue #1194.\n";
+    gzerr << "Bullet Joint::SetPosition affected by issue #1194.\n";
     return;
   }
 
@@ -157,7 +157,7 @@ void JointKinematicTest::SetJointPositionTest(const std::string &_physicsEngine)
 
   gzdbg << " -------------------------------------------------------------\n";
   gzdbg << " Send random joint position commands for " << test_wall_duration
-        << " secs, see how well Joint::SetPosition delas with random inputs.\n"
+        << " secs, see how well Joint::SetPosition deals with random inputs.\n"
         << " The test is run such that we call Joint::SetPosition in series"
         << " with World::Step, so there's no physics engine update collision"
         << " with Link::SetWorldPose from ODEJoint::SetPosition.\n";
@@ -174,7 +174,7 @@ void JointKinematicTest::SetJointPositionTest(const std::string &_physicsEngine)
       for (physics::Joint_V::iterator ji = joints.begin();
                                       ji != joints.end(); ++ji)
       {
-        (*ji)->SetAngle(0,
+        (*ji)->SetPosition(0,
             static_cast<double>(rand_r(&seed))/static_cast<double>(RAND_MAX));
       }
 
@@ -228,7 +228,7 @@ void JointKinematicTest::SetJointPositionThreadedTest(
 
   if (_physicsEngine == "bullet")
   {
-    gzerr << "Bullet Joint::SetAngle affected by issue #1194.\n";
+    gzerr << "Bullet Joint::SetPosition affected by issue #1194.\n";
     return;
   }
 
@@ -342,7 +342,7 @@ void JointKinematicTest::SetJointPositionThreadedTest(
       for (physics::Joint_V::iterator ji = joints.begin();
                                       ji != joints.end(); ++ji)
       {
-        (*ji)->SetAngle(0,
+        (*ji)->SetPosition(0,
             static_cast<double>(rand_r(&seed))/static_cast<double>(RAND_MAX));
       }
 
@@ -393,7 +393,7 @@ void JointKinematicTest::SetJointPositionLoopJointTest(
 
   if (_physicsEngine == "bullet")
   {
-    gzerr << "Bullet Joint::SetAngle affected by issue #1194.\n";
+    gzerr << "Bullet Joint::SetPosition affected by issue #1194.\n";
     return;
   }
 
@@ -511,7 +511,7 @@ void JointKinematicTest::SetJointPositionLoopJointTest(
       for (physics::Joint_V::iterator ji = joints.begin();
                                       ji != joints.end(); ++ji)
       {
-        (*ji)->SetAngle(0,
+        (*ji)->SetPosition(0,
             static_cast<double>(rand_r(&seed))/static_cast<double>(RAND_MAX));
       }
 
