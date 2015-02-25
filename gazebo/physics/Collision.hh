@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ namespace gazebo
       /// \brief Get the shape type.
       /// \return The shape type.
       /// \sa EntityType
-      public: unsigned int GetShapeType();
+      public: unsigned int GetShapeType() const;
 
       /// \brief Set the shape for this collision.
       /// \param[in] _shape The shape for this collision object.
