@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ namespace gazebo
                                    const math::Vector3 &_axis);
 
       // Documentation inherited
-      public: virtual void SetGearRatio(double _gearRatio);
+      public: virtual void SetGearboxRatio(double _gearRatio);
 
       // Documentation inherited
       public: virtual math::Angle GetAngleImpl(unsigned int _index) const;

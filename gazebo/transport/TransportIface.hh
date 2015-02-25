@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,6 +168,11 @@ namespace gazebo
     /// \return True if minimal comms is enabled.
     GAZEBO_VISIBLE
     bool getMinimalComms();
+
+    /// \brief Create a connection to master.
+    /// \return Connection to the master, NULL on error.
+    GAZEBO_VISIBLE
+    transport::ConnectionPtr connectToMaster();
 
     /// \brief Blocks while waiting for topic namespaces from the Master.
     /// This function will wait a maximum of _maxWait.

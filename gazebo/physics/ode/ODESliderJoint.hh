@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,13 @@ namespace gazebo
 
       // Documentation inherited
       public: virtual void Load(sdf::ElementPtr _sdf);
+
+      // Documentation inherited
+      public: virtual math::Vector3 GetAnchor(unsigned int _index) const;
+
+      // Documentation inherited
+      public: virtual void SetAnchor(unsigned int _index,
+                                     const math::Vector3 &_anchor);
 
       // Documentation inherited
       public: virtual math::Vector3 GetGlobalAxis(unsigned int _index) const;
