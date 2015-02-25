@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,24 +49,24 @@ void DiffDrivePlugin::Load(physics::ModelPtr _model,
     gzerr << "DiffDrive plugin missing <right_joint> element\n";
 
   this->leftJoint = _model->GetJoint(
-      _sdf->GetElement("left_joint")->GetValueString());
+      _sdf->GetElement("left_joint")->Get<std::string>());
   this->rightJoint = _model->GetJoint(
-      _sdf->GetElement("right_joint")->GetValueString());
+      _sdf->GetElement("right_joint")->Get<std::string>());
 
   if (_sdf->HasElement("torque"))
-    this->torque = _sdf->GetElement("torque")->GetValueDouble();
-  else
   {
-    gzwarn << "No torque value set for the DiffDrive plugin.\n";
-    this->torque = 5.0;
+    this->torque = _sdf->GetElement("torque")->Get<double>();
+    gzwarn << "The MaxForce API is deprecated in Gazebo, "
+           << "and the torque tag is no longer used in this plugin."
+           << std::endl;
   }
 
   if (!this->leftJoint)
     gzerr << "Unable to find left joint["
-          << _sdf->GetElement("left_joint")->GetValueString() << "]\n";
+          << _sdf->GetElement("left_joint")->Get<std::string>() << "]\n";
   if (!this->rightJoint)
     gzerr << "Unable to find right joint["
-          << _sdf->GetElement("right_joint")->GetValueString() << "]\n";
+          << _sdf->GetElement("right_joint")->Get<std::string>() << "]\n";
 
   this->updateConnection = event::Events::ConnectWorldUpdateBegin(
           boost::bind(&DiffDrivePlugin::OnUpdate, this));
@@ -121,7 +121,4 @@ void DiffDrivePlugin::OnUpdate()
 
   this->leftJoint->SetVelocity(0, leftVelDesired);
   this->rightJoint->SetVelocity(0, rightVelDesired);
-
-  this->leftJoint->SetMaxForce(0, this->torque);
-  this->rightJoint->SetMaxForce(0, this->torque);
 }

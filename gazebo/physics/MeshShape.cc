@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  * limitations under the License.
  *
 */
-/* Desc: Trimesh shape
- * Author: Nate Koenig
- * Date: 16 Oct 2009
- */
 
-#include "gazebo/common/Common.hh"
+#include "gazebo/common/CommonIface.hh"
+#include "gazebo/common/Console.hh"
 #include "gazebo/common/MeshManager.hh"
 #include "gazebo/common/Mesh.hh"
 #include "gazebo/common/Exception.hh"
@@ -49,14 +46,14 @@ MeshShape::~MeshShape()
 //////////////////////////////////////////////////
 void MeshShape::Init()
 {
-  std::string meshStr = this->sdf->GetValueString("uri");
+  std::string meshStr = this->sdf->Get<std::string>("uri");
 
   common::MeshManager *meshManager = common::MeshManager::Instance();
   this->mesh = meshManager->GetMesh(meshStr);
 
   if (!this->mesh)
   {
-    meshStr = common::find_file(this->sdf->GetValueString("uri"));
+    meshStr = common::find_file(this->sdf->Get<std::string>("uri"));
 
     if (meshStr == "__default__" || meshStr.empty())
     {
@@ -75,18 +72,26 @@ void MeshShape::Init()
   if (this->sdf->HasElement("submesh"))
   {
     sdf::ElementPtr submeshElem = this->sdf->GetElement("submesh");
-    this->submesh = new common::SubMesh(
-      this->mesh->GetSubMesh(submeshElem->GetValueString("name")));
-
-    if (!this->submesh)
-      gzthrow("Unable to get submesh with name[" +
-          submeshElem->GetValueString("name") + "]");
-
-    // Center the submesh if specified in SDF.
-    if (submeshElem->HasElement("center") &&
-        submeshElem->GetValueBool("center"))
+    std::string submeshName = submeshElem->Get<std::string>("name");
+    if (submeshName != "__default__" && !submeshName.empty())
     {
-      this->submesh->Center();
+      const common::SubMesh *smesh = this->mesh->GetSubMesh(submeshName);
+      if (smesh)
+      {
+        this->submesh = new common::SubMesh(
+          this->mesh->GetSubMesh(submeshName));
+
+        if (!this->submesh)
+          gzthrow("Unable to get submesh with name[" +
+              submeshElem->Get<std::string>("name") + "]");
+
+        // Center the submesh if specified in SDF.
+        if (submeshElem->HasElement("center") &&
+            submeshElem->Get<bool>("center"))
+        {
+          this->submesh->Center();
+        }
+      }
     }
   }
 }
@@ -100,25 +105,13 @@ void MeshShape::SetScale(const math::Vector3 &_scale)
 //////////////////////////////////////////////////
 math::Vector3 MeshShape::GetSize() const
 {
-  return this->sdf->GetValueVector3("scale");
-}
-
-//////////////////////////////////////////////////
-std::string MeshShape::GetFilename() const
-{
-  return this->GetMeshURI();
+  return this->sdf->Get<math::Vector3>("scale");
 }
 
 //////////////////////////////////////////////////
 std::string MeshShape::GetMeshURI() const
 {
-  return this->sdf->GetValueString("uri");
-}
-
-//////////////////////////////////////////////////
-void MeshShape::SetFilename(const std::string &_filename)
-{
-  this->SetMesh(_filename);
+  return this->sdf->Get<std::string>("uri");
 }
 
 //////////////////////////////////////////////////

@@ -2,7 +2,6 @@ include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 
 include_directories(SYSTEM
   ${OGRE_INCLUDE_DIRS}
-  ${CEGUI_INCLUDE_DIRS}
   skyx
   skyx/include
 )
@@ -22,12 +21,12 @@ set (sources
   ContactVisual.cc
   Conversions.cc
   DepthCamera.cc
+  Distortion.cc
   DynamicLines.cc
   DynamicRenderable.cc
   FPSViewController.cc
   GpuLaser.cc
   Grid.cc
-  GUIOverlay.cc
   Heightmap.cc
   JointVisual.cc
   LaserVisual.cc
@@ -37,14 +36,17 @@ set (sources
   MovableText.cc
   OrbitViewController.cc
   Projector.cc
+  RayQuery.cc
   RenderEngine.cc
   RenderEvents.cc
-  Rendering.cc
+  RenderingIface.cc
   Road2d.cc
   RFIDVisual.cc
   RFIDTagVisual.cc
   RTShaderSystem.cc
   Scene.cc
+  SelectionObj.cc
+  TransmitterVisual.cc
   UserCamera.cc
   VideoVisual.cc
   ViewController.cc
@@ -63,12 +65,12 @@ set (headers
   ContactVisual.hh
   Conversions.hh
   DepthCamera.hh
+  Distortion.hh
   DynamicLines.hh
   DynamicRenderable.hh
   FPSViewController.hh
   GpuLaser.hh
   Grid.hh
-  GUIOverlay.hh
   Heightmap.hh
   JointVisual.hh
   LaserVisual.hh
@@ -78,15 +80,18 @@ set (headers
   MovableText.hh
   OrbitViewController.hh
   Projector.hh
+  RayQuery.hh
   RenderEngine.hh
   RenderEvents.hh
-  Rendering.hh
+  RenderingIface.hh
   RenderTypes.hh
   Road2d.hh
   RFIDVisual.hh
   RFIDTagVisual.hh
   RTShaderSystem.hh
   Scene.hh
+  SelectionObj.hh
+  TransmitterVisual.hh
   UserCamera.hh
   VideoVisual.hh
   ViewController.hh
@@ -95,8 +100,32 @@ set (headers
   WindowManager.hh
   WrenchVisual.hh
   ogre_gazebo.h
-  cegui.h
 )
+
+if (HAVE_OCULUS)
+  set (sources ${sources}
+    OculusCamera.cc
+  )
+  set (headers ${headers}
+    OculusCamera.hh
+  )
+endif ()
+
+set (gtest_sources
+)
+
+gz_build_tests(${gtest_sources})
+
+set (gtest_sources_dri
+  GpuLaser_TEST.cc
+  Heightmap_TEST.cc
+  JointVisual_TEST.cc
+  SonarVisual_TEST.cc
+  TransmitterVisual_TEST.cc
+  Visual_TEST.cc
+)
+
+gz_build_dri_tests(${gtest_sources_dri})
 
 set (rendering_headers "" CACHE INTERNAL "rendering headers" FORCE)
 foreach (hdr ${headers})
@@ -106,22 +135,31 @@ endforeach()
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rendering.hh.in
                 ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
 
-link_directories(  
+link_directories(
   ${ogre_library_dirs}
 )
 
 gz_add_library(gazebo_rendering ${sources})
 
-target_link_libraries( gazebo_rendering
-  gazebo_common 
-  gazebo_sdf_interface
+target_link_libraries(gazebo_rendering
+  gazebo_common
+  gazebo_msgs
   gazebo_skyx
   gazebo_selection_buffer
-  ${ogre_libraries} 
-  ${OPENGL_LIBRARIES} 
-  ${CEGUI_LIBRARIES}
-  X11 
+  gazebo_transport
+  ${ogre_libraries}
+  ${OPENGL_LIBRARIES}
 )
+
+if (HAVE_OCULUS)
+  target_link_libraries(gazebo_rendering
+    OculusVR
+  )
+endif()
+
+if (NOT APPLE)
+  target_link_libraries(gazebo_rendering X11)
+endif()
 
 if (${OGRE_VERSION} GREATER 1.7.4)
   target_link_libraries(gazebo_rendering gazebo_rendering_deferred)
@@ -129,8 +167,3 @@ endif()
 
 gz_install_library(gazebo_rendering)
 gz_install_includes("rendering" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/rendering.hh)
-
-# unit tests
-set (gtest_sources
-  GpuLaser_TEST.cc)
-gz_build_dri_tests(${gtest_sources})
