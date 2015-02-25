@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,9 @@ void help()
     << "process.\n\n";
 
   std::cerr << "Options:\n"
-  << "  -q [ --quiet ]                Reduce output to stdout.\n"
+  << "  -v [ --version ]              Output version information.\n"
+  << "  --verbose                     Increase the messages written to the "
+  <<                                  "terminal.\n"
   << "  -h [ --help ]                 Produce this help message.\n"
   << "  -u [ --pause ]                Start the server in a paused state.\n"
   << "  -e [ --physics ] arg          Specify a physics engine "
@@ -51,11 +53,13 @@ void help()
   << "data \n"
   << "                                (zlib|bz2|txt).\n"
   << "  --record_path arg             Absolute path in which to store "
-  << "state data\n"
+  << "state data.\n"
   << "  --seed arg                    Start with a given random number seed.\n"
   << "  --iters arg                   Number of iterations to simulate.\n"
-  << "  --minimal_comms               Reduce the messages output by gzserver\n"
-  << "  -s [ --server-plugin ] arg    Load a plugin.\n\n";
+  << "  --minimal_comms               Reduce the TCP/IP traffic output by "
+  <<                                  "gazebo.\n"
+  << "  -g [ --gui-plugin ] arg       Load a GUI plugin.\n"
+  << "  -s [ --server-plugin ] arg    Load a server plugin.\n\n";
 }
 
 /////////////////////////////////////////////////
@@ -131,12 +135,27 @@ int main(int _argc, char **_argv)
   argvServer[_argc] = static_cast<char*>(NULL);
   argvClient[_argc] = static_cast<char*>(NULL);
 
+  // Need to check the return of wait function (8 lines below) to know
+  // what should be returned by the process
+  int returnValue = 0;
+
   if (pid1)
   {
     pid2 = fork();
     if (pid2)
     {
-      pid_t dead_child = wait(&status1);
+      int child_exit_status;
+      pid_t dead_child = wait(&child_exit_status);
+      // WIFEXITED will return zero if the process finished not reaching
+      // return or exit calls.
+      // WEXITSTATUS will check the value of the return function, not being
+      // zero means problems.
+      if ((WIFEXITED(child_exit_status)   == 0) ||
+          (WEXITSTATUS(child_exit_status) != 0))
+        returnValue = -1;
+      else
+        returnValue = 0;
+
       if (dead_child == pid1)
         killed1 = true;
       else if (dead_child == pid2)
@@ -167,5 +186,5 @@ int main(int _argc, char **_argv)
   delete[] argvServer;
   delete[] argvClient;
 
-  return 0;
+  return returnValue;
 }

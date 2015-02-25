@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 
 #include <sdf/sdf.hh>
 
@@ -27,12 +28,13 @@
 #include "gazebo/util/LogRecord.hh"
 #include "gazebo/util/LogPlay.hh"
 #include "gazebo/common/ModelDatabase.hh"
-#include "gazebo/common/Timer.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Plugin.hh"
 #include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Events.hh"
+
+#include "gazebo/msgs/msgs.hh"
 
 #include "gazebo/sensors/SensorsIface.hh"
 
@@ -44,6 +46,7 @@
 #include "gazebo/Master.hh"
 #include "gazebo/Server.hh"
 
+namespace po = boost::program_options;
 using namespace gazebo;
 
 bool Server::stop = true;
@@ -51,7 +54,6 @@ bool Server::stop = true;
 /////////////////////////////////////////////////
 Server::Server()
 {
-  this->receiveMutex = new boost::mutex();
   this->initialized = false;
 }
 
@@ -59,7 +61,6 @@ Server::Server()
 Server::~Server()
 {
   fflush(stdout);
-  delete this->receiveMutex;
 }
 
 /////////////////////////////////////////////////
@@ -73,21 +74,22 @@ void Server::PrintUsage()
 }
 
 /////////////////////////////////////////////////
-bool Server::ParseArgs(int argc, char **argv)
+bool Server::ParseArgs(int _argc, char **_argv)
 {
-  // save a copy of argc and argv for consumption by system plugins
-  this->systemPluginsArgc = argc;
-  this->systemPluginsArgv = new char*[argc];
-  for (int i = 0; i < argc; ++i)
+  // Save a copy of argc and argv for consumption by system plugins
+  this->systemPluginsArgc = _argc;
+  this->systemPluginsArgv = new char*[_argc];
+  for (int i = 0; i < _argc; ++i)
   {
-    int argvLen = strlen(argv[i]) + 1;
+    int argvLen = strlen(_argv[i]) + 1;
     this->systemPluginsArgv[i] = new char[argvLen];
-    snprintf(this->systemPluginsArgv[i], argvLen, "%s", argv[i]);
+    snprintf(this->systemPluginsArgv[i], argvLen, "%s", _argv[i]);
   }
 
-  po::options_description v_desc("Options");
-  v_desc.add_options()
-    ("quiet,q", "Reduce output to stdout.")
+  po::options_description visibleDesc("Options");
+  visibleDesc.add_options()
+    ("version,v", "Output version information.")
+    ("verbose", "Increase the messages written to the terminal.")
     ("help,h", "Produce this help message.")
     ("pause,u", "Start the server in a paused state.")
     ("physics,e", po::value<std::string>(),
@@ -98,32 +100,28 @@ bool Server::ParseArgs(int argc, char **argv)
      "Compression encoding format for log data (zlib|bz2|txt).")
     ("record_path", po::value<std::string>()->default_value(""),
      "Absolute path in which to store state data")
-    ("seed",  po::value<double>(),
-     "Start with a given random number seed.")
-    ("iters",  po::value<unsigned int>(),
-     "Number of iterations to simulate.")
-    ("minimal_comms", "Reduce the messages output by gzserver")
+    ("seed",  po::value<double>(), "Start with a given random number seed.")
+    ("iters",  po::value<unsigned int>(), "Number of iterations to simulate.")
+    ("minimal_comms", "Reduce the TCP/IP traffic output by gzserver")
     ("server-plugin,s", po::value<std::vector<std::string> >(),
      "Load a plugin.");
 
-  po::options_description h_desc("Hidden options");
-  h_desc.add_options()
-    ("world_file", po::value<std::string>(), "SDF world to load.");
-
-  h_desc.add_options()
+  po::options_description hiddenDesc("Hidden options");
+  hiddenDesc.add_options()
+    ("world_file", po::value<std::string>(), "SDF world to load.")
     ("pass_through", po::value<std::vector<std::string> >(),
      "not used, passed through to system plugins.");
 
   po::options_description desc("Options");
-  desc.add(v_desc).add(h_desc);
+  desc.add(visibleDesc).add(hiddenDesc);
 
-  po::positional_options_description p_desc;
-  p_desc.add("world_file", 1).add("pass_through", -1);
+  po::positional_options_description positionalDesc;
+  positionalDesc.add("world_file", 1).add("pass_through", -1);
 
   try
   {
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(
-          p_desc).allow_unregistered().run(), this->vm);
+    po::store(po::command_line_parser(_argc, _argv).options(desc).positional(
+          positionalDesc).allow_unregistered().run(), this->vm);
 
     po::notify(this->vm);
   }
@@ -135,17 +133,24 @@ bool Server::ParseArgs(int argc, char **argv)
     return false;
   }
 
-  if (this->vm.count("help"))
+  if (this->vm.count("version"))
   {
-    this->PrintUsage();
-    std::cerr << v_desc << "\n";
+    std::cout << GAZEBO_VERSION_HEADER << std::endl;
     return false;
   }
 
-  if (this->vm.count("quiet"))
-    gazebo::common::Console::Instance()->SetQuiet(true);
-  else
+  if (this->vm.count("help"))
+  {
+    this->PrintUsage();
+    std::cerr << visibleDesc << "\n";
+    return false;
+  }
+
+  if (this->vm.count("verbose"))
+  {
     gazebo::printVersion();
+    gazebo::common::Console::SetQuiet(false);
+  }
 
   if (this->vm.count("minimal_comms"))
     gazebo::transport::setMinimalComms(true);
@@ -524,7 +529,7 @@ void Server::SetParams(const common::StrStr_M &_params)
 /////////////////////////////////////////////////
 void Server::OnControl(ConstServerControlPtr &_msg)
 {
-  boost::mutex::scoped_lock lock(*this->receiveMutex);
+  boost::mutex::scoped_lock lock(this->receiveMutex);
   this->controlMsgs.push_back(*_msg);
 }
 
@@ -535,7 +540,84 @@ void Server::ProcessControlMsgs()
   for (iter = this->controlMsgs.begin();
        iter != this->controlMsgs.end(); ++iter)
   {
-    if ((*iter).has_save_world_name())
+    if ((*iter).has_clone() && (*iter).clone())
+    {
+      bool success = true;
+      std::string host;
+      std::string port;
+      physics::WorldPtr world;
+
+      // Get the world's name to be cloned.
+      std::string worldName = "";
+      if ((*iter).has_save_world_name())
+        worldName = (*iter).save_world_name();
+
+      // Get the world pointer.
+      try
+      {
+        world = physics::get_world(worldName);
+      }
+      catch(const common::Exception &)
+      {
+        gzwarn << "Unable to clone a server. Unknown world ["
+               << (*iter).save_world_name() << "]" << std::endl;
+        success = false;
+      }
+
+      // Check if the message contains a port for the new server.
+      if ((*iter).has_new_port())
+        port = boost::lexical_cast<std::string>((*iter).new_port());
+      else
+      {
+        gzwarn << "Unable to clone a server. Port is missing" << std::endl;
+        success = false;
+      }
+
+      if (success)
+      {
+        // world should not be NULL at this point.
+        GZ_ASSERT(world, "NULL world pointer");
+
+        // Save the world's state in a temporary file (clone.<PORT>.world).
+        boost::filesystem::path tmpDir =
+            boost::filesystem::temp_directory_path();
+        boost::filesystem::path worldFilename = "clone." + port + ".world";
+        boost::filesystem::path worldPath = tmpDir / worldFilename;
+        world->Save(worldPath.string());
+
+        // Get the hostname from the current server's master.
+        unsigned int unused;
+        transport::get_master_uri(host, unused);
+
+        // Command to be executed for cloning the server. The new server will
+        // load the world file /tmp/clone.<PORT>.world
+        std::string cmd = "GAZEBO_MASTER_URI=http://" + host + ":" + port +
+            " gzserver " + worldPath.string() + " &";
+
+        // Spawn a new gzserver process and load the saved world.
+        if (std::system(cmd.c_str()) == 0)
+        {
+          gzlog << "Cloning world [" << worldName << "]. "
+                << "Connect to the server by typing:\n\tGAZEBO_MASTER_URI="
+                << "http://" << host << ":" << port << " gzclient" << std::endl;
+        }
+        else
+        {
+          gzerr << "Unable to clone a simulation running the following command:"
+                << std::endl << "\t[" << cmd << "]" << std::endl;
+          success = false;
+        }
+      }
+
+      // Notify the result.
+      msgs::WorldModify worldMsg;
+      worldMsg.set_world_name(worldName);
+      worldMsg.set_cloned(success);
+      if (success)
+        worldMsg.set_cloned_uri("http://" + host + ":" + port);
+      this->worldModPub->Publish(worldMsg);
+    }
+    else if ((*iter).has_save_world_name())
     {
       physics::WorldPtr world = physics::get_world((*iter).save_world_name());
       if ((*iter).has_save_filename())
