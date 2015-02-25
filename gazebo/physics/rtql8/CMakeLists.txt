@@ -1,6 +1,7 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 
 include_directories(${RTQL8_INCLUDE_DIRS})
+
 link_directories(${RTQL8_LIBRARY_DIRS})
 
 set (sources
