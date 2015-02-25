@@ -4,5 +4,4 @@ build
 build_*
 Ogre.log
 .DS_Store
-*~
-*.orig
+*.swp
