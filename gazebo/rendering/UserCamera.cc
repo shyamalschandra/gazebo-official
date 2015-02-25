@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,12 @@
 
 #include "gazebo/rendering/selection_buffer/SelectionBuffer.hh"
 #include "gazebo/rendering/RenderEngine.hh"
-#include "gazebo/rendering/GUIOverlay.hh"
 #include "gazebo/rendering/WindowManager.hh"
 #include "gazebo/rendering/FPSViewController.hh"
 #include "gazebo/rendering/OrbitViewController.hh"
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/rendering/Scene.hh"
 #include "gazebo/rendering/UserCameraPrivate.hh"
-#include "gazebo/rendering/Conversions.hh"
 #include "gazebo/rendering/UserCamera.hh"
 
 using namespace gazebo;
@@ -40,8 +38,6 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
   : Camera(_name, _scene),
     dataPtr(new UserCameraPrivate)
 {
-  this->dataPtr->gui = new GUIOverlay();
-
   this->dataPtr->orbitViewController = NULL;
   this->dataPtr->fpsViewController = NULL;
   this->dataPtr->viewController = NULL;
@@ -50,9 +46,8 @@ UserCamera::UserCamera(const std::string &_name, ScenePtr _scene)
   this->dataPtr->joystickButtonToggleLast = false;
   this->dataPtr->joyPoseControl = true;
 
-  // Set default UserCamera render rate to 120Hz. This was choosen
-  // for stereo rendering and smooth user interactions.
-  this->SetRenderRate(120.0);
+  // Set default UserCamera render rate to 30Hz
+  this->SetRenderRate(30.0);
 
   this->SetUseSDFPose(false);
 }
@@ -62,9 +57,6 @@ UserCamera::~UserCamera()
 {
   delete this->dataPtr->orbitViewController;
   delete this->dataPtr->fpsViewController;
-
-  delete this->dataPtr->gui;
-  this->dataPtr->gui = NULL;
 
   this->connections.clear();
 
@@ -106,22 +98,6 @@ void UserCamera::Init()
   // Don't yaw along variable axis, causes leaning
   this->camera->setFixedYawAxis(true, Ogre::Vector3::UNIT_Z);
   this->camera->setDirection(1, 0, 0);
-  this->camera->setAutoAspectRatio(false);
-
-  // Right camera
-  {
-    this->dataPtr->rightCamera = this->scene->GetManager()->createCamera(
-        "StereoUserRight");
-    this->dataPtr->rightCamera->pitch(Ogre::Degree(90));
-
-    // Don't yaw along variable axis, causes leaning
-    this->dataPtr->rightCamera->setFixedYawAxis(true, Ogre::Vector3::UNIT_Z);
-    this->dataPtr->rightCamera->setDirection(1, 0, 0);
-
-    this->dataPtr->rightCamera->setAutoAspectRatio(false);
-
-    this->sceneNode->attachObject(this->dataPtr->rightCamera);
-  }
 
   this->SetHFOV(GZ_DTOR(60));
 
@@ -205,8 +181,8 @@ void UserCamera::Update()
 {
   Camera::Update();
 
-  if (this->dataPtr->gui)
-    this->dataPtr->gui->Update();
+  if (this->dataPtr->viewController)
+    this->dataPtr->viewController->Update();
 }
 
 //////////////////////////////////////////////////
@@ -230,32 +206,25 @@ void UserCamera::Fini()
 //////////////////////////////////////////////////
 void UserCamera::HandleMouseEvent(const common::MouseEvent &_evt)
 {
-  if (!this->dataPtr->gui || !this->dataPtr->gui->HandleMouseEvent(_evt))
-  {
-    if (this->dataPtr->selectionBuffer)
-      this->dataPtr->selectionBuffer->Update();
+  if (this->dataPtr->selectionBuffer)
+    this->dataPtr->selectionBuffer->Update();
 
-    // DEBUG: this->dataPtr->selectionBuffer->ShowOverlay(true);
+  // DEBUG: this->dataPtr->selectionBuffer->ShowOverlay(true);
 
-    // Don't update the camera if it's being animated.
-    if (!this->animState)
-      this->dataPtr->viewController->HandleMouseEvent(_evt);
-  }
+  // Don't update the camera if it's being animated.
+  if (!this->animState)
+    this->dataPtr->viewController->HandleMouseEvent(_evt);
 }
 
 /////////////////////////////////////////////////
 void UserCamera::HandleKeyPressEvent(const std::string &_key)
 {
-  if (this->dataPtr->gui)
-    this->dataPtr->gui->HandleKeyPressEvent(_key);
   this->dataPtr->viewController->HandleKeyPressEvent(_key);
 }
 
 /////////////////////////////////////////////////
 void UserCamera::HandleKeyReleaseEvent(const std::string &_key)
 {
-  if (this->dataPtr->gui)
-    this->dataPtr->gui->HandleKeyReleaseEvent(_key);
   this->dataPtr->viewController->HandleKeyReleaseEvent(_key);
 }
 
@@ -308,8 +277,8 @@ bool UserCamera::AttachToVisualImpl(VisualPtr _visual, bool _inheritOrientation,
       pitch = acos(zDiff/dist);
     }
 
-    this->RotateYaw(yaw);
-    this->RotatePitch(pitch);
+    this->Yaw(yaw);
+    this->Pitch(pitch);
 
     math::Box bb = _visual->GetBoundingBox();
     math::Vector3 pos = bb.GetCenter();
@@ -395,15 +364,6 @@ void UserCamera::Resize(unsigned int /*_w*/, unsigned int /*_h*/)
     double vfov = 2.0 * atan(tan(hfov / 2.0) / ratio);
     this->camera->setAspectRatio(ratio);
     this->camera->setFOVy(Ogre::Radian(vfov));
-
-    this->dataPtr->rightCamera->setAspectRatio(ratio);
-    this->dataPtr->rightCamera->setFOVy(Ogre::Radian(vfov));
-
-    if (this->dataPtr->gui)
-    {
-      this->dataPtr->gui->Resize(this->viewport->getActualWidth(),
-                        this->viewport->getActualHeight());
-    }
 
     delete [] this->saveFrameBuffer;
     this->saveFrameBuffer = NULL;
@@ -557,42 +517,12 @@ void UserCamera::SetRenderTarget(Ogre::RenderTarget *_target)
 {
   Camera::SetRenderTarget(_target);
 
-  // is 0.03m the stereo baseline?
-  Ogre::Vector2 offset(0.0f, 0.0f);
-  float focalLength = 1.0;
-
-  this->camera->setFocalLength(focalLength);
-  this->camera->setFrustumOffset(offset);
-
-  this->dataPtr->rightCamera->setFocalLength(focalLength);
-  this->dataPtr->rightCamera->setFrustumOffset(-offset);
-
-  this->dataPtr->rightViewport =
-    this->renderTarget->addViewport(this->dataPtr->rightCamera, 1);
-  this->dataPtr->rightViewport->setBackgroundColour(
-        Conversions::Convert(this->scene->GetBackgroundColor()));
-
-#if OGRE_VERSION_MAJOR > 1 || OGRE_VERSION_MINOR >= 9
-  this->viewport->setDrawBuffer(Ogre::CBT_BACK_LEFT);
-  this->dataPtr->rightViewport->setDrawBuffer(Ogre::CBT_BACK_RIGHT);
-#endif
-
   this->viewport->setVisibilityMask(GZ_VISIBILITY_ALL);
-  this->dataPtr->rightViewport->setVisibilityMask(GZ_VISIBILITY_ALL);
-
-  if (this->dataPtr->gui)
-    this->dataPtr->gui->Init(this->renderTarget);
 
   this->initialized = true;
 
   this->dataPtr->selectionBuffer = new SelectionBuffer(this->scopedUniqueName,
       this->scene->GetManager(), this->renderTarget);
-}
-
-//////////////////////////////////////////////////
-GUIOverlay *UserCamera::GetGUIOverlay()
-{
-  return this->dataPtr->gui;
 }
 
 //////////////////////////////////////////////////
@@ -621,12 +551,14 @@ VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos,
   {
     // Make sure we set the _mod only if we have found a selection object
     if (entity->getName().substr(0, 15) == "__SELECTION_OBJ" &&
-        !entity->getUserAny().isEmpty() &&
-        entity->getUserAny().getType() == typeid(std::string))
+        !entity->getUserObjectBindings().getUserAny().isEmpty() &&
+        entity->getUserObjectBindings().getUserAny().getType() ==
+        typeid(std::string))
     {
       try
       {
-        _mod = Ogre::any_cast<std::string>(entity->getUserAny());
+        _mod = Ogre::any_cast<std::string>(
+            entity->getUserObjectBindings().getUserAny());
       }
       catch(Ogre::Exception &e)
       {
@@ -635,12 +567,13 @@ VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos,
       }
     }
 
-    if (!entity->getUserAny().isEmpty())
+    if (!entity->getUserObjectBindings().getUserAny().isEmpty())
     {
       try
       {
         result = this->scene->GetVisual(
-            Ogre::any_cast<std::string>(entity->getUserAny()));
+            Ogre::any_cast<std::string>(
+              entity->getUserObjectBindings().getUserAny()));
       }
       catch(Ogre::Exception &e)
       {
@@ -667,10 +600,11 @@ VisualPtr UserCamera::GetVisual(const math::Vector2i &_mousePos) const
   Ogre::Entity *entity =
     this->dataPtr->selectionBuffer->OnSelectionClick(_mousePos.x, _mousePos.y);
 
-  if (entity && !entity->getUserAny().isEmpty())
+  if (entity && !entity->getUserObjectBindings().getUserAny().isEmpty())
   {
     result = this->scene->GetVisual(
-        Ogre::any_cast<std::string>(entity->getUserAny()));
+        Ogre::any_cast<std::string>(
+          entity->getUserObjectBindings().getUserAny()));
   }
 
   return result;
@@ -747,21 +681,5 @@ void UserCamera::OnJoyPose(ConstPosePtr &_msg)
     math::Pose pose(msgs::Convert(_msg->position()),
                     msgs::Convert(_msg->orientation()));
     this->SetWorldPose(pose);
-  }
-}
-
-//////////////////////////////////////////////////
-void UserCamera::SetClipDist(float _near, float _far)
-{
-  Camera::SetClipDist(_near, _far);
-
-  if (this->camera && this->dataPtr->rightCamera)
-  {
-    this->dataPtr->rightCamera->setNearClipDistance(
-      this->camera->getNearClipDistance());
-    this->dataPtr->rightCamera->setFarClipDistance(
-      this->camera->getFarClipDistance());
-    this->dataPtr->rightCamera->setRenderingDistance(
-      this->camera->getRenderingDistance());
   }
 }
