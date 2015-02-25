@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,12 +33,17 @@ class ImageConvertStressTest : public ServerFixture
     GetMemInfo(resident, share);
     return resident + share;
   }
+
+  public: static void delete_many(unsigned char* ptr)
+  {
+    delete[] ptr;
+  }
 };
 
 /////////////////////////////////////////////////
 TEST_F(ImageConvertStressTest, ManyConversions)
 {
-  boost::shared_ptr<unsigned char[]> u(new unsigned char[400*400*3]);
+  boost::shared_ptr<unsigned char> u(new unsigned char[400*400*3], delete_many);
   double memBefore = virtMemory();
 
   for (int i = 0; i < 1000; i++)
