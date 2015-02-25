@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,24 @@
  * limitations under the License.
  *
  */
-#include "common/Color.hh"
-#include "math/Pose.hh"
-#include "math/Vector3.hh"
-#include "math/Vector2d.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Vector2d.hh"
 
-#include "sdf/interface/parser.hh"
-#include "sdf/interface/SDF.hh"
+#include "gazebo/sdf/interface/parser.hh"
+#include "gazebo/sdf/interface/SDF.hh"
 
 using namespace sdf;
+
+void sdf::addURIPath(const std::string &/*_uri*/, const std::string &/*_path*/)
+{
+}
+
+void sdf::setFindCallback(
+    boost::function<std::string (const std::string &)> /*_cb*/)
+{
+}
 
 std::string SDF::version = SDF_VERSION;
 
@@ -35,7 +44,6 @@ Element::Element()
 /////////////////////////////////////////////////
 Element::~Element()
 {
-  this->parent.reset();
   for (Param_V::iterator iter = this->attributes.begin();
       iter != this->attributes.end(); ++iter)
   {
@@ -59,6 +67,7 @@ Element::~Element()
 
   this->value.reset();
 
+  this->parent.reset();
   // this->Reset();
 }
 
@@ -124,6 +133,13 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
     const std::string &_type, const std::string &_defaultValue, bool _required,
     const std::string &_description)
 {
+  if (_type == "char")
+  {
+    boost::shared_ptr<ParamT<char> > param(
+        new ParamT<char>(_key, _defaultValue, _required, _type,
+                           _description));
+    return param;
+  }
   if (_type == "double")
   {
     boost::shared_ptr<ParamT<double> > param(
@@ -198,6 +214,13 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
                                        _type, _description));
     return param;
   }
+  else if (_type == "quaternion")
+  {
+    boost::shared_ptr<ParamT<gazebo::math::Quaternion> > param(
+        new ParamT<gazebo::math::Quaternion>(_key, _defaultValue, _required,
+                                       _type, _description));
+    return param;
+  }
   else if (_type == "time")
   {
     boost::shared_ptr<ParamT<gazebo::common::Time> > param(
@@ -207,7 +230,6 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
   }
   else
   {
-    gzerr << "Unknown attribute _type[" << _type << "]\n";
     return boost::shared_ptr<Param>();
   }
 }
@@ -367,7 +389,12 @@ void Element::PrintDocRightPane(std::string &_html, int _spacing, int &_index)
 
   stream << "<font style='font-weight:bold'>Type: </font>";
   if (this->value)
-    stream << this->value->GetTypeName() << "\n";
+  {
+    stream << this->value->GetTypeName()
+           << "&nbsp;&nbsp;&nbsp;\n"
+           << "<font style='font-weight:bold'>Default: </font>"
+           << this->value->GetDefaultAsString() << '\n';
+  }
   else
     stream << "n/a\n";
 
@@ -732,8 +759,11 @@ ElementPtr Element::AddElement(const std::string &_name)
       for (iter2 = elem->elementDescriptions.begin();
            iter2 != elem->elementDescriptions.end(); ++iter2)
       {
+        // add only required child element
         if ((*iter2)->GetRequired() == "1")
+        {
           elem->AddElement((*iter2)->name);
+        }
       }
 
       return this->elements.back();
@@ -749,7 +779,17 @@ bool Element::GetValueBool(const std::string &_key)
   bool result = false;
 
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a bool.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -762,6 +802,7 @@ bool Element::GetValueBool(const std::string &_key)
     else
       gzerr << "Unable to find value for key[" << _key << "]\n";
   }
+
   return result;
 }
 
@@ -769,8 +810,19 @@ bool Element::GetValueBool(const std::string &_key)
 int Element::GetValueInt(const std::string &_key)
 {
   int result = 0;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as an int.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -790,8 +842,19 @@ int Element::GetValueInt(const std::string &_key)
 float Element::GetValueFloat(const std::string &_key)
 {
   float result = 0.0;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a float.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -811,12 +874,21 @@ float Element::GetValueFloat(const std::string &_key)
 double Element::GetValueDouble(const std::string &_key)
 {
   double result = 0.0;
+
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<double>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<double>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a double.\n";
+    }
   }
   else
   {
@@ -839,10 +911,18 @@ unsigned int Element::GetValueUInt(const std::string &_key)
   unsigned int result = 0;
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<unsigned int>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<unsigned int>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as an unsigned int.\n";
+    }
   }
   else
   {
@@ -863,12 +943,21 @@ unsigned int Element::GetValueUInt(const std::string &_key)
 char Element::GetValueChar(const std::string &_key)
 {
   char result = '\0';
+
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<char>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<char>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a char.\n";
+    }
   }
   else
   {
@@ -889,8 +978,19 @@ char Element::GetValueChar(const std::string &_key)
 std::string Element::GetValueString(const std::string &_key)
 {
   std::string result = "";
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value, returning empty string.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -910,8 +1010,19 @@ std::string Element::GetValueString(const std::string &_key)
 gazebo::math::Vector3 Element::GetValueVector3(const std::string &_key)
 {
   gazebo::math::Vector3 result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a vector3.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -931,8 +1042,19 @@ gazebo::math::Vector3 Element::GetValueVector3(const std::string &_key)
 gazebo::math::Vector2d Element::GetValueVector2d(const std::string &_key)
 {
   gazebo::math::Vector2d result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a vector2d.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -952,8 +1074,19 @@ gazebo::math::Vector2d Element::GetValueVector2d(const std::string &_key)
 gazebo::math::Quaternion Element::GetValueQuaternion(const std::string &_key)
 {
   gazebo::math::Quaternion result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a quaternion.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -973,8 +1106,19 @@ gazebo::math::Quaternion Element::GetValueQuaternion(const std::string &_key)
 gazebo::math::Pose Element::GetValuePose(const std::string &_key)
 {
   gazebo::math::Pose result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a pose.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -994,8 +1138,19 @@ gazebo::math::Pose Element::GetValuePose(const std::string &_key)
 gazebo::common::Color Element::GetValueColor(const std::string &_key)
 {
   gazebo::common::Color result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a color.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -1015,8 +1170,19 @@ gazebo::common::Color Element::GetValueColor(const std::string &_key)
 gazebo::common::Time Element::GetValueTime(const std::string &_key)
 {
   gazebo::common::Time result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a time.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -1052,6 +1218,8 @@ void Element::RemoveFromParent()
 /////////////////////////////////////////////////
 void Element::RemoveChild(ElementPtr _child)
 {
+  GZ_ASSERT(_child, "Cannot remove a NULL child pointer");
+
   ElementPtr_V::iterator iter;
   iter = std::find(this->elements.begin(),
                    this->elements.end(), _child);
@@ -1066,6 +1234,12 @@ void Element::RemoveChild(ElementPtr _child)
 /////////////////////////////////////////////////
 void Element::ClearElements()
 {
+  for (sdf::ElementPtr_V::iterator iter = this->elements.begin();
+      iter != this->elements.end(); ++iter)
+  {
+    (*iter)->ClearElements();
+  }
+
   this->elements.clear();
 }
 
@@ -1091,25 +1265,27 @@ void Element::Update()
 /////////////////////////////////////////////////
 void Element::Reset()
 {
-  this->parent.reset();
-
   for (ElementPtr_V::iterator iter = this->elements.begin();
       iter != this->elements.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
 
   for (ElementPtr_V::iterator iter = this->elementDescriptions.begin();
       iter != this->elementDescriptions.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
   this->elements.clear();
   this->elementDescriptions.clear();
 
   this->value.reset();
+
+  this->parent.reset();
 }
 
 /////////////////////////////////////////////////
