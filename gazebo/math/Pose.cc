@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -239,32 +239,3 @@ void Pose::Round(int _precision)
   this->pos.Round(_precision);
 }
 
-#ifdef HAVE_SDF
-//////////////////////////////////////////////////
-Pose::Pose(const sdf::Pose &_pose)
-{
-  this->pos.x = _pose.pos.x;
-  this->pos.y = _pose.pos.y;
-  this->pos.z = _pose.pos.z;
-
-  this->rot.x = _pose.rot.x;
-  this->rot.y = _pose.rot.y;
-  this->rot.z = _pose.rot.z;
-  this->rot.w = _pose.rot.w;
-}
-
-//////////////////////////////////////////////////
-Pose &Pose::operator=(const sdf::Pose &_pose)
-{
-  this->pos.x = _pose.pos.x;
-  this->pos.y = _pose.pos.y;
-  this->pos.z = _pose.pos.z;
-
-  this->rot.x = _pose.rot.x;
-  this->rot.y = _pose.rot.y;
-  this->rot.z = _pose.rot.z;
-  this->rot.w = _pose.rot.w;
-
-  return *this;
-}
-#endif

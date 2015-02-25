@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
  * limitations under the License.
  *
 */
-#include <sdf/sdf.hh>
 #include "Inertial.hh"
 
 using namespace gazebo;
@@ -32,7 +31,7 @@ Inertial::Inertial()
   if (!this->sdfInertial)
   {
     this->sdfInertial.reset(new sdf::Element);
-    sdf::initFile("inertial.sdf", this->sdfInertial);
+    initFile("inertial.sdf", this->sdfInertial);
   }
 
   // This is the only time this->sdfInertial should be used.
@@ -43,7 +42,7 @@ Inertial::Inertial()
 Inertial::Inertial(double _m)
 {
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("inertial.sdf", this->sdf);
+  initFile("inertial.sdf", this->sdf);
 
   this->mass = _m;
   this->cog.Set(0, 0, 0, 0, 0, 0);
@@ -55,7 +54,7 @@ Inertial::Inertial(double _m)
 Inertial::Inertial(const Inertial &_inertial)
 {
   this->sdf.reset(new sdf::Element);
-  sdf::initFile("inertial.sdf", this->sdf);
+  initFile("inertial.sdf", this->sdf);
 
   (*this) = _inertial;
 }

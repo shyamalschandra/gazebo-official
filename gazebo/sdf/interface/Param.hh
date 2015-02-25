@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@
 #ifndef SDF_PARAM_HH
 #define SDF_PARAM_HH
 
-#include <boost/lexical_cast.hpp>
+#ifndef Q_MOC_RUN  // See: https://bugreports.qt-project.org/browse/QTBUG-22829
+# include <boost/lexical_cast.hpp>
+#endif
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/any.hpp>

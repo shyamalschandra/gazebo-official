@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,26 @@
  * limitations under the License.
  *
  */
-#include <iomanip>
+
+#include <boost/date_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
-#include <boost/date_time.hpp>
-
-#include "gazebo/math/Rand.hh"
-
-#include "gazebo/transport/transport.hh"
+#include <iomanip>
 
 #include "gazebo/common/Assert.hh"
-#include "gazebo/common/Events.hh"
-#include "gazebo/common/Time.hh"
-#include "gazebo/common/Console.hh"
-#include "gazebo/common/Exception.hh"
 #include "gazebo/common/Base64.hh"
-#include "gazebo/util/LogRecord.hh"
-
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/common/SystemPaths.hh"
 #include "gazebo/gazebo_config.h"
+#include "gazebo/math/Rand.hh"
+#include "gazebo/transport/transport.hh"
+#include "gazebo/util/LogRecord.hh"
 
 using namespace gazebo;
 using namespace util;
@@ -57,7 +56,10 @@ LogRecord::LogRecord()
   GZ_ASSERT(homePath, "HOME environment variable is missing");
 
   if (!homePath)
-    this->logBasePath = boost::filesystem::path("/tmp/gazebo");
+  {
+    common::SystemPaths *paths = common::SystemPaths::Instance();
+    this->logBasePath = paths->GetTmpPath() + "/gazebo";
+  }
   else
     this->logBasePath = boost::filesystem::path(homePath);
 
@@ -205,8 +207,9 @@ void LogRecord::Fini()
   {
     boost::mutex::scoped_lock lock(this->controlMutex);
     this->cleanupCondition.notify_all();
-  } while (!this->cleanupThread.timed_join(
-        boost::posix_time::milliseconds(1000)));
+  } while (this->cleanupThread.joinable() &&
+          !this->cleanupThread.timed_join(
+            boost::posix_time::milliseconds(1000)));
 
   boost::mutex::scoped_lock lock(this->controlMutex);
   this->connections.clear();
@@ -275,8 +278,9 @@ void LogRecord::Add(const std::string &_name, const std::string &_filename,
 
     if (this->logs.find(_name)->second->GetRelativeFilename() != _filename)
     {
-      gzthrow(std::string("Attempting to add a duplicate log object named[")
-          + _name + "] with a filename of [" + _filename + "]\n");
+      gzerr << "Attempting to add a duplicate log object named["
+          << _name << "] with a filename of [" << _filename << "].\n";
+      return;
     }
     else
     {
@@ -548,15 +552,15 @@ unsigned int LogRecord::Log::Update()
     std::string data = stream.str();
     if (!data.empty())
     {
-      const std::string encoding = this->parent->GetEncoding();
+      const std::string encodingLocal = this->parent->GetEncoding();
 
       this->buffer.append("<chunk encoding='");
-      this->buffer.append(encoding);
+      this->buffer.append(encodingLocal);
       this->buffer.append("'>\n");
 
       this->buffer.append("<![CDATA[");
       // Compress the data.
-      if (encoding == "bz2")
+      if (encodingLocal == "bz2")
       {
         std::string str;
 
@@ -571,7 +575,7 @@ unsigned int LogRecord::Log::Update()
         // Encode in base64.
         Base64Encode(str.c_str(), str.size(), this->buffer);
       }
-      else if (encoding == "zlib")
+      else if (encodingLocal == "zlib")
       {
         std::string str;
 
@@ -586,10 +590,10 @@ unsigned int LogRecord::Log::Update()
         // Encode in base64.
         Base64Encode(str.c_str(), str.size(), this->buffer);
       }
-      else if (encoding == "txt")
+      else if (encodingLocal == "txt")
         this->buffer.append(data);
       else
-        gzerr << "Unknown log file encoding[" << encoding << "]\n";
+        gzerr << "Unknown log file encoding[" << encodingLocal << "]\n";
       this->buffer.append("]]>\n");
 
       this->buffer.append("</chunk>\n");

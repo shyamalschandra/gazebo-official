@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,12 @@
 /// \brief namespace for Simulation Description Format parser
 namespace sdf
 {
+  class SDF;
+  class Element;
+  typedef boost::shared_ptr<SDF> SDFPtr;
+  typedef boost::shared_ptr<Element> ElementPtr;
+  typedef std::vector< ElementPtr > ElementPtr_V;
+
   /// A function that is used in the external SDF library. This is here to
   /// make the build work if the external SDF library is not present.
   void addURIPath(const std::string &_uri, const std::string &_path);
@@ -306,9 +312,6 @@ namespace sdf
     public: static std::string version;
   };
   /// \}
-
-  typedef boost::shared_ptr<SDF> SDFPtr;
-  typedef boost::shared_ptr<Element> ElementPtr;
-  typedef std::vector< ElementPtr > ElementPtr_V;
 }
+
 #endif

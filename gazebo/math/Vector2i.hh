@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,7 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
-
-// Remove the gazebo_confif and ifdefs in Gazebo 1.8
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
-#include "sdf/sdf.hh"
-#endif
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -41,7 +36,7 @@ namespace gazebo
 
     /// \class Vector2i Vector2i.hh math/gzmath.hh
     /// \brief Generic integer x, y vector
-    class Vector2i
+    class GAZEBO_VISIBLE Vector2i
     {
       /// \brief Constructor
       public: Vector2i();
@@ -54,15 +49,6 @@ namespace gazebo
       /// \brief Copy onstructor
       /// \param[in] _pt a point
       public: Vector2i(const Vector2i &_pt);
-
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Vector2i(const sdf::Vector2i &_pt) __attribute__((deprecated));
-
-      /// Deprecated
-      public: Vector2i &operator =(const sdf::Vector2i &_v)
-              __attribute__((deprecated));
-#endif
 
       /// \brief Destructor
       public: virtual ~Vector2i();
