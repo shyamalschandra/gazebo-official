@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,14 +43,6 @@ class Issue494Test : public JointTest
 void Issue494Test::CheckAxisFrame(const std::string &_physicsEngine,
                                   const std::string &_jointType)
 {
-  if (_physicsEngine == "dart")
-  {
-    gzerr << "This test doesn't yet work for [" << _physicsEngine
-          << "] with joint type [" << _jointType << "]"
-          << std::endl;
-    return;
-  }
-
   // Load an empty world
   LoadWorld("worlds/empty.world", true, _physicsEngine);
 
@@ -94,6 +86,13 @@ void Issue494Test::CheckAxisFrame(const std::string &_physicsEngine,
       std::cout << " parent";
     }
     std::cout << std::endl;
+
+    if (opt.worldChild && _physicsEngine == "dart")
+    {
+      gzerr << "dart seg-faults without a child link, skipping sub-test"
+            << std::endl;
+      break;
+    }
 
     // spawn joint using using parent model frame to define joint axis
     {
@@ -146,8 +145,6 @@ void Issue494Test::CheckJointProperties(physics::JointPtr _joint,
   ASSERT_TRUE(world != NULL);
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
-  bool isOde = physics->GetType().compare("ode") == 0;
-  double dt = physics->GetMaxStepSize();
 
   // Check that Joint::GetGlobalAxis matches _axis
   EXPECT_EQ(_axis, _joint->GetGlobalAxis(0));
@@ -180,7 +177,6 @@ void Issue494Test::CheckJointProperties(physics::JointPtr _joint,
   }
 
   double velocityMagnitude = 1.0;
-  double maxForce = velocityMagnitude / dt * 10.1;
   std::vector<double> velocities;
   velocities.push_back(velocityMagnitude);
   velocities.push_back(0.0);
@@ -192,13 +188,7 @@ void Issue494Test::CheckJointProperties(physics::JointPtr _joint,
     double vel = *iter;
     _joint->SetVelocity(0, vel);
 
-    // ODE requires maxForce to be non-zero for SetVelocity to work
-    // See issue #964 for discussion of consistent API
-    if (isOde)
-      _joint->SetMaxForce(0, maxForce);
-
-    // Take a step and verify that Joint::GetVelocity returns the same value
-    world->Step(1);
+    // Verify that Joint::GetVelocity returns the same value
     EXPECT_NEAR(_joint->GetVelocity(0), vel, g_tolerance);
 
     // Also verify that relative body motions match expected joint behavior

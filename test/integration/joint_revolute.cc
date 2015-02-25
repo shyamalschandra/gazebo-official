@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,14 @@ class JointTestRevolute : public JointTest
 void JointTestRevolute::PendulumEnergy(const std::string &_physicsEngine)
 {
   // Load an empty world
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // Verify physics engine type
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
 
   {
     SpawnJointOptions opt;
@@ -69,9 +76,9 @@ void JointTestRevolute::PendulumEnergy(const std::string &_physicsEngine)
 
     // Get initial energy
     physics::LinkPtr link = joint->GetChild();
-    ASSERT_TRUE(link);
+    ASSERT_TRUE(link != NULL);
     physics::ModelPtr model = link->GetModel();
-    ASSERT_TRUE(model);
+    ASSERT_TRUE(model != NULL);
 
     double energy0 = model->GetWorldEnergy();
     EXPECT_NEAR(model->GetWorldEnergyKinetic(), 0.0, g_tolerance);
@@ -98,9 +105,14 @@ void JointTestRevolute::WrapAngle(const std::string &_physicsEngine)
   }
 
   // Load an empty world
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
-  bool isOde = physics->GetType().compare("ode") == 0;
+  // Verify physics engine type
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
 
   // disable gravity
   physics->SetGravity(math::Vector3::Zero);
@@ -121,8 +133,6 @@ void JointTestRevolute::WrapAngle(const std::string &_physicsEngine)
     EXPECT_GT(vel * stepSize * stepCount * dt, 1.25 * 2 * M_PI);
 
     joint->SetVelocity(0, vel);
-    if (isOde)
-      joint->SetMaxForce(0, 1e4);
 
     // expect that joint velocity is constant
     // and that joint angle is unwrapped
@@ -142,7 +152,14 @@ void JointTestRevolute::RevoluteJoint(const std::string &_physicsEngine)
 {
   math::Rand::SetSeed(0);
   // Load world
-  LoadWorld("worlds/revolute_joint_test.world", true, _physicsEngine);
+  Load("worlds/revolute_joint_test.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // Verify physics engine type
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
 
   // Model names
   std::vector<std::string> modelNames;
@@ -562,12 +579,30 @@ void JointTestRevolute::RevoluteJoint(const std::string &_physicsEngine)
 ////////////////////////////////////////////////////////////////////////
 void JointTestRevolute::SimplePendulum(const std::string &_physicsEngine)
 {
-  LoadWorld("worlds/simple_pendulums.world", true, _physicsEngine);
+  Load("worlds/simple_pendulums.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  int i = 0;
+  while (!this->HasEntity("model_1") && i < 20)
+  {
+    common::Time::MSleep(100);
+    ++i;
+  }
+
+  if (i > 20)
+    gzthrow("Unable to get model_1");
+
+  physics::PhysicsEnginePtr physicsEngine = world->GetPhysicsEngine();
+  EXPECT_TRUE(physicsEngine != NULL);
   physics::ModelPtr model = world->GetModel("model_1");
-  EXPECT_TRUE(model);
+  EXPECT_TRUE(model != NULL);
   physics::LinkPtr link = model->GetLink("link_2");  // sphere link at end
-  EXPECT_TRUE(link);
+  EXPECT_TRUE(link != NULL);
 
   double g = 9.81;
   double l = 10.0;
@@ -589,8 +624,8 @@ void JointTestRevolute::SimplePendulum(const std::string &_physicsEngine)
     //       << "] v[" << vel
     //       << "]\n";
   }
-  physics->SetMaxStepSize(0.0001);
-  physics->SetParam("iters", 1000);
+  physicsEngine->SetMaxStepSize(0.0001);
+  physicsEngine->SetParam("iters", 1000);
 
   {
     // test with global contact_max_correcting_vel at 0 as set by world file
@@ -644,7 +679,7 @@ void JointTestRevolute::SimplePendulum(const std::string &_physicsEngine)
     // test with global contact_max_correcting_vel at 100
     // here we expect much lower energy loss
     world->Reset();
-    physics->SetContactMaxCorrectingVel(100);
+    physicsEngine->SetContactMaxCorrectingVel(100);
 
     int steps = 10;  // @todo: make this more general
     for (int i = 0; i < steps; i ++)

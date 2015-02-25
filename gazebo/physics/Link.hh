@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ namespace gazebo
       /// \brief Reset the link.
       public: void Reset();
 
-      /// \brief Reset the link.
+      /// \brief Reset the velocity, acceleration, force and torque of link.
       public: void ResetPhysicsStates();
 
       /// \brief Update the parameters using new sdf values.
@@ -484,12 +484,17 @@ namespace gazebo
       /// \return this link's total energy
       public: double GetWorldEnergy() const;
 
+      /// \brief Returns the visual message specified by its name
+      /// \param[in] name of the visual message
+      /// \return visual message
+      public: msgs::Visual GetVisualMessage(const std::string &_name) const;
+
       /// \brief Freeze link to ground (inertial frame).
       /// \param[in] _static if true, freeze link to ground.  Otherwise
       /// unfreeze link.
       public: virtual void SetLinkStatic(bool _static) = 0;
 
-      /// \brief Move Link given source and targe frames specified in
+      /// \brief Move Link given source and target frames specified in
       /// world coordinates. Assuming link's relative pose to
       /// source frame (_worldReferenceFrameSrc) remains unchanged relative
       /// to destination frame (_worldReferenceFrameDst).
@@ -541,6 +546,9 @@ namespace gazebo
       /// \param[in] _value a particular link pointer.
       /// \return true if value is in vector.
       private: bool ContainsLink(const Link_V &_vector, const LinkPtr &_value);
+
+      /// \brief Update visual SDFs.
+      private: void UpdateVisualSDF();
 
       /// \brief Inertial properties.
       protected: InertialPtr inertial;
@@ -611,6 +619,9 @@ namespace gazebo
       /// playback.
       private: transport::SubscriberPtr audioContactsSub;
 #endif
+
+      /// \brief This flag is set to true when the link is initialized.
+      protected: bool initialized;
     };
     /// \}
   }

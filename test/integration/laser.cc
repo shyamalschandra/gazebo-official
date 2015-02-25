@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
 */
 
-#include "test/PhysicsFixture.hh"
+#include "ServerFixture.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/sensors/sensors.hh"
 #include "gazebo/common/common.hh"
@@ -26,7 +26,7 @@
 #define DOUBLE_TOL 1e-6
 
 using namespace gazebo;
-class LaserTest : public PhysicsFixture,
+class LaserTest : public ServerFixture,
                   public testing::WithParamInterface<const char*>
 {
   public: void Stationary_EmptyWorld(const std::string &_physicsEngine);
@@ -47,7 +47,7 @@ void LaserTest::Stationary_EmptyWorld(const std::string &_physicsEngine)
     return;
   }
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -68,7 +68,7 @@ void LaserTest::Stationary_EmptyWorld(const std::string &_physicsEngine)
     boost::static_pointer_cast<sensors::RaySensor>(
         sensors::SensorManager::Instance()->GetSensor(raySensorName));
 
-  ASSERT_TRUE(laser);
+  ASSERT_TRUE(laser != NULL);
   laser->Init();
   laser->Update(true);
 
@@ -115,6 +115,8 @@ void LaserTest::Stationary_EmptyWorld(const std::string &_physicsEngine)
   // Move the laser to point down on the ground plane,
   {
     common::Time prevTime;
+    physics::WorldPtr world = physics::get_world("default");
+    ASSERT_TRUE(world != NULL);
 
     physics::ModelPtr model = world->GetModel(modelName);
 
@@ -182,7 +184,7 @@ void LaserTest::LaserUnitBox(const std::string &_physicsEngine)
   // being a static model to verify collision filtering is working,
   // then move all 3 boxes out of range and verify range values
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -192,7 +194,8 @@ void LaserTest::LaserUnitBox(const std::string &_physicsEngine)
   double maxRange = 5.0;
   double rangeResolution = 0.02;
   unsigned int samples = 320;
-  math::Pose testPose(math::Vector3(0, 0, 0),
+  // Lift ray sensor so it's not right next to the edge
+  math::Pose testPose(math::Vector3(0, 0, 0.1),
       math::Quaternion(0, 0, 0));
   if (_physicsEngine == "bullet" && LIBBULLET_VERSION >= 2.82)
   {
@@ -232,6 +235,9 @@ void LaserTest::LaserUnitBox(const std::string &_physicsEngine)
 
   raySensor->Init();
   raySensor->Update(true);
+
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
   EXPECT_TRUE(world->GetModel(box02)->IsStatic());
 
@@ -287,7 +293,7 @@ void LaserTest::LaserVertical(const std::string &_physicsEngine)
   // Place a box within range and verify range values,
   // then move the box out of range and verify range values
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -322,6 +328,9 @@ void LaserTest::LaserVertical(const std::string &_physicsEngine)
 
   raySensor->Init();
   raySensor->Update(true);
+
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
   unsigned int mid = samples / 2;
   double unitBoxSize = 1.0;
@@ -388,7 +397,7 @@ void LaserTest::LaserScanResolution(const std::string &_physicsEngine)
   // Orient the sensor to face downwards and verify that the interpolated
   // range values all intersect with ground plane at z = 0;
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -422,6 +431,9 @@ void LaserTest::LaserScanResolution(const std::string &_physicsEngine)
 
   raySensor->Init();
   raySensor->Update(true);
+
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
   unsigned int h, v;
 
@@ -468,7 +480,7 @@ void LaserTest::GroundPlane(const std::string &_physicsEngine)
   // Test a ray sensor that has a vertical range component.
   // Aim the sensor toward the ground and verify correct ranges.
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -499,6 +511,9 @@ void LaserTest::GroundPlane(const std::string &_physicsEngine)
 
   raySensor->Init();
   raySensor->Update(true);
+
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
   unsigned int h, v;
 
@@ -537,7 +552,7 @@ void LaserTest::LaserUnitNoise(const std::string &_physicsEngine)
 
   // Test ray sensor with noise applied
 
-  LoadWorld("worlds/empty.world", true, _physicsEngine);
+  Load("worlds/empty.world", true, _physicsEngine);
 
   std::string modelName = "ray_model";
   std::string raySensorName = "ray_sensor";
@@ -568,6 +583,9 @@ void LaserTest::LaserUnitNoise(const std::string &_physicsEngine)
 
   raySensor->Init();
   raySensor->Update(true);
+
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
 
   // Expect at least one value to be non-max (empty world), and expect the
   // mean to be close to the max+noiseMean

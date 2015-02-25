@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,11 +57,6 @@ void JointTestScrew::WrapAngle(const std::string &_physicsEngine)
   if (_physicsEngine == "bullet")
   {
     gzerr << "Aborting test for bullet, see issues #1074.\n";
-    return;
-  }
-  if (_physicsEngine == "dart")
-  {
-    gzerr << "Aborting test for dart, see issues #1096.\n";
     return;
   }
 
@@ -266,7 +261,7 @@ void JointTestScrew::ScrewJointForce(const std::string &_physicsEngine)
 
   if (_physicsEngine == "dart")
   {
-    gzerr << "DART Screw Joint not yet implemented.\n";
+    gzerr << "Aborting test for dart, see issues #1096.\n";
     return;
   }
 
@@ -463,12 +458,6 @@ TEST_P(JointTestScrew, ScrewJointForce)
 //////////////////////////////////////////////////
 void JointTestScrew::ScrewJointLimitForce(const std::string &_physicsEngine)
 {
-  if (_physicsEngine == "dart")
-  {
-    gzerr << "DART Screw Joint not yet implemented.\n";
-    return;
-  }
-
   // Load pr2 world
   LoadWorld("worlds/pr2.world", true, _physicsEngine);
 
