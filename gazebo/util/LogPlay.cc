@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,15 +167,6 @@ bool LogPlay::Step(std::string &_data)
   std::string endMarker = "</sdf>";
   size_t start = this->currentChunk.find(startMarker);
   size_t end = this->currentChunk.find(endMarker);
-
-  if (start == std::string::npos || end == std::string::npos)
-  {
-    startMarker = "<sdf ";
-    endMarker = "</sdf>";
-
-    start = this->currentChunk.find(startMarker);
-    end = this->currentChunk.find(endMarker);
-  }
 
   if (start == std::string::npos || end == std::string::npos)
   {

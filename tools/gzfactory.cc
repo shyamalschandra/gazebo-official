@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #include <fstream>
 #include <string>
 #include <gazebo/transport/transport.hh>
+#include <gazebo/common/CommonIface.hh>
 
 using namespace gazebo;
 namespace po = boost::program_options;
@@ -205,6 +206,8 @@ int main(int argc, char **argv)
     std::cout << v_desc << "\n";
     return -1;
   }
+
+  sdf::setFindCallback(boost::bind(&gazebo::common::find_file, _1));
 
   if (vm.count("command"))
   {
