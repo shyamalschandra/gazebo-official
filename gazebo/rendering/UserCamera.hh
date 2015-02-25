@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,42 +14,34 @@
  * limitations under the License.
  *
 */
-/* Desc: Camera for viewing the world
- * Author: Nate Koenig
- * Date: 19 Jun 2008
- */
-
-#ifndef _USERCAMERA_HH_
-#define _USERCAMERA_HH_
+#ifndef _GAZEBO_USERCAMERA_HH_
+#define _GAZEBO_USERCAMERA_HH_
 
 #include <string>
 #include <vector>
 
-#include "rendering/Camera.hh"
-#include "rendering/RenderTypes.hh"
-#include "common/CommonTypes.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/common/CommonTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
+  class UserCameraPrivate;
+
   namespace rendering
   {
-    class OrbitViewController;
-    class FPSViewController;
-    class Visual;
-    class GUIOverlay;
-    class SelectionBuffer;
-
     /// \addtogroup gazebo_rendering
     /// \{
 
     /// \class UserCamera UserCamera.hh rendering/rendering.hh
     /// \brief A camera used for user visualization of a scene
-    class UserCamera : public Camera
+    class GAZEBO_VISIBLE UserCamera : public Camera
     {
       /// \brief Constructor
       /// \param[in] _name Name of the camera.
       /// \param[in] _scene Scene to put the camera in.
-      public: UserCamera(const std::string &_name, Scene *_scene);
+      public: UserCamera(const std::string &_name, ScenePtr _scene);
 
       /// \brief Destructor
       public: virtual ~UserCamera();
@@ -57,6 +49,9 @@ namespace gazebo
       /// \brief Load the user camera.
       /// \param[in] _sdf Parameters for the camera.
       public: void Load(sdf::ElementPtr _sdf);
+
+      // Documentation inherited
+      public: virtual void SetClipDist(float _near, float _far);
 
       /// \brief Generic load function
       public: void Load();
@@ -99,6 +94,10 @@ namespace gazebo
       public: void SetViewController(const std::string &_type,
                                      const math::Vector3 &_pos);
 
+      /// \brief Get current view controller type.
+      /// \return Type of the current view controller: "orbit", "fps"
+      public: std::string GetViewControllerTypeString();
+
       /// \brief Resize the camera.
       /// \param[in] _w Width of the camera image.
       /// \param[in] _h Height of the camera image.
@@ -118,7 +117,7 @@ namespace gazebo
 
       /// \brief Get the triangle count.
       /// \return The number of triangles currently being rendered.
-      public: float GetTriangleCount() const;
+      public: unsigned int GetTriangleCount() const;
 
       /// \brief Move the camera to focus on a visual.
       /// \param[in] _visual Visual to move the camera to.
@@ -138,12 +137,6 @@ namespace gazebo
       /// \param[in] _target The new rendering target.
       public: virtual void SetRenderTarget(Ogre::RenderTarget *_target);
 
-      /// \brief Get the GUI overlay
-      ///
-      /// An overlay allows you to draw 2D elements on the viewport.
-      /// \return Pointer to the GUIOverlay.
-      public: GUIOverlay *GetGUIOverlay();
-
       /// \brief Set whether the view controller is enabled.
       ///
       /// The view controller is used to handle user camera movements.
@@ -156,8 +149,8 @@ namespace gazebo
       /// \param[in] _mousePos The position of the mouse in screen coordinates
       /// \param[out] _mod Used for object manipulation
       /// \return The selected entity, or NULL
-      public: VisualPtr GetVisual(const math::Vector2i &mousePos,
-                                  std::string &mod);
+      public: VisualPtr GetVisual(const math::Vector2i &_mousePos,
+                                  std::string &_mod);
 
       /// \brief Get a visual at a mouse position
       /// \param[in] _mousePos 2D position of the mouse in pixels.
@@ -166,6 +159,32 @@ namespace gazebo
       /// \brief Set the point the camera should orbit around.
       /// \param[in] _pt The focal point
       public: void SetFocalPoint(const math::Vector3 &_pt);
+
+      // Documentation inherited
+      public: virtual unsigned int GetImageWidth() const;
+
+      // Documentation inherited
+      public: virtual unsigned int GetImageHeight() const;
+
+      /// brief Show if the user camera pose has changed in the world file.
+      /// return true if the camera pose changed in the world file.
+      public: bool IsCameraSetInWorldFile();
+
+      /// brief Set if the user camera pose has changed in the world file.
+      /// \param[in] _value True if the camera pose changed in the world file.
+      public: void SetUseSDFPose(bool _value);
+
+      /// brief Enable or disable camera control through ~/user_camera/joy_twist
+      /// gz topic. Defaults to true.
+      /// \param[in] _value True to enable camera pose control by
+      /// gz topic ~/user_camera/joy_twist.
+      public: void SetJoyTwistControl(bool _value);
+
+      /// brief Enable or disable camera control through ~/user_camera/joy_pose
+      /// gz topic. Defaults to true.
+      /// \param[in] _value True to enable camera pose control by
+      /// gz topic ~/user_camera/joy_pose.
+      public: void SetJoyPoseControl(bool _value);
 
       /// \brief Set the camera to be attached to a visual.
       ///
@@ -181,6 +200,9 @@ namespace gazebo
       protected: virtual bool AttachToVisualImpl(VisualPtr _visual,
                      bool _inheritOrientation, double _minDist = 0,
                      double _maxDist = 0);
+
+      // Documentation inherited.
+      protected: virtual void AnimationComplete();
 
       /// \brief Set the camera to track a scene node.
       ///
@@ -202,26 +224,21 @@ namespace gazebo
       /// a visual.
       private: void OnMoveToVisualComplete();
 
-      /// \brief The visual used to render the camera's appearance.
-      private: Visual *visual;
+      /// \brief Handles incoming relative joystick messages.
+      /// Incoming joystick messages are used to control
+      /// translation and rotation rates of the camera position.
+      /// \param[in] _msg New joystick message.
+      private: void OnJoyTwist(ConstJoystickPtr &_msg);
 
-      /// \brief The currently active view controller.
-      private: ViewController *viewController;
+      /// \brief Handles incoming absolute joystick messages.
+      /// Incoming joystick messages are used to control
+      /// camera's world pose.
+      /// \param[in] _msg New pose message.
+      private: void OnJoyPose(ConstPosePtr &_msg);
 
-      /// \brief An orbit view controller.
-      private: OrbitViewController *orbitViewController;
-
-      /// \brief A FPS view controller.
-      private: FPSViewController *fpsViewController;
-
-      /// \brief The GUI overlay.
-      private: GUIOverlay *gui;
-
-      /// \brief Draws a 3D axis in the viewport.
-      // private: Ogre::SceneNode *axisNode;
-
-      /// \brief Used to select objects from mouse clicks.
-      private: SelectionBuffer *selectionBuffer;
+      /// \internal
+      /// \brief Pointer to private data.
+      private: UserCameraPrivate *dataPtr;
     };
     /// \}
   }
