@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #define _BASE_64_HH_
 
 #include <string>
+#include "gazebo/util/system.hh"
 
 /// \brief Encode a binary string into base 64.
 /// \param[in] _bytesToEncode String of bytes to encode.
