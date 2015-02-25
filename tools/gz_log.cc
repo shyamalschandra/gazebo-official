@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,12 +38,16 @@ std::ostringstream &FilterBase::Out(std::ostringstream &_stream,
 {
   if (!this->xmlOutput && !this->stamp.empty())
   {
+    std::ios_base::fmtflags flags = _stream.flags();
+
+    _stream.setf(std::ios::fixed);
     if (this->stamp == "sim")
       _stream << _state.GetSimTime().Double() << " ";
     else if (this->stamp == "real")
       _stream << _state.GetRealTime().Double() << " ";
     else if (this->stamp == "wall")
       _stream << _state.GetWallTime().Double() << " ";
+    _stream.setf(flags);
   }
 
   return _stream;
@@ -153,7 +157,7 @@ void JointFilter::Init(const std::string &_filter)
   {
     boost::split(this->parts, _filter, boost::is_any_of("."));
 
-    if (!this->parts.size())
+    if (this->parts.empty())
       this->parts.push_back(_filter);
   }
 }
@@ -274,7 +278,7 @@ void LinkFilter::Init(const std::string &_filter)
   {
     boost::split(this->parts, _filter, boost::is_any_of("."));
 
-    if (!this->parts.size())
+    if (this->parts.empty())
       this->parts.push_back(_filter);
   }
 }
@@ -338,7 +342,7 @@ std::string LinkFilter::Filter(gazebo::physics::ModelState &_state)
   {
     // Filter the elements of the link (pose, velocity,
     // acceleration, wrench). If no filter parts were specified,
-    // then output the while link state.
+    // then output the whole link state.
     if (partIter != this->parts.end())
     {
       if (this->xmlOutput)
@@ -549,7 +553,7 @@ std::string StateFilter::Filter(const std::string &_stateString)
   result << this->filter.Filter(state);
 
   if (this->xmlOutput)
-    result << "</sdf></state>\n";
+    result << "</state></sdf>\n";
 
   this->prevTime = state.GetSimTime();
   return result.str();
@@ -561,14 +565,17 @@ LogCommand::LogCommand()
 {
   // Options that are visible to the user through help.
   this->visibleOptions.add_options()
-    ("info,i", "Output information about a log file.")
+    ("info,i", "Output information about a log file. "
+     "Log filename should be specified using the --file option")
     ("echo,e", "Output the contents of a log file to screen.")
     ("step,s", "Step through the contents of a log file.")
     ("record,d", po::value<bool>(),
-     "Start/stop recording a log file from an active Gazebo server.")
+     "Start/stop recording a log file from an active Gazebo server."
+     "O=stop record, 1=start recording.")
     ("world-name,w", po::value<std::string>(), "World name, used when "
      "starting or stopping recording.")
-    ("raw,r", "Output the data from echo and step without XML formatting.")
+    ("raw,r", "Output the data from echo and step without XML formatting."
+     "Used in conjuction with --echo or --step.")
     ("stamp", po::value<std::string>(), "Add a timestamp to each line of "
      "output. Valid values are (sim,real,wall)")
     ("hz,z", po::value<double>(), "Filter output to the specified Hz rate."

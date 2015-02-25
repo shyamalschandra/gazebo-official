@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2013-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  *
 */
 
+#include <sstream>
 #include "ServerFixture.hh"
 
 using namespace gazebo;
@@ -30,15 +31,15 @@ TEST_F(GzJoint, Force)
 
   // Get a pointer to the world
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   // Get a pointer to the model
   physics::ModelPtr model = world->GetModel("model");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
 
   // Get a pointer to the joint
   physics::JointPtr joint = model->GetJoint("joint");
-  ASSERT_TRUE(joint);
+  ASSERT_TRUE(joint != NULL);
 
   // Make sure the joint is at the correct initial pose
   EXPECT_NEAR(joint->GetAngle(0).Radian(), 0.0, 1e-3);
@@ -46,7 +47,7 @@ TEST_F(GzJoint, Force)
   world->SetPaused(true);
 
   // Move the joint
-  custom_exec("gz joint -w default -m model -j joint -f 10.0");
+  custom_exec("gz joint -w default -m model -j joint -f 1.0e5");
 
   world->Step(100);
 
@@ -62,15 +63,20 @@ TEST_F(GzJoint, PositionPID)
 
   // Get a pointer to the world
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
+
+  // Disable gravity to simplify PID control
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  physics->SetGravity(math::Vector3::Zero);
 
   // Get a pointer to the model
   physics::ModelPtr model = world->GetModel("model");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
 
   // Get a pointer to the joint
   physics::JointPtr joint = model->GetJoint("joint");
-  ASSERT_TRUE(joint);
+  ASSERT_TRUE(joint != NULL);
 
   // Make sure the joint is at the correct initial pose
   EXPECT_NEAR(joint->GetAngle(0).Radian(), 0.0, 1e-3);
@@ -78,13 +84,17 @@ TEST_F(GzJoint, PositionPID)
   world->SetPaused(true);
 
   // Tell the joint to hold a position using a PID controller.
-  custom_exec("gz joint -w default -m model -j joint --pos-t 3.1415 "
-      "--pos-p 0.3 --pos-i 0.0 --pos-d 1.8");
+  double targetAngle = 0.5;
+  std::ostringstream stream;
+  stream << "gz joint -w default -m model -j joint --pos-t "
+         << targetAngle
+         << " --pos-p 0.6e10 --pos-i 0.0 --pos-d 1.8e10";
+  custom_exec(stream.str());
 
-  world->Step(1000);
+  world->Step(5000);
 
   // Make sure the joint is at the specified pose
-  EXPECT_NEAR(joint->GetAngle(0).Radian(), 3.1415, 0.2);
+  EXPECT_NEAR(joint->GetAngle(0).Radian(), targetAngle, 0.2);
 }
 
 /////////////////////////////////////////////////
@@ -95,15 +105,15 @@ TEST_F(GzJoint, VelocityPID)
 
   // Get a pointer to the world
   physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world);
+  ASSERT_TRUE(world != NULL);
 
   // Get a pointer to the model
   physics::ModelPtr model = world->GetModel("model");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
 
   // Get a pointer to the joint
   physics::JointPtr joint = model->GetJoint("joint");
-  ASSERT_TRUE(joint);
+  ASSERT_TRUE(joint != NULL);
 
   // Make sure the joint is at the correct initial pose
   EXPECT_NEAR(joint->GetAngle(0).Radian(), 0.0, 1e-3);
@@ -112,7 +122,7 @@ TEST_F(GzJoint, VelocityPID)
 
   // Tell the joint to hold a velocity using a PID controller.
   custom_exec("gz joint -w default -m model -j joint --vel-t 0.5 "
-      "--vel-p 100.0 --vel-i 10.0 --vel-d 0.01");
+      "--vel-p 1e5 --vel-i 10.0 --vel-d 0.01");
 
   world->Step(800);
 
