@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,26 @@
 
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
+#include "gazebo/physics/ode/ODESurfaceParams.hh"
+#include "gazebo/physics/ode/ODETypes.hh"
+
+#ifdef HAVE_BULLET
+#include "gazebo/physics/bullet/BulletSurfaceParams.hh"
+#include "gazebo/physics/bullet/BulletTypes.hh"
+#endif
+
 #include "gazebo/transport/transport.hh"
-#include "ServerFixture.hh"
+#include "PhysicsFixture.hh"
 #include "helper_physics_generator.hh"
 
 using namespace gazebo;
 
 const double g_friction_tolerance = 1e-3;
 
-class PhysicsFrictionTest : public ServerFixture,
-                        public testing::WithParamInterface<const char*>
+class PhysicsFrictionTest : public PhysicsFixture,
+                            public testing::WithParamInterface<const char*>
 {
-  protected: PhysicsFrictionTest() : ServerFixture(), spawnCount(0)
+  protected: PhysicsFrictionTest() : PhysicsFixture(), spawnCount(0)
              {
              }
 
@@ -49,11 +57,29 @@ class PhysicsFrictionTest : public ServerFixture,
               physics::Collision_V::iterator iter = collisions.begin();
               if (iter != collisions.end())
               {
-                physics::SurfaceParamsPtr surface = (*iter)->GetSurface();
-                // Average the mu1 and mu2 values
-                this->friction = (
-                  surface->GetFrictionPyramid()->GetMuPrimary() +
-                  surface->GetFrictionPyramid()->GetMuSecondary() ) / 2.0;
+                physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+                if (physics->GetType() == "ode")
+                {
+                  physics::ODESurfaceParamsPtr surface =
+                    boost::dynamic_pointer_cast<physics::ODESurfaceParams>(
+                    (*iter)->GetSurface());
+                  // Average the mu1 and mu2 values
+                  this->friction = (surface->frictionPyramid.GetMuPrimary()
+                                  + surface->frictionPyramid.GetMuSecondary())
+                                  / 2.0;
+                }
+#ifdef HAVE_BULLET
+                else if (physics->GetType() == "bullet")
+                {
+                  physics::BulletSurfaceParamsPtr surface =
+                    boost::dynamic_pointer_cast<physics::BulletSurfaceParams>(
+                    (*iter)->GetSurface());
+                  // Average the mu1 and mu2 values
+                  this->friction = (surface->frictionPyramid.GetMuPrimary()
+                                  + surface->frictionPyramid.GetMuSecondary())
+                                  / 2.0;
+                }
+#endif
               }
             }
     public: ~FrictionDemoBox() {}
@@ -163,7 +189,7 @@ class PhysicsFrictionTest : public ServerFixture,
               << "  </link>"
               << "</model>";
 
-            physics::WorldPtr world = physics::get_world("default");
+            EXPECT_TRUE(world != NULL);
             world->InsertModelString(modelStr.str());
 
             physics::ModelPtr model;
@@ -204,7 +230,7 @@ class PhysicsFrictionTest : public ServerFixture,
   public: void DirectionNaN(const std::string &_physicsEngine);
 
   /// \brief Test Link::GetWorldInertia* functions.
-  /// \TODO: move the SpawnBox function to ServerFixture,
+  /// \TODO: move the SpawnBox function to PhysicsFixture,
   /// and then move this test to a different file.
   /// \param[in] _physicsEngine Physics engine to use.
   public: void LinkGetWorldInertia(const std::string &_physicsEngine);
@@ -229,15 +255,17 @@ void PhysicsFrictionTest::FrictionDemo(const std::string &_physicsEngine)
           << std::endl;
     return;
   }
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Aborting test since there's an issue with dart's friction"
+          << " parameters (#1000)"
+          << std::endl;
+    return;
+  }
 
-  Load("worlds/friction_demo.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
+  LoadWorld("worlds/friction_demo.world", true, _physicsEngine);
 
   // check the gravity vector
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
   math::Vector3 g = physics->GetGravity();
 
   // Custom gravity vector for this demo world.
@@ -322,14 +350,7 @@ void PhysicsFrictionTest::BoxDirectionRing(const std::string &_physicsEngine)
   }
 
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   // set the gravity vector
   // small positive y component
@@ -424,14 +445,7 @@ void PhysicsFrictionTest::DirectionNaN(const std::string &_physicsEngine)
   }
 
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   // set the gravity vector
   // small positive y component
@@ -469,14 +483,7 @@ void PhysicsFrictionTest::DirectionNaN(const std::string &_physicsEngine)
 void PhysicsFrictionTest::LinkGetWorldInertia(const std::string &_physicsEngine)
 {
   // Load a blank world (no ground plane)
-  Load("worlds/blank.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/blank.world", true, _physicsEngine);
 
   // disable gravity
   physics->SetGravity(math::Vector3::Zero);

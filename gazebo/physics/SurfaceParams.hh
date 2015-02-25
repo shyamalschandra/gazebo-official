@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/msgs/msgs.hh"
-#include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/util/system.hh"
 
 namespace gazebo
@@ -110,11 +109,6 @@ namespace gazebo
       /// \brief Process a surface message.
       /// \param[in] _msg Message to read values from.
       public: virtual void ProcessMsg(const msgs::Surface &_msg);
-
-      /// \brief Get access to FrictionPyramid data, if available.
-      /// \return Pointer to FrictionPyramid data or NULL if class does
-      /// not use FrictionPyramid data.
-      public: virtual FrictionPyramidPtr GetFrictionPyramid() const;
 
       /// \brief Allow collision checking without generating a contact joint.
       public: bool collideWithoutContact;

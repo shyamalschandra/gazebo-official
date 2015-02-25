@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@
 #include "gazebo/physics/dart/DARTLink.hh"
 #include "gazebo/physics/dart/DARTCollision.hh"
 #include "gazebo/physics/dart/DARTPlaneShape.hh"
-#include "gazebo/physics/dart/DARTSurfaceParams.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -37,7 +36,7 @@ DARTCollision::DARTCollision(LinkPtr _link)
     dtCollisionShape(NULL)
 {
   this->SetName("DART_Collision");
-  this->surface.reset(new DARTSurfaceParams());
+  this->surface.reset(new SurfaceParams());
   this->dtBodyNode
       = boost::static_pointer_cast<DARTLink>(this->link)->GetDARTBodyNode();
 }
@@ -152,10 +151,4 @@ void DARTCollision::SetDARTCollisionShape(dart::dynamics::Shape *_shape,
 dart::dynamics::Shape *DARTCollision::GetDARTCollisionShape() const
 {
   return dtCollisionShape;
-}
-
-/////////////////////////////////////////////////
-DARTSurfaceParamsPtr DARTCollision::GetDARTSurface() const
-{
-  return boost::dynamic_pointer_cast<DARTSurfaceParams>(this->surface);
 }
