@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,61 +33,10 @@
 #include "gazebo/common/Mesh.hh"
 #include "gazebo/common/Skeleton.hh"
 #include "gazebo/common/SkeletonAnimation.hh"
-#include "gazebo/common/ColladaLoader.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/common/Exception.hh"
-
-
-// TODO. These variables are used in a backport fix for issue #1134
-// Do not merge them with Gazebo 4.0.
-namespace gazebo
-{
-  namespace common
-  {
-    /// \brief Helper data structure for loading collada geometries.
-    class GeometryIndices
-    {
-      /// \brief Index of a vertex in the collada <p> element
-      public: unsigned int vertexIndex;
-
-      /// \brief Index of a normal in the collada <p> element
-      public: unsigned int normalIndex;
-
-      /// \brief Index of a texture coordinate in the collada <p> element
-      public: unsigned int texcoordIndex;
-
-      /// \brief Index of a vertex in the Gazebo mesh
-      public: unsigned int mappedIndex;
-    };
-
-    /// \brief Map of collada POSITION ids to list of vectors.
-    static std::map<std::string, std::vector<math::Vector3> > positionIds;
-
-    /// \brief Map of collada NORMAL ids to list of normals.
-    static std::map<std::string, std::vector<math::Vector3> > normalIds;
-
-    /// \brief Map of collada TEXCOORD ids to list of texture coordinates.
-    static std::map<std::string, std::vector<math::Vector2d> >texcoordIds;
-
-    /// \brief Map of collada  Material ids to Gazebo materials.
-    static std::map<std::string, Material *> materialIds;
-
-    /// \brief Map of collada POSITION ids to a map of
-    /// duplicate positions.
-    static std::map<std::string, std::map<unsigned int, unsigned int> >
-        positionDuplicateMap;
-
-    /// \brief Map of collada NORMAL ids to a map of
-    /// duplicate normals.
-    static std::map<std::string, std::map<unsigned int, unsigned int> >
-        normalDuplicateMap;
-
-    /// \brief Map of collada TEXCOORD ids to a map of
-    /// duplicate texture coordinates.
-    static std::map<std::string, std::map<unsigned int, unsigned int> >
-        texcoordDuplicateMap;
-  }
-}
+#include "gazebo/common/ColladaLoaderPrivate.hh"
+#include "gazebo/common/ColladaLoader.hh"
 
 using namespace gazebo;
 using namespace common;
@@ -119,65 +68,68 @@ struct Vector2dHash : std::unary_function<const math::Vector2d, std::size_t>
 
 //////////////////////////////////////////////////
   ColladaLoader::ColladaLoader()
-: MeshLoader(), meter(1.0)
+: MeshLoader(), dataPtr(new ColladaLoaderPrivate)
 {
+  this->dataPtr->meter = 1.0;
 }
 
 //////////////////////////////////////////////////
 ColladaLoader::~ColladaLoader()
 {
+  delete this->dataPtr;
+  this->dataPtr = 0;
 }
 
 //////////////////////////////////////////////////
 Mesh *ColladaLoader::Load(const std::string &_filename)
 {
-  // backport fix, do not merge with gazebo 4.0+
-  positionIds.clear();
-  normalIds.clear();
-  texcoordIds.clear();
-  materialIds.clear();
-  positionDuplicateMap.clear();
-  normalDuplicateMap.clear();
-  texcoordDuplicateMap.clear();
+  this->dataPtr->positionIds.clear();
+  this->dataPtr->normalIds.clear();
+  this->dataPtr->texcoordIds.clear();
+  this->dataPtr->materialIds.clear();
+  this->dataPtr->positionDuplicateMap.clear();
+  this->dataPtr->normalDuplicateMap.clear();
+  this->dataPtr->texcoordDuplicateMap.clear();
 
   // reset scale
-  this->meter = 1.0;
+  this->dataPtr->meter = 1.0;
 
   TiXmlDocument xmlDoc;
 
-  this->path.clear();
+  this->dataPtr->path.clear();
   if (_filename.rfind('/') != std::string::npos)
   {
-    this->path = _filename.substr(0, _filename.rfind('/'));
+    this->dataPtr->path = _filename.substr(0, _filename.rfind('/'));
   }
 
-  this->filename = _filename;
+  this->dataPtr->filename = _filename;
   if (!xmlDoc.LoadFile(_filename))
     gzerr << "Unable to load collada file[" << _filename << "]\n";
 
-  this->colladaXml = xmlDoc.FirstChildElement("COLLADA");
-  if (!this->colladaXml)
+  this->dataPtr->colladaXml = xmlDoc.FirstChildElement("COLLADA");
+  if (!this->dataPtr->colladaXml)
     gzerr << "Missing COLLADA tag\n";
 
-  if (std::string(this->colladaXml->Attribute("version")) != "1.4.0" &&
-      std::string(this->colladaXml->Attribute("version")) != "1.4.1")
+  if (std::string(this->dataPtr->colladaXml->Attribute("version")) != "1.4.0" &&
+      std::string(this->dataPtr->colladaXml->Attribute("version")) != "1.4.1")
     gzerr << "Invalid collada file. Must be version 1.4.0 or 1.4.1\n";
 
-  TiXmlElement *assetXml = this->colladaXml->FirstChildElement("asset");
+  TiXmlElement *assetXml =
+      this->dataPtr->colladaXml->FirstChildElement("asset");
   if (assetXml)
   {
     TiXmlElement *unitXml = assetXml->FirstChildElement("unit");
     if (unitXml && unitXml->Attribute("meter"))
-      this->meter = math::parseFloat(unitXml->Attribute("meter"));
+      this->dataPtr->meter = math::parseFloat(unitXml->Attribute("meter"));
   }
 
   Mesh *mesh = new Mesh();
-  mesh->SetPath(this->path);
+  mesh->SetPath(this->dataPtr->path);
 
   this->LoadScene(mesh);
 
   // This will make the model the correct size.
-  mesh->Scale(this->meter);
+  mesh->Scale(this->dataPtr->meter);
 
   return mesh;
 }
@@ -185,7 +137,8 @@ Mesh *ColladaLoader::Load(const std::string &_filename)
 /////////////////////////////////////////////////
 void ColladaLoader::LoadScene(Mesh *_mesh)
 {
-  TiXmlElement *sceneXml = this->colladaXml->FirstChildElement("scene");
+  TiXmlElement *sceneXml =
+      this->dataPtr->colladaXml->FirstChildElement("scene");
   std::string sceneURL =
     sceneXml->FirstChildElement("instance_visual_scene")->Attribute("url");
 
@@ -217,7 +170,7 @@ void ColladaLoader::LoadNode(TiXmlElement *_elem, Mesh *_mesh,
 
   if (_elem->Attribute("name"))
   {
-    this->currentNodeName = _elem->Attribute("name");
+    this->dataPtr->currentNodeName = _elem->Attribute("name");
   }
 
   nodeXml = _elem->FirstChildElement("node");
@@ -250,7 +203,7 @@ void ColladaLoader::LoadNode(TiXmlElement *_elem, Mesh *_mesh,
     std::string geomURL = instGeomXml->Attribute("url");
     TiXmlElement *geomXml = this->GetElementId("geometry", geomURL);
 
-    this->materialMap.clear();
+    this->dataPtr->materialMap.clear();
     TiXmlElement *bindMatXml, *techniqueXml, *matXml;
     bindMatXml = instGeomXml->FirstChildElement("bind_material");
     while (bindMatXml)
@@ -262,7 +215,7 @@ void ColladaLoader::LoadNode(TiXmlElement *_elem, Mesh *_mesh,
         {
           std::string symbol = matXml->Attribute("symbol");
           std::string target = matXml->Attribute("target");
-          this->materialMap[symbol] = target;
+          this->dataPtr->materialMap[symbol] = target;
           matXml = matXml->NextSiblingElement("instance_material");
         }
       }
@@ -284,7 +237,7 @@ void ColladaLoader::LoadNode(TiXmlElement *_elem, Mesh *_mesh,
     std::string rootURL = instSkelXml->GetText();
     TiXmlElement *rootNodeXml = this->GetElementId("node", rootURL);
 
-    this->materialMap.clear();
+    this->dataPtr->materialMap.clear();
     TiXmlElement *bindMatXml, *techniqueXml, *matXml;
     bindMatXml = instContrXml->FirstChildElement("bind_material");
     while (bindMatXml)
@@ -296,7 +249,7 @@ void ColladaLoader::LoadNode(TiXmlElement *_elem, Mesh *_mesh,
         {
           std::string symbol = matXml->Attribute("symbol");
           std::string target = matXml->Attribute("target");
-          this->materialMap[symbol] = target;
+          this->dataPtr->materialMap[symbol] = target;
           matXml = matXml->NextSiblingElement("instance_material");
         }
       }
@@ -332,7 +285,7 @@ math::Matrix4 ColladaLoader::LoadNodeTransform(TiXmlElement *_elem)
       std::string transStr = _elem->FirstChildElement("translate")->GetText();
       math::Vector3 translate;
       translate = boost::lexical_cast<math::Vector3>(transStr);
-      // translate *= this->meter;
+      // translate *= this->dataPtr->meter;
       transform.SetTranslate(translate);
     }
 
@@ -371,7 +324,7 @@ math::Matrix4 ColladaLoader::LoadNodeTransform(TiXmlElement *_elem)
 
 /////////////////////////////////////////////////
 void ColladaLoader::LoadController(TiXmlElement *_contrXml,
-      TiXmlElement *_skelXml, const math::Matrix4 _transform, Mesh *_mesh)
+      TiXmlElement *_skelXml, const math::Matrix4 &_transform, Mesh *_mesh)
 {
   Skeleton *skeleton = new Skeleton(this->LoadSkeletonNodes(_skelXml, NULL));
   _mesh->SetSkeleton(skeleton);
@@ -750,7 +703,7 @@ void ColladaLoader::SetSkeletonNodeTransform(TiXmlElement *_elem,
       std::string transStr = _elem->FirstChildElement("translate")->GetText();
       math::Vector3 translate;
       translate = boost::lexical_cast<math::Vector3>(transStr);
-      // translate *= this->meter;
+      // translate *= this->dataPtr->meter;
       transform.SetTranslate(translate);
 
       NodeTransform nt(transform);
@@ -847,7 +800,7 @@ void ColladaLoader::LoadGeometry(TiXmlElement *_xml,
 TiXmlElement *ColladaLoader::GetElementId(const std::string &_name,
                                           const std::string &_id)
 {
-  return this->GetElementId(this->colladaXml, _name, _id);
+  return this->GetElementId(this->dataPtr->colladaXml, _name, _id);
 }
 
 /////////////////////////////////////////////////
@@ -881,7 +834,6 @@ TiXmlElement *ColladaLoader::GetElementId(TiXmlElement *_parent,
   return NULL;
 }
 
-
 /////////////////////////////////////////////////
 void ColladaLoader::LoadVertices(const std::string &_id,
     const math::Matrix4 &_transform,
@@ -901,7 +853,7 @@ void ColladaLoader::LoadVertices(const std::string &_id,
     std::map<unsigned int, unsigned int> &_vertDups,
     std::map<unsigned int, unsigned int> &_normDups)
 {
-  TiXmlElement *verticesXml = this->GetElementId(this->colladaXml,
+  TiXmlElement *verticesXml = this->GetElementId(this->dataPtr->colladaXml,
                                                  "vertices", _id);
 
   if (!verticesXml)
@@ -934,18 +886,47 @@ void ColladaLoader::LoadPositions(const std::string &_id,
     std::vector<math::Vector3> &_values,
     std::map<unsigned int, unsigned int> &_duplicates)
 {
-  if (positionIds.find(_id) != positionIds.end())
+  if (this->dataPtr->positionIds.find(_id) != this->dataPtr->positionIds.end())
   {
-    _values = positionIds[_id];
-    _duplicates = positionDuplicateMap[_id];
+    _values = this->dataPtr->positionIds[_id];
+    _duplicates = this->dataPtr->positionDuplicateMap[_id];
     return;
   }
 
   TiXmlElement *sourceXml = this->GetElementId("source", _id);
-  TiXmlElement *floatArrayXml = sourceXml->FirstChildElement("float_array");
-  if (!floatArrayXml)
+  if (!sourceXml)
   {
-    gzerr << "Vertex source missing float_array element\n";
+    gzerr << "Unable to find source\n";
+    return;
+  }
+
+  TiXmlElement *floatArrayXml = sourceXml->FirstChildElement("float_array");
+  if (!floatArrayXml || !floatArrayXml->GetText())
+  {
+    int count = 1;
+    if (floatArrayXml && floatArrayXml->Attribute("count"))
+    {
+      try
+      {
+        count = boost::lexical_cast<int>(floatArrayXml->Attribute("count"));
+      }
+      catch(...)
+      {
+        // Do nothing. Messages are printed out below.
+      }
+    }
+
+    if (count)
+    {
+      gzerr << "Vertex source missing float_array element, "
+        << "or count is invalid.\n";
+    }
+    else
+    {
+      gzlog << "Vertex source has a float_array with a count of zero. "
+        << "This is likely not desired\n";
+    }
+
     return;
   }
   std::string valueStr = floatArrayXml->GetText();
@@ -971,8 +952,8 @@ void ColladaLoader::LoadPositions(const std::string &_id,
       unique[vec] = _values.size()-1;
   }
 
-  positionDuplicateMap[_id] = _duplicates;
-  positionIds[_id] = _values;
+  this->dataPtr->positionDuplicateMap[_id] = _duplicates;
+  this->dataPtr->positionIds[_id] = _values;
 }
 
 /////////////////////////////////////////////////
@@ -981,10 +962,10 @@ void ColladaLoader::LoadNormals(const std::string &_id,
     std::vector<math::Vector3> &_values,
     std::map<unsigned int, unsigned int> &_duplicates)
 {
-  if (normalIds.find(_id) != normalIds.end())
+  if (this->dataPtr->normalIds.find(_id) != this->dataPtr->normalIds.end())
   {
-    _values = normalIds[_id];
-    _duplicates = normalDuplicateMap[_id];
+    _values = this->dataPtr->normalIds[_id];
+    _duplicates = this->dataPtr->normalDuplicateMap[_id];
     return;
   }
 
@@ -999,9 +980,32 @@ void ColladaLoader::LoadNormals(const std::string &_id,
   }
 
   TiXmlElement *floatArrayXml = normalsXml->FirstChildElement("float_array");
-  if (!floatArrayXml)
+  if (!floatArrayXml || !floatArrayXml->GetText())
   {
-    gzwarn << "Normal source missing float_array element\n";
+    int count = 1;
+    if (floatArrayXml && floatArrayXml->Attribute("count"))
+    {
+      try
+      {
+        count = boost::lexical_cast<int>(floatArrayXml->Attribute("count"));
+      }
+      catch(...)
+      {
+        // Do nothing. Messages are printed out below.
+      }
+    }
+
+    if (count)
+    {
+      gzwarn << "Normal source missing float_array element, or count is "
+        << "invalid.\n";
+    }
+    else
+    {
+      gzlog << "Normal source has a float_array with a count of zero. "
+        << "This is likely not desired\n";
+    }
+
     return;
   }
 
@@ -1027,8 +1031,8 @@ void ColladaLoader::LoadNormals(const std::string &_id,
     }
   } while (iss);
 
-  normalDuplicateMap[_id] = _duplicates;
-  normalIds[_id] = _values;
+  this->dataPtr->normalDuplicateMap[_id] = _duplicates;
+  this->dataPtr->normalIds[_id] = _values;
 }
 
 /////////////////////////////////////////////////
@@ -1036,10 +1040,10 @@ void ColladaLoader::LoadTexCoords(const std::string &_id,
     std::vector<math::Vector2d> &_values,
     std::map<unsigned int, unsigned int> &_duplicates)
 {
-  if (texcoordIds.find(_id) != texcoordIds.end())
+  if (this->dataPtr->texcoordIds.find(_id) != this->dataPtr->texcoordIds.end())
   {
-    _values = texcoordIds[_id];
-    _duplicates = texcoordDuplicateMap[_id];
+    _values = this->dataPtr->texcoordIds[_id];
+    _duplicates = this->dataPtr->texcoordDuplicateMap[_id];
     return;
   }
 
@@ -1058,9 +1062,41 @@ void ColladaLoader::LoadTexCoords(const std::string &_id,
   // Get the array of float values. These are the raw values for the texture
   // coordinates.
   TiXmlElement *floatArrayXml = xml->FirstChildElement("float_array");
-  if (!floatArrayXml)
+  if (!floatArrayXml || !floatArrayXml->GetText())
   {
-    gzerr << "Normal source missing float_array element\n";
+    int count = 1;
+    if (floatArrayXml && floatArrayXml->Attribute("count"))
+    {
+      try
+      {
+        count = boost::lexical_cast<int>(floatArrayXml->Attribute("count"));
+      }
+      catch(...)
+      {
+        // Do nothing. Messages are printed out below.
+      }
+    }
+
+    if (count)
+    {
+      gzerr << "Normal source missing float_array element, or count is "
+        << "invalid.\n";
+    }
+    else
+    {
+      gzlog << "Normal source has a float_array with a count of zero. "
+        << "This is likely not desired\n";
+    }
+
+    return;
+  }
+  // Read in the total number of texture coordinate values
+  else if (floatArrayXml->Attribute("count"))
+    totCount = boost::lexical_cast<int>(floatArrayXml->Attribute("count"));
+  else
+  {
+    gzerr << "<float_array> has no count attribute in texture coordinate "
+          << "element with id[" << _id << "]\n";
     return;
   }
 
@@ -1080,16 +1116,6 @@ void ColladaLoader::LoadTexCoords(const std::string &_id,
   {
     gzerr << "Unable to find <accessor> as a child of <technique_common> "
           << "for texture coordinates with id[" << _id << "]\n";
-    return;
-  }
-
-  // Read in the total number of texture coordinate values
-  if (floatArrayXml->Attribute("count"))
-    totCount = boost::lexical_cast<int>(floatArrayXml->Attribute("count"));
-  else
-  {
-    gzerr << "<float_array> has no count attribute in texture coordinate "
-          << "element with id[" << _id << "]\n";
     return;
   }
 
@@ -1125,6 +1151,11 @@ void ColladaLoader::LoadTexCoords(const std::string &_id,
     return;
   }
 
+  // Nothing to read. Don't print a warning because the collada file is
+  // correct.
+  if (totCount == 0)
+    return;
+
   boost::unordered_map<math::Vector2d, unsigned int, Vector2dHash> unique;
 
   // Read the raw texture values, and split them on spaces.
@@ -1149,16 +1180,17 @@ void ColladaLoader::LoadTexCoords(const std::string &_id,
       unique[vec] = _values.size()-1;
   }
 
-  texcoordDuplicateMap[_id] = _duplicates;
-  texcoordIds[_id] = _values;
+  this->dataPtr->texcoordDuplicateMap[_id] = _duplicates;
+  this->dataPtr->texcoordIds[_id] = _values;
 }
 
 /////////////////////////////////////////////////
 Material *ColladaLoader::LoadMaterial(const std::string &_name)
 {
-  if (materialIds.find(_name) != materialIds.end())
+  if (this->dataPtr->materialIds.find(_name)
+      != this->dataPtr->materialIds.end())
   {
-    return materialIds[_name];
+    return this->dataPtr->materialIds[_name];
   }
 
   TiXmlElement *matXml = this->GetElementId("material", _name);
@@ -1243,7 +1275,7 @@ Material *ColladaLoader::LoadMaterial(const std::string &_name)
   if (cgXml)
     gzerr << "profile_CG unsupported\n";
 
-  materialIds[_name] = mat;
+  this->dataPtr->materialIds[_name] = mat;
 
   return mat;
 }
@@ -1267,9 +1299,12 @@ void ColladaLoader::LoadColorOrTexture(TiXmlElement *_elem,
       _mat->SetAmbient(color);
     else if (_type == "emission")
       _mat->SetEmissive(color);
+    else if (_type == "specular")
+      _mat->SetSpecular(color);
   }
   else if (typeElem->FirstChildElement("texture"))
   {
+    _mat->SetLighting(true);
     TiXmlElement *imageXml = NULL;
     std::string textureName =
       typeElem->FirstChildElement("texture")->Attribute("texture");
@@ -1309,7 +1344,7 @@ void ColladaLoader::LoadColorOrTexture(TiXmlElement *_elem,
     {
       std::string imgFile =
         imageXml->FirstChildElement("init_from")->GetText();
-      _mat->SetTextureImage(imgFile, this->path);
+      _mat->SetTextureImage(imgFile, this->dataPtr->path);
     }
   }
 }
@@ -1324,7 +1359,7 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
   // each polylist polygon is convex, and we do decomposion
   // by anchoring each triangle about vertex 0 or each polygon
   SubMesh *subMesh = new SubMesh;
-  subMesh->SetName(this->currentNodeName);
+  subMesh->SetName(this->dataPtr->currentNodeName);
   bool combinedVertNorms = false;
 
   subMesh->SetPrimitiveType(SubMesh::TRIANGLES);
@@ -1334,11 +1369,17 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
     std::map<std::string, std::string>::iterator iter;
     std::string matStr = _polylistXml->Attribute("material");
 
-    iter = this->materialMap.find(matStr);
-    if (iter != this->materialMap.end())
+    int matIndex = -1;
+    iter = this->dataPtr->materialMap.find(matStr);
+    if (iter != this->dataPtr->materialMap.end())
       matStr = iter->second;
 
-    int matIndex = _mesh->AddMaterial(this->LoadMaterial(matStr));
+    common::Material *mat = this->LoadMaterial(matStr);
+
+    matIndex = _mesh->GetMaterialIndex(mat);
+    if (matIndex < 0)
+      matIndex = _mesh->AddMaterial(mat);
+
     if (matIndex < 0)
       gzwarn << "Unable to add material[" << matStr << "]\n";
     else
@@ -1354,6 +1395,7 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
   const unsigned int VERTEX = 0;
   const unsigned int NORMAL = 1;
   const unsigned int TEXCOORD = 2;
+  unsigned int otherSemantics = TEXCOORD + 1;
   bool hasVertices = false;
   bool hasNormals = false;
   bool hasTexcoords = false;
@@ -1397,6 +1439,13 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
       inputs[TEXCOORD] = math::parseInt(offset);
       hasTexcoords = true;
     }
+    else
+    {
+      inputs[otherSemantics++] = math::parseInt(offset);
+      gzwarn << "Polylist input semantic: '" << semantic << "' is currently"
+          << " not supported" << std::endl;
+    }
+
     polylistInputXml = polylistInputXml->NextSiblingElement("input");
   }
 
@@ -1460,7 +1509,7 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
         }
 
 
-        int daeVertIndex = 0;
+        unsigned int daeVertIndex = 0;
         bool addIndex = !hasVertices;
 
         // find a set of vertex/normal/texcoord that can be reused
@@ -1553,10 +1602,10 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
                   subMesh->GetVertex(newVertIndex));
               Skeleton *skel = _mesh->GetSkeleton();
               for (unsigned int i = 0;
-                  i < skel->GetNumVertNodeWeights(values[daeVertIndex]); ++i)
+                  i < skel->GetNumVertNodeWeights(daeVertIndex); ++i)
               {
                 std::pair<std::string, double> node_weight =
-                  skel->GetVertNodeWeight(values[daeVertIndex], i);
+                  skel->GetVertNodeWeight(daeVertIndex, i);
                 SkeletonNode *node =
                     _mesh->GetSkeleton()->GetNodeByName(node_weight.first);
                 subMesh->AddNodeAssignment(subMesh->GetVertexCount()-1,
@@ -1568,14 +1617,24 @@ void ColladaLoader::LoadPolylist(TiXmlElement *_polylistXml,
           }
           if (hasNormals)
           {
-            subMesh->AddNormal(norms[values[inputs[NORMAL]]]);
-            input.normalIndex = values[inputs[NORMAL]];
+            unsigned int inputRemappedNormalIndex = values[inputs[NORMAL]];
+            if (normalDupMap.find(inputRemappedNormalIndex)
+                != normalDupMap.end())
+              inputRemappedNormalIndex = normalDupMap[inputRemappedNormalIndex];
+            subMesh->AddNormal(norms[inputRemappedNormalIndex]);
+            input.normalIndex = inputRemappedNormalIndex;
           }
           if (hasTexcoords)
           {
-            subMesh->AddTexCoord(texcoords[values[inputs[TEXCOORD]]].x,
-                texcoords[values[inputs[TEXCOORD]]].y);
-            input.texcoordIndex = values[inputs[TEXCOORD]];
+            unsigned int inputRemappedTexcoordIndex = values[inputs[TEXCOORD]];
+            if (texDupMap.find(inputRemappedTexcoordIndex) != texDupMap.end())
+            {
+              inputRemappedTexcoordIndex =
+                  texDupMap[inputRemappedTexcoordIndex];
+            }
+            subMesh->AddTexCoord(texcoords[inputRemappedTexcoordIndex].x,
+                texcoords[inputRemappedTexcoordIndex].y);
+            input.texcoordIndex = inputRemappedTexcoordIndex;
           }
 
           // add the new gazebo submesh vertex index to the map
@@ -1600,7 +1659,7 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
                                   Mesh *_mesh)
 {
   SubMesh *subMesh = new SubMesh;
-  subMesh->SetName(this->currentNodeName);
+  subMesh->SetName(this->dataPtr->currentNodeName);
   bool combinedVertNorms = false;
 
   subMesh->SetPrimitiveType(SubMesh::TRIANGLES);
@@ -1610,11 +1669,16 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
     std::map<std::string, std::string>::iterator iter;
     std::string matStr = _trianglesXml->Attribute("material");
 
-    iter = this->materialMap.find(matStr);
-    if (iter != this->materialMap.end())
+    int matIndex = -1;
+    iter = this->dataPtr->materialMap.find(matStr);
+    if (iter != this->dataPtr->materialMap.end())
       matStr = iter->second;
 
-    int matIndex = _mesh->AddMaterial(this->LoadMaterial(matStr));
+    common::Material *mat = this->LoadMaterial(matStr);
+    matIndex = _mesh->GetMaterialIndex(mat);
+    if (matIndex < 0)
+      matIndex = _mesh->AddMaterial(mat);
+
     if (matIndex < 0)
       gzwarn << "Unable to add material[" << matStr << "]\n";
     else
@@ -1630,6 +1694,7 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
   const unsigned int VERTEX = 0;
   const unsigned int NORMAL = 1;
   const unsigned int TEXCOORD = 2;
+  unsigned int otherSemantics = TEXCOORD + 1;
   bool hasVertices = false;
   bool hasNormals = false;
   bool hasTexcoords = false;
@@ -1670,6 +1735,12 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
       inputs[TEXCOORD] = math::parseInt(offset);
       hasTexcoords = true;
     }
+    else
+    {
+      inputs[otherSemantics++] = math::parseInt(offset);
+      gzwarn << "Triangle input semantic: '" << semantic << "' is currently"
+          << " not supported" << std::endl;
+    }
     trianglesInputXml = trianglesInputXml->NextSiblingElement("input");
     offsetSize++;
   }
@@ -1677,8 +1748,32 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
   TiXmlElement *pXml = _trianglesXml->FirstChildElement("p");
   if (!pXml || !pXml->GetText())
   {
-    gzerr << "Collada file[" << this->filename
-          << "] is invalid. Loading what we can...\n";
+    int count = 1;
+    if (_trianglesXml->Attribute("count"))
+    {
+      try
+      {
+        count = boost::lexical_cast<int>(_trianglesXml->Attribute("count"));
+      }
+      catch(...)
+      {
+        // Do nothing. Messages are printed out below.
+      }
+    }
+
+    // It's possible that the triangle count is zero. In this case, we
+    // should not output an error message
+    if (count)
+    {
+      gzerr << "Collada file[" << this->dataPtr->filename
+        << "] is invalid. Loading what we can...\n";
+    }
+    else
+    {
+      gzlog << "Triangle input has a count of zero. "
+        << "This is likely not desired\n";
+    }
+
     return;
   }
   std::string pStr = pXml->GetText();
@@ -1703,15 +1798,15 @@ void ColladaLoader::LoadTriangles(TiXmlElement *_trianglesXml,
     for (unsigned int i = 0; i < offsetSize; ++i)
       values[i] = math::parseInt(strs[j+i]);
 
-    int daeVertIndex = 0;
+    unsigned int daeVertIndex = 0;
     bool addIndex = !hasVertices;
 
     // find a set of vertex/normal/texcoord that can be reused
     // only do this if the mesh has vertices
     if (hasVertices)
     {
-      // Get the vertex position index value. If it is a duplicate then use
-      // the existing index instead
+      // Get the vertex position index value. If the position is a duplicate
+      // then reset the index to the first instance of the duplicated position
       daeVertIndex = values[inputs[VERTEX]];
       if (positionDupMap.find(daeVertIndex) != positionDupMap.end())
         daeVertIndex = positionDupMap[daeVertIndex];
@@ -1841,7 +1936,7 @@ void ColladaLoader::LoadLines(TiXmlElement *_xml,
     Mesh *_mesh)
 {
   SubMesh *subMesh = new SubMesh;
-  subMesh->SetName(this->currentNodeName);
+  subMesh->SetName(this->dataPtr->currentNodeName);
   subMesh->SetPrimitiveType(SubMesh::LINES);
 
   TiXmlElement *inputXml = _xml->FirstChildElement("input");
