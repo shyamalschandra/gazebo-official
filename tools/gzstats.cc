@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
 #include <google/protobuf/message.h>
 #include <boost/thread.hpp>
 
-#include "transport/Transport.hh"
-#include "transport/TransportTypes.hh"
-#include "transport/Node.hh"
+#include "gazebo/transport/TransportIface.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/transport/Node.hh"
 
-#include "common/Animation.hh"
-#include "common/KeyFrame.hh"
+#include "gazebo/common/Animation.hh"
+#include "gazebo/common/KeyFrame.hh"
 
-#include "gazebo_config.h"
+#include "gazebo/gazebo_config.h"
 
 namespace po = boost::program_options;
 using namespace gazebo;
@@ -112,8 +112,6 @@ void SignalHandler(int /*dummy*/)
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-  std::string worldName = "default";
-
   if (signal(SIGINT, SignalHandler) == SIG_ERR)
   {
     std::cerr << "signal(2) failed while setting up for SIGINT" << std::endl;
@@ -149,6 +147,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  std::string worldName;
   if (vm.count("world-name"))
   {
     worldName = vm["world-name"].as<std::string>();
@@ -159,19 +158,20 @@ int main(int argc, char **argv)
     g_plot = true;
   }
 
-  transport::init();
+  if (transport::init())
+  {
+    transport::NodePtr node(new transport::Node());
 
-  transport::NodePtr node(new transport::Node());
+    node->Init(worldName);
 
-  node->Init(worldName);
+    std::string topic = "~/world_stats";
 
-  std::string topic = "~/world_stats";
+    transport::SubscriberPtr sub = node->Subscribe(topic, cb);
+    transport::run();
 
-  transport::SubscriberPtr sub = node->Subscribe(topic, cb);
-  transport::run();
-
-  boost::mutex::scoped_lock lock(mutex);
-  condition.wait(lock);
+    boost::mutex::scoped_lock lock(mutex);
+    condition.wait(lock);
+  }
 
   transport::fini();
 
