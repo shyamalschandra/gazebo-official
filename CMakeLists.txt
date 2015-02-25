@@ -9,13 +9,12 @@ project (Gazebo)
 string (TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 string (TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
-set (GAZEBO_VERSION_NAME "lithium")
-set (GAZEBO_MAJOR_VERSION 4)
+set (GAZEBO_MAJOR_VERSION 5)
 set (GAZEBO_MINOR_VERSION 0)
 # The patch version may have been bumped for prerelease purposes; be sure to
 # check gazebo-release/ubuntu/debian/changelog@default to determine what the
 # next patch version should be for a regular release.
-set (GAZEBO_PATCH_VERSION 0)
+set (GAZEBO_PATCH_VERSION 1)
 
 set (GAZEBO_VERSION ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION})
 set (GAZEBO_VERSION_FULL ${GAZEBO_MAJOR_VERSION}.${GAZEBO_MINOR_VERSION}.${GAZEBO_PATCH_VERSION})
@@ -133,6 +132,7 @@ message (STATUS "----------------------------------------\n")
 set(GAZEBO_DEFAULT_MASTER_HOST localhost)
 set(GAZEBO_DEFAULT_MASTER_PORT 11345)
 set(GAZEBO_PLUGIN_PATH ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/gazebo-${GAZEBO_VERSION}/plugins)
+set(GAZEBO_MODEL_PATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo-${GAZEBO_VERSION}/models)
 set(GAZEBO_RESOURCE_PATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo-${GAZEBO_VERSION}:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/gazebo_models)
 set(GAZEBO_MODEL_DATABASE_URI http://gazebosim.org/models)
 set(OGRE_RESOURCE_PATH ${OGRE_PLUGINDIR})
@@ -287,15 +287,41 @@ else (build_errors)
     add_subdirectory(plugins)
     add_subdirectory(interfaces)
     add_subdirectory(worlds)
+    add_subdirectory(models)
   endif (BUILD_GAZEBO)
 
   ########################################
   # Make the package config files
   set (pkgconfig_files gazebo_ode gazebo_transport gazebo)
+
+  # set boost pkgconfig cflags
+  set (Boost_PKGCONFIG_CFLAGS ${Boost_INCLUDE_DIRS})
+  if (NOT "${Boost_PKGCONFIG_CFLAGS}" STREQUAL "")
+    set (Boost_PKGCONFIG_CFLAGS "-I${Boost_PKGCONFIG_CFLAGS}")
+  endif (NOT "${Boost_PKGCONFIG_CFLAGS}" STREQUAL "")
+  string (REPLACE ";" " -I" Boost_PKGCONFIG_CFLAGS "${Boost_PKGCONFIG_CFLAGS}")
+
+  # set boost pkgconfig libs
+  set (Boost_PKGCONFIG_LIBS ${Boost_LIBRARY_DIRS})
+  if (NOT "${Boost_PKGCONFIG_LIBS}" STREQUAL "")
+    set (Boost_PKGCONFIG_LIBS "-L${Boost_PKGCONFIG_LIBS}")
+  endif(NOT "${Boost_PKGCONFIG_LIBS}" STREQUAL "")
+  string (REPLACE ";" " -L" Boost_PKGCONFIG_LIBS "${Boost_PKGCONFIG_LIBS}")
+
+  foreach (b ${Boost_LIBRARIES})
+    get_filename_component(bname ${b} NAME_WE)
+    # Prefix always -l
+    set (bname "-l${bname}")
+    # Remove the prefix lib (not always present, like in pthread)
+    string (REPLACE "lib" "" bname "${bname}")
+    set (Boost_PKGCONFIG_LIBS "${Boost_PKGCONFIG_LIBS} ${bname}")
+  endforeach(b)
+
   # set additional ldflags for osx
   if (APPLE)
-    set (APPLE_LDFLAGS "-lboost_system -lstdc++")
-  endif (APPLE)
+    # append stdc++
+    set (APPLE_PKGCONFIG_LIBS "${APPLE_PKGCONFIG_LIBS} -lstdc++")
+  ENDIF (APPLE)
 
   foreach (pkgconfig ${pkgconfig_files})
     configure_file(${CMAKE_SOURCE_DIR}/cmake/pkgconfig/${pkgconfig}.in ${CMAKE_CURRENT_BINARY_DIR}/cmake/pkgconfig/${pkgconfig}.pc @ONLY)
@@ -326,7 +352,7 @@ else (build_errors)
     gazebo_transport
     gazebo_util)
 
-  if (NOT HAVE_CCD)
+  if (NOT CCD_FOUND)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_ccd)
   endif()
 
@@ -342,7 +368,7 @@ else (build_errors)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_rendering_deferred)
   endif()
 
-  set(PKG_DEPENDS Boost Protobuf SDFormat)
+  set(PKG_DEPENDS Boost Protobuf SDFormat OGRE)
 
   set(cmake_conf_file "cmake/gazebo-config.cmake")
   set(cmake_conf_version_file "cmake/gazebo-config-version.cmake")
