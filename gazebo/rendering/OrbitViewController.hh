@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,10 +109,10 @@ namespace gazebo
       private: void Orbit(double _dy, double _dp);
 
       /// \brief Yaw value.
-      private: float yaw, initYaw;
+      private: float yaw;
 
       /// \brief Pitch value.
-      private: float pitch, initPitch;
+      private: float pitch;
 
       /// \brief Distance to the focal point.
       private: float distance;
