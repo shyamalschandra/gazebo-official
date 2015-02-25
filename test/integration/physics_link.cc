@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 */
 #include <string.h>
 
+#include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
 #include "test/ServerFixture.hh"
 #include "helper_physics_generator.hh"
@@ -30,6 +31,10 @@ class PhysicsLinkTest : public ServerFixture,
   /// \brief Test GetWorldEnergy* functions.
   /// \param[in] _physicsEngine Type of physics engine to use.
   public: void GetWorldEnergy(const std::string &_physicsEngine);
+
+  /// \brief Test Link::GetWorldInertia* functions.
+  /// \param[in] _physicsEngine Physics engine to use.
+  public: void LinkGetWorldInertia(const std::string &_physicsEngine);
 
   /// \brief Test velocity setting functions.
   /// \param[in] _physicsEngine Type of physics engine to use.
@@ -79,15 +84,167 @@ void PhysicsLinkTest::GetWorldEnergy(const std::string &_physicsEngine)
 }
 
 /////////////////////////////////////////////////
+// LinkGetWorldInertia:
+// Spawn boxes and verify Link::GetWorldInertia* functions
+void PhysicsLinkTest::LinkGetWorldInertia(const std::string &_physicsEngine)
+{
+  // Load a blank world (no ground plane)
+  Load("worlds/blank.world", true, _physicsEngine);
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // Verify physics engine type
+  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), _physicsEngine);
+
+  // disable gravity
+  physics->SetGravity(math::Vector3::Zero);
+
+  // Box size
+  double dx = 1.0;
+  double dy = 4.0;
+  double dz = 9.0;
+  double mass = 10.0;
+  double angle = M_PI / 3.0;
+
+  const unsigned int testCases = 4;
+  for (unsigned int i = 0; i < testCases; ++i)
+  {
+    // Use msgs::AddBoxLink
+    msgs::Model msgModel;
+    math::Pose modelPose, linkPose, inertialPose;
+
+    msgModel.set_name(this->GetUniqueString("model"));
+    msgs::AddBoxLink(msgModel, mass, math::Vector3(dx, dy, dz));
+    modelPose.pos.x = i * dz;
+    modelPose.pos.z = dz;
+
+    // i=0: rotated model pose
+    //  expect inertial pose to match model pose
+    if (i == 0)
+    {
+      modelPose.rot.SetFromEuler(0.0, 0.0, angle);
+    }
+    // i=1: rotated link pose
+    //  expect inertial pose to match link pose
+    else if (i == 1)
+    {
+      linkPose.rot.SetFromEuler(0.0, 0.0, angle);
+    }
+    // i=2: rotated inertial pose
+    //  expect inertial pose to differ from link pose
+    else if (i == 2)
+    {
+      inertialPose.rot.SetFromEuler(0.0, 0.0, angle);
+    }
+    // i=3: offset inertial pose
+    //  expect inertial pose to differ from link pose
+    else if (i == 3)
+    {
+      inertialPose.pos.Set(1, 1, 1);
+    }
+
+    {
+      msgs::Link *msgLink = msgModel.mutable_link(0);
+      msgs::Inertial *msgInertial = msgLink->mutable_inertial();
+
+      msgs::Set(msgModel.mutable_pose(), modelPose);
+      msgs::Set(msgLink->mutable_pose(), linkPose);
+      msgs::Set(msgInertial->mutable_pose(), inertialPose);
+    }
+
+    physics::ModelPtr model = this->SpawnModel(msgModel);
+    ASSERT_TRUE(model != NULL);
+
+    physics::LinkPtr link = model->GetLink();
+    ASSERT_TRUE(link != NULL);
+
+    EXPECT_EQ(model->GetWorldPose(), modelPose);
+    EXPECT_EQ(link->GetWorldPose(), linkPose + modelPose);
+    EXPECT_EQ(link->GetWorldInertialPose(),
+              inertialPose + linkPose + modelPose);
+
+    // i=0: rotated model pose
+    //  expect inertial pose to match model pose
+    if (i == 0)
+    {
+      EXPECT_EQ(model->GetWorldPose(),
+                link->GetWorldInertialPose());
+    }
+    // i=1: rotated link pose
+    //  expect inertial pose to match link pose
+    else if (i == 1)
+    {
+      EXPECT_EQ(link->GetWorldPose(),
+                link->GetWorldInertialPose());
+    }
+    // i=2: offset and rotated inertial pose
+    //  expect inertial pose to differ from link pose
+    else if (i == 2)
+    {
+      EXPECT_EQ(link->GetWorldPose().pos,
+                link->GetWorldInertialPose().pos);
+    }
+    // i=3: offset inertial pose
+    //  expect inertial pose to differ from link pose
+    else if (i == 3)
+    {
+      EXPECT_EQ(link->GetWorldPose().pos + inertialPose.pos,
+                link->GetWorldInertialPose().pos);
+    }
+
+    // Expect rotated inertia matrix
+    math::Matrix3 inertia = link->GetWorldInertiaMatrix();
+    if (i == 3)
+    {
+      EXPECT_NEAR(inertia[0][0], 80.8333, 1e-4);
+      EXPECT_NEAR(inertia[1][1], 68.3333, 1e-4);
+      EXPECT_NEAR(inertia[2][2], 14.1667, 1e-4);
+      for (int row = 0; row < 3; ++row)
+        for (int col = 0; col < 3; ++col)
+          if (row != col)
+            EXPECT_NEAR(inertia[row][col], 0.0, g_tolerance);
+    }
+    else
+    {
+      EXPECT_NEAR(inertia[0][0], 71.4583, 1e-4);
+      EXPECT_NEAR(inertia[1][1], 77.7083, 1e-4);
+      EXPECT_NEAR(inertia[2][2], 14.1667, 1e-4);
+      EXPECT_NEAR(inertia[0][1],  5.4126, 1e-4);
+      EXPECT_NEAR(inertia[1][0],  5.4126, 1e-4);
+      EXPECT_NEAR(inertia[0][2], 0, g_tolerance);
+      EXPECT_NEAR(inertia[2][0], 0, g_tolerance);
+      EXPECT_NEAR(inertia[1][2], 0, g_tolerance);
+      EXPECT_NEAR(inertia[2][1], 0, g_tolerance);
+    }
+
+    // For 0-2, apply torque and expect equivalent response
+    if (i <= 2)
+    {
+      for (int step = 0; step < 50; ++step)
+      {
+        link->SetTorque(math::Vector3(100, 0, 0));
+        world->Step(1);
+      }
+      if (_physicsEngine.compare("dart") == 0)
+      {
+        gzerr << "Dart fails this portion of the test (#1090)" << std::endl;
+      }
+      else
+      {
+        math::Vector3 vel = link->GetWorldAngularVel();
+        EXPECT_NEAR(vel.x,  0.0703, g_tolerance);
+        EXPECT_NEAR(vel.y, -0.0049, g_tolerance);
+        EXPECT_NEAR(vel.z,  0.0000, g_tolerance);
+      }
+    }
+  }
+}
+
+/////////////////////////////////////////////////
 void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
 {
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "SimbodyLink::SetLinearVel, SetAngularVel aren't working (#1080)"
-          << std::endl;
-    return;
-  }
-
   Load("worlds/empty.world", true, _physicsEngine);
   physics::WorldPtr world = physics::get_world("default");
   ASSERT_TRUE(world != NULL);
@@ -114,40 +271,18 @@ void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
   // Set upward velocity and check
   math::Vector3 vel(0, 0, 1);
   link->SetLinearVel(vel);
-  gzmsg << "pos1: " << link->GetWorldPose() << std::endl;
-  gzmsg << "lvel1: " << link->GetWorldLinearVel() << std::endl;
-  gzmsg << "avel1: " << link->GetWorldAngularVel() << std::endl;
-  gzmsg << "lacc1: " << link->GetWorldLinearAccel() << std::endl;
-  gzmsg << "aacc1: " << link->GetWorldAngularAccel() << std::endl;
   world->Step(1);
-  gzmsg << "pos2: " << link->GetWorldPose() << std::endl;
-  gzmsg << "lvel2: " << link->GetWorldLinearVel() << std::endl;
-  gzmsg << "avel2: " << link->GetWorldAngularVel() << std::endl;
-  gzmsg << "lacc2: " << link->GetWorldLinearAccel() << std::endl;
-  gzmsg << "aacc2: " << link->GetWorldAngularAccel() << std::endl;
   EXPECT_EQ(vel, link->GetWorldLinearVel());
   EXPECT_EQ(math::Vector3::Zero, link->GetWorldAngularVel());
 
   // Step forward and check velocity again
-  world->Step(1);
+  world->Step(44);
   double time = world->GetSimTime().Double();
   EXPECT_EQ(vel, link->GetWorldLinearVel());
   EXPECT_EQ(math::Vector3::Zero, link->GetWorldAngularVel());
 
-  gzmsg << "vel: " << vel << std::endl;
-  gzmsg << "time: " << time << std::endl;
-  gzmsg << "pos0: " << pos0 << std::endl;
-
   // check position
   math::Vector3 pos = link->GetWorldPose().pos;
-  gzmsg << "pos: " << pos << std::endl;
-  if (_physicsEngine.compare("bullet") == 0)
-  {
-    /// \TODO skipping bullet, see issue #1081
-    gzerr << "Bullet seems to be off by one time step (#1081)"
-          << std::endl;
-    time -= dt;
-  }
   EXPECT_EQ(pos0 + time*vel, pos);
 
   // Set velocity to zero
@@ -176,12 +311,6 @@ void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
   EXPECT_NEAR(vel3.z, 0.0, g_tolerance);
 
   // check rotation
-  if (_physicsEngine.compare("bullet") == 0)
-  {
-    gzerr << "Bullet seems to be off by one time step (#1081)"
-          << std::endl;
-    world->Step(1);
-  }
   math::Vector3 rpy = link->GetWorldPose().rot.GetAsEuler();
   EXPECT_NEAR(rpy.x, 0.0, g_tolerance);
   EXPECT_NEAR(rpy.y, vel2.y*dt, g_tolerance);
@@ -192,6 +321,12 @@ void PhysicsLinkTest::SetVelocity(const std::string &_physicsEngine)
 TEST_P(PhysicsLinkTest, GetWorldEnergy)
 {
   GetWorldEnergy(GetParam());
+}
+
+/////////////////////////////////////////////////
+TEST_P(PhysicsLinkTest, LinkGetWorldInertia)
+{
+  LinkGetWorldInertia(GetParam());
 }
 
 /////////////////////////////////////////////////
