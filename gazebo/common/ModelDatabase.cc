@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,18 +20,20 @@
 #include <curl/curl.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
 #include <iostream>
+
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
-#include "gazebo/sdf/sdf.hh"
+#include <sdf/sdf.hh>
+
 #include "gazebo/common/Time.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/common/Console.hh"
+#include "gazebo/common/ModelDatabasePrivate.hh"
 #include "gazebo/common/ModelDatabase.hh"
 
 using namespace gazebo;
@@ -60,24 +62,51 @@ size_t get_models_cb(void *_buffer, size_t _size, size_t _nmemb, void *_userp)
 
 /////////////////////////////////////////////////
 ModelDatabase::ModelDatabase()
+  : dataPtr(new ModelDatabasePrivate)
 {
-  this->stop = false;
-
-  // Create the thread that is used to update the model cache. This
-  // retreives online data in the background to improve startup times.
-  this->updateCacheThread = new boost::thread(
-      boost::bind(&ModelDatabase::UpdateModelCache, this));
+  this->dataPtr->updateCacheThread = NULL;
+  this->Start();
 }
 
 /////////////////////////////////////////////////
 ModelDatabase::~ModelDatabase()
 {
-  // Stop the update thread.
-  this->stop = true;
-  this->updateCacheCondition.notify_one();
-  this->updateCacheThread->join();
+  this->Fini();
+  delete this->dataPtr;
+  this->dataPtr = NULL;
+}
 
-  delete this->updateCacheThread;
+/////////////////////////////////////////////////
+void ModelDatabase::Start(bool _fetchImmediately)
+{
+  boost::recursive_mutex::scoped_lock lock(this->dataPtr->startCacheMutex);
+
+  if (!this->dataPtr->updateCacheThread)
+  {
+    this->dataPtr->stop = false;
+
+    // Create the thread that is used to update the model cache. This
+    // retreives online data in the background to improve startup times.
+    this->dataPtr->updateCacheThread = new boost::thread(
+        boost::bind(&ModelDatabase::UpdateModelCache, this, _fetchImmediately));
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelDatabase::Fini()
+{
+  // Stop the update thread.
+  this->dataPtr->stop = true;
+  this->dataPtr->updateCacheCompleteCondition.notify_all();
+  this->dataPtr->updateCacheCondition.notify_all();
+
+  {
+    boost::recursive_mutex::scoped_lock lock(this->dataPtr->startCacheMutex);
+    if (this->dataPtr->updateCacheThread)
+      this->dataPtr->updateCacheThread->join();
+    delete this->dataPtr->updateCacheThread;
+    this->dataPtr->updateCacheThread = NULL;
+  }
 }
 
 /////////////////////////////////////////////////
@@ -88,7 +117,10 @@ std::string ModelDatabase::GetURI()
   if (uriStr)
     result = uriStr;
   else
-    gzwarn << "GAZEBO_MODEL_DATABASE_URI not set\n";
+  {
+    // No env var.  Take compile-time default.
+    result = GAZEBO_MODEL_DATABASE_URI;
+  }
 
   if (result[result.size()-1] != '/')
     result += '/';
@@ -100,15 +132,28 @@ std::string ModelDatabase::GetURI()
 bool ModelDatabase::HasModel(const std::string &_modelURI)
 {
   std::string uri = _modelURI;
+
+  size_t uriSeparator = uri.find("://");
+
+  // Make sure there is a URI separator
+  if (uriSeparator == std::string::npos)
+  {
+    gzerr << "No URI separator \"://\" in [" << _modelURI << "]\n";
+    return false;
+  }
+
   boost::replace_first(uri, "model://", ModelDatabase::GetURI());
+  uri = uri.substr(0, uri.find("/", ModelDatabase::GetURI().size()));
 
   std::map<std::string, std::string> models = ModelDatabase::GetModels();
+
   for (std::map<std::string, std::string>::iterator iter = models.begin();
        iter != models.end(); ++iter)
   {
     if (iter->first == uri)
       return true;
   }
+
   return false;
 }
 
@@ -145,12 +190,6 @@ std::string ModelDatabase::GetModelConfig(const std::string &_uri)
 }
 
 /////////////////////////////////////////////////
-std::string ModelDatabase::GetManifest(const std::string &_uri)
-{
-  return this->GetModelConfig(_uri);
-}
-
-/////////////////////////////////////////////////
 std::string ModelDatabase::GetManifestImpl(const std::string &_uri)
 {
   std::string xmlString;
@@ -166,7 +205,7 @@ std::string ModelDatabase::GetManifestImpl(const std::string &_uri)
     if (success != CURLE_OK)
     {
       gzwarn << "Unable to connect to model database using [" << _uri
-        << "]. Only locally installed models will be available.";
+        << "]. Only locally installed models will be available.\n";
     }
 
     curl_easy_cleanup(curl);
@@ -204,8 +243,9 @@ bool ModelDatabase::UpdateModelCacheImpl()
     }
 
     TiXmlElement *uriElem;
-    for (uriElem = modelsElem->FirstChildElement("uri"); uriElem != NULL;
-        uriElem = uriElem->NextSiblingElement("uri"))
+    for (uriElem = modelsElem->FirstChildElement("uri");
+         uriElem != NULL && !this->dataPtr->stop;
+         uriElem = uriElem->NextSiblingElement("uri"))
     {
       std::string uri = uriElem->GetText();
 
@@ -219,7 +259,7 @@ bool ModelDatabase::UpdateModelCacheImpl()
       std::string fullURI = ModelDatabase::GetURI() + suffix;
       std::string modelName = ModelDatabase::GetModelName(fullURI);
 
-      this->modelCache[fullURI] = modelName;
+      this->dataPtr->modelCache[fullURI] = modelName;
     }
   }
 
@@ -227,17 +267,21 @@ bool ModelDatabase::UpdateModelCacheImpl()
 }
 
 /////////////////////////////////////////////////
-void ModelDatabase::UpdateModelCache()
+void ModelDatabase::UpdateModelCache(bool _fetchImmediately)
 {
+  boost::mutex::scoped_lock lock(this->dataPtr->updateMutex);
+
   // Continually update the model cache when requested.
-  while (!this->stop)
+  while (!this->dataPtr->stop)
   {
     // Wait for an update request.
-    boost::mutex::scoped_lock lock(this->updateMutex);
-    this->updateCacheCondition.wait(lock);
+    if (!_fetchImmediately)
+      this->dataPtr->updateCacheCondition.wait(lock);
+    else
+      _fetchImmediately = false;
 
     // Exit if notified and stopped.
-    if (this->stop)
+    if (this->dataPtr->stop)
       break;
 
     // Update the model cache.
@@ -245,14 +289,15 @@ void ModelDatabase::UpdateModelCache()
       gzerr << "Unable to download model manifests\n";
     else
     {
-      for (std::list<CallbackFunc>::iterator iter = this->callbacks.begin();
-           iter != this->callbacks.end(); ++iter)
-      {
-        (*iter)(this->modelCache);
-      }
-      this->callbacks.clear();
+      boost::mutex::scoped_lock lock2(this->dataPtr->callbacksMutex);
+
+      this->dataPtr->modelDBUpdated(this->dataPtr->modelCache);
     }
+    this->dataPtr->updateCacheCompleteCondition.notify_all();
   }
+
+  // Make sure no one is waiting on us.
+  this->dataPtr->updateCacheCompleteCondition.notify_all();
 }
 
 /////////////////////////////////////////////////
@@ -261,36 +306,53 @@ std::map<std::string, std::string> ModelDatabase::GetModels()
   size_t size = 0;
 
   {
-    boost::mutex::scoped_lock lock(this->updateMutex);
-    size = this->modelCache.size();
+    boost::recursive_mutex::scoped_lock startLock(
+        this->dataPtr->startCacheMutex);
+    if (!this->dataPtr->updateCacheThread)
+    {
+      boost::mutex::scoped_lock lock(this->dataPtr->updateMutex);
+      this->Start(true);
+      this->dataPtr->updateCacheCompleteCondition.wait(lock);
+    }
+    else
+    {
+      boost::mutex::scoped_try_lock lock(this->dataPtr->updateMutex);
+      if (!lock)
+      {
+        gzmsg << "Waiting for model database update to complete...\n";
+        boost::mutex::scoped_lock lock2(this->dataPtr->updateMutex);
+      }
+    }
+
+    size = this->dataPtr->modelCache.size();
   }
 
   if (size != 0)
-    return this->modelCache;
+    return this->dataPtr->modelCache;
   else
   {
     gzwarn << "Getting models from[" << GetURI()
            << "]. This may take a few seconds.\n";
 
-    // Tell the background thread to grab the models from online.
-    this->updateCacheCondition.notify_one();
+    boost::mutex::scoped_lock lock(this->dataPtr->updateMutex);
 
-    // Let the other thread start downloading.
-    common::Time::MSleep(100);
+    // Tell the background thread to grab the models from online.
+    this->dataPtr->updateCacheCondition.notify_all();
 
     // Wait for the thread to finish.
-    boost::mutex::scoped_lock lock(this->updateMutex);
+    this->dataPtr->updateCacheCompleteCondition.wait(lock);
   }
 
-  return this->modelCache;
+  return this->dataPtr->modelCache;
 }
 
 /////////////////////////////////////////////////
-void ModelDatabase::GetModels(
+event::ConnectionPtr ModelDatabase::GetModels(
     boost::function<void (const std::map<std::string, std::string> &)> _func)
 {
-  this->callbacks.push_back(_func);
-  this->updateCacheCondition.notify_one();
+  boost::mutex::scoped_lock lock2(this->dataPtr->callbacksMutex);
+  this->dataPtr->updateCacheCondition.notify_one();
+  return this->dataPtr->modelDBUpdated.Connect(_func);
 }
 
 /////////////////////////////////////////////////
@@ -329,9 +391,14 @@ std::string ModelDatabase::GetModelName(const std::string &_uri)
 }
 
 /////////////////////////////////////////////////
-std::string ModelDatabase::GetModelPath(const std::string &_uri)
+std::string ModelDatabase::GetModelPath(const std::string &_uri,
+                                        bool _forceDownload)
 {
-  std::string path = SystemPaths::Instance()->FindFileURI(_uri);
+  std::string path, suffix;
+
+  if (!_forceDownload)
+    path = SystemPaths::Instance()->FindFileURI(_uri);
+
   struct stat st;
 
   if (path.empty() || stat(path.c_str(), &st) != 0 )
@@ -346,11 +413,32 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
     // std::cout << "Getting uri[" << _uri << "] path[" << path << "]\n";
 
     // Get the model name from the uri
-    int index = _uri.find_last_of("/");
-    std::string modelName = _uri.substr(index+1, _uri.size() - index - 1);
+    size_t startIndex = _uri.find_first_of("://");
+    if (startIndex == std::string::npos)
+    {
+      gzerr << "URI[" << _uri << "] is missing ://\n";
+      return std::string();
+    }
 
-    // store zip file in temp location
-    std::string filename = "/tmp/gz_model.tar.gz";
+    std::string modelName = _uri;
+    boost::replace_first(modelName, "model://", "");
+    boost::replace_first(modelName, ModelDatabase::GetURI(), "");
+
+    startIndex = modelName[0] == '/' ? 1 : 0;
+    size_t endIndex = modelName.find_first_of("/", startIndex);
+    size_t modelNameLen = endIndex == std::string::npos ? std::string::npos :
+      endIndex - startIndex;
+
+    if (endIndex != std::string::npos)
+      suffix = modelName.substr(endIndex, std::string::npos);
+
+    modelName = modelName.substr(startIndex, modelNameLen);
+
+    // Store downloaded .tar.gz and intermediate .tar files in temp location
+    boost::filesystem::path tmppath = boost::filesystem::temp_directory_path();
+    tmppath /= boost::filesystem::unique_path("gz_model-%%%%-%%%%-%%%%-%%%%");
+    std::string tarfilename = tmppath.string() + ".tar";
+    std::string tgzfilename = tarfilename + ".gz";
 
     CURL *curl = curl_easy_init();
     if (!curl)
@@ -358,6 +446,7 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
       gzerr << "Unable to initialize libcurl\n";
       return std::string();
     }
+
     curl_easy_setopt(curl, CURLOPT_URL,
         (ModelDatabase::GetURI() + "/" +
          modelName + "/model.tar.gz").c_str());
@@ -370,11 +459,11 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
       retry = false;
       iterations++;
 
-      FILE *fp = fopen(filename.c_str(), "wb");
+      FILE *fp = fopen(tgzfilename.c_str(), "wb");
       if (!fp)
       {
         gzerr << "Could not download model[" << _uri << "] because we were"
-          << "unable to write to file[" << filename << "]."
+          << "unable to write to file[" << tgzfilename << "]."
           << "Please fix file permissions.";
         return std::string();
       }
@@ -396,9 +485,9 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
       try
       {
         // Unzip model tarball
-        std::ifstream file(filename.c_str(),
+        std::ifstream file(tgzfilename.c_str(),
             std::ios_base::in | std::ios_base::binary);
-        std::ofstream out("/tmp/gz_model.tar",
+        std::ofstream out(tarfilename.c_str(),
             std::ios_base::out | std::ios_base::binary);
         boost::iostreams::filtering_streambuf<boost::iostreams::input> in;
         in.push(boost::iostreams::gzip_decompressor());
@@ -413,7 +502,7 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
       }
 
       TAR *tar;
-      tar_open(&tar, const_cast<char*>("/tmp/gz_model.tar"),
+      tar_open(&tar, const_cast<char*>(tarfilename.c_str()),
           NULL, O_RDONLY, 0644, TAR_GNU);
 
       std::string outputPath = getenv("HOME");
@@ -432,9 +521,20 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri)
         << "The model may be corrupt.\n";
       path.clear();
     }
+
+    // Clean up
+    try
+    {
+      boost::filesystem::remove(tarfilename);
+      boost::filesystem::remove(tgzfilename);
+    }
+    catch(...)
+    {
+      gzwarn << "Failed to remove temporary model files after download.";
+    }
   }
 
-  return path;
+  return path + suffix;
 }
 
 /////////////////////////////////////////////////
@@ -442,17 +542,13 @@ void ModelDatabase::DownloadDependencies(const std::string &_path)
 {
   boost::filesystem::path manifestPath = _path;
 
-  // First try to get the GZ_MODEL_MANIFEST_FILENAME. If that file doesn't
-  // exist, try to get the deprecated version.
+  // Get the GZ_MODEL_MANIFEST_FILENAME.
   if (boost::filesystem::exists(manifestPath / GZ_MODEL_MANIFEST_FILENAME))
     manifestPath /= GZ_MODEL_MANIFEST_FILENAME;
   else
   {
-    gzwarn << "The manifest.xml for a Gazebo model is deprecated. "
-      << "Please rename manifest.xml to " << GZ_MODEL_MANIFEST_FILENAME
+    gzerr << "Missing " << GZ_MODEL_MANIFEST_FILENAME
       << " for model " << _path << "\n";
-
-    manifestPath /= "manifest.xml";
   }
 
   TiXmlDocument xmlDoc;
@@ -499,17 +595,13 @@ std::string ModelDatabase::GetModelFile(const std::string &_uri)
 
   boost::filesystem::path manifestPath = path;
 
-  // First try to get the GZ_MODEL_MANIFEST_FILENAME. If that file doesn't
-  // exist, try to get the deprecated version.
+  // Get the GZ_MODEL_MANIFEST_FILENAME.
   if (boost::filesystem::exists(manifestPath / GZ_MODEL_MANIFEST_FILENAME))
     manifestPath /= GZ_MODEL_MANIFEST_FILENAME;
   else
   {
-    gzwarn << "The manifest.xml for a Gazebo model is deprecated. "
-      << "Please rename manifest.xml to " << GZ_MODEL_MANIFEST_FILENAME
+    gzerr << "Missing " << GZ_MODEL_MANIFEST_FILENAME
       << " for model " << manifestPath << "\n";
-
-    manifestPath /= "manifest.xml";
   }
 
   TiXmlDocument xmlDoc;
