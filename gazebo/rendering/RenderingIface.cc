@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,8 @@ rendering::ScenePtr rendering::get_scene(const std::string &_name)
 
 //////////////////////////////////////////////////
 rendering::ScenePtr rendering::create_scene(const std::string &_name,
-                                            bool _enableVisualizations)
+                                            bool _enableVisualizations,
+                                            bool _isServer)
 {
   ScenePtr scene = get_scene(_name);
 
@@ -85,11 +86,16 @@ rendering::ScenePtr rendering::create_scene(const std::string &_name,
     try
     {
       scene = rendering::RenderEngine::Instance()->CreateScene(_name,
-          _enableVisualizations);
+          _enableVisualizations, _isServer);
     }
     catch(common::Exception &e)
     {
-      gzerr << "Failed to create a scene in the Rendering engine" << e;
+      gzerr << "Failed to create a scene in the Rendering engine"
+        << e << std::endl;
+    }
+    catch(...)
+    {
+      gzerr << "Faild to create a scene\n";
     }
   }
 
