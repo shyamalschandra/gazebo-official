@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,12 @@ using namespace physics;
 //////////////////////////////////////////////////
 DARTCollision::DARTCollision(LinkPtr _link)
   : Collision(_link),
-    dtBodyNode(NULL),
     dtCollisionShape(NULL)
 {
   this->SetName("DART_Collision");
   this->surface.reset(new SurfaceParams());
+  this->dtBodyNode
+      = boost::static_pointer_cast<DARTLink>(this->link)->GetDARTBodyNode();
 }
 
 //////////////////////////////////////////////////
@@ -55,9 +56,6 @@ void DARTCollision::Load(sdf::ElementPtr _sdf)
     this->SetCategoryBits(GZ_FIXED_COLLIDE);
     this->SetCollideBits(~GZ_FIXED_COLLIDE);
   }
-
-  this->dtBodyNode
-      = boost::static_pointer_cast<DARTLink>(this->link)->GetDARTBodyNode();
 }
 
 //////////////////////////////////////////////////

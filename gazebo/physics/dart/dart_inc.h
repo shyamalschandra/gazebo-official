@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@
 #include <dart/math/Geometry.h>
 
 #include <dart/collision/CollisionDetector.h>
-#include <dart/collision/SoftCollisionNode.h>
+#include <dart/collision/CollisionNode.h>
 #include <dart/collision/dart/DARTCollisionDetector.h>
-#include <dart/collision/fcl_mesh/SoftFCLMeshCollisionDetector.h>
+#include <dart/collision/fcl_mesh/FCLMeshCollisionDetector.h>
 
 #include <dart/integration/Integrator.h>
 #include <dart/integration/EulerIntegrator.h>
@@ -39,7 +39,6 @@
 #include <dart/dynamics/CylinderShape.h>
 #include <dart/dynamics/EllipsoidShape.h>
 #include <dart/dynamics/FreeJoint.h>
-#include <dart/dynamics/GenCoord.h>
 #include <dart/dynamics/Joint.h>
 #include <dart/dynamics/MeshShape.h>
 #include <dart/dynamics/PointMass.h>
@@ -52,15 +51,13 @@
 #include <dart/dynamics/WeldJoint.h>
 #include <dart/dynamics/SoftBodyNode.h>
 #include <dart/dynamics/SoftMeshShape.h>
-#include <dart/dynamics/SoftSkeleton.h>
 
 #include <dart/constraint/Constraint.h>
-#include <dart/constraint/ConstraintDynamics.h>
-#include <dart/constraint/SoftConstraintDynamics.h>
-#include <dart/constraint/BallJointConstraint.h>
-#include <dart/constraint/RevoluteJointConstraint.h>
+#include <dart/constraint/ConstraintSolver.h>
+#include <dart/constraint/ContactConstraint.h>
+#include <dart/constraint/JointLimitConstraint.h>
+#include <dart/constraint/WeldJointConstraint.h>
 
-#include <dart/simulation/SoftWorld.h>
 #include <dart/simulation/World.h>
 
 #endif
