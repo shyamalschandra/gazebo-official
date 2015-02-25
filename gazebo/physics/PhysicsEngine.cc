@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,14 @@
  * limitations under the License.
  *
 */
-/* Desc: The base class for all physics engines
- * Author: Nate Koenig
- */
-
-#include "sdf/sdf.hh"
+#include <sdf/sdf.hh>
 
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Events.hh"
 
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
 
 #include "gazebo/math/Rand.hh"
@@ -74,11 +70,11 @@ void PhysicsEngine::Load(sdf::ElementPtr _sdf)
   this->sdf->Copy(_sdf);
 
   this->realTimeUpdateRate =
-      this->sdf->GetElement("real_time_update_rate")->GetValueDouble();
+      this->sdf->GetElement("real_time_update_rate")->Get<double>();
   this->targetRealTimeFactor =
-      this->sdf->GetElement("real_time_factor")->GetValueDouble();
+      this->sdf->GetElement("real_time_factor")->Get<double>();
   this->maxStepSize =
-      this->sdf->GetElement("max_step_size")->GetValueDouble();
+      this->sdf->GetElement("max_step_size")->Get<double>();
 }
 
 //////////////////////////////////////////////////
@@ -105,7 +101,7 @@ PhysicsEngine::~PhysicsEngine()
 //////////////////////////////////////////////////
 math::Vector3 PhysicsEngine::GetGravity() const
 {
-  return this->sdf->GetValueVector3("gravity");
+  return this->sdf->Get<math::Vector3>("gravity");
 }
 
 //////////////////////////////////////////////////
@@ -125,18 +121,6 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetUpdateRate(double _value)
-{
-  this->SetRealTimeUpdateRate(_value);
-}
-
-//////////////////////////////////////////////////
-double PhysicsEngine::GetUpdateRate()
-{
-  return this->GetRealTimeUpdateRate();
-}
-
-//////////////////////////////////////////////////
 double PhysicsEngine::GetUpdatePeriod()
 {
   double updateRate = this->GetRealTimeUpdateRate();
@@ -151,18 +135,6 @@ ModelPtr PhysicsEngine::CreateModel(BasePtr _base)
 {
   ModelPtr ret(new Model(_base));
   return ret;
-}
-
-//////////////////////////////////////////////////
-void PhysicsEngine::SetStepTime(double _value)
-{
-  this->SetMaxStepSize(_value);
-}
-
-//////////////////////////////////////////////////
-double PhysicsEngine::GetStepTime()
-{
-  return this->GetMaxStepSize();
 }
 
 //////////////////////////////////////////////////
@@ -220,27 +192,12 @@ void PhysicsEngine::SetAutoDisableFlag(bool /*_autoDisable*/)
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSPreconIters(unsigned int /*_iters*/)
-{
-}
-
-//////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSIters(unsigned int /*_iters*/)
-{
-}
-
-//////////////////////////////////////////////////
-void PhysicsEngine::SetSORPGSW(double /*_w*/)
-{
-}
-
-//////////////////////////////////////////////////
 void PhysicsEngine::SetContactMaxCorrectingVel(double /*_vel*/)
 {
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetMaxContacts(double /*_maxContacts*/)
+void PhysicsEngine::SetMaxContacts(unsigned int /*_maxContacts*/)
 {
 }
 
@@ -260,13 +217,14 @@ void PhysicsEngine::SetContactSurfaceLayer(double /*_layerDepth*/)
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetParam(std::string /*_key*/,
+bool PhysicsEngine::SetParam(const std::string &/*_key*/,
     const boost::any &/*_value*/)
 {
+  return true;
 }
 
 //////////////////////////////////////////////////
-boost::any PhysicsEngine::GetParam(std::string /*_key*/) const
+boost::any PhysicsEngine::GetParam(const std::string &/*_key*/) const
 {
   return 0;
 }
