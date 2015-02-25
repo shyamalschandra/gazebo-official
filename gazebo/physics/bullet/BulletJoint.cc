@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -526,21 +526,6 @@ math::Vector3 BulletJoint::GetLinkTorque(unsigned int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-void BulletJoint::SetAttribute(Attribute, unsigned int /*_index*/,
-    double /*_value*/)
-{
-  gzdbg << "Not implement in Bullet\n";
-}
-
-//////////////////////////////////////////////////
-void BulletJoint::SetAttribute(const std::string &_key,
-    unsigned int _index,
-    const boost::any &_value)
-{
-  this->SetParam(_key, _index, _value);
-}
-
-//////////////////////////////////////////////////
 bool BulletJoint::SetParam(const std::string &/*_key*/,
     unsigned int /*_index*/,
     const boost::any &/*_value*/)
@@ -550,18 +535,10 @@ bool BulletJoint::SetParam(const std::string &/*_key*/,
 }
 
 //////////////////////////////////////////////////
-double BulletJoint::GetParam(const std::string &/*_key*/,
-    unsigned int /*_index*/)
-{
-  gzdbg << "Not implement in Bullet\n";
-  return 0;
-}
-
-//////////////////////////////////////////////////
-double BulletJoint::GetAttribute(const std::string &_key,
+double BulletJoint::GetParam(const std::string &_key,
     unsigned int _index)
 {
-  return this->GetParam(_key, _index);
+  return Joint::GetParam(_key, _index);
 }
 
 //////////////////////////////////////////////////
@@ -574,4 +551,10 @@ math::Angle BulletJoint::GetHighStop(unsigned int _index)
 math::Angle BulletJoint::GetLowStop(unsigned int _index)
 {
   return this->GetLowerLimit(_index);
+}
+
+//////////////////////////////////////////////////
+bool BulletJoint::SetPosition(unsigned int _index, double _position)
+{
+  return Joint::SetPositionMaximal(_index, _position);
 }
