@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -400,7 +400,7 @@ void Element::PrintDocRightPane(std::string &_html, int _spacing, int &_index)
 
   stream << "</div>";
 
-  if (!this->attributes.empty())
+  if (this->attributes.size() > 0)
   {
     stream << "<div style='background-color: #dedede; padding-left:10px; "
            << "display:inline-block;'>\n";
@@ -480,7 +480,7 @@ void Element::PrintValues(std::string _prefix)
       << (*aiter)->GetAsString() << "'";
   }
 
-  if (!this->elements.empty())
+  if (this->elements.size() > 0)
   {
     std::cout << ">\n";
     ElementPtr_V::iterator eiter;
@@ -529,7 +529,7 @@ void Element::ToString(const std::string &_prefix,
            << (*aiter)->GetAsString() << "'";
     }
 
-    if (!this->elements.empty())
+    if (this->elements.size() > 0)
     {
       _out << ">\n";
       ElementPtr_V::const_iterator eiter;
