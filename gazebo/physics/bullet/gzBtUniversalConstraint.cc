@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ gzBtUniversalConstraint::gzBtUniversalConstraint(btRigidBody &_rbA,
   m_frameInA = _rbA.getCenterOfMassTransform().inverse() * frameInW;
   m_frameInB = _rbB.getCenterOfMassTransform().inverse() * frameInW;
 
-  // sei limits
+  // set limits
   setLinearLowerLimit(btVector3(0., 0., 0.));
   setLinearUpperLimit(btVector3(0., 0., 0.));
   this->setAngularLowerLimit(btVector3(0.f,
@@ -105,7 +105,7 @@ gzBtUniversalConstraint::gzBtUniversalConstraint(btRigidBody &_rbB,
   frameInW.setOrigin(_anchor);
 
   // now get constraint frame in local coordinate systems
-  m_frameInA =  btTransform::getIdentity().inverse() * frameInW;
+  m_frameInA = frameInW;
   m_frameInB = _rbB.getCenterOfMassTransform().inverse() * frameInW;
 
   // set limits
@@ -138,7 +138,7 @@ void gzBtUniversalConstraint::setAxis(const btVector3 &_axis1,
   frameInW.setOrigin(m_anchor);
 
   // now get constraint frame in local coordinate systems
-  m_frameInA = m_rbB.getCenterOfMassTransform().inverse() * frameInW;
+  m_frameInA = m_rbA.getCenterOfMassTransform().inverse() * frameInW;
   m_frameInB = m_rbB.getCenterOfMassTransform().inverse() * frameInW;
 
   this->calculateTransforms();
@@ -172,14 +172,14 @@ const btVector3 &gzBtUniversalConstraint::getAxis2()
 btScalar gzBtUniversalConstraint::getAngle1()
 {
   this->calculateTransforms();
-  return this->getAngle(2);
+  return this->getAngle(1);
 }
 
 /////////////////////////////////////////////////
 btScalar gzBtUniversalConstraint::getAngle2()
 {
   this->calculateTransforms();
-  return this->getAngle(1);
+  return this->getAngle(2);
 }
 
 /////////////////////////////////////////////////
