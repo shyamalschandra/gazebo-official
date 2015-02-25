@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,12 +53,14 @@ OculusWindow::OculusWindow(int _x, int _y, const std::string &_visual,
   renderLayout->setContentsMargins(0, 0, 0, 0);
 
   this->setLayout(renderLayout);
+  this->attachCameraThread = NULL;
 }
 
 /////////////////////////////////////////////////
 OculusWindow::~OculusWindow()
 {
-  this->attachCameraThread->join();
+  if (this->attachCameraThread)
+    this->attachCameraThread->join();
   delete this->attachCameraThread;
   this->oculusCamera.reset();
 }
@@ -109,8 +111,8 @@ void OculusWindow::AttachCameraToVisual()
 
   if (tries >= 50)
   {
-    gzerr << "Oculus: visual link not found and Oculus is not attached."
-          << std::endl;
+    gzerr << "Oculus: visual [" << this->visualName << "] not found."
+          << "Oculus is not attached." << std::endl;
     return;
   }
 
