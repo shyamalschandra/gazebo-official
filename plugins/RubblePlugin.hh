@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@
 #include <string>
 #include <vector>
 
-#include "gazebo/gazebo.hh"
+#include <gazebo/common/Plugin.hh>
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
-  class RubblePlugin : public WorldPlugin
+  class GAZEBO_VISIBLE RubblePlugin : public WorldPlugin
   {
     /// \brief Constructor.
     public: RubblePlugin();
@@ -39,23 +40,19 @@ namespace gazebo
     public: virtual void Init();
 
     private: void MakeBox(const std::string &_name, math::Pose &_pose,
-                          math::Vector3 &_size, double _mass,
-                          const std::string &_texture);
+                          math::Vector3 &_size, double _mass);
 
     private: void MakeCinderBlock(const std::string &_name, math::Pose &_pose,
-                                  math::Vector3 &_size, double _mass,
-                                  const std::string &_texture);
+                                  math::Vector3 &_size, double _mass);
 
     private: void MakeCylinder(const std::string &_name, math::Vector3 &_pos,
-                               math::Vector3 &_size, double _mass,
-                               const std::string &_texture);
+                               math::Vector3 &_size, double _mass);
 
     private: class Obj
              {
                public: math::Pose pose;
                public: math::Vector3 size;
                public: int type;
-               public: std::string texture;
              };
 
     private: class CompoundObj
@@ -70,13 +67,6 @@ namespace gazebo
 
     private: void MakeCompound(const std::string &_name, CompoundObj &_obj);
     private: physics::WorldPtr world;
-
-    /// \brief Stores absolute filename of rubble material script
-    private: std::string rubbleMaterialScript;
-
-    /// \brief Stores possible rubble textures used from rubble material script
-    ///        for each rubble type
-    private: std::vector< std::vector<std::string> > rubbleTextures;
   };
 }
 #endif

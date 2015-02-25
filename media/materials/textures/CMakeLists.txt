@@ -1,5 +1,7 @@
 set (files
   beigeWall.jpg
+  building_frame.png
+  bricks.png
   ceiling_tiled.jpg
   clouds.jpg
   dirt_diffusespecular.png
@@ -14,37 +16,26 @@ set (files
   grass_normal.png
   hardwood_floor.jpg
   heightmap_bowl.png
+  motorway.jpg
   paintedWall.jpg
   pioneerBody.jpg
+  primary.jpg
   projection_filter.png
   random.png
+  residential.jpg
   road1.jpg
+  secondary.jpg
+  sidewalk.jpg
+  steps.jpeg
   stereo_projection_pattern_high_res.png
   stereo_projection_pattern_high_res_red.png
   terrain_detail.jpg
   terrain.png
+  trunk.jpg
   white.bmp
   willowMap.png
   wood.jpg
   WoodPallet.png
-
-  aluminium_metal.jpg  
-  bark.jpg
-  cement_cracked.jpg
-  cinder_block.jpg
-  grass_dry.jpg  
-  metal_ripped.jpg   
-  mud_soft_leaves.jpg
-  red_brick.jpg
-  rock_craggy.jpg
-  rough_ground.jpg
-  steel_grating.jpg
-  tarmac.jpg         
-  wall_white_structured.jpg
-  wood_planks.jpg
-  
-  #TODO: REMOVE THIS FROM HERE AND FIND AN APPROPRIATE PLACE!
-  2x4x1_box.dae
 )
 
 

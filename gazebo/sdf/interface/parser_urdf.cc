@@ -15,14 +15,14 @@
  *
 */
 #include <urdf_parser/urdf_parser.h>
-#include <sdf/interface/parser_urdf.hh>
-#include <sdf/sdf.hh>
 
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <string>
 
+#include "gazebo/sdf/interface/parser_urdf.hh"
+#include "gazebo/sdf/sdf.hh"
 #include "gazebo/common/SystemPaths.hh"
 
 namespace urdf2gazebo
@@ -557,11 +557,11 @@ void URDF2Gazebo::InsertGazeboExtensionJoint(TiXmlElement *_elem,
         // insert stopCfm, stopErp, fudgeFactor
         if ((*ge)->isStopCfm)
         {
-          this->AddKeyValue(limit, "cfm", this->Values2str(1, &(*ge)->stopCfm));
+          this->AddKeyValue(limit, "erp", this->Values2str(1, &(*ge)->stopCfm));
         }
         if ((*ge)->isStopErp)
         {
-          this->AddKeyValue(limit, "erp", this->Values2str(1, &(*ge)->stopErp));
+          this->AddKeyValue(limit, "cfm", this->Values2str(1, &(*ge)->stopErp));
         }
         /* gone
         if ((*ge)->isInitialJointPosition)
