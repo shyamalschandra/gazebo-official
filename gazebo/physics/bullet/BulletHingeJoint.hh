@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,16 @@
  * limitations under the License.
  *
 */
-/* Desc: A body that has a box shape
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
+#ifndef _GAZEBO_BULLETHINGEJOINT_HH_
+#define _GAZEBO_BULLETHINGEJOINT_HH_
 
-#ifndef _BULLETHINGEJOINT_HH_
-#define _BULLETHINGEJOINT_HH_
-
+#include <string>
 #include "gazebo/math/Angle.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/physics/HingeJoint.hh"
 #include "gazebo/physics/bullet/BulletJoint.hh"
 #include "gazebo/physics/bullet/BulletPhysics.hh"
+#include "gazebo/util/system.hh"
 
 class btHingeConstraint;
 
@@ -39,7 +36,7 @@ namespace gazebo
     /// \{
 
     /// \brief A single axis hinge joint
-    class BulletHingeJoint : public HingeJoint<BulletJoint>
+    class GAZEBO_VISIBLE BulletHingeJoint : public HingeJoint<BulletJoint>
     {
       ///  Constructor
       public: BulletHingeJoint(btDynamicsWorld *world, BasePtr _parent);
@@ -54,49 +51,49 @@ namespace gazebo
       public: virtual void Init();
 
       // Documentation inherited.
-      public: virtual math::Vector3 GetAnchor(int _index) const;
+      public: virtual math::Vector3 GetAnchor(unsigned int _index) const;
 
       // Documentation inherited.
-      public: virtual void SetAnchor(int _index, const math::Vector3 &_anchor);
+      public: virtual void SetAxis(unsigned int _index,
+                  const math::Vector3 &_axis);
 
       // Documentation inherited.
-      public: virtual void SetAxis(int _index, const math::Vector3 &_axis);
-
-      /// \brief Set joint damping, not yet implemented
-      public: virtual void SetDamping(int _index, double _damping);
+      public: virtual void SetMaxForce(unsigned int _index, double _t);
 
       // Documentation inherited.
-      public: virtual void SetVelocity(int _index, double _vel);
+      public: virtual double GetMaxForce(unsigned int _index);
 
       // Documentation inherited.
-      public: virtual double GetVelocity(int _index) const;
+      public: virtual bool SetHighStop(unsigned int _index,
+                  const math::Angle &_angle);
 
       // Documentation inherited.
-      public: virtual void SetMaxForce(int _index, double _t);
+      public: virtual bool SetLowStop(unsigned int _index,
+                  const math::Angle &_angle);
 
       // Documentation inherited.
-      public: virtual double GetMaxForce(int _index);
+      public: virtual math::Angle GetHighStop(unsigned int _index);
 
       // Documentation inherited.
-      public: virtual void SetForce(int _index, double _effort);
+      public: virtual math::Angle GetLowStop(unsigned int _index);
 
       // Documentation inherited.
-      public: virtual void SetHighStop(int _index, const math::Angle &_angle);
+      public: virtual math::Vector3 GetGlobalAxis(unsigned int _index) const;
 
       // Documentation inherited.
-      public: virtual void SetLowStop(int _index, const math::Angle &_angle);
+      public: virtual math::Angle GetAngleImpl(unsigned int _index) const;
 
       // Documentation inherited.
-      public: virtual math::Angle GetHighStop(int _index);
+      public: virtual bool SetParam(const std::string &_key,
+                                    unsigned int _index,
+                                    const boost::any &_value);
 
       // Documentation inherited.
-      public: virtual math::Angle GetLowStop(int _index);
+      public: virtual double GetParam(const std::string &_key,
+                                      unsigned int _index);
 
       // Documentation inherited.
-      public: virtual math::Vector3 GetGlobalAxis(int _index) const;
-
-      // Documentation inherited.
-      public: virtual math::Angle GetAngleImpl(int _index) const;
+      protected: virtual void SetForceImpl(unsigned int _index, double _effort);
 
       /// \brief Pointer to bullet hinge constraint.
       private: btHingeConstraint *bulletHinge;
@@ -108,6 +105,15 @@ namespace gazebo
       /// \brief Initial value of joint axis, expressed as unit vector
       ///        in world frame.
       private: math::Vector3 initialWorldAxis;
+
+      // Documentation inherited.
+      public: virtual bool SetParam(const std::string &_key,
+                                        unsigned int _index,
+                                        const boost::any &_value);
+
+      // Documentation inherited.
+      public: virtual double GetParam(const std::string &_key,
+                                          unsigned int _index);
     };
     /// \}
   }
