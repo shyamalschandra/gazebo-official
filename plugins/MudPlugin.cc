@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 
 #include "gazebo/common/Assert.hh"
 #include "gazebo/physics/physics.hh"
+#include "gazebo/sensors/SensorManager.hh"
+#include "gazebo/sensors/ContactSensor.hh"
 #include "gazebo/transport/transport.hh"
 #include "plugins/MudPlugin.hh"
 
@@ -29,7 +31,8 @@ GZ_REGISTER_MODEL_PLUGIN(MudPlugin)
 
 /////////////////////////////////////////////////
 MudPlugin::MudPlugin()
-  : newMsg(false), newMsgWait(0), stiffness(0.0), damping(100.0)
+  : newMsg(false), newMsgWait(0), stiffness(0.0), damping(100.0),
+    contactSurfaceBitmask(0)
 {
 }
 
@@ -40,6 +43,7 @@ void MudPlugin::Load(physics::ModelPtr _model,
   GZ_ASSERT(_model, "MudPlugin _model pointer is NULL");
   this->model = _model;
   this->modelName = _model->GetName();
+  this->sdf = _sdf;
 
   this->world = this->model->GetWorld();
   GZ_ASSERT(this->world, "MudPlugin world pointer is NULL");
@@ -53,7 +57,7 @@ void MudPlugin::Load(physics::ModelPtr _model,
   GZ_ASSERT(_sdf, "MudPlugin _sdf pointer is NULL");
   if (_sdf->HasElement("contact_sensor_name"))
   {
-    this->contactSensorName = _sdf->GetValueString("contact_sensor_name");
+    this->contactSensorName = _sdf->Get<std::string>("contact_sensor_name");
   }
   else
   {
@@ -61,17 +65,23 @@ void MudPlugin::Load(physics::ModelPtr _model,
   }
 
   if (_sdf->HasElement("stiffness"))
-    this->stiffness = _sdf->GetValueDouble("stiffness");
+    this->stiffness = _sdf->Get<double>("stiffness");
 
   if (_sdf->HasElement("damping"))
-    this->damping = _sdf->GetValueDouble("damping");
+    this->damping = _sdf->Get<double>("damping");
+
+  if (_sdf->HasElement("contact_surface_bitmask"))
+  {
+    this->contactSurfaceBitmask =
+        _sdf->Get<unsigned int>("contact_surface_bitmask");
+  }
 
   if (_sdf->HasElement("link_name"))
   {
     sdf::ElementPtr elem = _sdf->GetElement("link_name");
     while (elem)
     {
-      allowedLinks.push_back(elem->GetValueString());
+      allowedLinks.push_back(elem->Get<std::string>());
       links.push_back(physics::LinkPtr());
       joints.push_back(physics::JointPtr());
       elem = elem->GetNextElement("link_name");
@@ -95,6 +105,56 @@ void MudPlugin::Init()
       this->contactSensorName;
     this->contactSub =
       this->node->Subscribe(topic, &MudPlugin::OnContact, this);
+
+    // create bitmask from contact sensor's collisions if it's not specified in
+    // the sdf
+    if (!this->sdf->HasElement("contact_surface_bitmask"))
+    {
+      std::string name = this->contactSensorName;
+      boost::replace_all(name, "/", "::");
+      name = this->world->GetName() + "::"+ this->modelName + "::" + name;
+      sensors::SensorManager *mgr = sensors::SensorManager::Instance();
+      // Get a pointer to the contact sensor
+      sensors::ContactSensorPtr sensor =
+          boost::dynamic_pointer_cast<sensors::ContactSensor>
+          (mgr->GetSensor(name));
+      if (sensor)
+      {
+        for (unsigned int i = 0; i < sensor->GetCollisionCount(); ++i)
+        {
+          std::string colName = sensor->GetCollisionName(i);
+          physics::CollisionPtr colPtr =
+              boost::dynamic_pointer_cast<physics::Collision>(
+              this->world->GetEntity(colName));
+          if (colPtr)
+          {
+            this->contactSurfaceBitmask |=
+                colPtr->GetSurface()->collideWithoutContactBitmask;
+          }
+        }
+      }
+      else
+      {
+        gzerr << "Unable to GetSensor, ignoring contact_surface_bitmask\n";
+      }
+    }
+  }
+
+  for (unsigned int i = 0; i < this->allowedLinks.size(); ++i)
+  {
+    physics::LinkPtr allowedLink = boost::dynamic_pointer_cast<physics::Link>(
+        this->world->GetEntity(this->allowedLinks[i]));
+
+    if (!allowedLink)
+      continue;
+
+    std::vector<physics::CollisionPtr> collisions
+        = allowedLink->GetCollisions();
+    for (unsigned int j = 0; j < collisions.size(); ++j)
+    {
+      collisions[j]->GetSurface()->collideWithoutContactBitmask |=
+          this->contactSurfaceBitmask;
+    }
   }
 
   this->updateConnection = event::Events::ConnectWorldUpdateBegin(
@@ -233,10 +293,10 @@ void MudPlugin::OnUpdate()
               double erp, cfm;
               erp = this->stiffness*dt / (this->stiffness*dt + this->damping);
               cfm = 1.0 / (this->stiffness*dt + this->damping);
-              (*iterJoint)->SetAttribute("erp", 0, erp);
-              (*iterJoint)->SetAttribute("cfm", 0, cfm);
-              (*iterJoint)->SetAttribute("stop_erp", 0, erp);
-              (*iterJoint)->SetAttribute("stop_cfm", 0, cfm);
+              (*iterJoint)->SetParam("erp", 0, erp);
+              (*iterJoint)->SetParam("cfm", 0, cfm);
+              (*iterJoint)->SetParam("stop_erp", 0, erp);
+              (*iterJoint)->SetParam("stop_cfm", 0, cfm);
             }
             (*iterJoint)->SetHighStop(0, 0.0);
             (*iterJoint)->SetLowStop(0, 0.0);
