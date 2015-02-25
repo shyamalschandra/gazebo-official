@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,29 @@
  * limitations under the License.
  *
  */
-#include <iomanip>
+
+#include <boost/date_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
-#include <boost/date_time.hpp>
-
-#include "gazebo/math/Rand.hh"
-
-#include "gazebo/transport/transport.hh"
+#include <iomanip>
 
 #include "gazebo/common/Assert.hh"
-#include "gazebo/common/Events.hh"
-#include "gazebo/common/Time.hh"
+#include "gazebo/common/Base64.hh"
 #include "gazebo/common/Console.hh"
+#include "gazebo/common/Events.hh"
 #include "gazebo/common/Exception.hh"
-#include "gazebo/util/LogRecord.hh"
-
+#include "gazebo/common/Time.hh"
+#include "gazebo/common/SystemPaths.hh"
 #include "gazebo/gazebo_config.h"
+#include "gazebo/math/Rand.hh"
+#include "gazebo/transport/transport.hh"
+#include "gazebo/util/LogRecord.hh"
 
 using namespace gazebo;
 using namespace util;
-
-/// Convert binary values to base64 characters
-typedef boost::archive::iterators::base64_from_binary<
-        // retrieve 6 bit integers from a sequence of 8 bit bytes
-        boost::archive::iterators::transform_width<const char *, 6, 8> >
-        Base64Text;
 
 //////////////////////////////////////////////////
 LogRecord::LogRecord()
@@ -53,6 +47,7 @@ LogRecord::LogRecord()
   this->initialized = false;
   this->stopThread = false;
   this->firstUpdate = true;
+  this->readyToStart = false;
 
   // Get the user's home directory
   // \todo getenv is not portable, and there is no generic cross-platform
@@ -61,7 +56,10 @@ LogRecord::LogRecord()
   GZ_ASSERT(homePath, "HOME environment variable is missing");
 
   if (!homePath)
-    this->logBasePath = boost::filesystem::path("/tmp/gazebo");
+  {
+    common::SystemPaths *paths = common::SystemPaths::Instance();
+    this->logBasePath = paths->GetTmpPath() + "/gazebo";
+  }
   else
     this->logBasePath = boost::filesystem::path(homePath);
 
@@ -105,6 +103,7 @@ bool LogRecord::Init(const std::string &_subdir)
   this->paused = false;
   this->stopThread = false;
   this->firstUpdate = true;
+  this->readyToStart = true;
 
   return true;
 }
@@ -165,21 +164,32 @@ bool LogRecord::Start(const std::string &_encoding, const std::string &_path)
   this->paused = false;
   this->firstUpdate = true;
   this->stopThread = false;
+  this->readyToStart = false;
 
   this->startTime = this->currTime = common::Time();
 
   // Create a thread to cleanup recording.
   this->cleanupThread = boost::thread(boost::bind(&LogRecord::Cleanup, this));
+  // Wait for thread to start
+  this->startThreadCondition.wait(lock);
 
   // Start the update thread if it has not already been started
   if (!this->updateThread)
+  {
+    boost::mutex::scoped_lock updateLock(this->updateMutex);
     this->updateThread = new boost::thread(
         boost::bind(&LogRecord::RunUpdate, this));
+    this->startThreadCondition.wait(updateLock);
+  }
 
   // Start the writing thread if it has not already been started
   if (!this->writeThread)
+  {
+    boost::mutex::scoped_lock writeLock(this->runWriteMutex);
     this->writeThread = new boost::thread(
         boost::bind(&LogRecord::RunWrite, this));
+    this->startThreadCondition.wait(writeLock);
+  }
 
   return true;
 }
@@ -197,8 +207,9 @@ void LogRecord::Fini()
   {
     boost::mutex::scoped_lock lock(this->controlMutex);
     this->cleanupCondition.notify_all();
-  } while (!this->cleanupThread.timed_join(
-        boost::posix_time::milliseconds(1000)));
+  } while (this->cleanupThread.joinable() &&
+          !this->cleanupThread.timed_join(
+            boost::posix_time::milliseconds(1000)));
 
   boost::mutex::scoped_lock lock(this->controlMutex);
   this->connections.clear();
@@ -267,8 +278,9 @@ void LogRecord::Add(const std::string &_name, const std::string &_filename,
 
     if (this->logs.find(_name)->second->GetRelativeFilename() != _filename)
     {
-      gzthrow(std::string("Attempting to add a duplicate log object named[")
-          + _name + "] with a filename of [" + _filename + "]\n");
+      gzerr << "Attempting to add a duplicate log object named["
+          << _name << "] with a filename of [" << _filename << "].\n";
+      return;
     }
     else
     {
@@ -422,13 +434,15 @@ bool LogRecord::GetFirstUpdate() const
 //////////////////////////////////////////////////
 void LogRecord::Notify()
 {
-  this->updateCondition.notify_all();
+  if (this->running)
+    this->updateCondition.notify_all();
 }
 
 //////////////////////////////////////////////////
 void LogRecord::RunUpdate()
 {
   boost::mutex::scoped_lock updateLock(this->updateMutex);
+  this->startThreadCondition.notify_all();
 
   // This loop will write data to disk.
   while (!this->stopThread)
@@ -481,6 +495,7 @@ void LogRecord::RunWrite()
 {
   // Wait for new data.
   boost::mutex::scoped_lock lock(this->runWriteMutex);
+  this->startThreadCondition.notify_all();
 
   // This loop will write data to disk.
   while (!this->stopThread)
@@ -532,18 +547,20 @@ unsigned int LogRecord::Log::Update()
   std::ostringstream stream;
 
   // Get log data via the callback.
-  if (this->logCB(stream) && !stream.str().empty())
+  if (this->logCB(stream))
   {
-    const std::string encoding = this->parent->GetEncoding();
-
-    this->buffer.append("<chunk encoding='");
-    this->buffer.append(encoding);
-    this->buffer.append("'>\n");
-
-    this->buffer.append("<![CDATA[");
+    std::string data = stream.str();
+    if (!data.empty())
     {
+      const std::string encodingLocal = this->parent->GetEncoding();
+
+      this->buffer.append("<chunk encoding='");
+      this->buffer.append(encodingLocal);
+      this->buffer.append("'>\n");
+
+      this->buffer.append("<![CDATA[");
       // Compress the data.
-      if (encoding == "bz2")
+      if (encodingLocal == "bz2")
       {
         std::string str;
 
@@ -552,16 +569,13 @@ unsigned int LogRecord::Log::Update()
           boost::iostreams::filtering_ostream out;
           out.push(boost::iostreams::bzip2_compressor());
           out.push(std::back_inserter(str));
-          out << stream.str();
-          out.flush();
+          boost::iostreams::copy(boost::make_iterator_range(data), out);
         }
 
         // Encode in base64.
-        std::copy(Base64Text(str.c_str()),
-                  Base64Text(str.c_str() + str.size()),
-                  std::back_inserter(this->buffer));
+        Base64Encode(str.c_str(), str.size(), this->buffer);
       }
-      else if (encoding == "zlib")
+      else if (encodingLocal == "zlib")
       {
         std::string str;
 
@@ -570,23 +584,20 @@ unsigned int LogRecord::Log::Update()
           boost::iostreams::filtering_ostream out;
           out.push(boost::iostreams::zlib_compressor());
           out.push(std::back_inserter(str));
-          out << stream.str();
-          out.flush();
+          boost::iostreams::copy(boost::make_iterator_range(data), out);
         }
 
         // Encode in base64.
-        std::copy(Base64Text(str.c_str()),
-                  Base64Text(str.c_str() + str.size()),
-                  std::back_inserter(this->buffer));
+        Base64Encode(str.c_str(), str.size(), this->buffer);
       }
-      else if (encoding == "txt")
-        this->buffer.append(stream.str());
+      else if (encodingLocal == "txt")
+        this->buffer.append(data);
       else
-        gzerr << "Unknown log file encoding[" << encoding << "]\n";
-    }
-    this->buffer.append("]]>\n");
+        gzerr << "Unknown log file encoding[" << encodingLocal << "]\n";
+      this->buffer.append("]]>\n");
 
-    this->buffer.append("</chunk>\n");
+      this->buffer.append("</chunk>\n");
+    }
   }
 
   return this->buffer.size();
@@ -621,6 +632,7 @@ void LogRecord::Log::Stop()
 {
   if (this->logFile.is_open())
   {
+    this->Update();
     this->Write();
 
     std::string xmlEnd = "</gazebo_log>";
@@ -640,7 +652,7 @@ void LogRecord::Log::Start(const boost::filesystem::path &_path)
 
   // Make sure the file does not exist
   if (boost::filesystem::exists(this->completePath))
-    gzwarn << "Filename[" + this->completePath.string() + "], already exists."
+    gzlog << "Filename[" + this->completePath.string() + "], already exists."
       << " The log file will be overwritten.\n";
 
   std::ostringstream stream;
@@ -697,7 +709,7 @@ void LogRecord::OnLogControl(ConstLogControlPtr &_data)
   if (_data->has_base_path() && !_data->base_path().empty())
     this->SetBasePath(_data->base_path());
 
-  std::string msgEncoding = "bz2";
+  std::string msgEncoding = "zlib";
   if (_data->has_encoding())
     msgEncoding = _data->encoding();
 
@@ -721,7 +733,8 @@ void LogRecord::OnLogControl(ConstLogControlPtr &_data)
 //////////////////////////////////////////////////
 void LogRecord::PublishLogStatus()
 {
-  if (this->logs.empty())
+  if (this->logs.empty() || !this->logStatusPub ||
+      !this->logStatusPub->HasConnections())
     return;
 
   /// \todo right now this function will only report on the first log.
@@ -769,14 +782,13 @@ void LogRecord::PublishLogStatus()
 void LogRecord::Cleanup()
 {
   boost::mutex::scoped_lock lock(this->controlMutex);
+  this->startThreadCondition.notify_all();
 
   // Wait for the cleanup signal
   this->cleanupCondition.wait(lock);
 
   bool currentPauseState = this->pauseState;
   event::Events::pause(true);
-
-  this->stopThread = true;
 
   // Reset the flags
   this->paused = false;
@@ -828,4 +840,26 @@ void LogRecord::Cleanup()
   this->PublishLogStatus();
 
   event::Events::pause(currentPauseState);
+  this->readyToStart = true;
+}
+
+//////////////////////////////////////////////////
+bool LogRecord::IsReadyToStart() const
+{
+  return this->readyToStart;
+}
+
+//////////////////////////////////////////////////
+unsigned int LogRecord::GetBufferSize() const
+{
+  boost::mutex::scoped_lock lock(this->writeMutex);
+  unsigned int size = 0;
+
+  for (Log_M::const_iterator iter = this->logs.begin();
+      iter != this->logs.end(); ++iter)
+  {
+    size += iter->second->GetBufferSize();
+  }
+
+  return size;
 }
