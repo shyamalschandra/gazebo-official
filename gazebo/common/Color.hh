@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,9 @@
 #define _GAZEBO_COLOR_HH_
 
 #include <iostream>
-
-// Remove the gazebo_confif and ifdefs in Gazebo 1.8
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
-#include "sdf/sdf.hh"
-#endif
-
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/math/Vector3.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -42,7 +36,7 @@ namespace gazebo
 
     /// \class Color Color.hh common/common.hh
     /// \brief Defines a color
-    class Color
+    class GAZEBO_VISIBLE Color
     {
       /// \brief (1, 1, 1)
       public: static const Color White;
@@ -88,18 +82,6 @@ namespace gazebo
       /// \brief Copy Constructor
       /// \param[in] _clr Color to copy
       public: Color(const Color &_clr);
-
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Color(const sdf::Color &_clr) GAZEBO_DEPRECATED(1.6);
-
-      /// Deprecated
-      public: Color &operator =(const sdf::Color &_clr) GAZEBO_DEPRECATED(1.5);
-
-      /// Deprecated
-      public: bool operator!=(
-                  const sdf::Color &_pt) const GAZEBO_DEPRECATED(1.5);
-#endif
 
       /// \brief Destructor
       public: virtual ~Color();

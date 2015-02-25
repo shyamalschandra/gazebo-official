@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,8 @@
 #include <time.h>
 #include <iostream>
 
-// Remove the gazebo_confif and ifdefs in Gazebo 1.8
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
-#include "sdf/sdf.hh"
-#endif
-
 #include "gazebo/common/CommonTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -45,7 +40,7 @@ namespace gazebo
     /// \class Time Time.hh common/common.hh
     /// \brief A Time class, can be used to hold wall- or sim-time.
     ///        stored as sec and nano-sec.
-    class Time
+    class GAZEBO_VISIBLE Time
     {
       /// \brief A static zero time variable set to common::Time(0, 0).
       public: static const Time Zero;
@@ -56,14 +51,6 @@ namespace gazebo
       /// \brief Copy constructor
       /// \param[in] time Time to copy
       public: Time(const Time &_time);
-
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Time(const sdf::Time &_time) GAZEBO_DEPRECATED(1.5);
-
-      /// Deprecated
-      public: Time &operator =(const sdf::Time &_time) GAZEBO_DEPRECATED(1.5);
-#endif
 
       /// \brief Constructor
       /// \param[in] _tv Time to initialize to
@@ -127,11 +114,6 @@ namespace gazebo
       /// \param[in] _ns nanoseconds
       /// \return Time actually slept
       public: static Time NSleep(unsigned int _ns);
-
-      /// \brief Nano sleep
-      /// \param[in] _time is a Time
-      /// \return Time actually slept
-      public: static Time NSleep(Time _time) GAZEBO_DEPRECATED(1.5);
 
       /// \brief Assignment operator
       /// \param[in] _tv the new time

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,8 @@
 #include <iostream>
 #include <fstream>
 
-// Remove the gazebo_confif and ifdefs in Gazebo 1.8
-#include "gazebo/gazebo_config.h"
-#ifdef HAVE_SDF
-#include "sdf/sdf.hh"
-#endif
-
 #include "gazebo/math/Helpers.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -45,7 +40,7 @@ namespace gazebo
     /// \brief The Vector3 class represents the generic vector containing 3
     ///        elements.  Since it's commonly used to keep coordinate system
     ///        related information, its elements are labeled by x, y, z.
-    class Vector3
+    class GAZEBO_VISIBLE Vector3
     {
       /// \brief math::Vector3(0, 0, 0)
       public: static const Vector3 Zero;
@@ -74,19 +69,6 @@ namespace gazebo
       /// \brief Copy constructor
       /// \param[in] _v a vector
       public: Vector3(const Vector3 &_v);
-
-#ifdef HAVE_SDF
-      /// Deprecated
-      public: Vector3(const sdf::Vector3 &_v) __attribute__((deprecated));
-
-      /// Deprecated
-      public: Vector3 &operator =(const sdf::Vector3 &_v)
-              __attribute__((deprecated));
-
-      /// Deprecated
-      public: bool operator!=(const sdf::Vector3 &_v) const
-              __attribute__((deprecated));
-#endif
 
       /// \brief Destructor
       public: virtual ~Vector3();
@@ -289,18 +271,17 @@ namespace gazebo
       /// default tolerence (1e-6), false otherwise
       public: bool operator!=(const Vector3 &_v) const;
 
-
       /// \brief See if a point is finite (e.g., not nan)
       public: bool IsFinite() const;
 
       /// \brief Corrects any nan values
       public: inline void Correct()
               {
-                if (!finite(this->x))
+                if (!std::isfinite(this->x))
                   this->x = 0;
-                if (!finite(this->y))
+                if (!std::isfinite(this->y))
                   this->y = 0;
-                if (!finite(this->z))
+                if (!std::isfinite(this->z))
                   this->z = 0;
               }
 
@@ -355,4 +336,3 @@ namespace gazebo
   }
 }
 #endif
-
