@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,10 @@
 
 #include <iostream>
 
-#include "physics/bullet/BulletPhysics.hh"
-#include "physics/PlaneShape.hh"
+#include "gazebo/physics/bullet/BulletPhysics.hh"
+#include "gazebo/physics/PlaneShape.hh"
+#include "gazebo/util/system.hh"
 
-// Note that this shape is not officially supported for use with
-// compound shapes: http://code.google.com/p/bullet/issues/detail?id=348
-// It appears to work, but this should be kept in mind.
 namespace gazebo
 {
   namespace physics
@@ -39,7 +37,7 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet collision for an infinite plane.
-    class BulletPlaneShape : public PlaneShape
+    class GAZEBO_VISIBLE BulletPlaneShape : public PlaneShape
     {
       /// \brief Constructor
       public: BulletPlaneShape(CollisionPtr _parent) : PlaneShape(_parent) {}
@@ -50,11 +48,6 @@ namespace gazebo
       /// \brief Set the altitude of the plane
       public: void SetAltitude(const math::Vector3 &pos)
               {
-                // This function doesn't actually alter the bullet plane shape
-                // The API needs to change so that the altitude is given to
-                // CreatePlane()
-                // Or, this child could reset the parent pointer,
-                // but it currently cannot access it
                 PlaneShape::SetAltitude(pos);
               }
 
@@ -63,13 +56,14 @@ namespace gazebo
               {
                 PlaneShape::CreatePlane();
                 BulletCollisionPtr bParent;
-                bParent = boost::shared_dynamic_cast<BulletCollision>(
+                bParent = boost::dynamic_pointer_cast<BulletCollision>(
                     this->collisionParent);
 
-                btVector3 n = BulletTypes::ConvertVector3(this->GetNormal());
+                math::Vector3 n = this->GetNormal();
+                btVector3 vec(n.x, n.y, n.z);
 
-                bParent->SetCollisionShape(btCollisionShapePtr(new
-                  btStaticPlaneShape(n, 0.0)));
+                bParent->SetCollisionShape(new btStaticPlaneShape(vec, 0.0),
+                    false);
               }
     };
     /// \}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #ifndef _BULLET_MATH_INC_H_
 #define _BULLET_MATH_INC_H_
 
-// This disables warning messages for ODE
+// This disables warning messages for Bullet
 #pragma GCC system_header
 #include <LinearMath/btVector3.h>
 #include <LinearMath/btTransform.h>

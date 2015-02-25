@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@
 #ifndef _BULLETLINK_HH_
 #define _BULLETLINK_HH_
 
-#include "physics/bullet/bullet_inc.h"
-#include "physics/bullet/BulletTypes.hh"
-#include "physics/Link.hh"
+#include "gazebo/physics/bullet/bullet_inc.h"
+#include "gazebo/physics/bullet/BulletTypes.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/util/system.hh"
 
 class btRigidBody;
 
@@ -40,7 +41,7 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet Link class
-    class BulletLink : public Link
+    class GAZEBO_VISIBLE BulletLink : public Link
     {
       /// \brief Constructor
       public: BulletLink(EntityPtr _parent);
@@ -58,31 +59,37 @@ namespace gazebo
       public: virtual void Fini();
 
       // Documentation inherited.
-      public: virtual void Update();
-
-      // Documentation inherited.
       public: virtual void OnPoseChange();
 
       // Documentation inherited.
-      public: virtual void SetEnabled(bool enable) const;
+      public: virtual void SetEnabled(bool _enable) const;
 
       // Documentation inherited.
       public: virtual bool GetEnabled() const;
 
       // Documentation inherited.
-      public: virtual void SetLinearVel(const math::Vector3 &vel);
+      public: virtual void SetLinearVel(const math::Vector3 &_vel);
 
       // Documentation inherited.
-      public: virtual void SetAngularVel(const math::Vector3 &vel);
+      public: virtual void SetAngularVel(const math::Vector3 &_vel);
 
       // Documentation inherited.
-      public: virtual void SetForce(const math::Vector3 &force);
+      public: virtual void SetForce(const math::Vector3 &_force);
 
       // Documentation inherited.
-      public: virtual void SetTorque(const math::Vector3 &force);
+      public: virtual void SetTorque(const math::Vector3 &_torque);
 
-      // Documentation inherited.
-      public: virtual math::Vector3 GetWorldLinearVel() const;
+      // Documentation inherited
+      public: virtual math::Vector3 GetWorldLinearVel(
+                  const math::Vector3 &_offset) const;
+
+      // Documentation inherited
+      public: virtual math::Vector3 GetWorldLinearVel(
+                  const math::Vector3 &_offset,
+                  const math::Quaternion &_q) const;
+
+      // Documentation inherited
+      public: virtual math::Vector3 GetWorldCoGLinearVel() const;
 
       // Documentation inherited.
       public: virtual math::Vector3 GetWorldAngularVel() const;
@@ -94,23 +101,27 @@ namespace gazebo
       public: virtual math::Vector3 GetWorldTorque() const;
 
       // Documentation inherited.
-      public: virtual void SetGravityMode(bool mode);
+      public: virtual void SetGravityMode(bool _mode);
 
       // Documentation inherited.
       public: virtual bool GetGravityMode() const;
 
       // Documentation inherited.
-      public: virtual void SetSelfCollide(bool collide);
+      public: virtual void SetSelfCollide(bool _collide);
 
       /// \brief Get the bullet rigid body.
       /// \return Pointer to bullet rigid body object.
       public: btRigidBody *GetBulletLink() const;
 
-      // Documentation inherited.
-      public: virtual void SetLinearDamping(double damping);
+      /// \internal
+      /// \brief Clear bullet collision cache needed when the body is resized.
+      public: void ClearCollisionCache();
 
       // Documentation inherited.
-      public: virtual void SetAngularDamping(double damping);
+      public: virtual void SetLinearDamping(double _damping);
+
+      // Documentation inherited.
+      public: virtual void SetAngularDamping(double _damping);
 
       /// \brief Set the relative pose of a child collision.
       /*public: void SetCollisionRelativePose(BulletCollision *collision,
@@ -141,13 +152,16 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void SetAutoDisable(bool _disable);
 
+      // Documentation inherited
+      public: virtual void SetLinkStatic(bool _static);
+
       /// \brief Pointer to bullet compound shape, which is a container
       ///        for other child shapes.
-      private: btCompoundShape *compoundShape;
+      private: btCollisionShape *compoundShape;
 
       /// \brief Pointer to bullet motion state, which manages updates to the
       ///        world pose from bullet.
-      private: BulletMotionStatePtr motionState;
+      public: BulletMotionStatePtr motionState;
 
       /// \brief Pointer to the bullet rigid body object.
       private: btRigidBody *rigidLink;
