@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/BoxShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +36,7 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet box collision
-    class BulletBoxShape : public BoxShape
+    class GAZEBO_VISIBLE BulletBoxShape : public BoxShape
     {
       /// \brief Constructor
       public: BulletBoxShape(CollisionPtr _parent) : BoxShape(_parent) {}
@@ -93,12 +94,27 @@ namespace gazebo
 
                   shape->setLocalScaling(boxScale);
 
-                  // clear bullet cache
+                  // clear bullet cache and re-add the collision shape
                   // otherwise collisions won't work properly after scaling
                   BulletLinkPtr bLink =
                     boost::dynamic_pointer_cast<BulletLink>(
                     bParent->GetLink());
                   bLink->ClearCollisionCache();
+
+                  // remove and add the shape again
+                  if (bLink->GetBulletLink()->getCollisionShape()->isCompound())
+                  {
+                    btCompoundShape *compoundShape =
+                        dynamic_cast<btCompoundShape *>(
+                        bLink->GetBulletLink()->getCollisionShape());
+
+                    compoundShape->removeChildShape(shape);
+                    math::Pose relativePose =
+                        this->collisionParent->GetRelativePose();
+                    relativePose.pos -= bLink->GetInertial()->GetCoG();
+                    compoundShape->addChildShape(
+                        BulletTypes::ConvertPose(relativePose), shape);
+                  }
                 }
               }
 

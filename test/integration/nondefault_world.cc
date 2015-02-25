@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ void NonDefaultWorld::Load(const std::string &_physicsEngine)
   ASSERT_TRUE(world != NULL);
 
   physics::ModelPtr model = world->GetModel("ground_plane");
-  ASSERT_TRUE(model);
+  ASSERT_TRUE(model != NULL);
 }
 
 TEST_P(NonDefaultWorld, Load)
@@ -42,7 +42,8 @@ TEST_P(NonDefaultWorld, Load)
   Load(GetParam());
 }
 
-INSTANTIATE_PHYSICS_ENGINES_TEST(NonDefaultWorld)
+INSTANTIATE_TEST_CASE_P(PhysicsEngines, NonDefaultWorld,
+                        PHYSICS_ENGINE_VALUES);
 
 int main(int argc, char **argv)
 {
