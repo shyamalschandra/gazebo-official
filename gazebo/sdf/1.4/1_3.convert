@@ -15,8 +15,6 @@
       </move>
     </convert>
 
-    <!-- See comments joint.sdf about poses in joints -->
-    <!--
     <convert name="model">
       <convert name="joint">
         <move>
@@ -29,12 +27,9 @@
         </move>
       </convert>
     </convert>
-    -->
   </convert>
-
+  
   <!-- for model sdfs -->
-  <!-- See comments joint.sdf about poses in joints -->
-  <!--
   <convert name="model">
     <convert name="joint">
       <move>
@@ -47,6 +42,4 @@
       </move>
     </convert>
   </convert>
-  -->
-
 </convert> <!-- End SDF -->

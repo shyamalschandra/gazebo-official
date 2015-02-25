@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Quaternion.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,7 +37,7 @@ namespace gazebo
 
     /// \class Pose Pose.hh math/gzmath.hh
     /// \brief Encapsulates a position and rotation in three space
-    class Pose
+    class GAZEBO_VISIBLE Pose
     {
       /// \brief math::Pose(0, 0, 0, 0, 0, 0)
       public: static const Pose Zero;
@@ -153,6 +154,10 @@ namespace gazebo
       /// \param[in] _pose the other pose
       /// \return itself
       public: Pose operator*(const Pose &_pose);
+
+      /// \brief Equal operator
+      /// \param[in] _pose Pose to copy
+      public: Pose &operator=(const Pose &_pose);
 
       /// \brief Add one point to a vector: result = this + pos
       /// \param[in] _pos Position to add to this pose
