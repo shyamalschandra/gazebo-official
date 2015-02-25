@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/msgs/msgs.hh"
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
 #include "gazebo/math/Vector2d.hh"
 
@@ -320,9 +320,12 @@ void GUIOverlay::Resize(unsigned int _width, unsigned int _height)
     CEGUI::WindowManager *windowManager =
       CEGUI::WindowManager::getSingletonPtr();
 
-    CEGUI::Window *rootWindow = windowManager->getWindow("root");
-    rootWindow->setArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-                        CEGUI::UDim(1, 0), CEGUI::UDim(1, 0));
+    if (windowManager && windowManager->isWindowPresent("root"))
+    {
+      CEGUI::Window *rootWindow = windowManager->getWindow("root");
+      rootWindow->setArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
+          CEGUI::UDim(1, 0), CEGUI::UDim(1, 0));
+    }
   }
 }
 #else

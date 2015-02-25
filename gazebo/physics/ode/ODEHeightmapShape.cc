@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ using namespace physics;
 ODEHeightmapShape::ODEHeightmapShape(CollisionPtr _parent)
     : HeightmapShape(_parent)
 {
+  this->flipY = false;
 }
 
 //////////////////////////////////////////////////
@@ -56,10 +57,10 @@ void ODEHeightmapShape::Init()
   this->odeData = dGeomHeightfieldDataCreate();
 
   // Step 3: Setup a callback method for ODE
-  dGeomHeightfieldDataBuildCallback(
+  dGeomHeightfieldDataBuildSingle(
       this->odeData,
-      this,
-      ODEHeightmapShape::GetHeightCallback,
+      &this->heights[0],
+      0,
       this->GetSize().x,  // in meters
       this->GetSize().y,  // in meters
       this->vertSize,  // width sampling size

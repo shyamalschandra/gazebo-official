@@ -3,6 +3,7 @@ include ( ${QT_USE_FILE} )
 
 
 set (sources
+  ImageFrame.cc
   ImageView.cc
   ImagesView.cc
   LaserView.cc
@@ -16,6 +17,7 @@ set (headers
 )
 
 set (qt_headers
+  ImageFrame.hh
   ImageView.hh
   ImagesView.hh
   LaserView.hh
@@ -42,8 +44,8 @@ gz_add_library(gazebo_gui_viewers ${sources}
 target_link_libraries(gazebo_gui_viewers
   gazebo_common
   gazebo_transport
-  gazebo_sdf_interface
   gazebo_rendering
-  gazebo_msgs)
+  gazebo_msgs
+  ${QT_LIBRARIES})
 
 gz_install_library(gazebo_gui_viewers)
