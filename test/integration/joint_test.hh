@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 #include <string>
 #include <sstream>
 
-#include "test/ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 
 #include "gazebo/common/Time.hh"
 #include "gazebo/physics/physics.hh"
@@ -30,20 +30,12 @@ using namespace gazebo;
 
 typedef std::tr1::tuple<const char *, const char *> std_string2;
 
-class JointTest : public ServerFixture,
-                   public ::testing::WithParamInterface<std_string2>
+class JointTest : public PhysicsFixture,
+                  public ::testing::WithParamInterface<std_string2>
 {
-  protected: JointTest() : ServerFixture(), spawnCount(0)
+  protected: JointTest() : PhysicsFixture(), spawnCount(0)
              {
              }
-
-  /// \brief Test spring dampers
-  /// \param[in] _physicsEngine Type of physics engine to use.
-  public: void SpringDamperTest(const std::string &_physicsEngine);
-
-  /// \brief Create and destroy joints repeatedly, monitors memory usage.
-  /// \param[in] _physicsEngine Type of physics engine to use.
-  public: void JointCreationDestructionTest(const std::string &_physicsEngine);
 
   // Documentation inherited.
   public: virtual void SetUp()
@@ -64,7 +56,8 @@ class JointTest : public ServerFixture,
     /// \brief Constructor.
     public: SpawnJointOptions() : worldChild(false), worldParent(false),
               wait(common::Time(99, 0)),
-              noLinkPose(false), axis(math::Vector3(1, 0, 0))
+              noLinkPose(false), axis(math::Vector3(1, 0, 0)),
+              useParentModelFrame(false)
             {
             }
 
@@ -103,6 +96,9 @@ class JointTest : public ServerFixture,
 
     /// \brief Axis value for spawned joint.
     public: math::Vector3 axis;
+
+    /// \brief Use parent model frame (#494)
+    public: bool useParentModelFrame;
   };
 
   /// \brief Spawn a model with a joint connecting to the world. The function
@@ -177,7 +173,19 @@ class JointTest : public ServerFixture,
             modelStr
               << "    <axis>"
               << "      <xyz>" << _opt.axis << "</xyz>"
+              << "      <use_parent_model_frame>" << _opt.useParentModelFrame
+              << "      </use_parent_model_frame>"
               << "    </axis>";
+            // Hack: hardcode a second axis for universal joints
+            if (_opt.type == "universal")
+            {
+              modelStr
+                << "  <axis2>"
+                << "    <xyz>" << math::Vector3(0, 1, 0) << "</xyz>"
+                << "    <use_parent_model_frame>" << _opt.useParentModelFrame
+                << "    </use_parent_model_frame>"
+                << "  </axis2>";
+            }
             modelStr
               << "  </joint>"
               << "</model>";
