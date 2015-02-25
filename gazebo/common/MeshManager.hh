@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,6 +120,16 @@ namespace gazebo
                              const math::Vector3 &_sides,
                              const math::Vector2d &_uvCoords);
 
+      /// \brief Create a Extruded Polyline mesh
+      /// \param[in] _name the name of the new mesh
+      /// \param[in] _vertices the x y  dimentions of eah vertex in meter
+      /// \param[in] _height the height of the polyline
+      /// \param[in] _uvCoords the texture coordinates
+      public: void CreateExtrudedPolyline(const std::string &_name,
+                  const std::vector<math::Vector2d> &_vertices,
+                  const double &_height,
+                  const math::Vector2d &_uvCoords);
+
       /// \brief Create a cylinder mesh
       /// \param[in] _name the name of the new mesh
       /// \param[in] _radius the radius of the cylinder in the x y plane
@@ -127,7 +137,7 @@ namespace gazebo
       /// \param[in] _rings the number of circles along the height
       /// \param[in] _segments the number of segment per circle
       public: void CreateCylinder(const std::string &_name,
-                              float _radius,
+                                  float _radius,
                                   float _height,
                                   int _rings,
                                   int _segments);
@@ -139,7 +149,7 @@ namespace gazebo
       /// \param[in] _rings the number of circles along the height
       /// \param[in] _segments the number of segment per circle
       public: void CreateCone(const std::string &_name,
-                          float _radius,
+                              float _radius,
                               float _height,
                               int _rings,
                               int _segments);
