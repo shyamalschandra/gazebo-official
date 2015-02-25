@@ -1,5 +1,5 @@
-/*  Copyright (C)
- *     Jonas Mellin & Zakiruz Zaman
+/*
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- */
+*/
 /* Desc: RFID Sensor
  * Author: Jonas Mellin & Zakiruz Zaman
  * Date: 6th December 2011
@@ -42,7 +42,7 @@ GZ_REGISTER_STATIC_SENSOR("rfid", RFIDSensor)
 
 /////////////////////////////////////////////////
 RFIDSensor::RFIDSensor()
-  : Sensor()
+  : Sensor(sensors::OTHER)
 {
   this->active = false;
 }
@@ -69,7 +69,7 @@ void RFIDSensor::Load(const std::string &_worldName)
   if (this->sdf->GetElement("topic"))
   {
     this->scanPub = this->node->Advertise<msgs::Pose>(
-        this->sdf->GetElement("topic")->GetValueString());
+        this->sdf->GetElement("topic")->Get<std::string>());
   }
 
   this->entity = this->world->GetEntity(this->parentName);
@@ -123,7 +123,7 @@ void RFIDSensor::Init()
 }
 
 //////////////////////////////////////////////////
-void RFIDSensor::UpdateImpl(bool /*_force*/)
+bool RFIDSensor::UpdateImpl(bool /*_force*/)
 {
   this->EvaluateTags();
   this->lastMeasurementTime = this->world->GetSimTime();
@@ -134,6 +134,8 @@ void RFIDSensor::UpdateImpl(bool /*_force*/)
     msgs::Set(&msg, this->entity->GetWorldPose());
     this->scanPub->Publish(msg);
   }
+
+  return true;
 }
 
 //////////////////////////////////////////////////
