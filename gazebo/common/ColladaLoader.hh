@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,13 @@
 #ifndef _COLLADALOADER_HH_
 #define _COLLADALOADER_HH_
 
-#include <map>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "gazebo/common/MeshLoader.hh"
 #include "gazebo/math/MathTypes.hh"
+#include "gazebo/util/system.hh"
 
 class TiXmlElement;
 
@@ -32,13 +33,14 @@ namespace gazebo
   namespace common
   {
     class Material;
+    class ColladaLoaderPrivate;
 
     /// \addtogroup gazebo_common Common
     /// \{
 
     /// \class ColladaLoader ColladaLoader.hh common/common.hh
     /// \brief Class used to load Collada mesh files
-    class ColladaLoader : public MeshLoader
+    class GAZEBO_VISIBLE ColladaLoader : public MeshLoader
     {
       /// \brief Constructor
       public: ColladaLoader();
@@ -57,7 +59,7 @@ namespace gazebo
       /// \param[in] _transform A tranform to apply
       /// \param[in,out] _mesh The mesh being loaded
       private: void LoadController(TiXmlElement *_contrXml,
-          TiXmlElement *_skelXml, const math::Matrix4 _transform, Mesh *_mesh);
+          TiXmlElement *_skelXml, const math::Matrix4 &_transform, Mesh *_mesh);
 
       /// \brief Load animations for a skeleton
       /// \param[in] _xml Animation XML instance
@@ -113,6 +115,7 @@ namespace gazebo
       /// \param[in] _elem Pointer to the transform XML instance
       /// \return A Matrix4 transform
       private: math::Matrix4 LoadNodeTransform(TiXmlElement *_elem);
+
 
       /// \brief Load vertices
       /// \param[in] _id String id of the vertices XML node
@@ -217,23 +220,9 @@ namespace gazebo
       /// \param[out] _mat Material to hold the transparent properties
       private: void LoadTransparent(TiXmlElement *_elem, Material *_mat);
 
-      /// \brief scaling factor
-      private: double meter;
-
-      /// \brief COLLADA file name
-      private: std::string filename;
-
-      /// \brief material dictionary indexed by name
-      private: std::map<std::string, std::string> materialMap;
-
-      /// \brief root xml element of COLLADA data
-      private: TiXmlElement *colladaXml;
-
-      /// \brief directory of COLLADA file name
-      private: std::string path;
-
-      /// \brief Name of the current node.
-      private: std::string currentNodeName;
+      /// \internal
+      /// \brief Pointer to private data.
+      private: ColladaLoaderPrivate *dataPtr;
     };
     /// \}
   }
