@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,8 +64,7 @@ void SimbodyLink::Load(sdf::ElementPtr _sdf)
   if (_sdf->HasElement("must_be_base_link"))
     this->mustBeBaseLink = _sdf->Get<bool>("must_be_base_link");
 
-  this->SetKinematic(_sdf->Get<bool>("kinematic"));
-  this->SetGravityMode(_sdf->Get<bool>("gravity"));
+  this->gravityMode = _sdf->Get<bool>("gravity");
 
   Link::Load(_sdf);
 }
@@ -73,10 +72,6 @@ void SimbodyLink::Load(sdf::ElementPtr _sdf)
 //////////////////////////////////////////////////
 void SimbodyLink::Init()
 {
-  /// \TODO: implement following
-  // this->SetLinearDamping(this->GetLinearDamping());
-  // this->SetAngularDamping(this->GetAngularDamping());
-
   Link::Init();
 
   math::Vector3 cogVec = this->inertial->GetCoG();
@@ -124,8 +119,7 @@ void SimbodyLink::SetGravityMode(bool _mode)
     this->gravityMode = _mode;
   }
   else
-    gzerr << "Trying to SetGravityMode for link [" << this->GetScopedName()
-          << "] before last setting is processed.\n";
+    gzerr << "Trying to SetGravityMode before last setting is processed.\n";
 }
 
 //////////////////////////////////////////////////
@@ -139,9 +133,6 @@ void SimbodyLink::ProcessSetGravityMode()
       this->simbodyPhysics->gravity.setBodyIsExcluded(
         this->simbodyPhysics->integ->updAdvancedState(),
         this->masterMobod, !this->gravityMode);
-      // realize system after changing gravity mode
-      this->simbodyPhysics->system.realize(
-        this->simbodyPhysics->integ->getState(), SimTK::Stage::Velocity);
       this->gravityModeDirty = false;
     }
     else
@@ -330,8 +321,13 @@ void SimbodyLink::SetEnabled(bool /*_enable*/) const
 }
 
 //////////////////////////////////////////////////
-void SimbodyLink::SetLinearVel(const math::Vector3 & /*_vel*/)
+void SimbodyLink::SetLinearVel(const math::Vector3 & _vel)
 {
+  this->masterMobod.setUToFitLinearVelocity(
+    this->simbodyPhysics->integ->updAdvancedState(),
+    SimbodyPhysics::Vector3ToVec3(_vel));
+  this->simbodyPhysics->system.realize(
+    this->simbodyPhysics->integ->getAdvancedState(), SimTK::Stage::Velocity);
 }
 
 //////////////////////////////////////////////////
@@ -412,8 +408,13 @@ math::Vector3 SimbodyLink::GetWorldCoGLinearVel() const
 }
 
 //////////////////////////////////////////////////
-void SimbodyLink::SetAngularVel(const math::Vector3 &/*_vel*/)
+void SimbodyLink::SetAngularVel(const math::Vector3 &_vel)
 {
+  this->masterMobod.setUToFitAngularVelocity(
+    this->simbodyPhysics->integ->updAdvancedState(),
+    SimbodyPhysics::Vector3ToVec3(_vel));
+  this->simbodyPhysics->system.realize(
+    this->simbodyPhysics->integ->getAdvancedState(), SimTK::Stage::Velocity);
 }
 
 //////////////////////////////////////////////////
@@ -518,7 +519,6 @@ void SimbodyLink::AddForceAtRelativePosition(const math::Vector3 &/*_force*/,
 /////////////////////////////////////////////////
 void SimbodyLink::AddTorque(const math::Vector3 &/*_torque*/)
 {
-  gzerr << "Not implemented.\n";
 }
 
 /////////////////////////////////////////////////
