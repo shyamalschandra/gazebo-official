@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ namespace gazebo
       /// \brief Reset the link.
       public: void Reset();
 
-      /// \brief Reset the link.
+      /// \brief Reset the velocity, acceleration, force and torque of link.
       public: void ResetPhysicsStates();
 
       /// \brief Update the parameters using new sdf values.
@@ -608,9 +608,6 @@ namespace gazebo
       /// \brief Cached list of collisions. This is here for performance.
       private: Collision_V collisions;
 
-      /// \brief scale of the link.
-      private: math::Vector3 scale;
-
 #ifdef HAVE_OPENAL
       /// \brief All the audio sources
       private: std::vector<util::OpenALSourcePtr> audioSources;
@@ -622,6 +619,9 @@ namespace gazebo
       /// playback.
       private: transport::SubscriberPtr audioContactsSub;
 #endif
+
+      /// \brief This flag is set to true when the link is initialized.
+      protected: bool initialized;
     };
     /// \}
   }
