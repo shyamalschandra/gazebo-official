@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,6 +90,10 @@ namespace gazebo
       /// \brief Reset the model.
       public: void Reset();
 
+      /// \brief Reset the velocity, acceleration, force and torque of
+      /// all child links.
+      public: void ResetPhysicsStates();
+
       /// \brief Set the linear velocity of the model, and all its links.
       /// \param[in] _vel The new linear velocity.
       public: void SetLinearVel(const math::Vector3 &_vel);
@@ -151,7 +155,7 @@ namespace gazebo
       /// \brief Construct and return a vector of Link's in this model
       /// Note this constructs the vector of Link's on the fly, could be costly
       /// \return a vector of Link's in this model
-      public: Link_V GetLinks() const;
+      public: const Link_V &GetLinks() const;
 
       /// \brief Get the joints.
       /// \return Vector of joints.
@@ -306,6 +310,23 @@ namespace gazebo
       /// \return Size of this->grippers array.
       /// \sa Model::GetGripper()
       public: size_t GetGripperCount() const;
+
+      /// \brief Returns the potential energy of all links
+      /// and joint springs in the model.
+      /// \return this link's potential energy,
+      public: double GetWorldEnergyPotential() const;
+
+      /// \brief Returns sum of the kinetic energies of all links
+      /// in this model.  Computed using link's CoG velocity in
+      /// the inertial (world) frame.
+      /// \return this link's kinetic energy
+      public: double GetWorldEnergyKinetic() const;
+
+      /// \brief Returns this model's total energy, or
+      /// sum of Model::GetWorldEnergyPotential() and
+      /// Model::GetWorldEnergyKinetic().
+      /// \return this link's total energy
+      public: double GetWorldEnergy() const;
 
       /// \brief Callback when the pose of the model has been changed.
       protected: virtual void OnPoseChange();
