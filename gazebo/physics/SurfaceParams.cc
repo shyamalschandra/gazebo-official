@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,10 +126,4 @@ void SurfaceParams::ProcessMsg(const msgs::Surface &_msg)
     this->collideWithoutContact = _msg.collide_without_contact();
   if (_msg.has_collide_without_contact_bitmask())
     this->collideWithoutContactBitmask = _msg.collide_without_contact_bitmask();
-}
-
-/////////////////////////////////////////////////
-FrictionPyramidPtr SurfaceParams::GetFrictionPyramid() const
-{
-  return FrictionPyramidPtr();
 }

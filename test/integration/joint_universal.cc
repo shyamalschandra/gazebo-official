@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,12 @@ void JointTestUniversal::Limits(const std::string &_physicsEngine)
   ASSERT_TRUE(jointLower != NULL);
   physics::LinkPtr linkLower = jointLower->GetChild();
   ASSERT_TRUE(linkLower != NULL);
+
+  // check joint limits from sdf
+  EXPECT_NEAR(1.4, jointLower->GetHighStop(0).Radian(), g_tolerance);
+  EXPECT_NEAR(1.27, jointLower->GetHighStop(1).Radian(), g_tolerance);
+  EXPECT_NEAR(-1.4, jointLower->GetLowStop(0).Radian(), g_tolerance);
+  EXPECT_NEAR(-1.27, jointLower->GetLowStop(1).Radian(), g_tolerance);
 
   // check joint limits from sdf
   EXPECT_NEAR(1.4, jointLower->GetHighStop(0).Radian(), g_tolerance);

@@ -1,12 +1,36 @@
-1. Model editor updates
+1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
+    * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
+
+1. Allow link selection with the mouse if parent model already selected.
+    * [Pull request #1409](https://bitbucket.org/osrf/gazebo/pull-request/1409)
+
+ 1. Model editor updates
     1. Joint preview using JointVisuals.
         * [Pull request #1369](https://bitbucket.org/osrf/gazebo/pull-request/1369)
 
+    1. Added inspector for configuring link, visual, and collision properties.
+        * [Pull request #1408](https://bitbucket.org/osrf/gazebo/pull-request/1408)
+
+    1. Saving, exiting, generalizing SaveDialog.
+        * [Pull request #1401](https://bitbucket.org/osrf/gazebo/pull-request/1401)
+
 ## Gazebo 5.0
 
+### Gazebo 5.1.0
+1. Added Joint Msg-to-SDF conversion functions and test.
+    * [Pull request #1419](https://bitbucket.org/osrf/gazebo/pull-request/1419)
+
+1. Added Visual, Material Msg-to-SDF conversion functions and ShaderType to string conversion functions.
+    * [Pull request #1415](https://bitbucket.org/osrf/gazebo/pull-request/1415)
+
 ### Gazebo 5.0.0
+1. Support for using [digital elevation maps](http://gazebosim.org/tutorials?tut=dem) has been added to debian packages.
+
 1. C++11 support (C++11 compatible compiler is now required)
     * [Pull request #1340](https://bitbucket.org/osrf/gazebo/pull-request/1340)
+
+1. Implemented private data pointer for the ODEPhysicsPrivate class.
+    * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
 
 1. Implemented private data pointer for the World class.
     * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
@@ -98,6 +122,10 @@
 1. Fixed crash on "permission denied" bug, added insert_model integration test.
     * [Pull request #1329](https://bitbucket.org/osrf/gazebo/pull-request/1329/)
 
+1. Enable simbody joint tests, implement `SimbodyJoint::GetParam`, create
+   `Joint::GetParam`, fix bug in `BulletHingeJoint::SetParam`.
+    * [Pull request #1404](https://bitbucket.org/osrf/gazebo/pull-request/1404/)
+
 1. Building editor updates
     1. Fixed inspector resizing.
         * [Pull request #1230](https://bitbucket.org/osrf/gazebo/pull-request/1230)
@@ -184,6 +212,9 @@
     1. Pick textures from the palette and assign in 3D view.
         * [Pull request #1368](https://bitbucket.org/osrf/gazebo/pull-request/1368)
 
+    1. Pick custom colors from the palette and assign in 3D view.
+        * [Pull request #1382](https://bitbucket.org/osrf/gazebo/pull-request/1382)
+
 1. Model editor updates
     1. Fix adding/removing event filters .
         * [Pull request #1279](https://bitbucket.org/osrf/gazebo/pull-request/1279)
@@ -227,6 +258,10 @@
     * [Pull request #1271](https://bitbucket.org/osrf/gazebo/pull-request/1271)
 1. Fix loading collada meshes with unsupported input semantics.
     * [Pull request #1319](https://bitbucket.org/osrf/gazebo/pull-request/1319)
+1. Fix race condition with ImuSensor not publishing after Reset World.
+    * [Pull request #1448](https://bitbucket.org/osrf/gazebo/pull-request/1448)
+    * [Pull request #1446](https://bitbucket.org/osrf/gazebo/pull-request/1446)
+    * [Issue #236](https://bitbucket.org/osrf/gazebo/issue/236)
 
 ### Gazebo 4.0.2 (2014-09-23)
 

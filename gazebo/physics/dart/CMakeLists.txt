@@ -21,7 +21,6 @@ set (sources
     DARTRayShape.cc
     DARTScrewJoint.cc
     DARTSliderJoint.cc
-    DARTSurfaceParams.cc
     DARTUniversalJoint.cc
 )
 
@@ -46,7 +45,6 @@ SET (headers
     DARTScrewJoint.hh
     DARTSliderJoint.hh
     DARTSphereShape.hh
-    DARTSurfaceParams.hh
     DARTTypes.hh
     DARTUniversalJoint.hh
     dart_inc.h

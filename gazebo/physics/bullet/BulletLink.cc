@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,13 +108,11 @@ void BulletLink::Init()
       collision = boost::static_pointer_cast<BulletCollision>(*iter);
       btCollisionShape *shape = collision->GetCollisionShape();
 
-      SurfaceParamsPtr surface = collision->GetSurface();
+      BulletSurfaceParamsPtr surface = collision->GetBulletSurface();
       GZ_ASSERT(surface, "Surface pointer for is invalid");
-      FrictionPyramidPtr friction = surface->GetFrictionPyramid();
-      GZ_ASSERT(friction, "Friction pointer is invalid");
 
-      hackMu1 = friction->GetMuPrimary();
-      hackMu2 = friction->GetMuSecondary();
+      hackMu1 = surface->frictionPyramid.GetMuPrimary();
+      hackMu2 = surface->frictionPyramid.GetMuSecondary();
       // gzerr << "link[" << this->GetName()
       //       << "] mu[" << hackMu1
       //       << "] mu2[" << hackMu2 << "]\n";
