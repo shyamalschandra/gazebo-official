@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@
 #define _RENDER_EVENTS_HH_
 
 #include <string>
-#include "common/Event.hh"
-#include "msgs/msgs.hh"
+#include "gazebo/common/Event.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +31,7 @@ namespace gazebo
 
     /// \class Events Events.hh rendering/rendering.hh
     /// \brief Base class for rendering events
-    class Events
+    class GAZEBO_VISIBLE Events
     {
       /// \brief Connect to a scene created event.
       /// \param[in] _subscriber Callback to trigger when event occurs.
@@ -58,27 +59,11 @@ namespace gazebo
                   event::ConnectionPtr _connection)
               {removeScene.Disconnect(_connection);}
 
-      /// \brief Connect to a view contacts event.
-      /// \param[in] _subscriber Callback to trigger when event occurs.
-      /// \return Pointer the connection. This must stay in scope.
-      public: template<typename T>
-              static event::ConnectionPtr ConnectViewContacts(T _subscriber)
-              {return viewContacts.Connect(_subscriber);}
-
-      /// \brief Disconnect from a view contacts event.
-      /// \param[in] _connection The connection to disconnect.
-      public: static void DisconnectViewContacts(
-                  event::ConnectionPtr _connection)
-              {viewContacts.Disconnect(_connection);}
-
       /// \brief The event used to trigger a create scene event.
       public: static event::EventT<void (const std::string &)> createScene;
 
       /// \brief The event used to trigger a remve scene event.
       public: static event::EventT<void (const std::string &)> removeScene;
-
-      /// \brief The event used to toggle contact visualization.
-      public: static event::EventT<void (bool)> viewContacts;
     };
     /// \}
   }

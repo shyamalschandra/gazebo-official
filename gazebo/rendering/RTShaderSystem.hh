@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,12 @@
 #include <string>
 #include <vector>
 
-#include "rendering/ogre_gazebo.h"
-#include "gazebo_config.h"
+#include "gazebo/rendering/ogre_gazebo.h"
+#include "gazebo/gazebo_config.h"
 
-#include "rendering/Camera.hh"
-#include "common/SingletonT.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/common/SingletonT.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -47,7 +48,7 @@ namespace gazebo
     ///
     /// This class allows Gazebo to generate per-pixel shaders for every
     /// material at run-time.
-    class RTShaderSystem : public SingletonT<RTShaderSystem>
+    class GAZEBO_VISIBLE RTShaderSystem : public SingletonT<RTShaderSystem>
     {
       /// \enum LightingModel.
       /// \brief The type of lighting.
@@ -127,6 +128,10 @@ namespace gazebo
       /// \param[in] _scene The scene to remove shadows from.
       public: void RemoveShadows(ScenePtr _scene);
 
+      /// \brief Get the Ogre PSSM Shadows camera setup.
+      /// \return The Ogre PSSM Shadows camera setup.
+      public: Ogre::PSSMShadowCameraSetup *GetPSSMShadowCameraSetup() const;
+
       /// \brief Get paths for the shader system
       /// \param[out] _coreLibsPath Path to the core libraries.
       /// \param[out] _cachePath Path to where the generated shaders are
@@ -156,6 +161,9 @@ namespace gazebo
 
       /// \brief Mutex used to protext the entities list.
       private: boost::mutex *entityMutex;
+
+      /// \brief Parallel Split Shadow Map (PSSM) camera setup
+      private: Ogre::ShadowCameraSetupPtr pssmSetup;
 
       /// \brief Make the RTShader system a singleton.
       private: friend class SingletonT<RTShaderSystem>;
