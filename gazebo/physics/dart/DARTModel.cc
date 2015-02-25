@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,47 +15,37 @@
  *
 */
 
+#include "gazebo/common/Assert.hh"
+
 #include "gazebo/physics/World.hh"
 
 #include "gazebo/physics/dart/DARTPhysics.hh"
 #include "gazebo/physics/dart/DARTLink.hh"
 #include "gazebo/physics/dart/DARTModel.hh"
-#include "gazebo/physics/dart/DARTUtils.hh"
 
 using namespace gazebo;
 using namespace physics;
 
 //////////////////////////////////////////////////
 DARTModel::DARTModel(BasePtr _parent)
-  : Model(_parent), dartSkeletonDynamics(NULL),
-    dartCanonicalJoint(NULL)
+  : Model(_parent), dtSkeleton(NULL)
 {
 }
 
 //////////////////////////////////////////////////
 DARTModel::~DARTModel()
 {
-  if (dartSkeletonDynamics)
-    delete dartSkeletonDynamics;
+  if (dtSkeleton)
+    delete dtSkeleton;
 }
 
 //////////////////////////////////////////////////
 void DARTModel::Load(sdf::ElementPtr _sdf)
 {
-  // create skeletonDynamics of DART
-  this->dartSkeletonDynamics = new dynamics::SkeletonDynamics();
+  // create skeleton of DART
+  this->dtSkeleton = new dart::dynamics::Skeleton();
 
   Model::Load(_sdf);
-
-  // Name
-  std::string modelName = this->GetName();
-  this->dartSkeletonDynamics->setName(modelName.c_str());
-
-  //  if (this->IsStatic())
-  //    dartSkeletonDynamics->setImmobileState(true);
-  //  else
-  //    dartSkeletonDynamics->setImmobileState(false);
-  dartSkeletonDynamics->setImmobileState(this->IsStatic());
 }
 
 //////////////////////////////////////////////////
@@ -63,84 +53,105 @@ void DARTModel::Init()
 {
   Model::Init();
 
-  // DART must have a joint that connects the canonnical link (body node) and
-  // the world (space). Let's call is a this joint as a cannonical joint.
-  // However, in gazebo, this joint is optional. If the canonnical link is free
-  // floating in the world, then we don't need a cannonical joint. Otherwise,
-  // if the canonnical link is connected to the world by a joint such as hinge
-  // joint, ball joint, and so on, then we need the joint.
-  //
-  // Therefore, we need to check whether this model has a cannonical joint. If
-  // there is no, then we must create a cannonical joint here even though the
-  // joint is not described in the sdf file.
-//  if (dartCanonicalJoint == 0)
-//  {
-//    // TODO: need to access to Model::canonicalLink
-//    //       the member is private for now. this should be protected.
-//    LinkPtr canonicalLink_ = this->GetLink("canonical");
+  //----------------------------------------------
+  // Name
+  std::string modelName = this->GetName();
+  this->dtSkeleton->setName(modelName.c_str());
 
-//    kinematics::BodyNode* parentBodyNode = NULL;
-//    kinematics::BodyNode* childBodyNode
-//        = boost::shared_dynamic_cast<DARTLink>(canonicalLink_)->GetBodyNode();
+  //----------------------------------------------
+  // Static
+  this->dtSkeleton->setMobile(!this->IsStatic());
 
-//    this->dartCanonicalJoint
-//        = new kinematics::Joint(parentBodyNode, childBodyNode);
-//    this->dartSkeletonDynamics->addJoint(dartCanonicalJoint);
+  //----------------------------------------------
+  // Check if this link is free floating body
+  // If a link of this model has no parent joint, then we add 6-dof free joint
+  // to the link.
+  Link_V linkList = this->GetLinks();
+  for (unsigned int i = 0; i < linkList.size(); ++i)
+  {
+    dart::dynamics::BodyNode *dtBodyNode
+        = boost::static_pointer_cast<DARTLink>(linkList[i])->GetDARTBodyNode();
 
-//    //---- Step 1. Transformation from rotated joint frame to child link frame.
-//    math::Pose canonicalLinkPose = canonicalLink_->GetWorldPose();
-////    DARTUtils::addTransformToDARTJoint(this->dartCanonicalJoint,
-////                                         canonicalLinkPose);
+    if (dtBodyNode->getParentJoint() == NULL)
+    {
+      dart::dynamics::FreeJoint *newFreeJoint = new dart::dynamics::FreeJoint;
 
-//    //---- Step 2. Transformation by the rotate axis.
-//    kinematics::Dof* tranX = new kinematics::Dof(0, -10000, 10000);
-//    kinematics::Dof* tranY = new kinematics::Dof(0, -10000, 10000);
-//    kinematics::Dof* tranZ = new kinematics::Dof(0, -10000, 10000);
-////    kinematics::Dof* rotX = new kinematics::Dof(0, -6.1416, 6.1416);
-////    kinematics::Dof* rotY = new kinematics::Dof(0, -6.1416, 6.1416);
-////    kinematics::Dof* rotZ = new kinematics::Dof(0, -6.1416, 6.1416);
-//    kinematics::Dof* rotX = new kinematics::Dof(0, -60.1416, 60.1416);
-//    kinematics::Dof* rotY = new kinematics::Dof(0, -60.1416, 60.1416);
-//    kinematics::Dof* rotZ = new kinematics::Dof(0, -60.1416, 60.1416);
+      newFreeJoint->setTransformFromParentBodyNode(
+            DARTTypes::ConvPose(linkList[i]->GetWorldPose()));
+      newFreeJoint->setTransformFromChildBodyNode(
+        Eigen::Isometry3d::Identity());
 
-//    kinematics::TrfmTranslate* trfmTranslateCanonical
-//        = new kinematics::TrfmTranslate(tranX, tranY, tranZ);
-//    kinematics::TrfmRotateExpMap* trfmRotateCanonical
-//        = new kinematics::TrfmRotateExpMap(rotX, rotY, rotZ);
+      dtBodyNode->setParentJoint(newFreeJoint);
+    }
 
-//    // Set the initial pose (transformation) of bodies.
-//    tranX->setValue(canonicalLinkPose.pos.x);
-//    tranY->setValue(canonicalLinkPose.pos.y);
-//    tranZ->setValue(canonicalLinkPose.pos.z);
+    dtSkeleton->addBodyNode(dtBodyNode);
+  }
 
-//    Eigen::Quaterniond eigenQuat(canonicalLinkPose.rot.w,
-//                                canonicalLinkPose.rot.x,
-//                                canonicalLinkPose.rot.y,
-//                                canonicalLinkPose.rot.z);
+  // Add the skeleton to the world
+  this->GetDARTWorld()->addSkeleton(dtSkeleton);
 
-//    //Eigen::Quaterniond expToQuat(Eigen::Vector3d& v);
-//    Eigen::Vector3d eigenVec3 = dart_math::quatToExp(eigenQuat);
+  // Self collision
+  // Note: This process should be done after this skeleton is added to the
+  //       world.
 
-//    rotX->setValue(eigenVec3(0));
-//    rotY->setValue(eigenVec3(1));
-//    rotZ->setValue(eigenVec3(2));
+  // Check whether there exist at least one pair of self collidable links.
+  int numSelfCollidableLinks = 0;
+  bool hasPairOfSelfCollidableLinks = false;
+  for (size_t i = 0; i < linkList.size(); ++i)
+  {
+    if (linkList[i]->GetSelfCollide())
+    {
+      ++numSelfCollidableLinks;
+      if (numSelfCollidableLinks >= 2)
+      {
+        hasPairOfSelfCollidableLinks = true;
+        break;
+      }
+    }
+  }
 
-//    // Get the model associated with
-//    // Add the transform to the skeletone in the model.
-//    // add to model because it's variable
-//    this->dartCanonicalJoint->addTransform(trfmTranslateCanonical, true);
-//    this->dartCanonicalJoint->addTransform(trfmRotateCanonical, true);
+  // If the skeleton has at least two self collidable links, then we set the
+  // skeleton as self collidable. If the skeleton is self collidable, then
+  // DART regards that all the links in the skeleton is self collidable. So, we
+  // disable all the pairs of which both of the links in the pair is not self
+  // collidable.
+  if (hasPairOfSelfCollidableLinks)
+  {
+    this->dtSkeleton->enableSelfCollision();
 
-//    this->GetSkeletonDynamics()->addTransform(trfmTranslateCanonical);
-//    this->GetSkeletonDynamics()->addTransform(trfmRotateCanonical);
-//  }
+    dart::simulation::World *dtWorld = this->GetDARTPhysics()->GetDARTWorld();
+    dart::collision::CollisionDetector *dtCollDet =
+        dtWorld->getConstraintSolver()->getCollisionDetector();
 
-  // init the kinematics and dynamics
-  dartSkeletonDynamics->initSkel();
-  //dartSkeletonDynamics->initDynamics();
+    for (size_t i = 0; i < linkList.size() - 1; ++i)
+    {
+      for (size_t j = i + 1; j < linkList.size(); ++j)
+      {
+        dart::dynamics::BodyNode *itdtBodyNode1 =
+          boost::dynamic_pointer_cast<DARTLink>(linkList[i])->GetDARTBodyNode();
+        dart::dynamics::BodyNode *itdtBodyNode2 =
+          boost::dynamic_pointer_cast<DARTLink>(linkList[j])->GetDARTBodyNode();
 
-  // add skeleton to world
-  this->GetDARTWorld()->addSkeleton(dartSkeletonDynamics);
+        // If this->dtBodyNode and itdtBodyNode are connected then don't enable
+        // the pair.
+        // Please see: https://bitbucket.org/osrf/gazebo/issue/899
+        if ((itdtBodyNode1->getParentBodyNode() == itdtBodyNode2) ||
+            itdtBodyNode2->getParentBodyNode() == itdtBodyNode1)
+        {
+          dtCollDet->disablePair(itdtBodyNode1, itdtBodyNode2);
+        }
+
+        if (!linkList[i]->GetSelfCollide() || !linkList[j]->GetSelfCollide())
+        {
+          dtCollDet->disablePair(itdtBodyNode1, itdtBodyNode2);
+        }
+      }
+    }
+  }
+
+  // Note: This function should be called after the skeleton is added to the
+  //       world.
+  this->BackupState();
 }
 
 
@@ -148,30 +159,51 @@ void DARTModel::Init()
 void DARTModel::Update()
 {
   Model::Update();
-  
 }
 
 //////////////////////////////////////////////////
 void DARTModel::Fini()
 {
   Model::Fini();
-  
 }
 
 //////////////////////////////////////////////////
-//void DARTModel::Reset()
-//{
-//  Model::Reset();
-
-//}
-
-//////////////////////////////////////////////////
-DARTPhysicsPtr DARTModel::GetDARTPhysics(void) const {
-  return boost::shared_dynamic_cast<DARTPhysics>(this->GetWorld()->GetPhysicsEngine());
+void DARTModel::BackupState()
+{
+  dtConfig = this->dtSkeleton->getPositions();
+  dtVelocity = this->dtSkeleton->getVelocities();
 }
 
 //////////////////////////////////////////////////
-simulation::World* DARTModel::GetDARTWorld(void) const
+void DARTModel::RestoreState()
+{
+  GZ_ASSERT(static_cast<size_t>(dtConfig.size()) ==
+            this->dtSkeleton->getNumDofs(),
+            "Cannot RestoreState, invalid size");
+  GZ_ASSERT(static_cast<size_t>(dtVelocity.size()) ==
+            this->dtSkeleton->getNumDofs(),
+            "Cannot RestoreState, invalid size");
+
+  this->dtSkeleton->setPositions(dtConfig);
+  this->dtSkeleton->setVelocities(dtVelocity);
+  this->dtSkeleton->computeForwardKinematics(true, true, false);
+}
+
+//////////////////////////////////////////////////
+dart::dynamics::Skeleton *DARTModel::GetDARTSkeleton()
+{
+  return dtSkeleton;
+}
+
+//////////////////////////////////////////////////
+DARTPhysicsPtr DARTModel::GetDARTPhysics(void) const
+{
+  return boost::dynamic_pointer_cast<DARTPhysics>(
+    this->GetWorld()->GetPhysicsEngine());
+}
+
+//////////////////////////////////////////////////
+dart::simulation::World *DARTModel::GetDARTWorld(void) const
 {
   return GetDARTPhysics()->GetDARTWorld();
 }

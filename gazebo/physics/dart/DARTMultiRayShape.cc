@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,9 @@ using namespace physics;
 DARTMultiRayShape::DARTMultiRayShape(CollisionPtr _parent)
   : MultiRayShape(_parent)
 {
+  this->SetName("DART_multiray_shape");
+  this->physicsEngine = boost::static_pointer_cast<DARTPhysics>(
+      this->collisionParent->GetWorld()->GetPhysicsEngine());
 }
 
 //////////////////////////////////////////////////
@@ -43,5 +46,21 @@ DARTMultiRayShape::~DARTMultiRayShape()
 //////////////////////////////////////////////////
 void DARTMultiRayShape::UpdateRays()
 {
-  gzwarn << "Not implemented!\n";
+  std::vector<RayShapePtr>::iterator iter;
+  for (iter = this->rays.begin(); iter != this->rays.end(); ++iter)
+  {
+    (*iter)->Update();
+  }
+}
+
+//////////////////////////////////////////////////
+void DARTMultiRayShape::AddRay(const math::Vector3& _start,
+                               const math::Vector3& _end)
+{
+  MultiRayShape::AddRay(_start, _end);
+
+  DARTRayShapePtr ray(new DARTRayShape(this->collisionParent));
+  ray->SetPoints(_start, _end);
+
+  this->rays.push_back(ray);
 }

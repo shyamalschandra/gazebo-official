@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,298 +18,170 @@
 #include <boost/bind.hpp>
 
 #include "gazebo/gazebo_config.h"
-
 #include "gazebo/common/Console.hh"
-
 #include "gazebo/physics/Link.hh"
-#include "gazebo/physics/dart/DARTModel.hh"
 #include "gazebo/physics/dart/DARTHingeJoint.hh"
-#include "gazebo/physics/dart/DARTUtils.hh"
 
 using namespace gazebo;
 using namespace physics;
 
 //////////////////////////////////////////////////
 DARTHingeJoint::DARTHingeJoint(BasePtr _parent)
-  : HingeJoint<DARTJoint>(_parent)
+  : HingeJoint<DARTJoint>(_parent),
+    dtRevoluteJoint(new dart::dynamics::RevoluteJoint())
 {
+  this->dtJoint = this->dtRevoluteJoint;
 }
 
 //////////////////////////////////////////////////
 DARTHingeJoint::~DARTHingeJoint()
 {
+  delete dtRevoluteJoint;
 }
 
 //////////////////////////////////////////////////
 void DARTHingeJoint::Load(sdf::ElementPtr _sdf)
 {
   HingeJoint<DARTJoint>::Load(_sdf);
+}
 
-  // Name
-  std::string jointName = this->GetName();
-  this->dartJoint->setName(jointName.c_str());
+//////////////////////////////////////////////////
+void DARTHingeJoint::Init()
+{
+  HingeJoint<DARTJoint>::Init();
+}
 
-  //----------------------------------------------------------------------------
-  // Step 0.
-  //----------------------------------------------------------------------------
-  poseChildLinkToJoint = this->anchorPose;
+//////////////////////////////////////////////////
+math::Vector3 DARTHingeJoint::GetAnchor(unsigned int /*index*/) const
+{
+  Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                        this->dtJoint->getTransformFromChildBodyNode();
+  Eigen::Vector3d worldOrigin = T.translation();
 
-  //----------------------------------------------------------------------------
-  // Step 1. Transformation from parent link frame to joint link frame.
-  //----------------------------------------------------------------------------
-  // Set Pose: offset from child link origin in child link frame.
-  if (this->parentLink == NULL)
+  return DARTTypes::ConvVec3(worldOrigin);
+}
+
+//////////////////////////////////////////////////
+math::Vector3 DARTHingeJoint::GetGlobalAxis(unsigned int _index) const
+{
+  Eigen::Vector3d globalAxis = Eigen::Vector3d::UnitX();
+
+  if (_index == 0)
   {
-    Eigen::Matrix4d matChildLink;
-    Eigen::Matrix4d matChildLinkToJoint;
-
-    DARTUtils::ConvPoseToMat(&matChildLink, this->childLink->GetWorldPose());
-    DARTUtils::ConvPoseToMat(&matChildLinkToJoint, this->poseChildLinkToJoint);
-    Eigen::Matrix4d matJointToChildLink = matChildLinkToJoint.inverse();
-
-    Eigen::Matrix4d matParentLinkToJoint = matChildLink * matChildLinkToJoint;
-
-    DARTUtils::ConvMatToPose(&poseParentLinkToJoint, matParentLinkToJoint);
-    DARTUtils::ConvMatToPose(&poseJointToChildLink, matJointToChildLink);
+    Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                          this->dtJoint->getTransformFromChildBodyNode();
+    Eigen::Vector3d axis = this->dtRevoluteJoint->getAxis();
+    globalAxis = T.linear() * axis;
   }
   else
   {
-    Eigen::Matrix4d matParentLink;
-    Eigen::Matrix4d matParentLinkInv;
-    Eigen::Matrix4d matChildLink;
-    Eigen::Matrix4d matChildLinkToJoint;
-
-    DARTUtils::ConvPoseToMat(&matParentLink, this->parentLink->GetWorldPose());
-    matParentLinkInv = matParentLink.inverse();
-    DARTUtils::ConvPoseToMat(&matChildLink, this->childLink->GetWorldPose());
-    DARTUtils::ConvPoseToMat(&matChildLinkToJoint, this->poseChildLinkToJoint);
-    Eigen::Matrix4d matJointToChildLink = matChildLinkToJoint.inverse();
-
-    Eigen::Matrix4d matParentLinkToJoint = matParentLinkInv
-                           * matChildLink
-                           * matChildLinkToJoint;
-
-    DARTUtils::ConvMatToPose(&poseParentLinkToJoint, matParentLinkToJoint);
-    DARTUtils::ConvMatToPose(&poseJointToChildLink, matJointToChildLink);
+    gzerr << "Invalid index[" << _index << "]\n";
   }
 
-  //----------------------------------------------------------------------------
-  // Step 2. Transformation by the rotate axis.
-  //----------------------------------------------------------------------------
-  //sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
-  //math::Vector3 xyz = axisElem->GetValueVector3("xyz");
-  //Eigen::Vector3d axisHinge(xyz.x, xyz.y, xyz.z);
-  Eigen::Vector3d axisHinge;
-  kinematics::Dof* dofHinge = new kinematics::Dof(0);
-  rotHinge = new kinematics::TrfmRotateAxis(axisHinge, dofHinge);
-
-  // Get the model associated with
-  // Add the transform to the skeletone in the model.
-  // add to model because it's variable
-  DARTModelPtr dartModel
-      = boost::shared_dynamic_cast<DARTModel>(this->model);
-  dartModel->GetSkeletonDynamics()->addTransform(rotHinge);
-
-  //----------------------------------------------------------------------------
-  // Step 3. Transformation from rotated joint frame to child link frame.
-  //----------------------------------------------------------------------------
-  //poseJointToChildLink = poseChildLinkToJoint.GetInverse();
-
-  DARTUtils::AddTransformToDARTJoint(this->dartJoint, poseParentLinkToJoint);
-
-  this->dartJoint->addTransform(rotHinge, true);
-
-  DARTUtils::AddTransformToDARTJoint(this->dartJoint, poseJointToChildLink);
-
-  dartJoint->setDampingCoefficient(0, dampingCoefficient);
+  return DARTTypes::ConvVec3(globalAxis);
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTHingeJoint::GetAnchor(int /*index*/) const
+void DARTHingeJoint::SetAxis(unsigned int _index, const math::Vector3& _axis)
 {
-  //TODO: need test
-
-  math::Vector3 result;
-  //math::Pose poseChildLinkToJoint = -(this->poseJointToChildLink);
-
-  // setting anchor relative to gazebo link frame pose
-  if (this->childLink)
-    result = poseChildLinkToJoint.pos + this->childLink->GetWorldPose().pos;
-  else
-    result = math::Vector3(0, 0, 0);
-
-  return result;
-}
-
-//////////////////////////////////////////////////
-void DARTHingeJoint::SetAnchor(int /*index*/, const math::Vector3& /*_anchor*/)
-{
-  // TODO: We do not do anything here because DART does not store the positon
-  // of the joint.
-}
-
-//////////////////////////////////////////////////
-math::Vector3 DARTHingeJoint::GetGlobalAxis(int /*_index*/) const
-{
-  // Axis in local frame of this joint
-  const Eigen::Vector3d& localAxis_Eigen = rotHinge->getAxis();
-  Eigen::Vector3d globalAxis_Eigen;
-
-  math::Vector3 localAxis(localAxis_Eigen.x(), localAxis_Eigen.y(), localAxis_Eigen.z());
-  math::Vector3 globalAxis;
-  Eigen::Matrix4d worldToJointTransform = Eigen::Matrix4d::Identity();
-
-  if (this->parentLink)
+  if (_index == 0)
   {
-    worldToJointTransform = dartJoint->getParentNode()->getWorldTransform();
+    Eigen::Vector3d dartAxis = DARTTypes::ConvVec3(
+        this->GetAxisFrameOffset(0).RotateVector(_axis));
+    Eigen::Isometry3d dartTransfJointLeftToParentLink
+        = this->dtJoint->getTransformFromParentBodyNode().inverse();
+    dartAxis = dartTransfJointLeftToParentLink.linear() * dartAxis;
+    //--------------------------------------------------------------------------
+
+    this->dtRevoluteJoint->setAxis(dartAxis);
   }
-  Eigen::Matrix4d matParentLinkToJoint;
-  DARTUtils::ConvPoseToMat(&matParentLinkToJoint, poseParentLinkToJoint);
-  worldToJointTransform = worldToJointTransform * matParentLinkToJoint;
-  globalAxis_Eigen = worldToJointTransform.topLeftCorner<3,3>() * localAxis_Eigen;
-  globalAxis.Set(globalAxis_Eigen(0), globalAxis_Eigen(1), globalAxis_Eigen(2));
-
-
-  //////////////////////////////////////////////////////////////////////////////
-//  Eigen::Matrix4d matParentLink = Eigen::Matrix4d::Identity();
-//  if (parentLink)
-//  {
-//    DARTUtils::ConvPoseToMat(&matParentLink, parentLink->GetWorldPose());
-//  }
-//  Eigen::Matrix3d rotParentLink = matParentLink.topLeftCorner<3,3>();
-//  globalAxis_Eigen = rotParentLink * localAxis_Eigen;
-//  globalAxis.Set(globalAxis_Eigen(0), globalAxis_Eigen(1), globalAxis_Eigen(2));
-
-  // TODO: Issue #494
-  // See: https://bitbucket.org/osrf/gazebo/issue/494/joint-axis-reference-frame-doesnt-match
-  return globalAxis;
-  //return this->poseParentLinkToJoint.rot * localAxis;
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetAxis(int /*index*/, const math::Vector3& _axis)
-{
-  // TODO: Issue #494
-  // See: https://bitbucket.org/osrf/gazebo/issue/494/joint-axis-reference-frame-doesnt-match
-
-  // For now the _axis is represented in global frame.
-  //math::Pose childWorldPose = this->childLink->GetWorldPose();
-  //math::Pose jointFrameInWorld = childWorldPose * this->poseChildLinkToJoint;
-  //math::Vector3 axisInJointFrame = (jointFrameInWorld.rot.GetInverse()) * _axis;
-  Eigen::Vector3d axisInJointFrame;
-  //  if (this->sdf->GetElement("parent")->GetValueString("link_name")
-  //      == std::string("world"))
-  //  {
-  //    axisInJointFrame = _axis;
-  //    gzwarn << "Parent link is world.\n";
-  //  }
-  //  else
-  //  {
-  Eigen::Matrix4d matJointToParent = Eigen::Matrix4d::Identity();
-  Eigen::Matrix4d matParentToJoint = Eigen::Matrix4d::Identity();
-  DARTUtils::ConvPoseToMat(&matParentToJoint, poseParentLinkToJoint);
-  matJointToParent = matParentToJoint.inverse();
-  //  }
-
-
-//  Eigen::Matrix4d matParentLink = Eigen::Matrix4d::Identity();
-//  Eigen::Matrix3d rot;
-
-//  if (parentLink)
-//  {
-//    DARTUtils::ConvPoseToMat(&matParentLink, this->parentLink->GetWorldPose());
-//  }
-//  else
-//  {
-
-//  }
-
-//  rot = matParentLink.topLeftCorner<3,3>().transpose();
-
-  Eigen::Vector3d axis;
-  axis(0) = _axis[0];
-  axis(1) = _axis[1];
-  axis(2) = _axis[2];
-
-  axisInJointFrame = matJointToParent.topLeftCorner<3,3>() * axis;
-
-  //axisInJointFrame = rot * axis;
-
-//  axis(0) = 1;
-//  axis(1) = 0;
-//  axis(2) = 0;
-//  axisInJointFrame = axis;
-
-  rotHinge->setAxis(axisInJointFrame);
-
-  // At some point, we need to change blow code.
-  //rotHinge->setAxis(Eigen::Vector3d(_axis.x, _axis.y, _axis.z));
-}
-
-//////////////////////////////////////////////////
-void DARTHingeJoint::SetDamping(int _index, double _damping)
-{
-  assert(_index == 0);
-  assert(_damping >= 0.0);
-
-  this->dampingCoefficient = _damping;
-
-  dartJoint->setDampingCoefficient(_index, _damping);
-}
-
-//////////////////////////////////////////////////
-math::Angle DARTHingeJoint::GetAngleImpl(int /*index*/) const
+math::Angle DARTHingeJoint::GetAngleImpl(unsigned int _index) const
 {
   math::Angle result;
 
-  assert(this->dartJoint);
-  assert(this->dartJoint->getNumDofs() == 1);
-
-  // Hinge joint has only one dof.
-  kinematics::Dof* dof = this->dartJoint->getDof(0);
-
-  assert(dof);
-
-  result.SetFromRadian(dof->getValue());
-
-  return result;
-}
-
-//////////////////////////////////////////////////
-double DARTHingeJoint::GetVelocity(int /*index*/) const
-{
-  double result;
-
-  result = this->dartJoint->getDof(0)->dq;
+  if (_index == 0)
+  {
+    double radianAngle = this->dtJoint->getPosition(0);
+    result.SetFromRadian(radianAngle);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 
   return result;
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetVelocity(int /*index*/, double /*_vel*/)
+void DARTHingeJoint::SetVelocity(unsigned int _index, double _vel)
 {
-  // TODO: Do nothing because DART accept only torques (forces) of joint as
-  // input.
-    gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    this->dtJoint->setVelocity(0, _vel);
+    this->dtJoint->getSkeleton()->computeForwardKinematics(false, true, false);
+  }
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetMaxForce(int /*index*/, double /*_force*/)
+double DARTHingeJoint::GetVelocity(unsigned int _index) const
 {
-  gzwarn << "Not implemented!\n";
+  double result = 0.0;
+
+  if (_index == 0)
+    result = this->dtJoint->getVelocity(0);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
+
+  return result;
 }
 
 //////////////////////////////////////////////////
-double DARTHingeJoint::GetMaxForce(int /*index*/)
+void DARTHingeJoint::SetMaxForce(unsigned int _index, double _force)
 {
-  gzwarn << "Not implemented!\n";
-  return 0.0;
+  if (_index == 0)
+  {
+    this->dtJoint->setForceLowerLimit(0, -_force);
+    this->dtJoint->setForceUpperLimit(0, _force);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetForce(int _index, double _torque)
+double DARTHingeJoint::GetMaxForce(unsigned int _index)
 {
-  DARTJoint::SetForce(_index, _torque);
+  double result = 0.0;
 
-  dartJoint->getDof(0)->tau = _torque;
+  if (_index == 0)
+  {
+    // Assume that the lower limit and upper limit has equal magnitute
+    // result = this->dtJoint->getForceLowerLimit(0);
+    result = this->dtJoint->getForceUpperLimit(0);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
+
+  return result;
+}
+
+//////////////////////////////////////////////////
+void DARTHingeJoint::SetForceImpl(unsigned int _index, double _effort)
+{
+  if (_index == 0)
+    this->dtJoint->setForce(0, _effort);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }

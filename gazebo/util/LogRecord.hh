@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
 #include "gazebo/common/SingletonT.hh"
+#include "gazebo/util/system.hh"
 
 #define GZ_LOG_VERSION "1.0"
 
@@ -64,7 +65,7 @@ namespace gazebo
     /// guarantees that all data is stored.
     ///
     /// \sa Logplay, State
-    class LogRecord : public SingletonT<LogRecord>
+    class GAZEBO_VISIBLE LogRecord : public SingletonT<LogRecord>
     {
       /// \brief Constructor
       private: LogRecord();
@@ -174,6 +175,10 @@ namespace gazebo
       /// \brief Write all logs.
       /// \param[in] _force True to skip waiting on dataAvailableCondition.
       public: void Write(bool _force = false);
+
+      /// \brief Get the size of the buffer.
+      /// \return Size of the buffer, in bytes.
+      public: unsigned int GetBufferSize() const;
 
       /// \brief Update the log files
       ///

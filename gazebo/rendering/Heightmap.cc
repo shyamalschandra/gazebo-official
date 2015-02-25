@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,40 +23,68 @@
 #include <math.h>
 
 #include "gazebo/common/Assert.hh"
-#include "gazebo/common/Common.hh"
+#include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Exception.hh"
-
+#include "gazebo/common/SystemPaths.hh"
 #include "gazebo/math/Helpers.hh"
-
-#include "gazebo/transport/Transport.hh"
+#include "gazebo/transport/TransportIface.hh"
 #include "gazebo/rendering/RTShaderSystem.hh"
 #include "gazebo/rendering/Scene.hh"
 #include "gazebo/rendering/Light.hh"
 #include "gazebo/rendering/Conversions.hh"
 #include "gazebo/rendering/Heightmap.hh"
+#include "gazebo/rendering/UserCamera.hh"
 
 using namespace gazebo;
 using namespace rendering;
+
+const unsigned int Heightmap::numTerrainSubdivisions = 16;
+const double Heightmap::loadRadiusFactor = 1.0;
+const double Heightmap::holdRadiusFactor = 1.15;
+const boost::filesystem::path Heightmap::pagingDirname = "paging";
+const boost::filesystem::path Heightmap::hashFilename = "gzterrain.SHA1";
 
 //////////////////////////////////////////////////
 Heightmap::Heightmap(ScenePtr _scene)
 {
   this->scene = _scene;
   this->terrainGlobals = NULL;
+  this->terrainPaging = NULL;
+  this->pageManager = NULL;
+
+  this->terrainIdx = 0;
+  this->useTerrainPaging = false;
+
+  this->pageManager = NULL;
+  this->terrainPaging = NULL;
+  this->terrainHashChanged = true;
+  this->terrainsImported = true;
+
+  this->gzPagingDir =
+      common::SystemPaths::Instance()->GetLogPath() / this->pagingDirname;
 }
 
 //////////////////////////////////////////////////
 Heightmap::~Heightmap()
 {
-  this->terrainGroup->removeAllTerrains();
-
-  delete this->terrainGlobals;
-  this->terrainGlobals = NULL;
-
-  delete this->terrainGroup;
-  this->terrainGroup = NULL;
-
   this->scene.reset();
+
+  if (this->terrainPaging)
+  {
+    OGRE_DELETE this->terrainPaging;
+    pageManager->destroyWorld(this->world);
+    OGRE_DELETE this->pageManager;
+  }
+  else
+  {
+    this->terrainGroup->removeAllTerrains();
+
+    OGRE_DELETE this->terrainGroup;
+    this->terrainGroup = NULL;
+  }
+
+  OGRE_DELETE this->terrainGlobals;
+  this->terrainGlobals = NULL;
 }
 
 //////////////////////////////////////////////////
@@ -81,6 +109,11 @@ void Heightmap::LoadFromMsg(ConstVisualPtr &_msg)
         _msg->geometry().heightmap().blend(i).min_height());
     this->blendFade.push_back(
         _msg->geometry().heightmap().blend(i).fade_dist());
+  }
+
+  if (_msg->geometry().heightmap().has_use_terrain_paging())
+  {
+    this->useTerrainPaging = _msg->geometry().heightmap().use_terrain_paging();
   }
 
   this->Load();
@@ -138,14 +171,142 @@ common::Image Heightmap::GetImage() const
 }
 
 //////////////////////////////////////////////////
+void Heightmap::SplitHeights(const std::vector<float> &_heightmap, int _n,
+    std::vector<std::vector<float> > &_v)
+{
+  // We support splitting the terrain in 4 or 16 pieces
+  GZ_ASSERT(_n == 4 || _n == 16,
+      "Invalid number of terrain divisions (it should be 4 or 16)");
+
+  int count = 0;
+  int width = sqrt(_heightmap.size());
+  int newWidth = 1 + (width - 1) / sqrt(_n);
+
+  // Memory allocation
+  _v.resize(_n);
+
+  for (int tileR = 0; tileR < sqrt(_n); ++tileR)
+  {
+    int tileIndex = tileR * sqrt(_n);
+    for (int row = 0; row < newWidth - 1; ++row)
+    {
+      for (int tileC = 0; tileC < sqrt(_n); ++tileC)
+      {
+        for (int col = 0; col < newWidth - 1; ++col)
+        {
+          _v[tileIndex].push_back(_heightmap[count]);
+          ++count;
+        }
+        // Copy last value into the last column
+        _v[tileIndex].push_back(_v[tileIndex].back());
+
+        tileIndex = tileR * sqrt(_n) +
+            (tileIndex + 1) % static_cast<int>(sqrt(_n));
+      }
+      ++count;
+    }
+    // Copy the last row
+    for (int i = 0; i < sqrt(_n); ++i)
+    {
+      tileIndex = tileR * sqrt(_n) + i;
+      std::vector<float> lastRow(_v[tileIndex].end() - newWidth,
+          _v[tileIndex].end());
+      _v[tileIndex].insert(_v[tileIndex].end(),
+          lastRow.begin(), lastRow.end());
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+void Heightmap::UpdateTerrainHash(const std::string &_hash,
+    const boost::filesystem::path &_terrainDir)
+{
+  std::ofstream terrainHashFile;
+  boost::filesystem::path terrainHashFullPath;
+
+  // Create the subdirectories if they do not exist
+  boost::filesystem::create_directories(_terrainDir);
+
+  terrainHashFullPath = _terrainDir / this->hashFilename;
+
+  // Update the terrain hash
+  terrainHashFile.open(terrainHashFullPath.string().c_str());
+
+  // Throw an error if we couldn't open the file for writing.
+  if (terrainHashFile.is_open())
+  {
+    terrainHashFile << _hash;
+    terrainHashFile.close();
+  }
+  else
+  {
+    gzerr << "Unable to open file for creating a terrain hash: [" +
+        terrainHashFullPath.string() + "]\n";
+  }
+}
+
+//////////////////////////////////////////////////
+bool Heightmap::PrepareTerrainPaging(
+    const boost::filesystem::path &_terrainDirPath)
+{
+  std::string heightmapHash;
+  boost::filesystem::path terrainHashFullPath;
+  bool updateHash = true;
+
+  // Compute the original heightmap's image.
+  heightmapHash = common::get_sha1<std::vector<float> >(this->heights);
+
+  // Check if the terrain hash exists
+  terrainHashFullPath = _terrainDirPath / this->hashFilename;
+  if (boost::filesystem::exists(terrainHashFullPath))
+  {
+    try
+    {
+      // Read the terrain hash
+      std::ifstream in(terrainHashFullPath.string().c_str());
+      std::stringstream buffer;
+      buffer << in.rdbuf();
+      std::string terrainHash(buffer.str());
+      updateHash = terrainHash != heightmapHash;
+    }
+    catch(std::ifstream::failure &e)
+    {
+      gzerr << "Terrain paging error: Unable to read terrain hash\n";
+    }
+  }
+
+  // Update the terrain hash and split the terrain into small pieces
+  if (updateHash)
+  {
+    this->UpdateTerrainHash(heightmapHash, _terrainDirPath);
+  }
+
+  return updateHash;
+}
+
+//////////////////////////////////////////////////
 void Heightmap::Load()
 {
   if (this->terrainGlobals != NULL)
     return;
 
+  // The terraingGroup is composed by a number of terrains (1 by default)
+  int nTerrains = 1;
+
   this->terrainGlobals = new Ogre::TerrainGlobalOptions();
 
+#if (OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 8) || \
+    OGRE_VERSION_MAJOR > 1
+  // Vertex compression breaks anything, e.g. Gpu laser, that tries to build
+  // a depth map.
+  this->terrainGlobals->setUseVertexCompressionWhenAvailable(false);
+#endif
+
   msgs::Geometry geomMsg;
+  boost::filesystem::path imgPath;
+  boost::filesystem::path terrainName;
+  boost::filesystem::path terrainDirPath;
+  boost::filesystem::path prefix;
   boost::shared_ptr<msgs::Response> response = transport::request(
      this->scene->GetName(), "heightmap_data");
 
@@ -155,15 +316,48 @@ void Heightmap::Load()
     geomMsg.ParseFromString(response->serialized_data());
 
     // Copy the height data.
+    this->terrainSize = msgs::Convert(geomMsg.heightmap().size());
     this->heights.resize(geomMsg.heightmap().heights().size());
     memcpy(&this->heights[0], geomMsg.heightmap().heights().data(),
         sizeof(this->heights[0])*geomMsg.heightmap().heights().size());
 
     this->dataSize = geomMsg.heightmap().width();
+
+    if (geomMsg.heightmap().has_filename())
+    {
+      // Get the full path of the image heightmap
+      imgPath = geomMsg.heightmap().filename();
+      terrainName = imgPath.filename().stem();
+      terrainDirPath = this->gzPagingDir / terrainName;
+
+      // Add the top level terrain paging directory to the OGRE
+      // ResourceGroupManager
+      if (!Ogre::ResourceGroupManager::getSingleton().resourceLocationExists(
+            this->gzPagingDir.string(), "General"))
+      {
+        Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
+            this->gzPagingDir.string(), "FileSystem", "General", true);
+        Ogre::ResourceGroupManager::getSingleton().initialiseResourceGroup(
+            "General");
+      }
+    }
   }
 
   if (!math::isPowerOfTwo(this->dataSize - 1))
     gzthrow("Heightmap image size must be square, with a size of 2^n+1\n");
+
+  // If the paging is enabled we modify the number of subterrains
+  if (this->useTerrainPaging)
+  {
+    nTerrains = this->numTerrainSubdivisions;
+    prefix = terrainDirPath / "gazebo_terrain_cache";
+  }
+  else
+  {
+    prefix = terrainDirPath / "gazebo_terrain_nocache";
+  }
+
+  double sqrtN = sqrt(nTerrains);
 
   // Create terrain group, which holds all the individual terrain instances.
   // Param 1: Pointer to the scene manager
@@ -171,24 +365,85 @@ void Heightmap::Load()
   // Param 3: Number of vertices along one edge of the terrain (2^n+1).
   //          Terrains must be square, with each side a power of 2 in size
   // Param 4: World size of each terrain instance, in meters.
+
   this->terrainGroup = new Ogre::TerrainGroup(
       this->scene->GetManager(), Ogre::Terrain::ALIGN_X_Y,
-      this->dataSize, this->terrainSize.x);
+      1 + ((this->dataSize - 1) / sqrtN),
+      this->terrainSize.x / (sqrtN));
 
   this->terrainGroup->setFilenameConvention(
-      Ogre::String("gazebo_terrain"), Ogre::String("dat"));
+    Ogre::String(prefix.string()), Ogre::String("dat"));
 
-  this->terrainGroup->setOrigin(Conversions::Convert(this->terrainOrigin));
+  Ogre::Vector3 orig = Conversions::Convert(this->terrainOrigin);
+  math::Vector3 origin(
+      orig.x -0.5 * this->terrainSize.x + 0.5 * this->terrainSize.x / sqrtN,
+      orig.y -0.5 * this->terrainSize.x + 0.5 * this->terrainSize.x / sqrtN,
+      orig.z);
 
+  this->terrainGroup->setOrigin(Conversions::Convert(origin));
   this->ConfigureTerrainDefaults();
-
   this->SetupShadows(true);
 
-  for (int x = 0; x <= 0; ++x)
-    for (int y = 0; y <= 0; ++y)
+  if (!this->heights.empty())
+  {
+    UserCameraPtr userCam = this->scene->GetUserCamera(0);
+
+    // Move the camera above the terrain only if the user did not modify the
+    // camera position in the world file
+    if (userCam && !userCam->IsCameraSetInWorldFile())
+    {
+      double h = *std::max_element(
+        &this->heights[0], &this->heights[0] + this->heights.size());
+
+      math::Vector3 camPos(5, -5, h + 200);
+      math::Vector3 lookAt(0, 0, h);
+      math::Vector3 delta = lookAt - camPos;
+
+      double yaw = atan2(delta.y, delta.x);
+      double pitch = atan2(-delta.z,
+                           sqrt(delta.x * delta.x + delta.y * delta.y));
+
+      userCam->SetWorldPose(math::Pose(camPos, math::Vector3(0, pitch, yaw)));
+    }
+  }
+
+  if (this->useTerrainPaging)
+  {
+    this->terrainHashChanged = this->PrepareTerrainPaging(terrainDirPath);
+
+    if (this->terrainHashChanged)
+    {
+      // Split the terrain. Every subterrain will be saved on disk and paged
+      this->SplitHeights(this->heights, nTerrains, this->subTerrains);
+    }
+
+    this->pageManager = OGRE_NEW Ogre::PageManager();
+    this->pageManager->setPageProvider(&this->dummyPageProvider);
+
+    // Add cameras
+    for (unsigned int i = 0; i < this->scene->GetCameraCount(); ++i)
+    {
+      this->pageManager->addCamera(this->scene->GetCamera(i)->GetOgreCamera());
+    }
+    for (unsigned int i = 0; i < this->scene->GetUserCameraCount(); ++i)
+    {
+      this->pageManager->addCamera(
+          this->scene->GetUserCamera(i)->GetOgreCamera());
+    }
+
+    this->terrainPaging = OGRE_NEW Ogre::TerrainPaging(this->pageManager);
+    this->world = pageManager->createWorld();
+    this->terrainPaging->createWorldSection(world, this->terrainGroup,
+        this->loadRadiusFactor * this->terrainSize.x,
+        this->holdRadiusFactor * this->terrainSize.x,
+        0, 0, sqrtN - 1, sqrtN - 1);
+  }
+
+  for (int y = 0; y <= sqrtN - 1; ++y)
+    for (int x = 0; x <= sqrtN - 1; ++x)
       this->DefineTerrain(x, y);
 
-  // sync load since we want everything in place when we start
+  // Sync load since we want everything in place when we start
   this->terrainGroup->loadAllTerrains(true);
 
   // Calculate blend maps
@@ -200,6 +455,11 @@ void Heightmap::Load()
     {
       Ogre::Terrain *t = ti.getNext()->instance;
       this->InitBlendMaps(t);
+    }
+    if (this->terrainHashChanged)
+    {
+      // Save all subterrains using files.
+      this->terrainGroup->saveAllTerrains(true);
     }
   }
 
@@ -219,6 +479,13 @@ void Heightmap::ConfigureTerrainDefaults()
   // CompositeMapDistance: decides how far the Ogre terrain will render
   // the lightmapped terrain.
   this->terrainGlobals->setCompositeMapDistance(2000);
+
+#if (OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR >= 8) || \
+    OGRE_VERSION_MAJOR > 1
+  // Vertex compression breaks anything, e.g. Gpu laser, that tries to build
+  // a depth map.
+  this->terrainGlobals->setUseVertexCompressionWhenAvailable(false);
+#endif
 
   // Get the first directional light
   LightPtr directionalLight;
@@ -261,8 +528,8 @@ void Heightmap::ConfigureTerrainDefaults()
 
   defaultimp.inputScale = 1.0;
 
-  defaultimp.minBatchSize = 65;
-  defaultimp.maxBatchSize = 129;
+  defaultimp.minBatchSize = 17;
+  defaultimp.maxBatchSize = 65;
 
   // textures. The default material generator takes two materials per layer.
   //    1. diffuse_specular - diffuse texture with a specular map in the
@@ -316,15 +583,22 @@ void Heightmap::DefineTerrain(int _x, int _y)
 {
   Ogre::String filename = this->terrainGroup->generateFilename(_x, _y);
 
-  if (Ogre::ResourceGroupManager::getSingleton().resourceExists(
-        this->terrainGroup->getResourceGroup(), filename))
+  if (!this->useTerrainPaging)
+  {
+    this->terrainGroup->defineTerrain(_x, _y, &this->heights[0]);
+  }
+  else if ((Ogre::ResourceGroupManager::getSingleton().resourceExists(
+             this->terrainGroup->getResourceGroup(), filename)) &&
+          (!this->terrainHashChanged))
   {
     this->terrainGroup->defineTerrain(_x, _y);
+    this->terrainsImported = false;
   }
   else
   {
-    this->terrainGroup->defineTerrain(_x, _y, &this->heights[0]);
-    this->terrainsImported = true;
+      this->terrainGroup->defineTerrain(_x, _y,
+          &this->subTerrains[this->terrainIdx][0]);
+      ++terrainIdx;
   }
 }
 
@@ -333,7 +607,7 @@ bool Heightmap::InitBlendMaps(Ogre::Terrain *_terrain)
 {
   if (!_terrain)
   {
-    std::cerr << "Invalid  terrain\n";
+    std::cerr << "Invalid terrain\n";
     return false;
   }
 
@@ -489,7 +763,7 @@ double Heightmap::GetAvgHeight(Ogre::Vector3 _pos, double _radius)
   int startx = (pos.x - _radius) * size;
   int starty = (pos.y - _radius) * size;
   int endx = (pos.x + _radius) * size;
-  int endy= (pos.y + _radius) * size;
+  int endy = (pos.y + _radius) * size;
 
   startx = std::max(startx, 0);
   starty = std::max(starty, 0);
@@ -532,7 +806,7 @@ void Heightmap::ModifyTerrain(Ogre::Vector3 _pos, double _outsideRadius,
   int startx = (pos.x - _outsideRadius) * size;
   int starty = (pos.y - _outsideRadius) * size;
   int endx = (pos.x + _outsideRadius) * size;
-  int endy= (pos.y + _outsideRadius) * size;
+  int endy = (pos.y + _outsideRadius) * size;
 
   startx = std::max(startx, 0);
   starty = std::max(starty, 0);
@@ -627,6 +901,12 @@ void Heightmap::SetupShadows(bool _enableShadows)
   {
     matProfile->setReceiveDynamicShadowsPSSM(NULL);
   }
+}
+
+/////////////////////////////////////////////////
+unsigned int Heightmap::GetTerrainSubdivisionCount() const
+{
+  return this->numTerrainSubdivisions;
 }
 
 /////////////////////////////////////////////////
@@ -966,7 +1246,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVertexProgram(
   Ogre::HighLevelGpuProgramPtr ret =
     this->createVertexProgram(_prof, _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
   this->generateVertexProgramSource(_prof, _terrain, _tt, sourceStr);
 
   ret->setSource(sourceStr.str());
@@ -984,7 +1264,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFragmentProgram(
   Ogre::HighLevelGpuProgramPtr ret = this->createFragmentProgram(_prof,
       _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
 
   this->generateFragmentProgramSource(_prof, _terrain, _tt, sourceStr);
 
@@ -1093,7 +1373,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::updateParams(
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::
 generateVertexProgramSource(const SM2Profile *_prof,
     const Ogre::Terrain* _terrain, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   this->generateVpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -1117,7 +1397,7 @@ generateVertexProgramSource(const SM2Profile *_prof,
 // virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   bool compression = false;
 
@@ -1310,7 +1590,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpHeader(
 // but is needed because generateVpDynamicShadows() is not declared virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "  gl_Position = viewProjMatrix * worldPos;\n"
              << "  uvMisc.xy = uv.xy;\n";
@@ -1341,7 +1621,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpFooter(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateVpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   unsigned int numTextures = 1;
 
@@ -1431,7 +1711,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::defaultVpParams(
 unsigned int GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::
 generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType /*_tt*/,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   // out semantics & params
   unsigned int numTextures = 1;
@@ -1460,7 +1740,7 @@ generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "#version 130\n\n";
 
@@ -1686,7 +1966,7 @@ void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsParams(
     Ogre::uint *_texCoord, Ogre::uint *_sampler, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   if (_tt == HIGH_LOD)
     this->mShadowSamplerStartHi = *_sampler;
@@ -1722,7 +2002,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsParams(
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpLayer(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
     TechniqueType _tt, Ogre::uint _layer,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   Ogre::uint uvIdx = _layer / 2;
   Ogre::String uvChannels = (_layer % 2) ? ".zw" : ".xy";
@@ -1799,7 +2079,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpLayer(
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   if (_tt == LOW_LOD)
   {
@@ -1875,7 +2155,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpFooter(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsHelpers(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   // TODO make filtering configurable
   _outStream <<
@@ -2004,7 +2284,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadowsHelpers(
 /////////////////////////////////////////////////
 void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   if (_prof->getReceiveDynamicShadowsPSSM())
   {
@@ -2062,7 +2342,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFpDynamicShadows(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperGLSL::generateFragmentProgramSource(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   this->generateFpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -2153,7 +2433,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVertexProgram(
   Ogre::HighLevelGpuProgramPtr ret =
     this->createVertexProgram(_prof, _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
   this->generateVertexProgramSource(_prof, _terrain, _tt, sourceStr);
 
   ret->setSource(sourceStr.str());
@@ -2221,7 +2501,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::defaultVpParams(
 void
 GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpDynamicShadows(
     const SM2Profile *_prof, const Ogre::Terrain * /*_terrain*/,
-    TechniqueType /*_tt*/, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType /*_tt*/, Ogre::StringStream &_outStream)
 {
   unsigned int numTextures = 1;
 
@@ -2257,7 +2537,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpDynamicShadows(
 unsigned int GzTerrainMatGen::SM2Profile::ShaderHelperCg::
 generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
     const Ogre::Terrain * /*_terrain*/, TechniqueType /*_tt*/,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   // out semantics & params
   unsigned int numTextures = 1;
@@ -2291,7 +2571,7 @@ generateVpDynamicShadowsParams(unsigned int _texCoord, const SM2Profile *_prof,
 // virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpHeader(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "void main_vp(\n";
 
@@ -2473,7 +2753,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpHeader(
 // but is needed because generateVpDynamicShadows() is not declared virtual.
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpFooter(
     const SM2Profile *_prof, const Ogre::Terrain *_terrain,
-    TechniqueType _tt, Ogre::StringUtil::StrStreamType &_outStream)
+    TechniqueType _tt, Ogre::StringStream &_outStream)
 {
   _outStream << "  oPos = mul(viewProjMatrix, worldPos);\n"
              << "  oUVMisc.xy = uv.xy;\n";
@@ -2504,7 +2784,7 @@ void GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateVpFooter(
 void GzTerrainMatGen::SM2Profile::ShaderHelperCg::
 generateVertexProgramSource(const SM2Profile *_prof,
     const Ogre::Terrain* _terrain, TechniqueType _tt,
-    Ogre::StringUtil::StrStreamType &_outStream)
+    Ogre::StringStream &_outStream)
 {
   this->generateVpHeader(_prof, _terrain, _tt, _outStream);
 
@@ -2529,7 +2809,7 @@ GzTerrainMatGen::SM2Profile::ShaderHelperCg::generateFragmentProgram(
   Ogre::HighLevelGpuProgramPtr ret = this->createFragmentProgram(_prof,
       _terrain, _tt);
 
-  Ogre::StringUtil::StrStreamType sourceStr;
+  Ogre::StringStream sourceStr;
 
   this->generateFragmentProgramSource(_prof, _terrain, _tt, sourceStr);
 

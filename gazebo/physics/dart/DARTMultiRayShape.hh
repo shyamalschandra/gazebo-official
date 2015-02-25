@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,23 @@
  *
 */
 
-#ifndef _DARTMULTIRAYSHAPE_HH_
-#define _DARTMULTIRAYSHAPE_HH_
+#ifndef _GAZEBO_DARTMULTIRAYSHAPE_HH_
+#define _GAZEBO_DARTMULTIRAYSHAPE_HH_
 
 #include "gazebo/physics/MultiRayShape.hh"
+#include "gazebo/physics/dart/DARTTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
+    /// \ingroup gazebo_physics
+    /// \addtogroup gazebo_physics_bullet Bullet Physics
+    /// \{
+
     /// \brief DART specific version of MultiRayShape
-    class DARTMultiRayShape : public MultiRayShape
+    class GAZEBO_VISIBLE DARTMultiRayShape : public MultiRayShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.
@@ -36,6 +42,15 @@ namespace gazebo
 
       // Documentation inherited.
       public: virtual void UpdateRays();
+
+      /// \brief Add a ray to the collision.
+      /// \param[in] _start Start location of the ray.
+      /// \param[in] _end End location of the ray.
+      protected: void AddRay(const math::Vector3 &_start,
+                             const math::Vector3 &_end);
+
+      /// \brief Pointer to the DART physics engine.
+      private: DARTPhysicsPtr physicsEngine;
     };
   }
 }
