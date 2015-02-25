@@ -279,6 +279,8 @@ dxBody *dBodyCreate (dxWorld *w)
   dSetZero (b->avel,4);
   dSetZero (b->facc,4);
   dSetZero (b->tacc,4);
+  dSetZero (b->facc_last,4);
+  dSetZero (b->tacc_last,4);
   dSetZero (b->finite_rot_axis,4);
   addObjectToList (b,(dObject **) &w->firstbody);
   w->nb++;
@@ -684,10 +686,24 @@ const dReal * dBodyGetForce (dBodyID b)
 }
 
 
+const dReal * dBodyGetForceLast (dBodyID b)
+{
+  dAASSERT (b);
+  return b->facc_last;
+}
+
+
 const dReal * dBodyGetTorque (dBodyID b)
 {
   dAASSERT (b);
   return b->tacc;
+}
+
+
+const dReal * dBodyGetTorqueLast (dBodyID b)
+{
+  dAASSERT (b);
+  return b->tacc_last;
 }
 
 
@@ -1675,7 +1691,7 @@ dxWorld * dWorldCreate()
   w->qs.w = REAL(1.3);
   w->qs.num_chunks = 1;
   w->qs.num_overlap = 0;
-  w->qs.sor_lcp_tolerance = 0;
+  w->qs.sor_lcp_tolerance = -1;
   w->qs.rms_dlambda[0] = 0;
   w->qs.rms_dlambda[1] = 0;
   w->qs.rms_dlambda[2] = 0;
@@ -2274,7 +2290,7 @@ dReal dWorldGetQuickStepW (dWorldID w)
 	return w->qs.w;
 }
 
-dReal *dWorldGetQuickStepRMSError (dWorldID w)
+dReal *dWorldGetQuickStepRMSDeltaLambda (dWorldID w)
 {
 	dAASSERT(w);
 	return w->qs.rms_dlambda;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,17 @@
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/transport.hh"
-#include "ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 #include "helper_physics_generator.hh"
 
 #define PHYSICS_TOL 1e-2
 using namespace gazebo;
 
-class PhysicsThreadSafeTest : public ServerFixture,
-                        public testing::WithParamInterface<const char*>
+class PhysicsThreadSafeTest : public PhysicsFixture,
+                              public testing::WithParamInterface<const char*>
 {
   /// \brief Load a blank world and try to change gravity.
+  /// The test passes if it doesn't seg-fault.
   /// \param[in] _physicsEngine Type of physics engine to use.
   public: void BlankWorld(const std::string &_physicsEngine);
 
@@ -41,14 +42,10 @@ class PhysicsThreadSafeTest : public ServerFixture,
 /////////////////////////////////////////////////
 void PhysicsThreadSafeTest::BlankWorld(const std::string &_physicsEngine)
 {
-  Load("worlds/blank.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
+  LoadWorld("worlds/blank.world", true, _physicsEngine);
 
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
+  // The following lines cause a seg-fault on revision 031749b
+  // This test passes if it doesn't seg-fault.
   math::Vector3 g = physics->GetGravity();
   physics->SetGravity(g);
 }
@@ -56,16 +53,7 @@ void PhysicsThreadSafeTest::BlankWorld(const std::string &_physicsEngine)
 /////////////////////////////////////////////////
 void PhysicsThreadSafeTest::LinkGet(const std::string &_physicsEngine)
 {
-  Load("worlds/revolute_joint_test.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
-
-  math::Vector3 g = physics->GetGravity();
-  physics->SetGravity(0*g);
+  LoadWorld("worlds/revolute_joint_test.world", true, _physicsEngine);
 
   // Unthrottle the update rate
   physics->SetRealTimeUpdateRate(0);
@@ -92,8 +80,6 @@ void PhysicsThreadSafeTest::LinkGet(const std::string &_physicsEngine)
     vel += link->GetWorldLinearVel(math::Vector3(), math::Quaternion());
     vel += link->GetWorldCoGLinearVel();
     vel += link->GetWorldAngularVel();
-    vel += physics->GetGravity();
-    physics->SetGravity(math::Vector3(0, 0, -9.81));
   }
 }
 
