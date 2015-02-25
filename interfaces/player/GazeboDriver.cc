@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,16 +70,6 @@ void GazeboDriver_Register(DriverTable *_table)
   // TODO: Fix the PACKAGE_VERSION
   // printf("\n ** Gazebo plugin v%s **", PACKAGE_VERSION);
 
-  if (!player_quiet_startup)
-  {
-    puts("\n * Part of the Player/Stage Project "
-          "[http://playerstage.sourceforge.net]\n"
-          " * Copyright 2000-2006 Richard Vaughan, Andrew Howard, "
-          "Brian Gerkey, Nathan Koenig\n"
-          " * and contributors. Released under the GNU General Public"
-          " License v2.");
-  }
-
   _table->AddDriver(const_cast<char*>("gazebo"), GazeboDriver_Init);
 }
 
@@ -87,13 +77,13 @@ void GazeboDriver_Register(DriverTable *_table)
 // need the extern to avoid C++ name-mangling
 extern "C"
 {
+  GAZEBO_VISIBLE
   int player_driver_init(DriverTable *_table)
   {
     GazeboDriver_Register(_table);
     return(0);
   }
 }
-
 
 //////////////////////////////////////////////////
 // Retrieve options from the configuration file and do any
@@ -190,13 +180,12 @@ int GazeboDriver::Unsubscribe(player_devaddr_t addr)
 void GazeboDriver::Update()
 {
   int i;
-  GazeboInterface *iface;
 
   Driver::ProcessMessages();
 
   for (i = 0; i < this->deviceCount; i++)
   {
-    iface = this->devices[i];
+    GazeboInterface *iface = this->devices[i];
     iface->Update();
   }
 
@@ -371,11 +360,10 @@ int GazeboDriver::LoadDevices(ConfigFile *_cf, int _section)
 GazeboInterface *GazeboDriver::LookupDevice(player_devaddr_t _addr)
 {
   int i;
-  GazeboInterface *iface = NULL;
 
   for (i = 0; i < static_cast<int>(this->deviceCount); ++i)
   {
-    iface = static_cast<GazeboInterface*>(this->devices[i]);
+    GazeboInterface *iface = static_cast<GazeboInterface*>(this->devices[i]);
 
     if (iface->device_addr.robot == _addr.robot &&
         iface->device_addr.interf == _addr.interf &&
@@ -385,5 +373,3 @@ GazeboInterface *GazeboDriver::LookupDevice(player_devaddr_t _addr)
 
   return NULL;
 }
-
-
