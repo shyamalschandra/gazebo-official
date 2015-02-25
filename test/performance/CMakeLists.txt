@@ -23,9 +23,10 @@ if (NOT APPLE)
     RAMLibrary_TEST.cc
     factory_stress.cc
     gz_stress.cc
-    sensor_stress.cc
-    transport_stress.cc
     image_convert_stress.cc
+    sensor_stress.cc
+    set_world_pose.cc
+    transport_stress.cc
   )
 
   gz_build_tests(${tests})

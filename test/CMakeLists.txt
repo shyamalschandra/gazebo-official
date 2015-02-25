@@ -2,7 +2,7 @@ include_directories (
   ${ODE_INCLUDE_DIRS}
   ${OPENGL_INCLUDE_DIR}
   ${OGRE_INCLUDE_DIRS}
-  ${SDF_INCLUDE_DIRS}
+  ${SDFormat_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/test/gtest/include
   ${PROJECT_SOURCE_DIR}/test/gtest
@@ -10,10 +10,11 @@ include_directories (
 )
 
 link_directories(
+  ${CCD_LIBRARY_DIRS}
   ${ogre_library_dirs}
   ${Boost_LIBRARY_DIRS}
   ${ODE_LIBRARY_DIRS}
-  ${SDF_LIBRARY_DIRS}
+  ${SDFormat_LIBRARY_DIRS}
 )
 
 if (HAVE_BULLET)
@@ -21,6 +22,10 @@ if (HAVE_BULLET)
 endif()
 
 configure_file (test_config.h.in ${PROJECT_BINARY_DIR}/test_config.h)
+
+if (HAVE_BULLET)
+  link_directories(${BULLET_LIBRARY_DIRS})
+endif()
 
 # Build gtest
 add_library(gtest STATIC gtest/src/gtest-all.cc)
@@ -34,6 +39,7 @@ set(ServerFixtureSources
   ${PROJECT_SOURCE_DIR}/gazebo/Server.cc
   ${PROJECT_SOURCE_DIR}/gazebo/Master.cc
   ${PROJECT_SOURCE_DIR}/gazebo/gazebo.cc
+  ${PROJECT_SOURCE_DIR}/test/PhysicsFixture.cc
   ${PROJECT_SOURCE_DIR}/test/ServerFixture.cc
 )
 add_library(server_fixture STATIC ${ServerFixtureSources})
