@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,29 +15,22 @@
  *
 */
 
-/* Desc: Base class shared by all classes in Gazebo.
- * Author: Nate Koenig
- * Date: 09 Sept. 2008
- */
-
-
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
+#include "gazebo/physics/PhysicsIface.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/Base.hh"
 
 using namespace gazebo;
 using namespace physics;
 
-unsigned int Base::idCounter = 0;
-
 //////////////////////////////////////////////////
 Base::Base(BasePtr _parent)
 : parent(_parent)
 {
   this->type = BASE;
-  this->id = ++idCounter;
+  this->id = physics::getUniqueId();
   this->saveable = true;
   this->selected = false;
 
@@ -67,8 +60,8 @@ Base::~Base()
       (*iter)->SetParent(BasePtr());
   }
   this->children.clear();
-  this->childrenEnd = this->children.end();
-  this->sdf->Reset();
+  if (this->sdf)
+    this->sdf->Reset();
   this->sdf.reset();
 }
 
@@ -112,7 +105,6 @@ void Base::Fini()
       (*iter)->Fini();
 
   this->children.clear();
-  this->childrenEnd = this->children.end();
 
   this->world.reset();
   this->parent.reset();
@@ -153,7 +145,7 @@ std::string Base::GetName() const
 }
 
 //////////////////////////////////////////////////
-unsigned int Base::GetId() const
+uint32_t Base::GetId() const
 {
   return this->id;
 }
@@ -196,7 +188,6 @@ void Base::AddChild(BasePtr _child)
 
   // Add this _child to our list
   this->children.push_back(_child);
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -212,7 +203,6 @@ void Base::RemoveChild(unsigned int _id)
       break;
     }
   }
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -259,15 +249,12 @@ void Base::RemoveChild(const std::string &_name)
     (*iter)->Fini();
     this->children.erase(iter);
   }
-
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
 void Base::RemoveChildren()
 {
   this->children.clear();
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -305,9 +292,12 @@ BasePtr Base::GetByName(const std::string &_name)
 }
 
 //////////////////////////////////////////////////
-std::string Base::GetScopedName() const
+std::string Base::GetScopedName(bool _prependWorldName) const
 {
-  return this->scopedName;
+  if (_prependWorldName)
+    return this->world->GetName() + "::" + this->scopedName;
+  else
+    return this->scopedName;
 }
 
 //////////////////////////////////////////////////
