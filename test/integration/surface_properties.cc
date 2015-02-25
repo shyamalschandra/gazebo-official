@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
 */
 
-#include "ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/msgs/msgs.hh"
 #include "helper_physics_generator.hh"
@@ -24,7 +24,7 @@ const double g_physics_tol = 1e-2;
 
 using namespace gazebo;
 
-class SurfaceTest : public ServerFixture,
+class SurfaceTest : public PhysicsFixture,
                     public testing::WithParamInterface<const char*>
 {
   public: void CollideWithoutContact(const std::string &_physicsEngine);
@@ -39,14 +39,9 @@ class SurfaceTest : public ServerFixture,
 void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
 {
   // load an empty world
-  Load("worlds/collide_without_contact.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
+  LoadWorld("worlds/collide_without_contact.world", true, _physicsEngine);
 
   // check the gravity vector
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
   math::Vector3 g = physics->GetGravity();
   // Assume gravity vector points down z axis only.
   EXPECT_EQ(g.x, 0);
@@ -68,12 +63,12 @@ void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
   sensors::SensorPtr sensor = sensors::get_sensor("box_contact");
   sensors::ContactSensorPtr contactSensor =
       boost::dynamic_pointer_cast<sensors::ContactSensor>(sensor);
-  ASSERT_TRUE(contactSensor);
+  ASSERT_TRUE(contactSensor != NULL);
 
   // Step forward 0.2 s
   double stepTime = 0.2;
   unsigned int steps = floor(stepTime / dt);
-  world->StepWorld(steps);
+  world->Step(steps);
 
   // Expect boxes to be falling
   double fallVelocity = g.z * stepTime;
@@ -81,7 +76,7 @@ void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
   EXPECT_LT(collideBox->GetWorldLinearVel().z, fallVelocity*(1-g_physics_tol));
 
   // Step forward another 0.2 s
-  world->StepWorld(steps);
+  world->Step(steps);
   fallVelocity = g.z * 2*stepTime;
   // Expect contactBox to be resting on contact sensor box
   EXPECT_NEAR(contactBox->GetWorldLinearVel().z, 0.0, g_physics_tol);
@@ -93,7 +88,7 @@ void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
     msgs::Contacts contacts;
     while (contacts.contact_size() == 0 && --steps > 0)
     {
-      world->StepWorld(1);
+      world->Step(1);
       contacts = contactSensor->GetContacts();
     }
 
@@ -123,7 +118,7 @@ void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
   // Step forward another 0.4 s
   // The collideBox should have fallen through the ground and not
   // be in contact with the sensor
-  world->StepWorld(steps*2);
+  world->Step(steps*2);
   fallVelocity = g.z * 4*stepTime;
   // Expect contactBox to still be resting on contact sensor box
   EXPECT_NEAR(contactBox->GetWorldLinearVel().z, 0.0, g_physics_tol);
@@ -135,7 +130,7 @@ void SurfaceTest::CollideWithoutContact(const std::string &_physicsEngine)
     msgs::Contacts contacts;
     while (contacts.contact_size() == 0 && --steps > 0)
     {
-      world->StepWorld(1);
+      world->Step(1);
       contacts = contactSensor->GetContacts();
     }
 
