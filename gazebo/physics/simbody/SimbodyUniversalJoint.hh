@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include "gazebo/physics/UniversalJoint.hh"
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,7 +32,8 @@ namespace gazebo
     /// \{
 
     /// \brief A simbody universal joint class
-    class SimbodyUniversalJoint : public UniversalJoint<SimbodyJoint>
+    class GAZEBO_VISIBLE SimbodyUniversalJoint
+      : public UniversalJoint<SimbodyJoint>
     {
       /// \brief Constructor
       /// \param[in] _world Pointer to the Simbody world.
