@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,20 @@
 */
 
 #include <gtest/gtest.h>
+#include <boost/filesystem.hpp>
 
 #include "test_config.h"
-#include "gazebo/math/Vector3.hh"
-#include "gazebo/common/Exception.hh"
-#include "gazebo/common/MeshManager.hh"
-#include "gazebo/common/Mesh.hh"
 #include "gazebo/common/ColladaLoader.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Mesh.hh"
+#include "gazebo/common/MeshManager.hh"
+#include "gazebo/common/SystemPaths.hh"
+#include "gazebo/math/Vector3.hh"
+#include "test/util.hh"
 
 using namespace gazebo;
+
+class MeshTest : public gazebo::testing::AutoLogFixture { };
 
 std::string asciiSTLBox =
 "solid MYSOLID\n\
@@ -116,8 +121,13 @@ endsolid MYSOLID";
 
 
 /////////////////////////////////////////////////
-TEST(MeshTest, Mesh)
+TEST_F(MeshTest, Mesh)
 {
+  // Cleanup test directory.
+  common::SystemPaths *paths = common::SystemPaths::Instance();
+  boost::filesystem::remove_all(paths->GetDefaultTestPath());
+  boost::filesystem::create_directories(paths->GetDefaultTestPath());
+
   EXPECT_EQ(NULL, common::MeshManager::Instance()->Load("break.mesh"));
   EXPECT_EQ(NULL, common::MeshManager::Instance()->Load("break.3ds"));
   EXPECT_EQ(NULL, common::MeshManager::Instance()->Load("break.xml"));
@@ -219,23 +229,29 @@ TEST(MeshTest, Mesh)
   newMesh->GenSphericalTexCoord(math::Vector3(0, 0, 0));
   delete newMesh;
 
-  std::ofstream stlFile("/tmp/gazebo_stl_test.stl", std::ios::out);
+  std::ofstream stlFile((paths->GetDefaultTestPath() +
+      "/gazebo_stl_test.stl").c_str(), std::ios::out);
   stlFile << asciiSTLBox;
   stlFile.close();
 
-  mesh = common::MeshManager::Instance()->Load("/tmp/gazebo_stl_test-bad.stl");
+  mesh = common::MeshManager::Instance()->Load(
+      paths->GetDefaultTestPath() + "/gazebo_stl_test-bad.stl");
   EXPECT_EQ(NULL, mesh);
 
-  mesh = common::MeshManager::Instance()->Load("/tmp/gazebo_stl_test.stl");
+  mesh = common::MeshManager::Instance()->Load(
+      paths->GetDefaultTestPath() + "/gazebo_stl_test.stl");
   mesh->GetAABB(center, min, max);
   EXPECT_TRUE(center == math::Vector3(0.5, 0.5, 0.5));
   EXPECT_TRUE(min == math::Vector3(0, 0, 0));
   EXPECT_TRUE(max == math::Vector3(1, 1, 1));
+
+  // Cleanup test directory.
+  boost::filesystem::remove_all(paths->GetDefaultTestPath());
 }
 
 /////////////////////////////////////////////////
 // Test centering a submesh.
-TEST(MeshTest, MeshMove)
+TEST_F(MeshTest, MeshMove)
 {
   common::ColladaLoader loader;
   common::Mesh *mesh = loader.Load(
@@ -257,7 +273,7 @@ TEST(MeshTest, MeshMove)
 
 /////////////////////////////////////////////////
 // Test centering a submesh.
-TEST(MeshTest, SubMeshCenter)
+TEST_F(MeshTest, SubMeshCenter)
 {
   common::ColladaLoader loader;
   common::Mesh *mesh = loader.Load(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 #include <gazebo/gazebo.hh>
 
 #include <gazebo/common/Time.hh>
-#include <gazebo/transport/Transport.hh>
+#include <gazebo/transport/TransportIface.hh>
 #include <gazebo/transport/TransportTypes.hh>
 #include <gazebo/transport/Node.hh>
 
@@ -112,20 +112,30 @@ transport::ConnectionPtr connect_to_master()
 
   // Connect to the master
   transport::ConnectionPtr connection(new transport::Connection());
-  connection->Connect(host, port);
 
-  // Read the verification message
-  connection->Read(data);
-  connection->Read(namespacesData);
-  connection->Read(publishersData);
-
-  packet.ParseFromString(data);
-  if (packet.type() == "init")
+  if (connection->Connect(host, port))
   {
-    msgs::GzString msg;
-    msg.ParseFromString(packet.serialized_data());
-    if (msg.data() != std::string("gazebo ") + GAZEBO_VERSION_FULL)
-      std::cerr << "Conflicting gazebo versions\n";
+    try
+    {
+      // Read the verification message
+      connection->Read(data);
+      connection->Read(namespacesData);
+      connection->Read(publishersData);
+    }
+    catch(...)
+    {
+      gzerr << "Unable to read from master\n";
+      return transport::ConnectionPtr();
+    }
+
+    packet.ParseFromString(data);
+    if (packet.type() == "init")
+    {
+      msgs::GzString msg;
+      msg.ParseFromString(packet.serialized_data());
+      if (msg.data() != std::string("gazebo ") + GAZEBO_VERSION_FULL)
+        std::cerr << "Conflicting gazebo versions\n";
+    }
   }
 
   return connection;
@@ -141,26 +151,39 @@ void list()
 
   transport::ConnectionPtr connection = connect_to_master();
 
-  request.set_id(0);
-  request.set_request("get_publishers");
-  connection->EnqueueMsg(msgs::Package("request", request), true);
-  connection->Read(data);
-
-  packet.ParseFromString(data);
-  pubs.ParseFromString(packet.serialized_data());
-
-  // This list is used to filter topic output.
-  std::list<std::string> listed;
-
-  for (int i = 0; i < pubs.publisher_size(); i++)
+  if (connection)
   {
-    const msgs::Publish &p = pubs.publisher(i);
-    if (std::find(listed.begin(), listed.end(), p.topic()) == listed.end())
-    {
-      std::cout << p.topic() << std::endl;
+    request.set_id(0);
+    request.set_request("get_publishers");
+    connection->EnqueueMsg(msgs::Package("request", request), true);
 
-      // Record the topics that have been listed to prevent duplicates.
-      listed.push_back(p.topic());
+    try
+    {
+      connection->Read(data);
+    }
+    catch(...)
+    {
+      gzerr << "An active gzserver is probably not present.\n";
+      connection.reset();
+      return;
+    }
+
+    packet.ParseFromString(data);
+    pubs.ParseFromString(packet.serialized_data());
+
+    // This list is used to filter topic output.
+    std::list<std::string> listed;
+
+    for (int i = 0; i < pubs.publisher_size(); i++)
+    {
+      const msgs::Publish &p = pubs.publisher(i);
+      if (std::find(listed.begin(), listed.end(), p.topic()) == listed.end())
+      {
+        std::cout << p.topic() << std::endl;
+
+        // Record the topics that have been listed to prevent duplicates.
+        listed.push_back(p.topic());
+      }
     }
   }
 
@@ -189,7 +212,10 @@ void hzCB(const std::string &/*_data*/)
   common::Time cur_time = common::Time::GetWallTime();
 
   if (hz_prev_time != common::Time(0, 0))
-    printf("Hz: %6.2f\n", 1.0 / (cur_time - hz_prev_time).Double());
+  {
+    std::cout << "Hz: " << std::setw(6) << std::fixed << std::setprecision(2)
+              << 1.0 / (cur_time - hz_prev_time).Double() << std::endl;
+  }
 
   hz_prev_time = cur_time;
 }
@@ -255,7 +281,8 @@ void echo()
 
   std::string topic = params[1];
 
-  transport::init();
+  if (!transport::init())
+    return;
 
   transport::NodePtr node(new transport::Node());
   node->Init();
@@ -300,7 +327,8 @@ void bw()
     return;
   }
 
-  transport::init();
+  if (!transport::init())
+    return;
 
   transport::NodePtr node(new transport::Node());
   node->Init();
@@ -392,7 +420,8 @@ void hz()
     return;
   }
 
-  transport::init();
+  if (!transport::init())
+    return;
 
   transport::NodePtr node(new transport::Node());
   node->Init();

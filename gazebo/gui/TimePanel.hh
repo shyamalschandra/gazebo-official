@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@
 
 #include <vector>
 #include <list>
+#include <string>
 
 #include "gazebo/gui/qt.h"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/msgs/MessageTypes.hh"
 #include "gazebo/common/Event.hh"
 #include "gazebo/common/Time.hh"
+#include "gazebo/util/system.hh"
 
 class QLineEdit;
 class QLabel;
@@ -33,7 +35,7 @@ namespace gazebo
 {
   namespace gui
   {
-    class TimePanel : public QWidget
+    class GAZEBO_VISIBLE TimePanel : public QWidget
     {
       Q_OBJECT
 
@@ -58,6 +60,9 @@ namespace gazebo
       /// \brief Update the data output.
       private slots: void Update();
 
+      /// \brief Qt call back when the step value in the spinbox changed
+      private slots: void OnStepValueChanged(int _value);
+
       /// \brief Called when the GUI enters/leaves full-screen mode.
       /// \param[in] _value True when entering full screen, false when
       /// leaving.
@@ -66,6 +71,10 @@ namespace gazebo
       /// \brief Called when a world stats message is received.
       /// \param[in] _msg World statistics message.
       private: void OnStats(ConstWorldStatisticsPtr &_msg);
+
+      /// \brief Helper function to format time string.
+      /// \param[in] _msg Time message.
+      private: static std::string FormatTime(const msgs::Time &_msg);
 
       /// \brief QT callback when the reset time button is pressed.
       private slots: void OnTimeReset();
@@ -102,6 +111,9 @@ namespace gazebo
 
       /// \brief Mutex to protect the memeber variables.
       private: boost::mutex mutex;
+
+      /// \brief Tool button that holds the step widget
+      private: QToolButton *stepButton;
     };
   }
 }
