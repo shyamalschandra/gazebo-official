@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ namespace gazebo
       /// \brief Get the shape type.
       /// \return The shape type.
       /// \sa EntityType
-      public: unsigned int GetShapeType();
+      public: unsigned int GetShapeType() const;
 
       /// \brief Set the shape for this collision.
       /// \param[in] _shape The shape for this collision object.
@@ -184,6 +184,14 @@ namespace gazebo
       /// \return max num contacts allowed for this collision.
       public: virtual unsigned int GetMaxContacts();
 
+      /// \brief Indicate that the world pose should be recalculated.
+      /// The recalculation will be done when Collision::GetWorldPose is
+      /// called.
+      public: void SetWorldPoseDirty();
+
+      // Documentation inherited.
+      public: virtual const math::Pose &GetWorldPose() const;
+
       /// \brief Helper function used to create a collision visual message.
       /// \return Visual message for a collision.
       private: msgs::Visual CreateCollisionVisual();
@@ -211,6 +219,9 @@ namespace gazebo
 
       /// \brief Unique id for collision visual.
       private: uint32_t collisionVisualId;
+
+      /// \brief True if the world pose should be recalculated.
+      private: mutable bool worldPoseDirty;
     };
     /// \}
   }
