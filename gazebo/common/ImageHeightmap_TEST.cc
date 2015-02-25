@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,20 +20,25 @@
 
 #include "gazebo/common/ImageHeightmap.hh"
 #include "test_config.h"
+#include "test/util.hh"
 
 #define ELEVATION_TOL 1e-8
 
 using namespace gazebo;
 
+class ImageHeightmapTest : public gazebo::testing::AutoLogFixture { };
+
+class DemTest : public gazebo::testing::AutoLogFixture { };
+
 /////////////////////////////////////////////////
-TEST(DemTest, MisingFile)
+TEST_F(DemTest, MisingFile)
 {
   common::ImageHeightmap img;
   EXPECT_EQ(-1, img.Load("/file/shouldn/never/exist.png"));
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, NotImage)
+TEST_F(DemTest, NotImage)
 {
   common::ImageHeightmap img;
   boost::filesystem::path path = TEST_PATH;
@@ -43,7 +48,7 @@ TEST(DemTest, NotImage)
 }
 
 /////////////////////////////////////////////////
-TEST(ImageHeightmapTest, BasicAPI)
+TEST_F(ImageHeightmapTest, BasicAPI)
 {
   common::ImageHeightmap img;
   std::string path;
@@ -58,7 +63,7 @@ TEST(ImageHeightmapTest, BasicAPI)
 }
 
 /////////////////////////////////////////////////
-TEST(ImageHeightmapTest, FillHeightmap)
+TEST_F(ImageHeightmapTest, FillHeightmap)
 {
   common::ImageHeightmap img;
   std::string path;
