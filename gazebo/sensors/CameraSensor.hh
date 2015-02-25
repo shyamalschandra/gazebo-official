@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,16 @@
  * Date: 15 July 2003
  */
 
-#ifndef CAMERASENSOR_HH
-#define CAMERASENSOR_HH
+#ifndef _CAMERASENSOR_HH_
+#define _CAMERASENSOR_HH_
 
 #include <string>
 
-#include "sensors/Sensor.hh"
-#include "msgs/MessageTypes.hh"
-#include "transport/TransportTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/sensors/Sensor.hh"
+#include "gazebo/msgs/MessageTypes.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -40,17 +41,13 @@ namespace gazebo
     /// \brief Basic camera sensor
     ///
     /// This sensor is used for simulating standard monocular cameras
-    class CameraSensor : public Sensor
+    class GAZEBO_VISIBLE CameraSensor : public Sensor
     {
       /// \brief Constructor
       public: CameraSensor();
 
       /// \brief Destructor
       public: virtual ~CameraSensor();
-
-      /// \brief Set the parent of the sensor
-      /// \param _name The name of the parent
-      public: virtual void SetParent(const std::string &_name);
 
       /// \brief Load the sensor with SDF parameters
       /// \param[in] _sdf SDF Sensor parameters
@@ -70,9 +67,8 @@ namespace gazebo
       /// @todo to be implemented
       public: virtual std::string GetTopic() const;
 
-      /// \brief Update the sensor information
-      /// \param[in] _force True if update is forced, false if not
-      protected: virtual void UpdateImpl(bool _force);
+      // Documentation inherited
+      protected: virtual bool UpdateImpl(bool _force);
 
       /// \brief Finalize the camera
       protected: virtual void Fini();
@@ -99,10 +95,20 @@ namespace gazebo
       /// \return True if successful, false if unsuccessful.
       public: bool SaveFrame(const std::string &_filename);
 
-      private: rendering::CameraPtr camera;
-      private: rendering::ScenePtr scene;
+      // Documentation inherited
+      public: virtual bool IsActive();
 
+      /// \brief Handle the render event.
+      private: void Render();
+
+      /// \brief Pointer to the camera.
+      private: rendering::CameraPtr camera;
+
+      /// \brief Publisher of image messages.
       private: transport::PublisherPtr imagePub;
+
+      /// \brief True if the sensor was rendered.
+      private: bool rendered;
     };
     /// \}
   }
