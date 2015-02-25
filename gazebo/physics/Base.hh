@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ namespace gazebo
                 SPHERE_SHAPE    = 0x01000000,
                 /// \brief MeshShape type
                 MESH_SHAPE      = 0x02000000,
-                
+                /// \brief PolylineShape type
                 POLYLINE_SHAPE  = 0x04000000,
 
                 /// \brief Indicates a collision shape used for sensing
@@ -261,9 +261,12 @@ namespace gazebo
       public: unsigned int GetType() const;
 
       /// \brief Return the name of this entity with the model scope
-      /// world::model1::...::modelN::entityName
+      /// model1::...::modelN::entityName
+      /// \param[in] _prependWorldName True to prended the returned string
+      /// with the world name. The result will be
+      /// world::model1::...::modelN::entityName.
       /// \return The scoped name.
-      public: std::string GetScopedName() const;
+      public: std::string GetScopedName(bool _prependWorldName = false) const;
 
       /// \brief Print this object to screen via gzmsg.
       /// \param[in] _prefix Usually a set of spaces.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ namespace gazebo
   namespace common
   {
     class ColladaLoader;
+    class ColladaExporter;
     class STLLoader;
     class Mesh;
     class Plane;
@@ -58,6 +59,15 @@ namespace gazebo
       /// \param[in] _filename the path to the mesh
       /// \return a pointer to the created mesh
       public: const Mesh *Load(const std::string &_filename);
+
+      /// \brief Export a mesh to a file
+      /// \param[in] _mesh Pointer to the mesh to be exported
+      /// \param[in] _filename Exported file's path and name
+      /// \param[in] _extension Exported file's format ("dae" for Collada)
+      /// \param[in] _exportTextures True to export texture images to
+      /// '../materials/textures' folder
+      public: void Export(const Mesh *_mesh, const std::string &_filename,
+          const std::string &_extension, bool _exportTextures = false);
 
       /// \brief Checks a path extension against the list of valid extensions.
       /// \return true if the file extension is loadable
@@ -116,11 +126,10 @@ namespace gazebo
       /// \param[in] _height the height of the polyline
       /// \param[in] _uvCoords the texture coordinates
       public: void CreateExtrudedPolyline(const std::string &_name,
-                                          const std::vector<math::Vector2d>
-                                                &_vertices,
-                                          double _height,                                    
-                                          const math::Vector2d &_uvCoords);
-      
+                  const std::vector<math::Vector2d> &_vertices,
+                  const double &_height,
+                  const math::Vector2d &_uvCoords);
+
       /// \brief Create a cylinder mesh
       /// \param[in] _name the name of the new mesh
       /// \param[in] _radius the radius of the cylinder in the x y plane
@@ -217,6 +226,9 @@ namespace gazebo
 
       /// \brief 3D mesh loader for COLLADA files
       private: ColladaLoader *colladaLoader;
+
+      /// \brief 3D mesh exporter for COLLADA files
+      private: ColladaExporter *colladaExporter;
 
       /// \brief 3D mesh loader for STL files
       private: STLLoader *stlLoader;
