@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  */
 #include <sys/stat.h>
 #include <string>
-#include <vector>
 
 #include "gazebo/math/Plane.hh"
 #include "gazebo/math/Matrix3.hh"
@@ -27,11 +26,13 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Mesh.hh"
 #include "gazebo/common/ColladaLoader.hh"
+#include "gazebo/common/ColladaExporter.hh"
 #include "gazebo/common/STLLoader.hh"
 #include "gazebo/gazebo_config.h"
 
 #ifdef HAVE_GTS
   #include "gazebo/common/MeshCSG.hh"
+  #include "gazebo/common/GTSMeshUtils.hh"
 #endif
 
 #include "gazebo/common/MeshManager.hh"
@@ -43,6 +44,7 @@ using namespace common;
 MeshManager::MeshManager()
 {
   this->colladaLoader = new ColladaLoader();
+  this->colladaExporter = new ColladaExporter();
   this->stlLoader = new STLLoader();
 
   // Create some basic shapes
@@ -66,15 +68,6 @@ MeshManager::MeshManager()
 
   this->CreateTube("selection_tube", 1.0, 1.2, 0.01, 1, 64);
 
-  std::vector<math::Vector2d> vertices;
-  vertices.push_back(math::Vector2d(0, 2));
-  vertices.push_back(math::Vector2d(1, 1));
-  vertices.push_back(math::Vector2d(1, -1));
-  vertices.push_back(math::Vector2d(0, -2));
-  vertices.push_back(math::Vector2d(-1, -1));
-  vertices.push_back(math::Vector2d(-1, 1));
-  this->CreateExtrudedPolyline("polyline", vertices , 1, math::Vector2d(0, 0));
-
   this->fileExtensions.push_back("stl");
   this->fileExtensions.push_back("dae");
 }
@@ -83,6 +76,7 @@ MeshManager::MeshManager()
 MeshManager::~MeshManager()
 {
   delete this->colladaLoader;
+  delete this->colladaExporter;
   delete this->stlLoader;
   std::map<std::string, Mesh*>::iterator iter;
   for (iter = this->meshes.begin(); iter != this->meshes.end(); ++iter)
@@ -166,6 +160,20 @@ const Mesh *MeshManager::Load(const std::string &_filename)
     gzerr << "Unable to find file[" << _filename << "]\n";
 
   return mesh;
+}
+
+//////////////////////////////////////////////////
+void MeshManager::Export(const Mesh *_mesh, const std::string &_filename,
+    const std::string &_extension, bool _exportTextures)
+{
+  if (_extension == "dae")
+  {
+    this->colladaExporter->Export(_mesh, _filename, _exportTextures);
+  }
+  else
+  {
+    gzerr << "Unsupported mesh format for file[" << _filename << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
@@ -475,17 +483,16 @@ void MeshManager::CreateBox(const std::string &name, const math::Vector3 &sides,
 
 //////////////////////////////////////////////////
 void MeshManager::CreateExtrudedPolyline(const std::string &_name,
-                                         const std::vector<math::Vector2d>
-                                               &_vertices,
-                                         double _height,
-                                         const math::Vector2d &_uvCoords)
+    const std::vector<math::Vector2d> &_vertices,
+    const double &_height, const math::Vector2d & /*_uvCoords*/)
 {
-  int i, k;
-
   if (this->HasMesh(_name))
   {
     return;
   }
+
+  int i;
+  int numSides = _vertices.size();
 
   Mesh *mesh = new Mesh();
   mesh->SetName(_name);
@@ -494,110 +501,107 @@ void MeshManager::CreateExtrudedPolyline(const std::string &_name,
   SubMesh *subMesh = new SubMesh();
   mesh->AddSubMesh(subMesh);
 
-  int numSides = _vertices.size();
-
-  // Texture coords
-  double t[4][2] =
+  #if HAVE_GTS
   {
-    {_uvCoords.x, 0}, {0, 0}, {0, _uvCoords.y}, {_uvCoords.x, _uvCoords.y}
-  };
-
-  float **v = new float *[numSides*2];
-  for(i=0;i<numSides*2;i++)
-    v[i]= new float[3];    
-
-  float **n = new float *[numSides*2];
-  for(i=0;i<numSides*2;i++)
-    n[i]= new float[3];
-
-  for (i=0; i<numSides*2; i++)
-  {
-       n[i][0] = 0.577350;
-       n[i][1] = 0.577350;
-       n[i][2] = 0.577350;
-  }
-
-  // Compute the vertices
-  for (i=0, k=0; i<numSides*2; i++, k++)
-  {
-    v[i][0] = _vertices[k].x;
-    v[i][1] = _vertices[k].y;
-    v[i][2] = 0.0;
-    subMesh->AddVertex(v[i][0], v[i][1], v[i][2]);
-    subMesh->AddNormal(n[i][0], n[i][1], n[i][2]);
-    subMesh->AddTexCoord(t[k%4][0], t[k%4][1]);
-    i++;
-
-    v[i][0] = _vertices[k].x;
-    v[i][1] = _vertices[k].y;
-    v[i][2] = _height;
-    subMesh->AddVertex(v[i][0], v[i][1], v[i][2]);
-    subMesh->AddNormal(n[i][0], n[i][1], n[i][2]);
-    subMesh->AddTexCoord(t[k%4][0], t[k%4][1]);
-  }
-
-  // Euler's Formula: numFaces = numEdges - numVertices + 2
-  //                           = numSides + 2
-  // # of SideFaces = numFaces - (upper face + lower face)
-  //                = numFaces - 2
-  //                = numSides
-
-  //for each sideface
-  for (i=0; i<numSides; i++)
-  {
-    if (i!=(numSides - 1))
+    if (!GTSMeshUtils::CreateExtrudedPolyline(_vertices, _height, subMesh))
     {
-      subMesh->AddIndex(i*2);
-      subMesh->AddIndex(i*2+1);
-      subMesh->AddIndex(i*2+2);
-
-      subMesh->AddIndex(i*2+1);
-      subMesh->AddIndex(i*2+2);
-      subMesh->AddIndex(i*2+3);
-    }
-    else
-    {
-      subMesh->AddIndex(i*2);
-      subMesh->AddIndex(i*2+1);
-      subMesh->AddIndex(0);
-
-      subMesh->AddIndex(i*2+1);
-      subMesh->AddIndex(0);
-      subMesh->AddIndex(1);
+      gzerr << "Unable to create extruded polyline.\n";
+      delete mesh;
+      return;
     }
   }
-
-  int startVert = 0;
-  int endVert = numSides*2-2;
-  //for upper and lower face
-  for (k=0; k<2; k++)
+  #else
   {
+    gzerr << "GTS library not found.\n" <<
+             "Polylines rendered may be incorrect, if concave\n";
+
+    // Add the vertices
+    for (i = 0; i < numSides; ++i)
+    {
+      subMesh->AddVertex(_vertices[i].x, _vertices[i].y, 0.0);
+      subMesh->AddVertex(_vertices[i].x, _vertices[i].y, _height);
+    }
+
+    // Euler's Formula: numFaces = numEdges - numVertices + 2
+    //                           = numSides + 2
+    // # of SideFaces = numFaces - (upper face + lower face)
+    //                = numFaces - 2
+    //                = numSides
+
+    // for lower face
+    int startVert = 0;
+    int endVert = numSides * 2 - 2;
     subMesh->AddIndex(startVert);
-    startVert +=2;
+    startVert += 2;
     subMesh->AddIndex(startVert);
     subMesh->AddIndex(endVert);
-
-    for (i=0; i<numSides-3; i++)
+    for (i = 1; i < numSides-2; ++i)
     {
       if (i%2)
       {
         subMesh->AddIndex(startVert);
-        startVert +=2;
-        subMesh->AddIndex(endVert);
+        startVert += 2;
         subMesh->AddIndex(startVert);
+        subMesh->AddIndex(endVert);
       }
       else
       {
         subMesh->AddIndex(endVert);
-        endVert -=2;
+        endVert -= 2;
         subMesh->AddIndex(startVert);
         subMesh->AddIndex(endVert);
       }
     }
+
+    // for upper face
     startVert = 1;
     endVert = numSides*2-1;
+    subMesh->AddIndex(startVert);
+    startVert += 2;
+    subMesh->AddIndex(endVert);
+    subMesh->AddIndex(startVert);
+    for (i = 1; i < numSides-2; ++i)
+    {
+      if (!i%2)
+      {
+        subMesh->AddIndex(startVert);
+        startVert += 2;
+        subMesh->AddIndex(startVert);
+        subMesh->AddIndex(endVert);
+      }
+      else
+      {
+        subMesh->AddIndex(endVert);
+        endVert -= 2;
+        subMesh->AddIndex(endVert);
+        subMesh->AddIndex(startVert);
+      }
+    }
+  }
+  #endif
+
+  // for each sideface
+  for (i = 0; i < numSides; ++i)
+  {
+    subMesh->AddVertex(_vertices[i].x, _vertices[i].y, 0.0);
+    subMesh->AddVertex(_vertices[i].x, _vertices[i].y, _height);
+  }
+  subMesh->AddVertex(_vertices[0].x, _vertices[0].y, 0.0);
+  subMesh->AddVertex(_vertices[0].x, _vertices[0].y, _height);
+
+  for (i = 0; i < numSides; ++i)
+  {
+    subMesh->AddIndex(i*2+numSides*2);
+    subMesh->AddIndex(i*2+1+numSides*2);
+    subMesh->AddIndex(i*2+2+numSides*2);
+
+    subMesh->AddIndex(i*2+2+numSides*2);
+    subMesh->AddIndex(i*2+1+numSides*2);
+    subMesh->AddIndex(i*2+3+numSides*2);
   }
 
+  if (subMesh->GetNormalCount() != subMesh->GetVertexCount())
+    subMesh->SetNormalCount(subMesh->GetVertexCount());
   subMesh->RecalculateNormals();
 }
 
@@ -1119,3 +1123,4 @@ void MeshManager::CreateBoolean(const std::string &_name, const Mesh *_m1,
   this->meshes.insert(std::make_pair(_name, mesh));
 }
 #endif
+
