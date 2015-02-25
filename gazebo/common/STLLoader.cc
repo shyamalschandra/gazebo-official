@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,8 +168,12 @@ bool STLLoader::ReadAscii(FILE *_filein, Mesh *_mesh)
     }
   }
 
+  result = subMesh->GetVertexCount() > 0;
+
   if (result)
     _mesh->AddSubMesh(subMesh);
+  else
+    delete subMesh;
 
   return result;
 }

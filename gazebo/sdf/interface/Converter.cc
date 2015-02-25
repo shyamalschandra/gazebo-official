@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 
-#include "gazebo/common/Common.hh"
+#include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Assert.hh"
 #include "gazebo/sdf/interface/Converter.hh"
@@ -38,9 +38,7 @@ bool Converter::Convert(TiXmlDocument *_doc, const std::string &_toVersion,
 
   // Replace <gazebo> with <sdf>
   if (elem && boost::lexical_cast<double>(_toVersion) >= 1.3)
-  {
     elem->SetValue("sdf");
-  }
   else if (!elem)
     elem = _doc->FirstChildElement("sdf");
 
