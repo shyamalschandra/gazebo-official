@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,12 @@ class Issue940Test : public ServerFixture,
 // \brief Compare force and torque measures with analytical solutions
 void Issue940Test::ForceTorqueSensorFrameTest(const std::string &_physicsEngine)
 {
+  if (SDF_MAJOR_VERSION < 2 ||
+      std::string(SDF_VERSION_FULL) == std::string("2.0.0"))
+  {
+    gzerr << "Skipping test since SDF is too old" << std::endl;
+    return;
+  }
   if (_physicsEngine == "bullet")
   {
     gzerr << "Skipping this test for " << _physicsEngine
@@ -47,7 +53,7 @@ void Issue940Test::ForceTorqueSensorFrameTest(const std::string &_physicsEngine)
           << std::endl;
     return;
   }
-  if (_physicsEngine == "simbody" || _physicsEngine == "dart")
+  if (_physicsEngine == "dart")
   {
     gzerr << "Skipping this test for " << _physicsEngine
           << " since it consistently gives"
