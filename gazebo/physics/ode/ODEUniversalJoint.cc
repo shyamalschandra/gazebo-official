@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,13 +159,7 @@ double ODEUniversalJoint::GetVelocity(unsigned int _index) const
 //////////////////////////////////////////////////
 void ODEUniversalJoint::SetVelocity(unsigned int _index, double _angle)
 {
-  // flipping axis 1 and 2 around
-  if (_index == UniversalJoint::AXIS_CHILD)
-    this->SetParam(dParamVel, _angle);
-  else if (_index == UniversalJoint::AXIS_PARENT)
-    this->SetParam(dParamVel2, _angle);
-  else
-    gzerr << "Joint index out of bounds.\n";
+  this->SetVelocityMaximal(_index, _angle);
 }
 
 //////////////////////////////////////////////////
@@ -293,72 +287,45 @@ bool ODEUniversalJoint::SetParam(
       gzerr << "Invalid index[" << _index << "]\n";
       return false;
   };
-  if (_key == "stop_erp")
+
+  try
   {
-    try
+    if (_key == "stop_erp")
     {
       this->SetParam(dParamStopERP | group, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
-    }
-  }
-  else if (_key == "stop_cfm")
-  {
-    try
+    else if (_key == "stop_cfm")
     {
       this->SetParam(dParamStopCFM | group, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
-    }
-  }
-  else if (_key == "friction")
-  {
-    try
+    else if (_key == "friction")
     {
       this->SetParam(dParamVel | group, 0.0);
       this->SetParam(dParamFMax | group, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
-    }
-  }
-  else if (_key == "hi_stop")
-  {
-    try
+    else if (_key == "hi_stop")
     {
       this->SetParam(dParamHiStop | group, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
+    else if (_key == "lo_stop")
     {
       this->SetParam(dParamLoStop | group, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
+    else
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
+      // Overload because we switched axis orders
+      return ODEJoint::SetParam(_key, _index, _value);
     }
   }
-  else
+  catch(const boost::bad_any_cast &e)
   {
-    // Overload because we switched axis orders
-    return ODEJoint::SetParam(_key, _index, _value);
+    gzerr << "boost any_cast error during "
+          << "SetParam('" << _key << "'): "
+          << e.what()
+          << std::endl;
+    return false;
   }
+
   return true;
 }
 
@@ -381,45 +348,33 @@ double ODEUniversalJoint::GetParam(
       gzerr << "Invalid index[" << _index << "]\n";
       return false;
   };
+
   // Overload because we switched axis orders
-  if (_key == "friction")
+  try
   {
-    try
+    if (_key == "friction")
     {
-      return this->GetParam(dParamFMax | group);
+        return this->GetParam(dParamFMax | group);
     }
-    catch(const common::Exception &e)
+    else if (_key == "hi_stop")
     {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
+      return this->GetHighStop(_index).Radian();
+    }
+    else if (_key == "lo_stop")
+    {
+      return this->GetLowStop(_index).Radian();
+    }
+    else
+    {
+      return ODEJoint::GetParam(_key, _index);
     }
   }
-  else if (_key == "hi_stop")
+  catch(const common::Exception &e)
   {
-    try
-    {
-      return this->GetParam(dParamHiStop | group);
-    }
-    catch(const common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
-    {
-      return this->GetParam(dParamLoStop | group);
-    }
-    catch(const common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else
-  {
-    return ODEJoint::GetParam(_key, _index);
+    gzerr << "Error during "
+          << "GetParam('" << _key << "'): "
+          << e.GetErrorStr()
+          << std::endl;
+    return 0;
   }
 }
