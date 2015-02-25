@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ void SonarSensor_TEST::CreateSonar(const std::string &_physicsEngine,
         mgr->GetSensor(sensorName));
 
   // Make sure the above dynamic cast worked.
-  EXPECT_TRUE(sensor != NULL);
+  ASSERT_TRUE(sensor != NULL);
 
   // Update the sensor
   sensor->Update(true);
@@ -93,6 +93,8 @@ void SonarSensor_TEST::CreateSonar(const std::string &_physicsEngine,
   EXPECT_DOUBLE_EQ(sensor->GetRangeMax(), 1.0);
   EXPECT_DOUBLE_EQ(sensor->GetRadius(), 0.3);
   EXPECT_DOUBLE_EQ(sensor->GetRange(), 1.0);
+
+  EXPECT_TRUE(sensor->IsActive());
 }
 
 /////////////////////////////////////////////////
@@ -101,6 +103,10 @@ void SonarSensor_TEST::DemoWorld(const std::string &_physicsEngine,
 {
   Load("worlds/sonar_demo.world", _paused, _physicsEngine);
   sensors::SensorManager *mgr = sensors::SensorManager::Instance();
+
+  physics::WorldPtr world = physics::get_world();
+  ASSERT_TRUE(world != NULL);
+  world->Step(100);
 
   // Sonar sensor name
   std::string sensorName = "sonar";
@@ -114,7 +120,7 @@ void SonarSensor_TEST::DemoWorld(const std::string &_physicsEngine,
         mgr->GetSensor(sensorName));
 
   // Make sure the above dynamic cast worked.
-  EXPECT_TRUE(sensor != NULL);
+  ASSERT_TRUE(sensor != NULL);
 
   // Update the sensor
   sensor->Update(true);
@@ -124,7 +130,14 @@ void SonarSensor_TEST::DemoWorld(const std::string &_physicsEngine,
   EXPECT_DOUBLE_EQ(sensor->GetRangeMin(), 0.0);
   EXPECT_DOUBLE_EQ(sensor->GetRangeMax(), 2.0);
   EXPECT_DOUBLE_EQ(sensor->GetRadius(), 0.3);
-  EXPECT_DOUBLE_EQ(sensor->GetRange(), 2.0);
+  if (_physicsEngine == "ode")
+    EXPECT_NEAR(sensor->GetRange(), 1.517, 1e-3);
+  else
+  {
+    gzerr << "Sonar range sensing only works in ODE, issue #1038"
+          << std::endl;
+    return;
+  }
 }
 
 TEST_P(SonarSensor_TEST, CreateSonar)
