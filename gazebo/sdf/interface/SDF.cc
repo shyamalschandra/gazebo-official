@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,24 @@
  * limitations under the License.
  *
  */
-#include "common/Color.hh"
-#include "common/Assert.hh"
-#include "math/Pose.hh"
-#include "math/Vector3.hh"
-#include "math/Vector2d.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Vector2d.hh"
 
-#include "sdf/interface/parser.hh"
-#include "sdf/interface/SDF.hh"
+#include "gazebo/sdf/interface/parser.hh"
+#include "gazebo/sdf/interface/SDF.hh"
 
 using namespace sdf;
+
+void sdf::addURIPath(const std::string &/*_uri*/, const std::string &/*_path*/)
+{
+}
+
+void sdf::setFindCallback(
+    boost::function<std::string (const std::string &)> /*_cb*/)
+{
+}
 
 std::string SDF::version = SDF_VERSION;
 
@@ -36,7 +44,6 @@ Element::Element()
 /////////////////////////////////////////////////
 Element::~Element()
 {
-  this->parent.reset();
   for (Param_V::iterator iter = this->attributes.begin();
       iter != this->attributes.end(); ++iter)
   {
@@ -60,6 +67,7 @@ Element::~Element()
 
   this->value.reset();
 
+  this->parent.reset();
   // this->Reset();
 }
 
@@ -381,7 +389,12 @@ void Element::PrintDocRightPane(std::string &_html, int _spacing, int &_index)
 
   stream << "<font style='font-weight:bold'>Type: </font>";
   if (this->value)
-    stream << this->value->GetTypeName() << "\n";
+  {
+    stream << this->value->GetTypeName()
+           << "&nbsp;&nbsp;&nbsp;\n"
+           << "<font style='font-weight:bold'>Default: </font>"
+           << this->value->GetDefaultAsString() << '\n';
+  }
   else
     stream << "n/a\n";
 
@@ -746,8 +759,11 @@ ElementPtr Element::AddElement(const std::string &_name)
       for (iter2 = elem->elementDescriptions.begin();
            iter2 != elem->elementDescriptions.end(); ++iter2)
       {
+        // add only required child element
         if ((*iter2)->GetRequired() == "1")
+        {
           elem->AddElement((*iter2)->name);
+        }
       }
 
       return this->elements.back();
@@ -1218,6 +1234,12 @@ void Element::RemoveChild(ElementPtr _child)
 /////////////////////////////////////////////////
 void Element::ClearElements()
 {
+  for (sdf::ElementPtr_V::iterator iter = this->elements.begin();
+      iter != this->elements.end(); ++iter)
+  {
+    (*iter)->ClearElements();
+  }
+
   this->elements.clear();
 }
 
@@ -1243,25 +1265,27 @@ void Element::Update()
 /////////////////////////////////////////////////
 void Element::Reset()
 {
-  this->parent.reset();
-
   for (ElementPtr_V::iterator iter = this->elements.begin();
       iter != this->elements.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
 
   for (ElementPtr_V::iterator iter = this->elementDescriptions.begin();
       iter != this->elementDescriptions.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
   this->elements.clear();
   this->elementDescriptions.clear();
 
   this->value.reset();
+
+  this->parent.reset();
 }
 
 /////////////////////////////////////////////////
