@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,162 +18,170 @@
 #include <boost/bind.hpp>
 
 #include "gazebo/gazebo_config.h"
-
 #include "gazebo/common/Console.hh"
-
 #include "gazebo/physics/Link.hh"
-#include "gazebo/physics/dart/DARTModel.hh"
 #include "gazebo/physics/dart/DARTHingeJoint.hh"
-#include "gazebo/physics/dart/DARTUtils.hh"
 
 using namespace gazebo;
 using namespace physics;
 
 //////////////////////////////////////////////////
 DARTHingeJoint::DARTHingeJoint(BasePtr _parent)
-  : HingeJoint<DARTJoint>(_parent)
+  : HingeJoint<DARTJoint>(_parent),
+    dtRevoluteJoint(new dart::dynamics::RevoluteJoint())
 {
+  this->dtJoint = this->dtRevoluteJoint;
 }
 
 //////////////////////////////////////////////////
 DARTHingeJoint::~DARTHingeJoint()
 {
+  delete dtRevoluteJoint;
 }
 
 //////////////////////////////////////////////////
 void DARTHingeJoint::Load(sdf::ElementPtr _sdf)
 {
   HingeJoint<DARTJoint>::Load(_sdf);
-
 }
 
+//////////////////////////////////////////////////
 void DARTHingeJoint::Init()
 {
-  // Create dart joint first.
-  this->dartJoint = new dart::dynamics::RevoluteJoint();
-
   HingeJoint<DARTJoint>::Init();
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTHingeJoint::GetAnchor(int /*index*/) const
+math::Vector3 DARTHingeJoint::GetAnchor(unsigned int /*index*/) const
 {
-  //TODO: need test
+  Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                        this->dtJoint->getTransformFromChildBodyNode();
+  Eigen::Vector3d worldOrigin = T.translation();
 
-  math::Vector3 result;
-  //math::Pose poseChildLinkToJoint = -(this->poseJointToChildLink);
+  return DARTTypes::ConvVec3(worldOrigin);
+}
 
-  // setting anchor relative to gazebo link frame pose
-  if (this->childLink)
-    result = poseChildLinkToJoint.pos + this->childLink->GetWorldPose().pos;
+//////////////////////////////////////////////////
+math::Vector3 DARTHingeJoint::GetGlobalAxis(unsigned int _index) const
+{
+  Eigen::Vector3d globalAxis = Eigen::Vector3d::UnitX();
+
+  if (_index == 0)
+  {
+    Eigen::Isometry3d T = this->dtChildBodyNode->getTransform() *
+                          this->dtJoint->getTransformFromChildBodyNode();
+    Eigen::Vector3d axis = this->dtRevoluteJoint->getAxis();
+    globalAxis = T.linear() * axis;
+  }
   else
-    result = math::Vector3(0, 0, 0);
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 
-  return result;
+  return DARTTypes::ConvVec3(globalAxis);
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetAnchor(int /*index*/, const math::Vector3& /*_anchor*/)
+void DARTHingeJoint::SetAxis(unsigned int _index, const math::Vector3& _axis)
 {
-  // TODO: We do not do anything here because DART does not store the positon
-  // of the joint.
+  if (_index == 0)
+  {
+    Eigen::Vector3d dartAxis = DARTTypes::ConvVec3(
+        this->GetAxisFrameOffset(0).RotateVector(_axis));
+    Eigen::Isometry3d dartTransfJointLeftToParentLink
+        = this->dtJoint->getTransformFromParentBodyNode().inverse();
+    dartAxis = dartTransfJointLeftToParentLink.linear() * dartAxis;
+    //--------------------------------------------------------------------------
+
+    this->dtRevoluteJoint->setAxis(dartAxis);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-math::Vector3 DARTHingeJoint::GetGlobalAxis(int /*_index*/) const
-{
-  // Axis in local frame of this joint
-  dart::dynamics::RevoluteJoint* dartRevJoint
-      = dynamic_cast<dart::dynamics::RevoluteJoint*>(this->dartJoint);
-  dart::math::Axis globalAxis = dartRevJoint->getAxisGlobal();
-
-  // TODO: Issue #494
-  // See: https://bitbucket.org/osrf/gazebo/issue/494/joint-axis-reference-frame-doesnt-match
-  return DARTUtils::ConvertAxis(globalAxis);
-}
-
-//////////////////////////////////////////////////
-void DARTHingeJoint::SetAxis(int /*index*/, const math::Vector3& _axis)
-{
-  dart::dynamics::RevoluteJoint* dartRevJoint
-      = dynamic_cast<dart::dynamics::RevoluteJoint*>(this->dartJoint);
-
-  dart::math::Axis dartAxis = DARTUtils::ConvertAxis(_axis);
-
-  //----------------------------------------------------------------------------
-  // TODO: Issue #494
-  // See: https://bitbucket.org/osrf/gazebo/issue/494/joint-axis-reference-frame-doesnt-match
-  dart::math::SE3 dartTransfJointLeftToParentLink
-      = dart::math::Inv(dartRevJoint->getLocalTransformationFromParentBody());
-  dartAxis = dart::math::Rotate(dartTransfJointLeftToParentLink, dartAxis);
-  //----------------------------------------------------------------------------
-
-  dartRevJoint->setAxis(dartAxis);
-}
-
-//////////////////////////////////////////////////
-void DARTHingeJoint::SetDamping(int _index, double _damping)
-{
-  assert(_index == 0);
-  assert(_damping >= 0.0);
-
-  dart::dynamics::RevoluteJoint* dartRevJoint
-      = dynamic_cast<dart::dynamics::RevoluteJoint*>(this->dartJoint);
-
-  this->dampingCoefficient = _damping;
-  dartRevJoint->setDampingCoefficient(0, _damping);
-}
-
-//////////////////////////////////////////////////
-math::Angle DARTHingeJoint::GetAngleImpl(int /*index*/) const
+math::Angle DARTHingeJoint::GetAngleImpl(unsigned int _index) const
 {
   math::Angle result;
 
-  assert(this->dartJoint);
-  assert(this->dartJoint->getNumDofs() == 1);
-
-  // Hinge joint has only one dof.
-  double radianAngle = this->dartJoint->getDof(0)->get_q();
-  result.SetFromRadian(radianAngle);
-
-  return result;
-}
-
-//////////////////////////////////////////////////
-double DARTHingeJoint::GetVelocity(int /*index*/) const
-{
-  double result;
-
-  result = this->dartJoint->getDof(0)->get_dq();
+  if (_index == 0)
+  {
+    double radianAngle = this->dtJoint->getPosition(0);
+    result.SetFromRadian(radianAngle);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 
   return result;
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetVelocity(int /*index*/, double /*_vel*/)
+void DARTHingeJoint::SetVelocity(unsigned int _index, double _vel)
 {
-  // TODO: Do nothing because DART accept only torques (forces) of joint as
-  // input.
-  gzwarn << "Not implemented!\n";
+  if (_index == 0)
+  {
+    this->dtJoint->setVelocity(0, _vel);
+    this->dtJoint->getSkeleton()->computeForwardKinematics(false, true, false);
+  }
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetMaxForce(int /*index*/, double /*_force*/)
+double DARTHingeJoint::GetVelocity(unsigned int _index) const
 {
-  gzwarn << "Not implemented!\n";
+  double result = 0.0;
+
+  if (_index == 0)
+    result = this->dtJoint->getVelocity(0);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
+
+  return result;
 }
 
 //////////////////////////////////////////////////
-double DARTHingeJoint::GetMaxForce(int /*index*/)
+void DARTHingeJoint::SetMaxForce(unsigned int _index, double _force)
 {
-  gzwarn << "Not implemented!\n";
-  return 0.0;
+  if (_index == 0)
+  {
+    this->dtJoint->setForceLowerLimit(0, -_force);
+    this->dtJoint->setForceUpperLimit(0, _force);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
 }
 
 //////////////////////////////////////////////////
-void DARTHingeJoint::SetForce(int _index, double _torque)
+double DARTHingeJoint::GetMaxForce(unsigned int _index)
 {
-  DARTJoint::SetForce(_index, _torque);
+  double result = 0.0;
 
-  dartJoint->getDof(0)->set_tau(_torque);
+  if (_index == 0)
+  {
+    // Assume that the lower limit and upper limit has equal magnitute
+    // result = this->dtJoint->getForceLowerLimit(0);
+    result = this->dtJoint->getForceUpperLimit(0);
+  }
+  else
+  {
+    gzerr << "Invalid index[" << _index << "]\n";
+  }
+
+  return result;
+}
+
+//////////////////////////////////////////////////
+void DARTHingeJoint::SetForceImpl(unsigned int _index, double _effort)
+{
+  if (_index == 0)
+    this->dtJoint->setForce(0, _effort);
+  else
+    gzerr << "Invalid index[" << _index << "]\n";
 }
