@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  * limitations under the License.
  *
 */
-/* Desc: The ODE base joint class
- * Author: Nate Koenig, Andrew Howard
- * Date: 12 Oct 2009
- */
-
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Assert.hh"
@@ -28,6 +23,7 @@
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/ode/ODELink.hh"
 #include "gazebo/physics/ode/ODEJoint.hh"
+#include "gazebo/physics/GearboxJoint.hh"
 #include "gazebo/physics/ScrewJoint.hh"
 #include "gazebo/physics/JointWrench.hh"
 
@@ -78,13 +74,7 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
   {
     sdf::ElementPtr elem = this->sdf->GetElement("physics")->GetElement("ode");
 
-    if (elem->HasElement("cfm_damping"))
-    {
-      gzwarn << "Deprecating sdf <cfm_damping>, "
-             << "replace with <implicit_spring_damper> in sdf 1.5.\n";
-      this->useImplicitSpringDamper = elem->Get<bool>("cfm_damping");
-    }
-    else if (elem->HasElement("implicit_spring_damper"))
+    if (elem->HasElement("implicit_spring_damper"))
     {
       this->useImplicitSpringDamper = elem->Get<bool>("implicit_spring_damper");
     }
@@ -92,12 +82,12 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
     // initializa both axis, \todo: make cfm, erp per axis
     this->stopERP = elem->GetElement("limit")->Get<double>("erp");
     for (unsigned int i = 0; i < this->GetAngleCount(); ++i)
-      this->SetAttribute("stop_erp", i, this->stopERP);
+      this->SetParam("stop_erp", i, this->stopERP);
 
     // initializa both axis, \todo: make cfm, erp per axis
     this->stopCFM = elem->GetElement("limit")->Get<double>("cfm");
     for (unsigned int i = 0; i < this->GetAngleCount(); ++i)
-      this->SetAttribute("stop_cfm", i, this->stopCFM);
+      this->SetParam("stop_cfm", i, this->stopCFM);
 
     if (elem->HasElement("suspension"))
     {
@@ -112,10 +102,10 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
           elem->GetElement("fudge_factor")->Get<double>());
 
     if (elem->HasElement("cfm"))
-        this->SetAttribute("cfm", 0, elem->Get<double>("cfm"));
+        this->SetParam("cfm", 0, elem->Get<double>("cfm"));
 
     if (elem->HasElement("erp"))
-        this->SetAttribute("erp", 0, elem->Get<double>("erp"));
+        this->SetParam("erp", 0, elem->Get<double>("erp"));
 
     if (elem->HasElement("bounce"))
         this->SetParam(dParamBounce,
@@ -129,48 +119,10 @@ void ODEJoint::Load(sdf::ElementPtr _sdf)
       this->SetParam(dParamVel,
           elem->GetElement("velocity")->Get<double>());
   }
-
-  if (this->sdf->HasElement("axis"))
-  {
-    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
-    if (axisElem->HasElement("dynamics"))
-    {
-      sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
-
-      if (dynamicsElem->HasElement("damping"))
-      {
-        this->SetDamping(0, dynamicsElem->Get<double>("damping"));
-      }
-      if (dynamicsElem->HasElement("friction"))
-      {
-        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
-        gzlog << "joint friction not implemented\n";
-      }
-    }
-  }
-
-  if (this->sdf->HasElement("axis2"))
-  {
-    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
-    if (axisElem->HasElement("dynamics"))
-    {
-      sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
-
-      if (dynamicsElem->HasElement("damping"))
-      {
-        this->SetDamping(1, dynamicsElem->Get<double>("damping"));
-      }
-      if (dynamicsElem->HasElement("friction"))
-      {
-        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
-        gzlog << "joint friction not implemented\n";
-      }
-    }
-  }
 }
 
 //////////////////////////////////////////////////
-LinkPtr ODEJoint::GetJointLink(int _index) const
+LinkPtr ODEJoint::GetJointLink(unsigned int _index) const
 {
   LinkPtr result;
   if (!this->jointId)
@@ -207,7 +159,7 @@ bool ODEJoint::AreConnected(LinkPtr _one, LinkPtr _two) const
 
 //////////////////////////////////////////////////
 // child classes where appropriate
-double ODEJoint::GetParam(int /*parameter*/) const
+double ODEJoint::GetParam(unsigned int /*parameter*/) const
 {
   return 0;
 }
@@ -262,7 +214,7 @@ void ODEJoint::Detach()
 
 //////////////////////////////////////////////////
 // where appropriate
-void ODEJoint::SetParam(int /*parameter*/, double /*value*/)
+void ODEJoint::SetParam(unsigned int /*parameter*/, double /*value*/)
 {
   if (this->childLink)
     this->childLink->SetEnabled(true);
@@ -305,54 +257,55 @@ dJointFeedback *ODEJoint::GetFeedback()
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetHighStop(int _index, const math::Angle &_angle)
+bool ODEJoint::SetHighStop(unsigned int _index, const math::Angle &_angle)
 {
   Joint::SetHighStop(_index, _angle);
   switch (_index)
   {
     case 0:
       this->SetParam(dParamHiStop, _angle.Radian());
-      break;
+      return true;
     case 1:
       this->SetParam(dParamHiStop2, _angle.Radian());
-      break;
+      return true;
     case 2:
       this->SetParam(dParamHiStop3, _angle.Radian());
-      break;
+      return true;
     default:
       gzerr << "Invalid index[" << _index << "]\n";
-      break;
+      return false;
   };
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetLowStop(int _index, const math::Angle &_angle)
+bool ODEJoint::SetLowStop(unsigned int _index, const math::Angle &_angle)
 {
   Joint::SetLowStop(_index, _angle);
   switch (_index)
   {
     case 0:
       this->SetParam(dParamLoStop, _angle.Radian());
-      break;
+      return true;
     case 1:
       this->SetParam(dParamLoStop2, _angle.Radian());
-      break;
+      return true;
     case 2:
       this->SetParam(dParamLoStop3, _angle.Radian());
-      break;
+      return true;
     default:
       gzerr << "Invalid index[" << _index << "]\n";
+      return false;
   };
 }
 
 //////////////////////////////////////////////////
-math::Angle ODEJoint::GetHighStop(int _index)
+math::Angle ODEJoint::GetHighStop(unsigned int _index)
 {
   return this->GetUpperLimit(_index);
 }
 
 //////////////////////////////////////////////////
-math::Angle ODEJoint::GetLowStop(int _index)
+math::Angle ODEJoint::GetLowStop(unsigned int _index)
 {
   return this->GetLowerLimit(_index);
 }
@@ -404,7 +357,7 @@ math::Vector3 ODEJoint::GetLinkTorque(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetAxis(int _index, const math::Vector3 &_axis)
+void ODEJoint::SetAxis(unsigned int _index, const math::Vector3 &_axis)
 {
   // record axis in sdf element
   if (_index == 0)
@@ -416,504 +369,258 @@ void ODEJoint::SetAxis(int _index, const math::Vector3 &_axis)
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetAttribute(Attribute _attr, int _index, double _value)
+bool ODEJoint::SetParam(const std::string &_key, unsigned int _index,
+                        const boost::any &_value)
 {
-  switch (_attr)
+  // Axis parameters for multi-axis joints use a group bitmask
+  // to identify the variable.
+  unsigned int group;
+  switch (_index)
   {
-    case FUDGE_FACTOR:
-      this->SetParam(dParamFudgeFactor, _value);
+    case 0:
+      group = dParamGroup1;
       break;
-    case SUSPENSION_ERP:
-      this->SetParam(dParamSuspensionERP, _value);
+    case 1:
+      group = dParamGroup2;
       break;
-    case SUSPENSION_CFM:
-      this->SetParam(dParamSuspensionCFM, _value);
-      break;
-    case STOP_ERP:
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamStopERP, _value);
-          break;
-        case 1:
-          this->SetParam(dParamStopERP2, _value);
-          break;
-        case 2:
-          this->SetParam(dParamStopERP3, _value);
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-      break;
-    case STOP_CFM:
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamStopCFM, _value);
-          break;
-        case 1:
-          this->SetParam(dParamStopCFM2, _value);
-          break;
-        case 2:
-          this->SetParam(dParamStopCFM3, _value);
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-      break;
-    case ERP:
-      this->SetParam(dParamERP, _value);
-      break;
-    case CFM:
-      this->SetParam(dParamCFM, _value);
-      break;
-    case FMAX:
-      this->SetParam(dParamFMax, _value);
-      break;
-    case VEL:
-      this->SetParam(dParamVel, _value);
-      break;
-    case HI_STOP:
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamHiStop, _value);
-          break;
-        case 1:
-          this->SetParam(dParamHiStop2, _value);
-          break;
-        case 2:
-          this->SetParam(dParamHiStop3, _value);
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-      break;
-    case LO_STOP:
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamLoStop, _value);
-          break;
-        case 1:
-          this->SetParam(dParamLoStop2, _value);
-          break;
-        case 2:
-          this->SetParam(dParamLoStop3, _value);
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
+    case 2:
+      group = dParamGroup3;
       break;
     default:
-      gzerr << "Unable to handle joint attribute[" << _attr << "]\n";
-      break;
+      gzerr << "Invalid index[" << _index << "]\n";
+      return false;
   };
-}
 
-//////////////////////////////////////////////////
-void ODEJoint::SetAttribute(const std::string &_key, int _index,
-                            const boost::any &_value)
-{
-  if (_key == "fudge_factor")
+  // try because boost::any_cast can throw
+  try
   {
-    try
+    if (_key == "fudge_factor")
     {
       this->SetParam(dParamFudgeFactor, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "suspension_erp")
-  {
-    try
+    else if (_key == "suspension_erp")
     {
       this->SetParam(dParamSuspensionERP, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "suspension_cfm")
-  {
-    try
+    else if (_key == "suspension_cfm")
     {
       this->SetParam(dParamSuspensionCFM, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
+    else if (_key == "stop_erp")
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
+      this->SetParam(dParamStopERP | group, boost::any_cast<double>(_value));
     }
-  }
-  else if (_key == "stop_erp")
-  {
-    try
+    else if (_key == "stop_cfm")
     {
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamStopERP, boost::any_cast<double>(_value));
-          break;
-        case 1:
-          this->SetParam(dParamStopERP2, boost::any_cast<double>(_value));
-          break;
-        case 2:
-          this->SetParam(dParamStopERP3, boost::any_cast<double>(_value));
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
+      this->SetParam(dParamStopCFM | group, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "stop_cfm")
-  {
-    try
-    {
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamStopCFM, boost::any_cast<double>(_value));
-          break;
-        case 1:
-          this->SetParam(dParamStopCFM2, boost::any_cast<double>(_value));
-          break;
-        case 2:
-          this->SetParam(dParamStopCFM3, boost::any_cast<double>(_value));
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-    }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "erp")
-  {
-    try
+    else if (_key == "erp")
     {
       this->SetParam(dParamERP, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "cfm")
-  {
-    try
+    else if (_key == "cfm")
     {
       this->SetParam(dParamCFM, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
+    else if (_key == "fmax")
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
+      gzwarn << "The '" << _key << "' parameter is deprecated "
+             << "to enable Coulomb joint friction with the "
+             << "'friction' parameter"
+             << std::endl;
+      this->SetParam(dParamFMax | group, boost::any_cast<double>(_value));
     }
-  }
-  else if (_key == "fmax")
-  {
-    try
+    else if (_key == "friction")
     {
-      this->SetParam(dParamFMax, boost::any_cast<double>(_value));
+      // To represent Coulomb friction,
+      //  set FMax to friction value
+      //  set Vel to 0
+      this->SetParam(group | dParamFMax, boost::any_cast<double>(_value));
+      this->SetParam(group | dParamVel, 0.0);
     }
-    catch(boost::bad_any_cast &e)
+    else if (_key == "vel")
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
+      gzwarn << "The '" << _key << "' parameter is deprecated "
+             << "to enable Coulomb joint friction with the "
+             << "'friction' parameter"
+             << std::endl;
+      this->SetParam(dParamVel | group, boost::any_cast<double>(_value));
     }
-  }
-  else if (_key == "vel")
-  {
-    try
+    else if (_key == "hi_stop")
     {
-      this->SetParam(dParamVel, boost::any_cast<double>(_value));
+      this->SetParam(dParamHiStop | group, boost::any_cast<double>(_value));
     }
-    catch(boost::bad_any_cast &e)
+    else if (_key == "lo_stop")
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
+      this->SetParam(dParamLoStop | group, boost::any_cast<double>(_value));
     }
-  }
-  else if (_key == "hi_stop")
-  {
-    try
+    else if (_key == "thread_pitch")
     {
-      switch (_index)
+      ScrewJoint<ODEJoint>* screwJoint =
+        dynamic_cast<ScrewJoint<ODEJoint>* >(this);
+      if (screwJoint != NULL)
       {
-        case 0:
-          this->SetParam(dParamHiStop, boost::any_cast<double>(_value));
-          break;
-        case 1:
-          this->SetParam(dParamHiStop2, boost::any_cast<double>(_value));
-          break;
-        case 2:
-          this->SetParam(dParamHiStop3, boost::any_cast<double>(_value));
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-    }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
-    {
-      switch (_index)
-      {
-        case 0:
-          this->SetParam(dParamLoStop, boost::any_cast<double>(_value));
-          break;
-        case 1:
-          this->SetParam(dParamLoStop2, boost::any_cast<double>(_value));
-          break;
-        case 2:
-          this->SetParam(dParamLoStop3, boost::any_cast<double>(_value));
-          break;
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-    }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-  else if (_key == "thread_pitch")
-  {
-    ScrewJoint<ODEJoint>* screwJoint =
-      dynamic_cast<ScrewJoint<ODEJoint>* >(this);
-    if (screwJoint != NULL)
-    {
-      try
-      {
-        screwJoint->SetThreadPitch(0, boost::any_cast<double>(_value));
+        screwJoint->SetThreadPitch(boost::any_cast<double>(_value));
       }
-      catch(boost::bad_any_cast &e)
+      else
       {
-        gzerr << "boost any_cast error:" << e.what() << "\n";
+        gzerr << "Trying to set " << _key << " for non-screw joints."
+              << std::endl;
+        return 0;
       }
     }
-  }
-  else
-  {
-    try
+    else if (_key == "gearbox_ratio")
     {
-      gzerr << "Unable to handle joint attribute["
-            << boost::any_cast<std::string>(_value) << "]\n";
-    }
-    catch(boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-    }
-  }
-}
-
-//////////////////////////////////////////////////
-double ODEJoint::GetAttribute(const std::string &_key, unsigned int _index)
-{
-  if (_key == "fudge_factor")
-  {
-    try
-    {
-      return this->GetParam(dParamFudgeFactor);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "suspension_erp")
-  {
-    try
-    {
-      return this->GetParam(dParamSuspensionERP);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "suspension_cfm")
-  {
-    try
-    {
-      return this->GetParam(dParamSuspensionCFM);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "stop_erp")
-  {
-    try
-    {
-      /// \TODO: switch based on index
-      return this->GetParam(dParamStopERP);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "stop_cfm")
-  {
-    try
-    {
-      /// \TODO: switch based on index
-      return this->GetParam(dParamStopCFM);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "erp")
-  {
-    try
-    {
-      return this->GetParam(dParamERP);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "cfm")
-  {
-    try
-    {
-      return this->GetParam(dParamCFM);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "fmax")
-  {
-    try
-    {
-      return this->GetParam(dParamFMax);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "vel")
-  {
-    try
-    {
-      return this->GetParam(dParamVel);
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "hi_stop")
-  {
-    try
-    {
-      switch (_index)
+      GearboxJoint<ODEJoint>* gearboxJoint =
+        dynamic_cast<GearboxJoint<ODEJoint>* >(this);
+      if (gearboxJoint != NULL)
       {
-        case 0:
-          return this->GetParam(dParamHiStop);
-        case 1:
-          return this->GetParam(dParamHiStop2);
-        case 2:
-          return this->GetParam(dParamHiStop3);
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
-    {
-      switch (_index)
-      {
-        case 0:
-          return this->GetParam(dParamLoStop);
-        case 1:
-          return this->GetParam(dParamLoStop2);
-        case 2:
-          return this->GetParam(dParamLoStop3);
-        default:
-          gzerr << "Invalid index[" << _index << "]\n";
-          break;
-      };
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "thread_pitch")
-  {
-    ScrewJoint<ODEJoint>* screwJoint =
-      dynamic_cast<ScrewJoint<ODEJoint>* >(this);
-    if (screwJoint != NULL)
-    {
-      try
-      {
-        return screwJoint->GetThreadPitch(0);
+        gearboxJoint->SetGearboxRatio(boost::any_cast<double>(_value));
       }
-      catch(common::Exception &e)
+      else
       {
-        gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
+        gzerr << "Trying to set " << _key << " for non-gearbox joints."
+              << std::endl;
         return 0;
       }
     }
     else
     {
-      gzerr << "Trying to get thread_pitch for non-screw joints.\n";
-      return 0;
+      gzerr << "Unable to handle joint attribute[" << _key << "]\n";
+      return false;
     }
   }
-  else
+  catch(const boost::bad_any_cast &e)
   {
-    gzerr << "Unable to get joint attribute[" << _key << "]\n";
+    gzerr << "SetParam(" << _key << ")"
+          << " boost any_cast error:" << e.what()
+          << std::endl;
+    return false;
+  }
+  return true;
+}
+
+//////////////////////////////////////////////////
+double ODEJoint::GetParam(const std::string &_key, unsigned int _index)
+{
+  // Axis parameters for multi-axis joints use a group bitmask
+  // to identify the variable.
+  unsigned int group;
+  switch (_index)
+  {
+    case 0:
+      group = dParamGroup1;
+      break;
+    case 1:
+      group = dParamGroup2;
+      break;
+    case 2:
+      group = dParamGroup3;
+      break;
+    default:
+      gzerr << "Invalid index[" << _index << "]\n";
+      return false;
+  }
+
+  try
+  {
+    if (_key == "fudge_factor")
+    {
+      return this->GetParam(dParamFudgeFactor);
+    }
+    else if (_key == "suspension_erp")
+    {
+      return this->GetParam(dParamSuspensionERP);
+    }
+    else if (_key == "suspension_cfm")
+    {
+      return this->GetParam(dParamSuspensionCFM);
+    }
+    else if (_key == "stop_erp")
+    {
+      return this->GetParam(dParamStopERP | group);
+    }
+    else if (_key == "stop_cfm")
+    {
+      return this->GetParam(dParamStopCFM | group);
+    }
+    else if (_key == "erp")
+    {
+      return this->GetParam(dParamERP);
+    }
+    else if (_key == "cfm")
+    {
+      return this->GetParam(dParamCFM);
+    }
+    else if (_key == "fmax")
+    {
+      gzwarn << "The '" << _key << "' parameter is deprecated "
+             << "to enable Coulomb joint friction with the "
+             << "'friction' parameter"
+             << std::endl;
+      return this->GetParam(dParamFMax | group);
+    }
+    else if (_key == "friction")
+    {
+      return this->GetParam(dParamFMax | group);
+    }
+    else if (_key == "vel")
+    {
+      gzwarn << "The '" << _key << "' parameter is deprecated "
+             << "to enable Coulomb joint friction with the "
+             << "'friction' parameter"
+             << std::endl;
+      return this->GetParam(dParamVel | group);
+    }
+    else if (_key == "hi_stop")
+    {
+          return this->GetParam(dParamHiStop | group);
+    }
+    else if (_key == "lo_stop")
+    {
+          return this->GetParam(dParamLoStop | group);
+    }
+    else if (_key == "thread_pitch")
+    {
+      ScrewJoint<ODEJoint>* screwJoint =
+        dynamic_cast<ScrewJoint<ODEJoint>* >(this);
+      if (screwJoint != NULL)
+      {
+          return screwJoint->GetThreadPitch();
+      }
+      else
+      {
+        gzerr << "Trying to get " << _key << " for non-screw joints."
+              << std::endl;
+        return 0;
+      }
+    }
+    else if (_key == "gearbox_ratio")
+    {
+      GearboxJoint<ODEJoint>* gearboxJoint =
+        dynamic_cast<GearboxJoint<ODEJoint>* >(this);
+      if (gearboxJoint != NULL)
+      {
+        return gearboxJoint->GetGearboxRatio();
+      }
+      else
+      {
+        gzerr << "Trying to get " << _key << " for non-gearbox joints."
+              << std::endl;
+        return 0;
+      }
+    }
+  }
+  catch(common::Exception &e)
+  {
+    gzerr << "GetParam(" << _key << ") error:"
+          << e.GetErrorStr()
+          << std::endl;
     return 0;
   }
 
-  gzerr << "should not be here\n";
+  gzerr << "Unable to get joint attribute[" << _key << "]"
+        << std::endl;
   return 0;
 }
 
@@ -1064,8 +771,8 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
 
       if (!this->childLink)
       {
-        gzlog << "Joint [" << this->GetName()
-              << "] with parent Link [" << this->parentLink->GetName()
+        gzlog << "Joint [" << this->GetScopedName()
+              << "] with parent Link [" << this->parentLink->GetScopedName()
               << "] but no child Link.  Child Link must be world.\n";
         // if child link does not exist, use equal and opposite
         this->wrench.body2Force = -this->wrench.body1Force;
@@ -1091,8 +798,8 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
       }
       else
       {
-        gzlog << "Joint [" << this->GetName()
-              << "] with child Link [" << this->childLink->GetName()
+        gzlog << "Joint [" << this->GetScopedName()
+              << "] with child Link [" << this->childLink->GetScopedName()
               << "] but no parent Link.  Parent Link must be world.\n";
         // if parentLink does not exist, use equal opposite body1 wrench
         this->wrench.body1Force = -this->wrench.body2Force;
@@ -1121,9 +828,15 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::CFMDamping()
+bool ODEJoint::UsesImplicitSpringDamper()
 {
-  this->ApplyImplicitStiffnessDamping();
+  return this->useImplicitSpringDamper;
+}
+
+//////////////////////////////////////////////////
+void ODEJoint::UseImplicitSpringDamper(const bool _implicit)
+{
+  this->useImplicitSpringDamper = _implicit;
 }
 
 //////////////////////////////////////////////////
@@ -1154,11 +867,11 @@ void ODEJoint::ApplyImplicitStiffnessDamping()
         // We have hit the actual joint limit!
         // turn off simulated damping by recovering cfm and erp,
         // and recover joint limits
-        this->SetAttribute("stop_erp", i, this->stopERP);
-        this->SetAttribute("stop_cfm", i, this->stopCFM);
-        this->SetAttribute("hi_stop", i, this->upperLimit[i].Radian());
-        this->SetAttribute("lo_stop", i, this->lowerLimit[i].Radian());
-        this->SetAttribute("hi_stop", i, this->upperLimit[i].Radian());
+        this->SetParam("stop_erp", i, this->stopERP);
+        this->SetParam("stop_cfm", i, this->stopCFM);
+        this->SetParam("hi_stop", i, this->upperLimit[i].Radian());
+        this->SetParam("lo_stop", i, this->lowerLimit[i].Radian());
+        this->SetParam("hi_stop", i, this->upperLimit[i].Radian());
         this->implicitDampingState[i] = ODEJoint::JOINT_LIMIT;
       }
       /* test to see if we can reduce jitter at joint limits
@@ -1201,11 +914,11 @@ void ODEJoint::ApplyImplicitStiffnessDamping()
 
         // add additional constraint row by fake hitting joint limit
         // then, set erp and cfm to simulate viscous joint damping
-        this->SetAttribute("stop_erp", i, erp);
-        this->SetAttribute("stop_cfm", i, cfm);
-        this->SetAttribute("hi_stop", i, this->springReferencePosition[i]);
-        this->SetAttribute("lo_stop", i, this->springReferencePosition[i]);
-        this->SetAttribute("hi_stop", i, this->springReferencePosition[i]);
+        this->SetParam("stop_erp", i, erp);
+        this->SetParam("stop_cfm", i, cfm);
+        this->SetParam("hi_stop", i, this->springReferencePosition[i]);
+        this->SetParam("lo_stop", i, this->springReferencePosition[i]);
+        this->SetParam("hi_stop", i, this->springReferencePosition[i]);
         this->implicitDampingState[i] = ODEJoint::DAMPING_ACTIVE;
       }
     }
@@ -1213,7 +926,8 @@ void ODEJoint::ApplyImplicitStiffnessDamping()
 }
 
 //////////////////////////////////////////////////
-double ODEJoint::ApplyAdaptiveDamping(int _index, const double _damping)
+double ODEJoint::ApplyAdaptiveDamping(unsigned int _index,
+    const double _damping)
 {
   /// \TODO: hardcoded thresholds for now, make them params.
   static double vThreshold = 0.01;
@@ -1265,12 +979,11 @@ void ODEJoint::CFMERPToKpKd(const double _dt,
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetDamping(int _index, double _damping)
+void ODEJoint::SetDamping(unsigned int _index, double _damping)
 {
-  if (static_cast<unsigned int>(_index) < this->GetAngleCount())
+  if (_index < this->GetAngleCount())
   {
-    this->SetStiffnessDamping(static_cast<unsigned int>(_index),
-      this->stiffnessCoefficient[_index],
+    this->SetStiffnessDamping(_index, this->stiffnessCoefficient[_index],
       _damping);
   }
   else
@@ -1283,12 +996,11 @@ void ODEJoint::SetDamping(int _index, double _damping)
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetStiffness(int _index, double _stiffness)
+void ODEJoint::SetStiffness(unsigned int _index, double _stiffness)
 {
-  if (static_cast<unsigned int>(_index) < this->GetAngleCount())
+  if (_index < this->GetAngleCount())
   {
-    this->SetStiffnessDamping(static_cast<unsigned int>(_index),
-      _stiffness,
+    this->SetStiffnessDamping(_index, _stiffness,
       this->dissipationCoefficient[_index]);
   }
   else
@@ -1362,6 +1074,18 @@ void ODEJoint::SetProvideFeedback(bool _enable)
   if (this->provideFeedback)
   {
     this->feedback = new dJointFeedback;
+    this->feedback->f1[0] = 0;
+    this->feedback->f1[1] = 0;
+    this->feedback->f1[2] = 0;
+    this->feedback->t1[0] = 0;
+    this->feedback->t1[1] = 0;
+    this->feedback->t1[2] = 0;
+    this->feedback->f2[0] = 0;
+    this->feedback->f2[1] = 0;
+    this->feedback->f2[2] = 0;
+    this->feedback->t2[0] = 0;
+    this->feedback->t2[1] = 0;
+    this->feedback->t2[2] = 0;
 
     if (this->jointId)
       dJointSetFeedback(this->jointId, this->feedback);
@@ -1371,23 +1095,25 @@ void ODEJoint::SetProvideFeedback(bool _enable)
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SetForce(int _index, double _force)
+void ODEJoint::SetForce(unsigned int _index, double _force)
 {
   double force = Joint::CheckAndTruncateForce(_index, _force);
   this->SaveForce(_index, force);
   this->SetForceImpl(_index, force);
 
   // for engines that supports auto-disable of links
-  if (this->childLink) this->childLink->SetEnabled(true);
-  if (this->parentLink) this->parentLink->SetEnabled(true);
+  if (this->childLink)
+    this->childLink->SetEnabled(true);
+  if (this->parentLink)
+    this->parentLink->SetEnabled(true);
 }
 
 //////////////////////////////////////////////////
-void ODEJoint::SaveForce(int _index, double _force)
+void ODEJoint::SaveForce(unsigned int _index, double _force)
 {
   // this bit of code actually doesn't do anything physical,
   // it simply records the forces commanded inside forceApplied.
-  if (_index >= 0 && static_cast<unsigned int>(_index) < this->GetAngleCount())
+  if (_index < this->GetAngleCount())
   {
     if (this->forceAppliedTime < this->GetWorld()->GetSimTime())
     {
@@ -1399,7 +1125,7 @@ void ODEJoint::SaveForce(int _index, double _force)
     this->forceApplied[_index] += _force;
   }
   else
-    gzerr << "Something's wrong, joint [" << this->GetName()
+    gzerr << "Something's wrong, joint [" << this->GetScopedName()
           << "] index [" << _index
           << "] out of range.\n";
 }
@@ -1447,4 +1173,10 @@ void ODEJoint::ApplyExplicitStiffnessDamping()
 
     // gzerr << this->GetVelocity(0) << " : " << dampingForce << "\n";
   }
+}
+
+//////////////////////////////////////////////////
+bool ODEJoint::SetPosition(unsigned int _index, double _position)
+{
+  return Joint::SetPositionMaximal(_index, _position);
 }

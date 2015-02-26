@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@
 #include "gazebo/physics/Joint.hh"
 #include "gazebo/physics/dart/dart_inc.h"
 #include "gazebo/physics/dart/DARTPhysics.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief DART joint interface
-    class DARTJoint : public Joint
+    class GAZEBO_VISIBLE DARTJoint : public Joint
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent of the Joint.
@@ -50,7 +51,7 @@ namespace gazebo
       public: virtual void Reset();
 
       // Documentation inherited.
-      public: virtual LinkPtr GetJointLink(int _index) const;
+      public: virtual LinkPtr GetJointLink(unsigned int _index) const;
 
       // Documentation inherited.
       public: virtual bool AreConnected(LinkPtr _one, LinkPtr _two) const;
@@ -62,26 +63,33 @@ namespace gazebo
       public: virtual void Detach();
 
       /// \brief Set the anchor point
-      public: virtual void SetAnchor(int /*index*/,
-                                     const gazebo::math::Vector3 & /*anchor*/)
-      {
-        // nothing to do here for DART.
-      }
+      public: virtual void SetAnchor(unsigned int /*_index*/,
+                                     const gazebo::math::Vector3 &/*_anchor*/);
 
       // Documentation inherited
-      public: virtual void SetDamping(int _index, double _damping);
+      public: virtual void SetDamping(unsigned int _index, double _damping);
 
       // Documentation inherited.
-      public: virtual void SetHighStop(int _index, const math::Angle &_angle);
+      public: virtual void SetStiffness(unsigned int _index,
+                  const double _stiffness);
 
       // Documentation inherited.
-      public: virtual void SetLowStop(int _index, const math::Angle &_angle);
+      public: virtual void SetStiffnessDamping(unsigned int _index,
+        double _stiffness, double _damping, double _reference = 0);
 
       // Documentation inherited.
-      public: virtual math::Angle GetHighStop(int _index);
+      public: virtual bool SetHighStop(unsigned int _index,
+                  const math::Angle &_angle);
 
       // Documentation inherited.
-      public: virtual math::Angle GetLowStop(int _index);
+      public: virtual bool SetLowStop(unsigned int _index,
+                  const math::Angle &_angle);
+
+      // Documentation inherited.
+      public: virtual math::Angle GetHighStop(unsigned int _index);
+
+      // Documentation inherited.
+      public: virtual math::Angle GetLowStop(unsigned int _index);
 
       // Documentation inherited.
       public: virtual math::Vector3 GetLinkForce(unsigned int _index) const;
@@ -90,21 +98,19 @@ namespace gazebo
       public: virtual math::Vector3 GetLinkTorque(unsigned int _index) const;
 
       // Documentation inherited.
-      public: virtual void SetAttribute(const std::string &_key, int _index,
+      public: virtual bool SetParam(const std::string &_key,
+                                        unsigned int _index,
                                         const boost::any &_value);
 
       // Documentation inherited.
-      public: virtual double GetAttribute(const std::string &_key,
-                                        unsigned int _index);
-
-      // Documentation inherited.
-      public: virtual JointWrench GetForceTorque(int _index);
+      public: virtual double GetParam(const std::string &_key,
+                                          unsigned int _index);
 
       // Documentation inherited.
       public: virtual JointWrench GetForceTorque(unsigned int _index);
 
       // Documentation inherited.
-      public: virtual void SetForce(int _index, double _force);
+      public: virtual void SetForce(unsigned int _index, double _force);
 
       // Documentation inherited.
       public: virtual double GetForce(unsigned int _index);
@@ -123,18 +129,21 @@ namespace gazebo
       /// step will accumulate forces on that Joint).
       /// \param[in] _index Index of the axis.
       /// \param[in] _force Force value.
-      protected: virtual void SetForceImpl(int _index, double _force) = 0;
+      protected: virtual void SetForceImpl(unsigned int _index,
+                     double _force) = 0;
 
       /// \brief Save external forces applied to this Joint.
       /// \param[in] _index Index of the axis.
       /// \param[in] _force Force value.
-      private: void SaveForce(int _index, double _force);
+      private: void SaveForce(unsigned int _index, double _force);
 
       /// \brief Get DART model pointer.
+      /// \return A pointer to the DART model.
       public: DARTModelPtr GetDARTModel() const;
 
       /// \brief Get DART joint pointer.
-      public: dart::dynamics::Joint* getDARTJoint() { return dtJoint; }
+      /// \return A pointer to the DART joint.
+      public: dart::dynamics::Joint *GetDARTJoint();
 
       /// \brief Save force applied by user
       /// This plus the joint feedback (joint contstraint forces) is the
@@ -151,10 +160,10 @@ namespace gazebo
       protected: DARTPhysicsPtr dartPhysicsEngine;
 
       /// \brief DART joint pointer
-      protected: dart::dynamics::Joint* dtJoint;
+      protected: dart::dynamics::Joint *dtJoint;
 
       /// \brief DART child body node pointer
-      protected: dart::dynamics::BodyNode* dtChildBodyNode;
+      protected: dart::dynamics::BodyNode *dtChildBodyNode;
     };
   }
 }

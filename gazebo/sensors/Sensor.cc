@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,13 @@
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/Plugin.hh"
 
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/rendering/Distortion.hh"
 #include "gazebo/rendering/RenderingIface.hh"
 #include "gazebo/rendering/Scene.hh"
 
 #include "gazebo/sensors/CameraSensor.hh"
+#include "gazebo/sensors/Noise.hh"
 #include "gazebo/sensors/Sensor.hh"
 #include "gazebo/sensors/SensorManager.hh"
 
@@ -77,6 +80,9 @@ Sensor::~Sensor()
     this->sdf->Reset();
   this->sdf.reset();
   this->connections.clear();
+
+  for (unsigned int i = 0; i < this->noises.size(); ++i)
+    this->noises[i].reset();
 }
 
 //////////////////////////////////////////////////
@@ -128,12 +134,6 @@ void Sensor::Init()
   msgs::Sensor msg;
   this->FillMsg(msg);
   this->sensorPub->Publish(msg);
-}
-
-//////////////////////////////////////////////////
-void Sensor::SetParent(const std::string &_name)
-{
-  this->parentName = _name;
 }
 
 //////////////////////////////////////////////////
@@ -230,6 +230,9 @@ void Sensor::Update(bool _force)
 //////////////////////////////////////////////////
 void Sensor::Fini()
 {
+  for (unsigned int i= 0; i < this->noises.size(); ++i)
+    this->noises[i]->Fini();
+
   this->active = false;
   this->plugins.clear();
 }
@@ -244,7 +247,7 @@ std::string Sensor::GetName() const
 std::string Sensor::GetScopedName() const
 {
   return this->world->GetName() + "::" + this->parentName + "::" +
-         this->GetName();
+    this->GetName();
 }
 
 //////////////////////////////////////////////////
@@ -360,6 +363,19 @@ void Sensor::FillMsg(msgs::Sensor &_msg)
     msgs::CameraSensor *camMsg = _msg.mutable_camera();
     camMsg->mutable_image_size()->set_x(camSensor->GetImageWidth());
     camMsg->mutable_image_size()->set_y(camSensor->GetImageHeight());
+    rendering::DistortionPtr distortion =
+        camSensor->GetCamera()->GetDistortion();
+    if (distortion)
+    {
+      msgs::Distortion *distortionMsg = camMsg->mutable_distortion();
+      distortionMsg->set_k1(distortion->GetK1());
+      distortionMsg->set_k2(distortion->GetK2());
+      distortionMsg->set_k3(distortion->GetK3());
+      distortionMsg->set_p1(distortion->GetP1());
+      distortionMsg->set_p2(distortion->GetP2());
+      distortionMsg->mutable_center()->set_x(distortion->GetCenter().x);
+      distortionMsg->mutable_center()->set_y(distortion->GetCenter().y);
+    }
   }
 }
 
@@ -373,6 +389,17 @@ std::string Sensor::GetWorldName() const
 SensorCategory Sensor::GetCategory() const
 {
   return this->category;
+}
+
+//////////////////////////////////////////////////
+NoisePtr Sensor::GetNoise(unsigned int _index) const
+{
+  if (_index >= this->noises.size())
+  {
+    gzerr << "Get noise index out of range" << std::endl;
+    return NoisePtr();
+  }
+  return this->noises[_index];
 }
 
 //////////////////////////////////////////////////

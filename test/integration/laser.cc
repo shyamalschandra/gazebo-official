@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ void LaserTest::Stationary_EmptyWorld(const std::string &_physicsEngine)
     boost::static_pointer_cast<sensors::RaySensor>(
         sensors::SensorManager::Instance()->GetSensor(raySensorName));
 
-  ASSERT_TRUE(laser);
+  ASSERT_TRUE(laser != NULL);
   laser->Init();
   laser->Update(true);
 
@@ -116,7 +116,7 @@ void LaserTest::Stationary_EmptyWorld(const std::string &_physicsEngine)
   {
     common::Time prevTime;
     physics::WorldPtr world = physics::get_world("default");
-    ASSERT_TRUE(world);
+    ASSERT_TRUE(world != NULL);
 
     physics::ModelPtr model = world->GetModel(modelName);
 
@@ -194,7 +194,8 @@ void LaserTest::LaserUnitBox(const std::string &_physicsEngine)
   double maxRange = 5.0;
   double rangeResolution = 0.02;
   unsigned int samples = 320;
-  math::Pose testPose(math::Vector3(0, 0, 0),
+  // Lift ray sensor so it's not right next to the edge
+  math::Pose testPose(math::Vector3(0, 0, 0.1),
       math::Quaternion(0, 0, 0));
   if (_physicsEngine == "bullet" && LIBBULLET_VERSION >= 2.82)
   {
@@ -277,6 +278,14 @@ void LaserTest::LaserVertical(const std::string &_physicsEngine)
   {
     gzerr << "Abort test since simbody does not support ray sensor, "
           << "Please see issue #867.\n";
+    return;
+  }
+
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Abort test since dart does not support ray shape and sensor, "
+          << "Please see issue #911. "
+          << "(https://bitbucket.org/osrf/gazebo/issue/911).\n";
     return;
   }
 
@@ -376,6 +385,14 @@ void LaserTest::LaserScanResolution(const std::string &_physicsEngine)
     return;
   }
 
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Abort test since dart does not support ray shape and sensor, "
+          << "Please see issue #911. "
+          << "(https://bitbucket.org/osrf/gazebo/issue/911).\n";
+    return;
+  }
+
   // Test ray sensor scan resolution.
   // Orient the sensor to face downwards and verify that the interpolated
   // range values all intersect with ground plane at z = 0;
@@ -449,6 +466,14 @@ void LaserTest::GroundPlane(const std::string &_physicsEngine)
   {
     gzerr << "Abort test since simbody does not support ray sensor, "
           << "Please see issue #867.\n";
+    return;
+  }
+
+  if (_physicsEngine == "dart")
+  {
+    gzerr << "Abort test since dart does not support ray shape and sensor, "
+          << "Please see issue #911. "
+          << "(https://bitbucket.org/osrf/gazebo/issue/911).\n";
     return;
   }
 
