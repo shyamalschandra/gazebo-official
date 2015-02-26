@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  *
 */
 
-#include "transport/TopicManager.hh"
-#include "transport/ConnectionManager.hh"
-#include "transport/PublicationTransport.hh"
+#include "gazebo/transport/TopicManager.hh"
+#include "gazebo/transport/ConnectionManager.hh"
+#include "gazebo/transport/PublicationTransport.hh"
 
 using namespace gazebo;
 using namespace transport;
@@ -38,8 +38,6 @@ PublicationTransport::~PublicationTransport()
 {
   if (this->connection)
   {
-    this->connection->DisconnectShutdown(this->shutdownConnectionPtr);
-
     msgs::Subscribe sub;
     sub.set_topic(this->topic);
     sub.set_msg_type(this->msgType);
@@ -55,14 +53,15 @@ PublicationTransport::~PublicationTransport()
 }
 
 /////////////////////////////////////////////////
-void PublicationTransport::Init(const ConnectionPtr &conn_)
+void PublicationTransport::Init(const ConnectionPtr &_conn, bool _latched)
 {
-  this->connection = conn_;
+  this->connection = _conn;
   msgs::Subscribe sub;
   sub.set_topic(this->topic);
   sub.set_msg_type(this->msgType);
   sub.set_host(this->connection->GetLocalAddress());
   sub.set_port(this->connection->GetLocalPort());
+  sub.set_latching(_latched);
 
   this->connection->EnqueueMsg(msgs::Package("sub", sub));
 
@@ -70,15 +69,8 @@ void PublicationTransport::Init(const ConnectionPtr &conn_)
   // Start reading messages from the remote publisher
   this->connection->AsyncRead(boost::bind(&PublicationTransport::OnPublish,
         this, _1));
-
-  this->shutdownConnectionPtr = this->connection->ConnectToShutdown(
-      boost::bind(&PublicationTransport::OnConnectionShutdown, this));
 }
 
-/////////////////////////////////////////////////
-void PublicationTransport::OnConnectionShutdown()
-{
-}
 
 /////////////////////////////////////////////////
 void PublicationTransport::AddCallback(
