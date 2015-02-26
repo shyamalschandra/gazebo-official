@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/Conversions.hh"
 #include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/Distortion.hh"
 #include "gazebo/rendering/CameraPrivate.hh"
 #include "gazebo/rendering/Camera.hh"
 
@@ -81,7 +82,6 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
   this->camera = NULL;
   this->viewport = NULL;
 
-  this->pitchNode = NULL;
   this->sceneNode = NULL;
 
   this->screenshotPath = getenv("HOME");
@@ -115,7 +115,6 @@ Camera::~Camera()
   delete [] this->saveFrameBuffer;
   delete [] this->bayerFrameBuffer;
 
-  this->pitchNode = NULL;
   this->sceneNode = NULL;
 
   if (this->renderTexture && this->scene->GetInitialized())
@@ -189,6 +188,12 @@ void Camera::Load()
     this->dataPtr->cmdSub = this->dataPtr->node->Subscribe(
         "~/" + this->GetName() + "/cmd", &Camera::OnCmdMsg, this, true);
   }
+
+  if (this->sdf->HasElement("distortion"))
+  {
+    this->dataPtr->distortion.reset(new Distortion());
+    this->dataPtr->distortion->Load(this->sdf->GetElement("distortion"));
+  }
 }
 
 //////////////////////////////////////////////////
@@ -200,16 +205,10 @@ void Camera::Init()
 
   this->CreateCamera();
 
-  // Create a scene node to control pitch motion
-  this->pitchNode =
-    this->sceneNode->createChildSceneNode(this->scopedUniqueName + "PitchNode");
-  this->pitchNode->pitch(Ogre::Degree(0));
-
-  this->pitchNode->attachObject(this->camera);
+  this->sceneNode->attachObject(this->camera);
   this->camera->setAutoAspectRatio(true);
 
   this->sceneNode->setInheritScale(false);
-  this->pitchNode->setInheritScale(false);
 
   this->saveCount = 0;
 
@@ -339,10 +338,12 @@ void Camera::Update()
     double yaw = atan2(direction.y, direction.x);
     double pitch = atan2(-direction.z,
                          sqrt(pow(direction.x, 2) + pow(direction.y, 2)));
-    pitch = math::clamp(pitch, 0.0, 0.25*M_PI);
 
-    double currPitch = this->GetWorldRotation().GetAsEuler().y;
-    double currYaw = this->GetWorldRotation().GetAsEuler().z;
+    Ogre::Quaternion localRotOgre = this->sceneNode->getOrientation();
+    math::Quaternion localRot = math::Quaternion(
+      localRotOgre.w, localRotOgre.x, localRotOgre.y, localRotOgre.z);
+    double currPitch = localRot.GetAsEuler().y;
+    double currYaw = localRot.GetAsEuler().z;
 
     double pitchError = currPitch - pitch;
 
@@ -370,17 +371,12 @@ void Camera::Update()
     displacement.Normalize();
     displacement *= scaling;
 
-    math::Vector3 pos = this->GetWorldPosition() + displacement;
-    pos.z = math::clamp(pos.z, 3.0, pos.z);
+    math::Vector3 localPos =
+      Conversions::Convert(this->sceneNode->_getDerivedPosition());
+    math::Vector3 pos = localPos + displacement;
 
     this->SetWorldPosition(pos);
   }
-}
-
-//////////////////////////////////////////////////
-void Camera::Render()
-{
-  this->Render(false);
 }
 
 //////////////////////////////////////////////////
@@ -536,12 +532,8 @@ math::Vector3 Camera::GetWorldPosition() const
 //////////////////////////////////////////////////
 math::Quaternion Camera::GetWorldRotation() const
 {
-  math::Vector3 sRot, pRot;
-
-  sRot = Conversions::Convert(this->sceneNode->getOrientation()).GetAsEuler();
-  pRot = Conversions::Convert(this->pitchNode->getOrientation()).GetAsEuler();
-
-  return math::Quaternion(sRot.x, pRot.y, sRot.z);
+  Ogre::Quaternion rot = this->sceneNode->_getDerivedOrientation();
+  return math::Quaternion(rot.w, rot.x, rot.y, rot.z);
 }
 
 //////////////////////////////////////////////////
@@ -563,10 +555,8 @@ void Camera::SetWorldPosition(const math::Vector3 &_pos)
   if (this->animState)
     return;
 
-  this->sceneNode->setPosition(Ogre::Vector3(_pos.x, _pos.y, _pos.z));
-
-  // The pitch nodes needs to be told to update its transform
-  this->pitchNode->needUpdate();
+  this->sceneNode->_setDerivedPosition(Ogre::Vector3(_pos.x, _pos.y, _pos.z));
+  this->sceneNode->needUpdate();
 }
 
 //////////////////////////////////////////////////
@@ -575,44 +565,55 @@ void Camera::SetWorldRotation(const math::Quaternion &_quant)
   if (this->animState)
     return;
 
-  math::Quaternion p, s;
   math::Vector3 rpy = _quant.GetAsEuler();
-  p.SetFromEuler(math::Vector3(0, rpy.y, 0));
 
-  // Set the roll and yaw.
-  s.SetFromEuler(math::Vector3(rpy.x, 0, rpy.z));
+  // Set the roll and yaw for sceneNode
+  math::Quaternion s(rpy.x, rpy.y, rpy.z);
 
-  this->sceneNode->setOrientation(
-      Ogre::Quaternion(s.w, s.x, s.y, s.z));
-
-  this->pitchNode->setOrientation(
-      Ogre::Quaternion(p.w, p.x, p.y, p.z));
+  this->sceneNode->_setDerivedOrientation(Ogre::Quaternion(s.w, s.x, s.y, s.z));
 
   this->sceneNode->needUpdate();
-  this->pitchNode->needUpdate();
 }
 
 //////////////////////////////////////////////////
-void Camera::Translate(const math::Vector3 &direction)
+void Camera::Translate(const math::Vector3 &_direction)
 {
-  Ogre::Vector3 vec(direction.x, direction.y, direction.z);
-
   this->sceneNode->translate(this->sceneNode->getOrientation() *
-      this->pitchNode->getOrientation() * vec);
+      Conversions::Convert(_direction));
+}
+
+//////////////////////////////////////////////////
+void Camera::Roll(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->pitch(Ogre::Radian(_angle.Radian()), _relativeTo);
+}
+
+//////////////////////////////////////////////////
+void Camera::Yaw(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->roll(Ogre::Radian(_angle.Radian()), _relativeTo);
+}
+
+//////////////////////////////////////////////////
+void Camera::Pitch(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->yaw(Ogre::Radian(_angle.Radian()), _relativeTo);
 }
 
 //////////////////////////////////////////////////
 void Camera::RotateYaw(math::Angle _angle)
 {
-  this->sceneNode->roll(Ogre::Radian(_angle.Radian()), Ogre::Node::TS_WORLD);
+  this->Yaw(_angle);
 }
 
 //////////////////////////////////////////////////
 void Camera::RotatePitch(math::Angle _angle)
 {
-  this->pitchNode->yaw(Ogre::Radian(_angle.Radian()));
+  this->Pitch(_angle);
 }
-
 
 //////////////////////////////////////////////////
 void Camera::SetClipDist()
@@ -929,12 +930,6 @@ Ogre::SceneNode *Camera::GetSceneNode() const
 }
 
 //////////////////////////////////////////////////
-Ogre::SceneNode *Camera::GetPitchNode() const
-{
-  return this->pitchNode;
-}
-
-//////////////////////////////////////////////////
 const unsigned char *Camera::GetImageData(unsigned int _i)
 {
   if (_i != 0)
@@ -1227,6 +1222,13 @@ void Camera::SetCaptureDataOnce()
 //////////////////////////////////////////////////
 void Camera::CreateRenderTexture(const std::string &_textureName)
 {
+  int fsaa = 4;
+
+  // Full-screen anti-aliasing only works correctly in 1.8 and above
+#if OGRE_VERSION_MAJOR == 1 && OGRE_VERSION_MINOR < 8
+  fsaa = 0;
+#endif
+
   // Create the render texture
   this->renderTexture = (Ogre::TextureManager::getSingleton().createManual(
       _textureName,
@@ -1239,7 +1241,7 @@ void Camera::CreateRenderTexture(const std::string &_textureName)
       Ogre::TU_RENDERTARGET,
       0,
       false,
-      4)).getPointer();
+      fsaa)).getPointer();
 
   this->SetRenderTarget(this->renderTexture->getBuffer()->getRenderTarget());
 
@@ -1349,9 +1351,11 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
       // this->dataPtr->this->ssaoInstance->setEnabled(false);
     }
 
+    if (this->dataPtr->distortion)
+      this->dataPtr->distortion->SetCamera(shared_from_this());
 
-    if (this->GetScene()->skyx != NULL)
-      this->renderTarget->addListener(this->GetScene()->skyx);
+    if (this->GetScene()->GetSkyX() != NULL)
+      this->renderTarget->addListener(this->GetScene()->GetSkyX());
   }
 }
 
@@ -1390,7 +1394,10 @@ void Camera::AttachToVisual(const std::string &_visualName,
   if (visual)
     track.set_id(visual->GetId());
   else
+  {
+    gzerr << "Unable to attach to visual with name[" << _visualName << "]\n";
     track.set_id(GZ_UINT32_MAX);
+  }
 
   track.set_name(_visualName);
   track.set_min_dist(_minDist);
@@ -1442,10 +1449,8 @@ bool Camera::AttachToVisualImpl(VisualPtr _visual, bool _inheritOrientation,
 
   if (_visual)
   {
-    math::Pose origPose = this->GetWorldPose();
     _visual->GetSceneNode()->addChild(this->sceneNode);
     this->sceneNode->setInheritOrientation(_inheritOrientation);
-    this->SetWorldPose(origPose);
     return true;
   }
 
@@ -1461,6 +1466,9 @@ bool Camera::TrackVisualImpl(const std::string &_name)
   else
     this->dataPtr->trackedVisual.reset();
 
+  if (_name.empty())
+    return true;
+
   return false;
 }
 
@@ -1470,6 +1478,7 @@ bool Camera::TrackVisualImpl(VisualPtr _visual)
   // if (this->sceneNode->getParent())
   //  this->sceneNode->getParent()->removeChild(this->sceneNode);
 
+  bool result = false;
   if (_visual)
   {
     this->dataPtr->trackVisualPID.Init(0.25, 0, 0, 0, 0, 1.0, 0.0);
@@ -1477,13 +1486,14 @@ bool Camera::TrackVisualImpl(VisualPtr _visual)
     this->dataPtr->trackVisualYawPID.Init(0.05, 0, 0, 0, 0, 1.0, 0.0);
 
     this->dataPtr->trackedVisual = _visual;
+    result = true;
   }
   else
   {
     this->dataPtr->trackedVisual.reset();
   }
 
-  return true;
+  return result;
 }
 
 //////////////////////////////////////////////////
@@ -1508,6 +1518,7 @@ bool Camera::IsVisible(VisualPtr _visual)
     box.setMinimum(bbox.min.x, bbox.min.y, bbox.min.z);
     box.setMaximum(bbox.max.x, bbox.max.y, bbox.max.z);
 
+    box.transformAffine(_visual->GetSceneNode()->_getFullTransform());
     return this->camera->isVisible(box);
   }
 
@@ -1539,15 +1550,19 @@ bool Camera::MoveToPosition(const math::Pose &_pose, double _time)
   math::Vector3 rpy = _pose.rot.GetAsEuler();
   math::Vector3 start = this->GetWorldPose().pos;
 
-  double dyaw =  this->GetWorldRotation().GetAsEuler().z - rpy.z;
+  Ogre::Quaternion localRotOgre = this->sceneNode->getOrientation();
+  math::Quaternion localRot = math::Quaternion(
+    localRotOgre.w, localRotOgre.x, localRotOgre.y, localRotOgre.z);
+  double dyaw =  localRot.GetAsEuler().z - rpy.z;
 
   if (dyaw > M_PI)
     rpy.z += 2*M_PI;
   else if (dyaw < -M_PI)
     rpy.z -= 2*M_PI;
 
-  Ogre::Quaternion yawFinal(Ogre::Radian(rpy.z), Ogre::Vector3(0, 0, 1));
-  Ogre::Quaternion pitchFinal(Ogre::Radian(rpy.y), Ogre::Vector3(0, 1, 0));
+  math::Quaternion pitchYawOnly(0, rpy.y, rpy.z);
+  Ogre::Quaternion pitchYawFinal(pitchYawOnly.w, pitchYawOnly.x,
+    pitchYawOnly.y, pitchYawOnly.z);
 
   std::string trackName = "cameratrack";
   int i = 0;
@@ -1563,21 +1578,15 @@ bool Camera::MoveToPosition(const math::Pose &_pose, double _time)
   anim->setInterpolationMode(Ogre::Animation::IM_SPLINE);
 
   Ogre::NodeAnimationTrack *strack = anim->createNodeTrack(0, this->sceneNode);
-  Ogre::NodeAnimationTrack *ptrack = anim->createNodeTrack(1, this->pitchNode);
 
   key = strack->createNodeKeyFrame(0);
   key->setTranslate(Ogre::Vector3(start.x, start.y, start.z));
   key->setRotation(this->sceneNode->getOrientation());
 
-  key = ptrack->createNodeKeyFrame(0);
-  key->setRotation(this->pitchNode->getOrientation());
-
   key = strack->createNodeKeyFrame(_time);
   key->setTranslate(Ogre::Vector3(_pose.pos.x, _pose.pos.y, _pose.pos.z));
-  key->setRotation(yawFinal);
+  key->setRotation(pitchYawFinal);
 
-  key = ptrack->createNodeKeyFrame(_time);
-  key->setRotation(pitchFinal);
 
   this->animState =
     this->scene->GetManager()->createAnimationState(trackName);
@@ -1616,19 +1625,18 @@ bool Camera::MoveToPositions(const std::vector<math::Pose> &_pts,
   anim->setInterpolationMode(Ogre::Animation::IM_SPLINE);
 
   Ogre::NodeAnimationTrack *strack = anim->createNodeTrack(0, this->sceneNode);
-  Ogre::NodeAnimationTrack *ptrack = anim->createNodeTrack(1, this->pitchNode);
 
   key = strack->createNodeKeyFrame(0);
   key->setTranslate(Ogre::Vector3(start.x, start.y, start.z));
   key->setRotation(this->sceneNode->getOrientation());
 
-  key = ptrack->createNodeKeyFrame(0);
-  key->setRotation(this->pitchNode->getOrientation());
-
   double dt = _time / (_pts.size()-1);
   double tt = 0;
 
-  double prevYaw = this->GetWorldRotation().GetAsEuler().z;
+  Ogre::Quaternion localRotOgre = this->sceneNode->getOrientation();
+  math::Quaternion localRot = math::Quaternion(
+    localRotOgre.w, localRotOgre.x, localRotOgre.y, localRotOgre.z);
+  double prevYaw = localRot.GetAsEuler().z;
   for (unsigned int j = 0; j < _pts.size(); j++)
   {
     math::Vector3 pos = _pts[j].pos;
@@ -1641,15 +1649,14 @@ bool Camera::MoveToPositions(const std::vector<math::Pose> &_pts,
       rpy.z -= 2*M_PI;
 
     prevYaw = rpy.z;
-    Ogre::Quaternion yawFinal(Ogre::Radian(rpy.z), Ogre::Vector3(0, 0, 1));
-    Ogre::Quaternion pitchFinal(Ogre::Radian(rpy.y), Ogre::Vector3(0, 1, 0));
+
+    math::Quaternion pitchYawOnly(0, rpy.y, rpy.z);
+    Ogre::Quaternion pitchYawFinal(pitchYawOnly.w, pitchYawOnly.x,
+      pitchYawOnly.y, pitchYawOnly.z);
 
     key = strack->createNodeKeyFrame(tt);
     key->setTranslate(Ogre::Vector3(pos.x, pos.y, pos.z));
-    key->setRotation(yawFinal);
-
-    key = ptrack->createNodeKeyFrame(tt);
-    key->setRotation(pitchFinal);
+    key->setRotation(pitchYawFinal);
 
     tt += dt;
   }
@@ -1695,4 +1702,10 @@ void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
 {
   boost::mutex::scoped_lock lock(this->dataPtr->receiveMutex);
   this->dataPtr->commandMsgs.push_back(_msg);
+}
+
+//////////////////////////////////////////////////
+DistortionPtr Camera::GetDistortion() const
+{
+  return this->dataPtr->distortion;
 }
