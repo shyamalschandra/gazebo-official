@@ -1,14 +1,15 @@
 include ( ${QT_USE_FILE} )
 add_definitions(${QT_DEFINITIONS})
 
-include_directories( 
+include_directories(
   ${tinyxml_INCLUDE_DIRS}
   ${PROTOBUF_INCLUDE_DIR}
-  ${SDF_INCLUDE_DIRS}
+  ${SDFormat_INCLUDE_DIRS}
 )
 
-link_directories( 
-  ${SDF_LIBRARY_DIRS}
+link_directories(
+  ${CCD_LIBRARY_DIRS}
+  ${SDFormat_LIBRARY_DIRS}
   ${tinyxml_LIBRARY_DIRS}
 )
 
@@ -16,8 +17,12 @@ if (HAVE_BULLET)
   link_directories(${BULLET_LIBRARY_DIRS})
 endif()
 
-set (test_sources 
-  gz_log_TEST.cc 
+if (HAVE_DART)
+  link_directories(${DARTCore_LIBRARY_DIRS})
+endif()
+
+set (test_sources
+  gz_log_TEST.cc
   gz_TEST.cc
 )
 
@@ -30,8 +35,6 @@ target_link_libraries(gz
 gz_install_executable(gz)
 
 roffman(gz 1)
-
-install (PROGRAMS gzmodel_create gzmodel_create DESTINATION ${BIN_INSTALL_DIR})
 
 install (PROGRAMS gzprop DESTINATION ${BIN_INSTALL_DIR})
 manpage(gzprop 1)
