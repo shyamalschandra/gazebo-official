@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,8 +197,10 @@ void SelectionBuffer::CreateRTTOverlays()
     panel->setPosition(10, 10);
     panel->setDimensions(400, 280);
     panel->setMaterialName("SelectionDebugMaterial");
+#if OGRE_VERSION_MAJOR > 1 && OGRE_VERSION_MINOR  <= 9
     this->selectionDebugOverlay->add2D(panel);
     this->selectionDebugOverlay->hide();
+#endif
   }
   else
   {
@@ -209,10 +211,12 @@ void SelectionBuffer::CreateRTTOverlays()
 }
 
 /////////////////////////////////////////////////
-void SelectionBuffer::ShowOverlay(bool _show)
+void SelectionBuffer::ShowOverlay(bool /*_show*/)
 {
+#if OGRE_VERSION_MAJOR > 1 && OGRE_VERSION_MINOR  <= 9
   if (_show)
     this->selectionDebugOverlay->show();
   else
     this->selectionDebugOverlay->hide();
+#endif
 }
