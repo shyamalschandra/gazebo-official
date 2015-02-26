@@ -5,19 +5,24 @@ include_directories(
   ${OGRE_INCLUDE_DIRS}
 )
 
-include (${QT_USE_FILE})
-add_definitions(${QT_DEFINITIONS})
-
 # Tinyxml are used since the plugins are linking against gazebo_common
 # which uses tinxyml. Not defining the link directory here will end up
 # failures in clang.
 link_directories(
+  ${CCD_LIBRARY_DIRS}
   ${SDFormat_LIBRARY_DIRS}
   ${tinyxml_LIBRARY_DIRS}
 )
 
+include (${QT_USE_FILE})
+add_definitions(${QT_DEFINITIONS})
+
 if (HAVE_BULLET)
   link_directories(${BULLET_LIBRARY_DIRS})
+endif()
+
+if (HAVE_DART)
+  link_directories(${DARTCore_LIBRARY_DIRS})
 endif()
 
 set (plugins
@@ -30,6 +35,8 @@ set (plugins
   DiffDrivePlugin
   ForceTorquePlugin
   GpuRayPlugin
+  ImuSensorPlugin
+  InitialVelocityPlugin
   JointTrajectoryPlugin
   LiftDragPlugin
   ModelPropShop
@@ -65,37 +72,10 @@ set_target_properties(BreakableJointPlugin PROPERTIES
   INSTALL_RPATH ${GAZEBO_PLUGIN_INSTALL_DIR}
 )
 
-QT4_WRAP_CPP(GUIAratPlugin_MOC GUIAratPlugin.hh)
-add_library(GUIAratPlugin SHARED ${GUIAratPlugin_MOC} GUIAratPlugin.cc)
+QT4_WRAP_CPP(TimerGUIPlugin_MOC TimerGUIPlugin.hh)
+add_library(TimerGUIPlugin SHARED TimerGUIPlugin.cc ${TimerGUIPlugin_MOC})
+target_link_libraries(TimerGUIPlugin libgazebo gazebo_sensors ${ogre_libraries} ${QT_LIBRARIES})
+install (TARGETS TimerGUIPlugin DESTINATION ${GAZEBO_PLUGIN_INSTALL_DIR})
 
-# customize for haptix control plugin
-find_package(haptix_comm REQUIRED)
-find_package(ignition-transport REQUIRED)
-message(status "debug:\n\n\n${CMAKE_CXX_FLAGS} ${IGNITION-TRANSPORT_CXX_FLAGS}\n\n\n")
-# make below target specific?
-include_directories(
-  ${CMAKE_SOURCE_DIR}/deps/polhemus_driver/include
-  ${HAPTIX_COMM_INCLUDE_DIRS}
-  ${IGNITION-TRANSPORT_INCLUDE_DIRS})
-# make below target specific?
-link_directories(
-  ${HAPTIX_COMM_LIBRARY_DIRS}
-  ${IGNITION-TRANSPORT_LIBRARY_DIRS})
-# build library
-add_library(HaptixControlPlugin SHARED HaptixControlPlugin.cc)
-# additional library dependencies
-target_link_libraries(HaptixControlPlugin ${GAZEBO_LIBRARIES}
-  spnav polhemus_driver haptix_comm
-  ${IGNITION-TRANSPORT_LIBRARIES})
-target_link_libraries( GUIAratPlugin ${GAZEBO_LIBRARIES} ${OGRE_LIBRARIES} 
-            ${OGRE-Terrain_LIBRARIES} ${QT_LIBRARIES} ${PROTOBUF_LIBRARIES}
-            haptix_comm ${IGNITION-TRANSPORT_LIBRARIES})
-# below adds -std=c++11, needed to compile against ign-transport
-set_target_properties(GUIAratPlugin PROPERTIES
-  COMPILE_FLAGS ${IGNITION-TRANSPORT_CXX_FLAGS})
-set_target_properties(HaptixControlPlugin PROPERTIES
-  COMPILE_FLAGS ${IGNITION-TRANSPORT_CXX_FLAGS})
-# install library and header
-install (TARGETS HaptixControlPlugin GUIAratPlugin DESTINATION
-  ${GAZEBO_PLUGIN_INSTALL_DIR})
-gz_install_includes("plugins" HaptixControlPlugin.hh GUIAratPlugin.hh)
+add_subdirectory(events)
+
