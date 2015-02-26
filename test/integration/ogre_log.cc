@@ -17,6 +17,7 @@
 #include <boost/filesystem.hpp>
 #include <fstream>
 
+#include "gazebo/common/common.hh"
 #include "ServerFixture.hh"
 
 using namespace gazebo;

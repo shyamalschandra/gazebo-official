@@ -21,6 +21,7 @@
 #include "test/ServerFixture.hh"
 #include "test/integration/helper_physics_generator.hh"
 #include "gazebo/sensors/ImuSensor.hh"
+#include "gazebo/sensors/sensors.hh"
 
 #define TOL 1e-4
 

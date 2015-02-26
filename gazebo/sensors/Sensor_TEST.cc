@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 #include "gazebo/physics/PhysicsIface.hh"
 #include "gazebo/common/Time.hh"
+#include "gazebo/sensors/sensors.hh"
+#include "gazebo/transport/transport.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -88,11 +90,11 @@ TEST_F(Sensor_TEST, UpdateAfterReset)
   g_imuMsgCount = 0;
 
   // Subscribe to sensor messages
-  transport::NodePtr node = transport::NodePtr(new transport::Node());
-  node->Init();
-  transport::SubscriberPtr laserSub = node->Subscribe(
+  transport::NodePtr localNode = transport::NodePtr(new transport::Node());
+  localNode->Init();
+  transport::SubscriberPtr laserSub = localNode->Subscribe(
       "~/hokuyo/link/laser/scan", &ReceiveHokuyoMsg);
-  transport::SubscriberPtr imuSub = node->Subscribe(
+  transport::SubscriberPtr imuSub = localNode->Subscribe(
       "~/box_model/box_link/box_imu_sensor/imu", &ReceiveImuMsg);
 
   // Wait for messages to arrive
@@ -139,7 +141,7 @@ TEST_F(Sensor_TEST, UpdateAfterReset)
 
   // Send reset world message
   transport::PublisherPtr worldControlPub =
-    node->Advertise<msgs::WorldControl>("~/world_control");
+    localNode->Advertise<msgs::WorldControl>("~/world_control");
   {
     // Copied from MainWindow::OnResetWorld
     msgs::WorldControl msg;

@@ -14,15 +14,17 @@
  * limitations under the License.
  *
 */
+#pragma GCC diagnostic ignored "-Wfloat-equal"
 
 #include <map>
 #include <string>
 #include <vector>
 
 #include "ServerFixture.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
 #include "SimplePendulumIntegrator.hh"
-#include "gazebo/msgs/msgs.hh"
 #include "helper_physics_generator.hh"
 
 #define PHYSICS_TOL 1e-2
@@ -710,7 +712,7 @@ void PhysicsTest::JointDampingTest(const std::string &_physicsEngine)
     double dt = world->GetPhysicsEngine()->GetMaxStepSize();
     int steps = test_duration/dt;
 
-    for (int i = 0; i < steps; ++i)
+    for (i = 0; i < steps; ++i)
     {
       world->Step(1);  // theoretical contact, but
       // gzdbg << "box time [" << world->GetSimTime().Double()
@@ -761,15 +763,17 @@ void PhysicsTest::DropStuff(const std::string &_physicsEngine)
   physics::WorldPtr world = physics::get_world("default");
   EXPECT_TRUE(world != NULL);
 
-  int i = 0;
-  while (!this->HasEntity("cylinder") && i < 20)
   {
-    common::Time::MSleep(100);
-    ++i;
-  }
+    int i = 0;
+    while (!this->HasEntity("cylinder") && i < 20)
+    {
+      common::Time::MSleep(100);
+      ++i;
+    }
 
-  if (i > 20)
-    gzthrow("Unable to get cylinder");
+    if (i > 20)
+      gzthrow("Unable to get cylinder");
+  }
 
   {
     // todo: get parameters from drop_test.world
@@ -916,15 +920,17 @@ void PhysicsTest::InelasticCollision(const std::string &_physicsEngine)
   physics::WorldPtr world = physics::get_world("default");
   EXPECT_TRUE(world != NULL);
 
-  int i = 0;
-  while (!this->HasEntity("sphere") && i < 20)
   {
-    common::Time::MSleep(100);
-    ++i;
-  }
+    int i = 0;
+    while (!this->HasEntity("sphere") && i < 20)
+    {
+      common::Time::MSleep(100);
+      ++i;
+    }
 
-  if (i > 20)
-    gzthrow("Unable to get sphere");
+    if (i > 20)
+      gzthrow("Unable to get sphere");
+  }
 
   {
     // todo: get parameters from drop_test.world
@@ -1064,15 +1070,17 @@ void PhysicsTest::SphereAtlasLargeError(const std::string &_physicsEngine)
 
   physics->SetGravity(math::Vector3(0, 0, 0));
 
-  int i = 0;
-  while (!this->HasEntity("sphere_atlas") && i < 20)
   {
-    common::Time::MSleep(100);
-    ++i;
-  }
+    int i = 0;
+    while (!this->HasEntity("sphere_atlas") && i < 20)
+    {
+      common::Time::MSleep(100);
+      ++i;
+    }
 
-  if (i > 20)
-    gzthrow("Unable to get sphere_atlas");
+    if (i > 20)
+      gzthrow("Unable to get sphere_atlas");
+  }
 
   physics::ModelPtr model = world->GetModel("sphere_atlas");
   EXPECT_TRUE(model != NULL);
