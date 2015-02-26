@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  *
  */
 #include <sdf/sdf.hh>
+#include <boost/scoped_ptr.hpp>
 
 #include "gazebo/gazebo_config.h"
 
@@ -36,6 +37,8 @@
 #include "gazebo/transport/Node.hh"
 #include "gazebo/transport/TransportIface.hh"
 
+#include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/Light.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 #include "gazebo/rendering/Scene.hh"
@@ -54,7 +57,6 @@
 #include "gazebo/gui/building/BuildingEditor.hh"
 #include "gazebo/gui/terrain/TerrainEditor.hh"
 #include "gazebo/gui/model/ModelEditor.hh"
-#include "gazebo/gui/ConfigWidget.hh"
 
 #ifdef HAVE_QWT
 #include "gazebo/gui/Diagnostics.hh"
@@ -113,11 +115,11 @@ MainWindow::MainWindow()
   this->tabWidget->setMinimumWidth(MINIMUM_TAB_WIDTH);
   this->AddToLeftColumn("default", this->tabWidget);
 
-  this->CreateEditors();
-
   this->toolsWidget = new ToolsWidget();
 
   this->renderWidget = new RenderWidget(mainWidget);
+
+  this->CreateEditors();
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
@@ -263,8 +265,6 @@ void MainWindow::Init()
     this->node->Advertise<msgs::WorldControl>("~/world_control");
   this->serverControlPub =
     this->node->Advertise<msgs::ServerControl>("/gazebo/server/control");
-  this->selectionPub =
-    this->node->Advertise<msgs::Selection>("~/selection");
   this->scenePub =
     this->node->Advertise<msgs::Scene>("~/scene");
 
@@ -285,34 +285,6 @@ void MainWindow::Init()
 
   this->requestMsg = msgs::CreateRequest("scene_info");
   this->requestPub->Publish(*this->requestMsg);
-
-  // added for testing ConfigWidget
-  gazebo::gui::ConfigWidget *linkConfigWidget =
-      new gazebo::gui::ConfigWidget;
-  gazebo::msgs::Link linkMsg;
-  linkConfigWidget->Load(&linkMsg);
-
-  gazebo::gui::ConfigWidget *visualConfigWidget =
-      new gazebo::gui::ConfigWidget;
-  gazebo::msgs::Visual visualMsg;
-  visualConfigWidget->Load(&visualMsg);
-
-  gazebo::gui::ConfigWidget *collisionConfigWidget =
-      new gazebo::gui::ConfigWidget;
-  gazebo::msgs::Collision collisionMsg;
-  collisionConfigWidget->Load(&collisionMsg);
-
-  gazebo::gui::ConfigWidget *sensorConfigWidget =
-      new gazebo::gui::ConfigWidget;
-  gazebo::msgs::Sensor sensorMsg;
-  sensorConfigWidget->Load(&sensorMsg);
-
-  QTabWidget *configTabWidget = new QTabWidget();
-  configTabWidget->setObjectName("partInspectorTab");
-  configTabWidget->addTab(linkConfigWidget, "Link");
-  configTabWidget->addTab(visualConfigWidget, "Visual");
-  configTabWidget->addTab(collisionConfigWidget, "Collision");
-  configTabWidget->show();
 
   gui::Events::mainWindowReady();
 }
@@ -470,12 +442,14 @@ void MainWindow::Save()
     msg.ParseFromString(response->serialized_data());
 
     // Parse the string into sdf, so that we can insert user camera settings.
-    sdf::SDF sdf_parsed;
-    sdf_parsed.SetFromString(msg.data());
+    // Also, remove all the lights from the parsed sdf and insert lights from
+    // the current Scene.
+    sdf::SDF sdfParsed;
+    sdfParsed.SetFromString(msg.data());
     // Check that sdf contains world
-    if (sdf_parsed.root->HasElement("world"))
+    if (sdfParsed.root->HasElement("world"))
     {
-      sdf::ElementPtr world = sdf_parsed.root->GetElement("world");
+      sdf::ElementPtr world = sdfParsed.root->GetElement("world");
       sdf::ElementPtr guiElem = world->GetElement("gui");
 
       if (guiElem->HasAttribute("fullscreen"))
@@ -488,7 +462,30 @@ void MainWindow::Save()
       cameraElem->GetElement("view_controller")->Set(
           cam->GetViewControllerTypeString());
       // TODO: export track_visual properties as well.
-      msgData = sdf_parsed.root->ToString("");
+
+      // Remove lights from parsed sdf
+      sdf::ElementPtr current, next;
+      next = world->GetElement("light");
+      while (next)
+      {
+        next->RemoveFromParent();
+        next = world->GetElement("light");
+      }
+
+      // Get lights from current scene.
+      rendering::ScenePtr scene = cam->GetScene();
+      uint32_t i;
+      rendering::LightPtr light;
+      for (i = 0; i < scene->GetLightCount(); i++)
+      {
+        sdf::ElementPtr elem;
+        light = scene->GetLight(i);
+        // Clone light sdf and insert into world
+        elem = light->CloneSDF();
+        world->InsertElement(elem);
+      }
+
+      msgData = sdfParsed.root->ToString("");
     }
     else
     {
@@ -637,16 +634,6 @@ void MainWindow::OnFollow(const std::string &_modelName)
         "Press Escape to exit Follow mode", 0);
     this->editMenu->setEnabled(false);
   }
-}
-
-/////////////////////////////////////////////////
-void MainWindow::NewModel()
-{
-  /*ModelBuilderWidget *modelBuilder = new ModelBuilderWidget();
-  modelBuilder->Init();
-  modelBuilder->show();
-  modelBuilder->resize(800, 600);
-  */
 }
 
 /////////////////////////////////////////////////
@@ -999,11 +986,6 @@ void MainWindow::CreateActions()
   g_quitAct->setStatusTip(tr("Quit"));
   connect(g_quitAct, SIGNAL(triggered()), this, SLOT(close()));
 
-  g_newModelAct = new QAction(tr("New &Model"), this);
-  g_newModelAct->setShortcut(tr("Ctrl+M"));
-  g_newModelAct->setStatusTip(tr("Create a new model"));
-  connect(g_newModelAct, SIGNAL(triggered()), this, SLOT(NewModel()));
-
   g_resetModelsAct = new QAction(tr("&Reset Model Poses"), this);
   g_resetModelsAct->setShortcut(tr("Ctrl+Shift+R"));
   g_resetModelsAct->setStatusTip(tr("Reset model poses"));
@@ -1016,6 +998,10 @@ void MainWindow::CreateActions()
   connect(g_resetWorldAct, SIGNAL(triggered()), this, SLOT(OnResetWorld()));
 
   QActionGroup *editorGroup = new QActionGroup(this);
+  // Exclusive doesn't allow all actions to be unchecked at the same time
+  editorGroup->setExclusive(false);
+  connect(editorGroup, SIGNAL(triggered(QAction *)), this,
+      SLOT(OnEditorGroup(QAction *)));
 
   g_editBuildingAct = new QAction(tr("&Building Editor"), editorGroup);
   g_editBuildingAct->setShortcut(tr("Ctrl+B"));
@@ -1815,4 +1801,18 @@ void MainWindow::SetLeftPaneVisibility(bool _on)
   sizes.push_back(rightPane);
 
   this->splitter->setSizes(sizes);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnEditorGroup(QAction *_action)
+{
+  QActionGroup * editorGroup = _action->actionGroup();
+  // Manually uncheck all other actions in the group
+  for (int i = 0; i < editorGroup->actions().size(); ++i)
+  {
+    if (editorGroup->actions()[i] != _action)
+    {
+      editorGroup->actions()[i]->setChecked(false);
+    }
+  }
 }
