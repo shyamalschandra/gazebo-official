@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,23 +71,8 @@ class JointSpawningTest_RotationalWorld : public JointSpawningTest {};
 void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
                                         const std::string &_jointType)
 {
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")  // &&
-  //    _jointType != "revolute" && _jointType != "prismatic")
-  {
-    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
-    return;
-  }
-
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   // disable gravity
   physics->SetGravity(math::Vector3::Zero);
@@ -145,10 +130,10 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
     gzerr << "Skip tests for child world link cases "
           << "since DART does not allow joint with world as child. "
           << "Please see issue #914. "
-          << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-    return;
+          << "(https://bitbucket.org/osrf/gazebo/issue/914)"
+          << std::endl;
   }
-
+  else
   {
     gzdbg << "SpawnJoint " << _jointType << " world parent" << std::endl;
     physics::JointPtr joint = SpawnJoint(_jointType, true, false);
@@ -173,22 +158,8 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
 void JointSpawningTest::SpawnJointRotational(const std::string &_physicsEngine,
                                              const std::string &_jointType)
 {
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody" && _jointType != "revolute")
-  {
-    gzerr << "Aborting test for Simbody, see issue #859.\n";
-    return;
-  }
-
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   gzdbg << "SpawnJoint " << _jointType << std::endl;
   physics::JointPtr joint = SpawnJoint(_jointType);
@@ -226,37 +197,12 @@ void JointSpawningTest::SpawnJointRotationalWorld(
   const std::string &_physicsEngine,
   const std::string &_jointType)
 {
-  /// \TODO: simbody not complete for this test
-  if (_physicsEngine == "simbody")  // && _jointType != "revolute")
-  {
-    gzerr << "Aborting test for Simbody, see issues #859, #861.\n";
-    return;
-  }
-
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   physics::JointPtr joint;
   for (unsigned int i = 0; i < 2; ++i)
   {
-    if (_physicsEngine == "dart" && i == 0)
-    {
-      // DART assumes that: (i) every link has its parent joint (ii) root link
-      // is the only link that doesn't have parent link.
-      // Child world link breaks dart for now. Do we need to support it?
-      gzerr << "Skip tests for child world link cases "
-            << "since DART does not allow joint with world as child. "
-            << "Please see issue #914. "
-            << "(https://bitbucket.org/osrf/gazebo/issue/914)\n";
-      continue;
-    }
     bool worldChild = (i == 0);
     bool worldParent = (i == 1);
     std::string child = worldChild ? "world" : "child";
@@ -264,15 +210,30 @@ void JointSpawningTest::SpawnJointRotationalWorld(
     gzdbg << "SpawnJoint " << _jointType << " "
           << child << " "
           << parent << std::endl;
+
+    if ((_physicsEngine == "dart" || _physicsEngine == "simbody")
+        && worldChild)
+    {
+      // These physics engines don't support world as a child link.
+      // simbody https://bitbucket.org/osrf/gazebo/issue/861
+      // dart https://bitbucket.org/osrf/gazebo/issue/914
+      gzerr << "Skip tests for child world link cases since "
+            << _physicsEngine
+            << " does not allow joint with world as child. "
+            << "Please see bitbucket issues #861, #914."
+            << std::endl;
+      continue;
+    }
+
     joint = SpawnJoint(_jointType, worldChild, worldParent);
-    EXPECT_TRUE(joint != NULL);
+    ASSERT_TRUE(joint != NULL);
 
     physics::LinkPtr link;
     if (!worldChild)
       link = joint->GetChild();
     else if (!worldParent)
       link = joint->GetParent();
-    EXPECT_TRUE(link != NULL);
+    ASSERT_TRUE(link != NULL);
 
     math::Pose initialPose = link->GetWorldPose();
     world->Step(100);
@@ -291,8 +252,8 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
   ASSERT_TRUE(world != NULL);
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
-  bool isOde = physics->GetType().compare("ode") == 0;
   bool isBullet = physics->GetType().compare("bullet") == 0;
+  bool isSimbody = physics->GetType().compare("simbody") == 0;
   double dt = physics->GetMaxStepSize();
 
   if (_joint->HasType(physics::Base::HINGE2_JOINT) ||
@@ -308,6 +269,9 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     return;
   }
 
+  // Reset world prior to testing SetVelocity
+  // This is needed for SimbodyUniversalJoint
+  world->Reset();
   double velocityMagnitude = 1.0;
   std::vector<double> velocities;
   velocities.push_back(velocityMagnitude);
@@ -370,7 +334,7 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
           << " joint"
           << std::endl;
   }
-  else if (!isOde && !isBullet)
+  else if (isSimbody)
   {
     gzerr << "Skipping friction test for "
           << physics->GetType()
@@ -385,7 +349,7 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
 
     // set friction to 1.0
     const double friction = 1.0;
-    _joint->SetParam("friction", _index, friction);
+    EXPECT_TRUE(_joint->SetParam("friction", _index, friction));
     EXPECT_NEAR(_joint->GetParam("friction", _index), friction, g_tolerance);
 
     for (unsigned int i = 0; i < 500; ++i)
@@ -409,6 +373,10 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     // Expect motion
     EXPECT_GT(_joint->GetVelocity(_index), 0.2 * friction);
     EXPECT_GT(_joint->GetAngle(_index).Radian(), 0.05 * friction);
+
+    // Set friction back to zero to not interfere with other tests
+    EXPECT_TRUE(_joint->SetParam("friction", _index, 0.0));
+    EXPECT_NEAR(_joint->GetParam("friction", _index), 0.0, g_tolerance);
   }
 
   // SetHighStop
@@ -462,6 +430,12 @@ TEST_P(JointSpawningTest_All, SpawnJointTypes)
           << std::endl;
     return;
   }
+  if (physicsEngine == "simbody" && jointType == "revolute2")
+  {
+    gzerr << "Skip test, revolute2 not supported in simbody, see issue #859."
+          << std::endl;
+    return;
+  }
   SpawnJointTypes(this->physicsEngine, this->jointType);
 }
 
@@ -493,10 +467,10 @@ INSTANTIATE_TEST_CASE_P(TestRuns, JointSpawningTest_Rotational,
                   , "ball")));
 
 // Skip prismatic, screw, and revolute2 because they allow translation
-// Skip universal because it can't be connected to world in bullet.
 INSTANTIATE_TEST_CASE_P(TestRuns, JointSpawningTest_RotationalWorld,
   ::testing::Combine(PHYSICS_ENGINE_VALUES,
   ::testing::Values("revolute"
+                  , "universal"
                   , "ball")));
 
 int main(int argc, char **argv)

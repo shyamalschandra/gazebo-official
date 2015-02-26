@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,18 +45,6 @@ namespace gazebo
                   const std::vector<math::Vector2d> &_vertices,
                   const double &_height,
                   SubMesh *_submesh);
-
-      /// \brief Create an extruded submesh from a 2D outline
-      /// \param[in] _vertices the x y dimentions of eah vertex in meter
-      /// \param[in] _height the height of the polyline
-      /// \param[out] _submesh A submesh that will be populated with the
-      /// extruded outline.
-      /// \return True on success.
-      public: static bool CreateExtrudedOutlines(
-                  const std::vector<std::vector<math::Vector2d> > &_path,
-                  const double &_height,
-                  SubMesh *_submesh);
-
     };
   }
 }
