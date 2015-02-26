@@ -2526,9 +2526,27 @@ void dxQuickStepper (dxWorldProcessContext *context,
     // update the position and orientation from the new linear/angular velocity
     // (over the given timestep)
     IFTIMING (dTimerNow ("update position"));
+    const dReal *caccelcurr = caccel;
     dxBody *const *const bodyend = body + nb;
-    for (dxBody *const *bodycurr = body; bodycurr != bodyend; bodycurr++) {
+    for (dxBody *const *bodycurr = body; bodycurr != bodyend;
+         caccelcurr += 6, ++bodycurr)
+    {
       dxBody *b_ptr = *bodycurr;
+      {
+        // sum all forces (external and constraint) into facc and tacc
+        // so dBodyGetForce and dBodyGetTorque returns total force and torque
+        // on the body
+        dReal cf[6];
+        cf[0] = b_ptr->mass.mass * caccelcurr[0];
+        cf[1] = b_ptr->mass.mass * caccelcurr[1];
+        cf[2] = b_ptr->mass.mass * caccelcurr[2];
+        dMultiply0_331 (cf+3, b_ptr->mass.I, caccelcurr+3);
+        for (unsigned int j = 0; j < 3; ++j)
+        {
+          b_ptr->facc[j] += cf[j];
+          b_ptr->tacc[j] += cf[3+j];
+        }
+      }
       dxStepBody (b_ptr,stepsize);
     }
   }
@@ -2641,6 +2659,12 @@ void dxQuickStepper (dxWorldProcessContext *context,
     dxBody *const *const bodyend = body + nb;
     for (dxBody *const *bodycurr = body; bodycurr != bodyend; bodycurr++) {
       dxBody *b_ptr = *bodycurr;
+      b_ptr->facc_last[0] = b_ptr->facc[0];
+      b_ptr->facc_last[1] = b_ptr->facc[1];
+      b_ptr->facc_last[2] = b_ptr->facc[2];
+      b_ptr->tacc_last[0] = b_ptr->tacc[0];
+      b_ptr->tacc_last[1] = b_ptr->tacc[1];
+      b_ptr->tacc_last[2] = b_ptr->tacc[2];
       dSetZero (b_ptr->facc,3);
       dSetZero (b_ptr->tacc,3);
     }
