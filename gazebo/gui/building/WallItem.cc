@@ -408,14 +408,17 @@ void WallItem::UpdateSegmentChildren(LineSegmentItem *_segment)
   QList<QGraphicsItem *> children = _segment->childItems();
   for (int j = 0; j < children.size(); ++j)
   {
-    // TODO find a more generic way than casting child as rect item
+    // TODO find a more generic way than casting child as rect item,
+    // and need to keep wall-children pos ratio fixed
     RectItem *rectItem = dynamic_cast<RectItem *>(children[j]);
     if (rectItem)
     {
       rectItem->SetRotation(-_segment->line().angle());
-      QPointF segLine = _segment->line().p2() - _segment->line().p1();
-      rectItem->setPos(_segment->line().p1() + rectItem->GetPositionOnWall()*
-          segLine);
+      QPointF delta = rectItem->pos() - _segment->line().p1();
+      QPointF deltaLine = _segment->line().p2() - _segment->line().p1();
+      double deltaRatio = sqrt(delta.x()*delta.x() + delta.y()*delta.y())
+          / _segment->line().length();
+      rectItem->setPos(_segment->line().p1() + deltaRatio*deltaLine);
     }
   }
 }
