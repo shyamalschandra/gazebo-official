@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@
 #define _VIEWCONTROLLER_HH_
 
 #include <string>
-#include "common/CommonTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/common/CommonTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +31,7 @@ namespace gazebo
 
     /// \class ViewController ViewController.hh rendering/rendering.hh
     /// \brief Base class for view controllers.
-    class ViewController
+    class GAZEBO_VISIBLE ViewController
     {
       /// \brief Constructor
       /// \param[in] _camera The user camera to controll.
@@ -58,6 +59,14 @@ namespace gazebo
       /// \param[in] _event The mouse position.
       public: virtual void HandleMouseEvent(
                   const common::MouseEvent &_event) = 0;
+
+      /// \brief Handle a key release event.
+      /// \param[in] _key The key that was released.
+      public: virtual void HandleKeyReleaseEvent(const std::string &_key) = 0;
+
+      /// \brief Handle a key press event
+      /// \param[in] _key The key that was pressed.
+      public: virtual void HandleKeyPressEvent(const std::string &_key) = 0;
 
       /// \brief Get the type of view controller.
       /// \return The view controller type string.

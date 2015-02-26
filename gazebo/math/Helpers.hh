@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  *
 */
-#ifndef GAZEBO_MATH_FUNCTIONS_HH
-#define GAZEBO_MATH_FUNCTIONS_HH
+#ifndef _GAZEBO_MATH_FUNCTIONS_HH_
+#define _GAZEBO_MATH_FUNCTIONS_HH_
 
 #include <boost/math/special_functions/fpclassify.hpp>
+#include <boost/math/special_functions/round.hpp>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -25,11 +26,30 @@
 #include <iostream>
 #include <vector>
 
+/// \brief Double maximum value
 #define GZ_DBL_MAX std::numeric_limits<double>::max()
+
+/// \brief Double min value
 #define GZ_DBL_MIN std::numeric_limits<double>::min()
 
+/// \brief Float maximum value
 #define GZ_FLT_MAX std::numeric_limits<float>::max()
+
+/// \brief Float minimum value
 #define GZ_FLT_MIN std::numeric_limits<float>::min()
+
+/// \brief 32bit unsigned integer maximum value
+#define GZ_UINT32_MAX std::numeric_limits<uint32_t>::max()
+
+/// \brief 32bit unsigned integer minimum value
+#define GZ_UINT32_MIN std::numeric_limits<uint32_t>::min()
+
+/// \brief 32bit integer maximum value
+#define GZ_INT32_MAX std::numeric_limits<int32_t>::max()
+
+/// \brief 32bit integer minimum value
+#define GZ_INT32_MIN std::numeric_limits<int32_t>::min()
+
 
 namespace gazebo
 {
@@ -40,10 +60,16 @@ namespace gazebo
     ///        functions.
     /// \{
 
+    /// \brief Returns the representation of a quiet not a number (NAN)
     static const double NAN_D = std::numeric_limits<double>::quiet_NaN();
-    static const double NAN_I = std::numeric_limits<int>::quiet_NaN();
 
-    /// \brief simple clamping function
+    /// \brief Returns the representation of a quiet not a number (NAN)
+    static const int NAN_I = std::numeric_limits<int>::quiet_NaN();
+
+    /// \brief Simple clamping function
+    /// \param[in] _v value
+    /// \param[in] _min minimum
+    /// \param[in] _max maximum
     template<typename T>
     inline T clamp(T _v, T _min, T _max)
     {
@@ -51,18 +77,40 @@ namespace gazebo
     }
 
     /// \brief check if a float is NaN
+    /// \param[in] _v the value
+    /// \return true if _v is not a number, false otherwise
     inline bool isnan(float _v)
     {
       return (boost::math::isnan)(_v);
     }
 
     /// \brief check if a double is NaN
+    /// \param[in] _v the value
+    /// \return true if _v is not a number, false otherwise
     inline bool isnan(double _v)
     {
       return (boost::math::isnan)(_v);
     }
 
+    /// \brief Fix a nan value.
+    /// \param[in] _v Value to correct.
+    /// \return 0 if _v is NaN, _v otherwise.
+    inline float fixnan(float _v)
+    {
+      return isnan(_v) || std::isinf(_v) ? 0.0f : _v;
+    }
+
+    /// \brief Fix a nan value.
+    /// \param[in] _v Value to correct.
+    /// \return 0 if _v is NaN, _v otherwise.
+    inline double fixnan(double _v)
+    {
+      return isnan(_v) || std::isinf(_v) ? 0.0 : _v;
+    }
+
     /// \brief get mean of vector of values
+    /// \param[in] _values the vector of values
+    /// \return the mean
     template<typename T>
     inline T mean(const std::vector<T> &_values)
     {
@@ -73,6 +121,8 @@ namespace gazebo
     }
 
     /// \brief get variance of vector of values
+    /// \param[in] _values the vector of values
+    /// \return the squared deviation
     template<typename T>
     inline T variance(const std::vector<T> &_values)
     {
@@ -84,7 +134,9 @@ namespace gazebo
       return sum / _values.size();
     }
 
-    /// \brief get variance of vector of values
+    /// \brief get the maximum value of vector of values
+    /// \param[in] _values the vector of values
+    /// \return maximum
     template<typename T>
     inline T max(const std::vector<T> &_values)
     {
@@ -95,7 +147,9 @@ namespace gazebo
       return max;
     }
 
-    /// \brief get min of vector of values
+    /// \brief get the minimum value of vector of values
+    /// \param[in] _values the vector of values
+    /// \return minimum
     template<typename T>
     inline T min(const std::vector<T> &_values)
     {
@@ -106,7 +160,10 @@ namespace gazebo
       return min;
     }
 
-    /// \brief check if two values are equal in the machine precision sense
+    /// \brief check if two values are equal, within a tolerance
+    /// \param[in] _a the first value
+    /// \param[in] _b the second value
+    /// \param[in] _epsilon the tolerance
     template<typename T>
     inline bool equal(const T &_a, const T &_b,
                       const T &_epsilon = 1e-6)
@@ -114,23 +171,51 @@ namespace gazebo
       return std::fabs(_a - _b) <= _epsilon;
     }
 
-    /// \brief get precision of a value
+    /// \brief get value at a specified precision
+    /// \param[in] _a the number
+    /// \param[in] _precision the precision
+    /// \return the value for the specified precision
     template<typename T>
     inline T precision(const T &_a, const unsigned int &_precision)
     {
-      return round(_a * pow(10, _precision)) / pow(10, _precision);
+      return boost::math::round(_a * pow(10, _precision)) / pow(10, _precision);
     }
 
     /// \brief is this a power of 2?
+    /// \param[in] _x the number
+    /// \return true if _x is a power of 2, false otherwise
     inline bool isPowerOfTwo(unsigned int _x)
     {
       return ((_x != 0) && ((_x & (~_x + 1)) == _x));
     }
 
-    /// \brief parse string into int
-    inline int parseInt(const std::string& input)
+    /// \brief Get the smallest power of two that is greater or equal to a given
+    /// value
+    /// \param[in] _x the number
+    /// \return the same value if _x is already a power of two. Otherwise,
+    /// it returns the smallest power of two that is greater than _x
+    inline unsigned int roundUpPowerOfTwo(unsigned int _x)
     {
-      const char *p = input.c_str();
+      if (_x == 0)
+        return 1;
+
+      if (isPowerOfTwo(_x))
+        return _x;
+
+      while (_x & (_x - 1))
+        _x = _x & (_x - 1);
+
+      _x = _x << 1;
+
+      return _x;
+    }
+
+    /// \brief parse string into an integer
+    /// \param[in] _input the string
+    /// \return an integer, 0 or 0 and a message in the error stream
+    inline int parseInt(const std::string& _input)
+    {
+      const char *p = _input.c_str();
       if (!*p || *p == '?')
         return NAN_I;
 
@@ -150,7 +235,7 @@ namespace gazebo
 
       if (*p)
       {
-        std::cerr << "Invalid int numeric format[" << input << "]\n";
+        std::cerr << "Invalid int numeric format[" << _input << "]\n";
         return 0.0;
       }
 
@@ -158,9 +243,12 @@ namespace gazebo
     }
 
     /// \brief parse string into float
-    inline double parseFloat(const std::string& input)
+    /// \param _input the string
+    /// \return a floating point number (can be NaN) or 0 with a message in the
+    /// error stream
+    inline double parseFloat(const std::string& _input)
     {
-      const char *p = input.c_str();
+      const char *p = _input.c_str();
       if (!*p || *p == '?')
         return NAN_D;
       int s = 1;
@@ -210,7 +298,7 @@ namespace gazebo
 
       if (*p)
       {
-        std::cerr << "Invalid double numeric format[" << input << "]\n";
+        std::cerr << "Invalid double numeric format[" << _input << "]\n";
         return 0.0;
       }
       return s * acc;

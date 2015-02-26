@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #define _SELECTIONBUFFER_HH_
 
 #include <string>
+#include "gazebo/util/system.hh"
 
 namespace Ogre
 {
@@ -37,7 +38,7 @@ namespace gazebo
     class SelectionRenderListener;
     class Scene;
 
-    class SelectionBuffer
+    class GAZEBO_VISIBLE SelectionBuffer
     {
       /// \brief Constructor
       /// \param[in] _camera Name of the camera to generate a selection
@@ -62,6 +63,12 @@ namespace gazebo
 
       /// \brief Call this to update the selection buffer contents
       public: void Update();
+
+      /// \brief Delete the render texture
+      private: void DeleteRTTBuffer();
+
+      /// \brief Create the render texture
+      private: void CreateRTTBuffer();
 
       /// \brief Create the selection buffer offscreen render texture.
       private: void CreateRTTOverlays();

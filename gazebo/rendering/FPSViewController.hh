@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@
 
 #include <string>
 
-#include "rendering/ViewController.hh"
+#include "gazebo/rendering/ViewController.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +31,7 @@ namespace gazebo
 
     /// \class FPSViewController FPSViewController.hh rendering/rendering.hh
     /// \brief First Person Shooter style view controller
-    class FPSViewController : public ViewController
+    class GAZEBO_VISIBLE FPSViewController : public ViewController
     {
       /// \brief Constructor
       /// \param[in] Camera to controll
@@ -49,11 +50,29 @@ namespace gazebo
       /// \return The name of the controller type: "fps"
       public: static std::string GetTypeString();
 
-      /// \brief Handle a mouse event
-      ///
-      /// This is ususally called from the graphical interface.
-      /// \param[in] _event The mouse event.
+      // Documentation inherited from parent
       public: virtual void HandleMouseEvent(const common::MouseEvent &_event);
+
+      // Documentation inherited from parent
+      public: void HandleKeyReleaseEvent(const std::string &_key);
+
+      // Documentation inherited from parent
+      public: void HandleKeyPressEvent(const std::string &_key);
+
+      /// \brief The current velocity of the camera.
+      private: math::Pose velocity;
+
+      /// \brief Translation velocity factor along the x-axis
+      private: float xVelocityFactor;
+
+      /// \brief Translation velocity factor along the y-axis
+      private: float yVelocityFactor;
+
+      /// \brief Translation velocity along the x-axis
+      private: math::Vector3 xVelocity;
+
+      /// \brief Translation velocity along the y-axis
+      private: math::Vector3 yVelocity;
     };
     /// \}
   }
