@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  *
 */
-#ifndef GAZEBO_MATH_FUNCTIONS_HH
-#define GAZEBO_MATH_FUNCTIONS_HH
+#ifndef _GAZEBO_MATH_FUNCTIONS_HH_
+#define _GAZEBO_MATH_FUNCTIONS_HH_
 
 #include <boost/math/special_functions/fpclassify.hpp>
+#include <boost/math/special_functions/round.hpp>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -25,11 +26,30 @@
 #include <iostream>
 #include <vector>
 
+/// \brief Double maximum value
 #define GZ_DBL_MAX std::numeric_limits<double>::max()
+
+/// \brief Double min value
 #define GZ_DBL_MIN std::numeric_limits<double>::min()
 
+/// \brief Float maximum value
 #define GZ_FLT_MAX std::numeric_limits<float>::max()
+
+/// \brief Float minimum value
 #define GZ_FLT_MIN std::numeric_limits<float>::min()
+
+/// \brief 32bit unsigned integer maximum value
+#define GZ_UINT32_MAX std::numeric_limits<uint32_t>::max()
+
+/// \brief 32bit unsigned integer minimum value
+#define GZ_UINT32_MIN std::numeric_limits<uint32_t>::min()
+
+/// \brief 32bit integer maximum value
+#define GZ_INT32_MAX std::numeric_limits<int32_t>::max()
+
+/// \brief 32bit integer minimum value
+#define GZ_INT32_MIN std::numeric_limits<int32_t>::min()
+
 
 namespace gazebo
 {
@@ -40,13 +60,13 @@ namespace gazebo
     ///        functions.
     /// \{
 
-    /// \brief Not a number
+    /// \brief Returns the representation of a quiet not a number (NAN)
     static const double NAN_D = std::numeric_limits<double>::quiet_NaN();
 
-    /// \brief TODO Nate: type int has no quiet_NaN ... what does this 0 mean?
-    static const double NAN_I = std::numeric_limits<int>::quiet_NaN();
+    /// \brief Returns the representation of a quiet not a number (NAN)
+    static const int NAN_I = std::numeric_limits<int>::quiet_NaN();
 
-    /// \brief simple clamping function
+    /// \brief Simple clamping function
     /// \param[in] _v value
     /// \param[in] _min minimum
     /// \param[in] _max maximum
@@ -72,6 +92,22 @@ namespace gazebo
       return (boost::math::isnan)(_v);
     }
 
+    /// \brief Fix a nan value.
+    /// \param[in] _v Value to correct.
+    /// \return 0 if _v is NaN, _v otherwise.
+    inline float fixnan(float _v)
+    {
+      return isnan(_v) || std::isinf(_v) ? 0.0f : _v;
+    }
+
+    /// \brief Fix a nan value.
+    /// \param[in] _v Value to correct.
+    /// \return 0 if _v is NaN, _v otherwise.
+    inline double fixnan(double _v)
+    {
+      return isnan(_v) || std::isinf(_v) ? 0.0 : _v;
+    }
+
     /// \brief get mean of vector of values
     /// \param[in] _values the vector of values
     /// \return the mean
@@ -85,7 +121,7 @@ namespace gazebo
     }
 
     /// \brief get variance of vector of values
-    /// \param _values the vector of values
+    /// \param[in] _values the vector of values
     /// \return the squared deviation
     template<typename T>
     inline T variance(const std::vector<T> &_values)
@@ -142,7 +178,7 @@ namespace gazebo
     template<typename T>
     inline T precision(const T &_a, const unsigned int &_precision)
     {
-      return round(_a * pow(10, _precision)) / pow(10, _precision);
+      return boost::math::round(_a * pow(10, _precision)) / pow(10, _precision);
     }
 
     /// \brief is this a power of 2?
@@ -151,6 +187,27 @@ namespace gazebo
     inline bool isPowerOfTwo(unsigned int _x)
     {
       return ((_x != 0) && ((_x & (~_x + 1)) == _x));
+    }
+
+    /// \brief Get the smallest power of two that is greater or equal to a given
+    /// value
+    /// \param[in] _x the number
+    /// \return the same value if _x is already a power of two. Otherwise,
+    /// it returns the smallest power of two that is greater than _x
+    inline unsigned int roundUpPowerOfTwo(unsigned int _x)
+    {
+      if (_x == 0)
+        return 1;
+
+      if (isPowerOfTwo(_x))
+        return _x;
+
+      while (_x & (_x - 1))
+        _x = _x & (_x - 1);
+
+      _x = _x << 1;
+
+      return _x;
     }
 
     /// \brief parse string into an integer

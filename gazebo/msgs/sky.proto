@@ -3,37 +3,20 @@ package gazebo.msgs;
 /// \ingroup gazebo_msgs
 /// \interface Sky 
 /// \brief Information about the sky
-/// \verbatim
+
 
 import "color.proto";
-import "vector4d.proto";
 
 message Sky
 {
-  message Clouds
-  {
-    required bool enabled             = 1[default=true];
-    optional double speed             = 2[default=0.0];
-    optional double direction         = 3[default=0.0];
-    optional Color ambient            = 4;
-    optional double humidity          = 5[default=0.5];
-    optional double mean_size         = 6[default=0.5];
-    optional Vector4d light_response  = 7;
-    optional Vector4d ambient_factors = 8;
-  }
+  optional double time           = 1;
+  optional double sunrise        = 2;
+  optional double sunset         = 3;
 
-  message Lightning
-  {
-    optional double mean_time       = 1[default=1.0];
-    optional double time_multiplier = 2[default=0.5];
-    optional Color color            = 3;
-  }
-
-  optional double time           = 1[default=10.0];
-  optional double sunrise        = 2[default=6.0];
-  optional double sunset         = 3[default=20.0];
-  optional double moon_phase     = 4[default=0.0];
-  optional Clouds clouds         = 5;
-  optional Lightning lightning   = 6;
+  optional double wind_speed     = 4;
+  optional double wind_direction = 5;
+  optional Color cloud_ambient   = 6;
+  optional double humidity       = 7;
+  optional double mean_cloud_size = 8;
 }
-/// \endverbatim
+
