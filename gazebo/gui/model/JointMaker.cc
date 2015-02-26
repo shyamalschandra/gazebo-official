@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
 #include "gazebo/gui/GuiEvents.hh"
 
 #include "gazebo/gui/model/JointInspector.hh"
+#include "gazebo/gui/model/ModelEditorEvents.hh"
 #include "gazebo/gui/model/JointMaker.hh"
 
 using namespace gazebo;
@@ -161,6 +162,7 @@ void JointMaker::RemoveJoint(const std::string &_jointName)
     delete joint->inspector;
     delete joint;
     this->joints.erase(_jointName);
+    gui::model::Events::modelChanged();
   }
 }
 
@@ -288,6 +290,7 @@ bool JointMaker::OnMouseRelease(const common::MouseEvent &_event)
           this->AddJoint(JointMaker::JOINT_NONE);
 
           this->newJointCreated = true;
+          gui::model::Events::modelChanged();
         }
       }
     }
@@ -310,7 +313,7 @@ JointData *JointMaker::CreateJoint(rendering::VisualPtr _parent,
   jointVis->Load();
   rendering::DynamicLines *jointLine =
       jointVis->CreateDynamicLine(rendering::RENDERING_LINE_LIST);
-  math::Vector3 origin = this->GetPartWorldCentroid(_parent)
+  math::Vector3 origin = _parent->GetWorldPose().pos
       - _parent->GetParent()->GetWorldPose().pos;
   jointLine->AddPoint(origin);
   jointLine->AddPoint(origin + math::Vector3(0, 0, 0.1));
@@ -644,19 +647,17 @@ void JointMaker::Update()
 
         if (joint->dirty || poseUpdate)
         {
-          // get centroid of parent part visuals
-          math::Vector3 parentCentroid =
-              this->GetPartWorldCentroid(joint->parent);
+          // get origin of parent part visuals
+          math::Vector3 parentOrigin = joint->parent->GetWorldPose().pos;
 
-          // get centroid of child part visuals
-          math::Vector3 childCentroid =
-              this->GetPartWorldCentroid(joint->child);
+          // get origin of child part visuals
+          math::Vector3 childOrigin = joint->child->GetWorldPose().pos;
 
           // set orientation of joint hotspot
-          math::Vector3 dPos = (childCentroid - parentCentroid);
+          math::Vector3 dPos = (childOrigin - parentOrigin);
           math::Vector3 center = dPos/2.0;
           joint->hotspot->SetScale(math::Vector3(0.02, 0.02, dPos.GetLength()));
-          joint->hotspot->SetWorldPosition(parentCentroid + center);
+          joint->hotspot->SetWorldPosition(parentOrigin + center);
           math::Vector3 u = dPos.Normalize();
           math::Vector3 v = math::Vector3::UnitZ;
           double cosTheta = v.Dot(u);
@@ -686,7 +687,7 @@ void JointMaker::Update()
 
           // set pos of joint handle
           joint->handles->getBillboard(0)->setPosition(
-              rendering::Conversions::Convert(parentCentroid -
+              rendering::Conversions::Convert(parentOrigin -
               joint->hotspot->GetWorldPose().pos));
           joint->handles->_updateBounds();
         }
@@ -730,14 +731,27 @@ void JointMaker::Update()
           int axisCount = JointMaker::GetJointAxisCount(joint->type);
           for (int i = 0; i < axisCount; ++i)
           {
-            joint->jointMsg->add_angle(0);
             msgs::Axis *axisMsg;
             if (i == 0)
+            {
               axisMsg = joint->jointMsg->mutable_axis1();
+            }
             else if (i == 1)
+            {
               axisMsg = joint->jointMsg->mutable_axis2();
-
+            }
+            else
+            {
+              gzerr << "Invalid axis index["
+                    << i
+                    << "]"
+                    << std::endl;
+              continue;
+            }
             msgs::Set(axisMsg->mutable_xyz(), joint->axis[i]);
+
+            // Add angle field after we've checked that index i is valid
+            joint->jointMsg->add_angle(0);
           }
 
           if (joint->jointVisual)
@@ -755,7 +769,7 @@ void JointMaker::Update()
           }
 
           // Line now connects the child link to the joint frame
-          joint->line->SetPoint(0, this->GetPartWorldCentroid(joint->child));
+          joint->line->SetPoint(0, joint->child->GetWorldPose().pos);
           joint->line->SetPoint(1, joint->jointVisual->GetWorldPose().pos);
           joint->line->setMaterial(this->jointMaterials[joint->type]);
           joint->dirty = false;
@@ -933,4 +947,5 @@ void JointData::OnApply()
     this->upperLimit[i] = this->inspector->GetUpperLimit(i);
   }
   this->dirty = true;
+  gui::model::Events::modelChanged();
 }
