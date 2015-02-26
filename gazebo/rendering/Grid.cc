@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,8 +113,7 @@ void Grid::Init()
 {
   this->manualObject =
     this->scene->GetManager()->createManualObject(this->name);
-  this->manualObject->setVisibilityFlags(GZ_VISIBILITY_GUI |
-                                         GZ_VISIBILITY_NOT_SELECTABLE);
+  this->manualObject->setVisibilityFlags(GZ_VISIBILITY_GUI);
 
   this->manualObject->setDynamic(false);
   // this->manualObject->setRenderQueueGroup(
@@ -205,7 +204,7 @@ void Grid::Create()
 //////////////////////////////////////////////////
 void Grid::SetUserData(const Ogre::Any &_data)
 {
-  this->manualObject->setUserAny(_data);
+  this->manualObject->getUserObjectBindings().setUserAny(_data);
 }
 
 //////////////////////////////////////////////////

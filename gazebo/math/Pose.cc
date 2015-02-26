@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,19 +46,6 @@ Pose::Pose(double _x, double _y, double _z,
 }
 
 //////////////////////////////////////////////////
-Pose::Pose(const sdf::Pose &_pose)
-{
-  this->pos.x = _pose.pos.x;
-  this->pos.y = _pose.pos.y;
-  this->pos.z = _pose.pos.z;
-
-  this->rot.x = _pose.rot.x;
-  this->rot.y = _pose.rot.y;
-  this->rot.z = _pose.rot.z;
-  this->rot.w = _pose.rot.w;
-}
-
-//////////////////////////////////////////////////
 Pose::Pose(const Pose &_pose)
   : pos(_pose.pos), rot(_pose.rot)
 {
@@ -74,6 +61,13 @@ void Pose::Set(const Vector3 &_pos, const Quaternion &_rot)
 {
   this->pos = _pos;
   this->rot = _rot;
+}
+
+//////////////////////////////////////////////////
+void Pose::Set(const Vector3 &_pos, const Vector3 &_rpy)
+{
+  this->pos = _pos;
+  this->rot.SetFromEuler(_rpy);
 }
 
 //////////////////////////////////////////////////
@@ -149,21 +143,6 @@ Pose &Pose::operator=(const Pose &_pose)
 {
   this->pos = _pose.pos;
   this->rot = _pose.rot;
-  return *this;
-}
-
-//////////////////////////////////////////////////
-Pose &Pose::operator=(const sdf::Pose &_pose)
-{
-  this->pos.x = _pose.pos.x;
-  this->pos.y = _pose.pos.y;
-  this->pos.z = _pose.pos.z;
-
-  this->rot.x = _pose.rot.x;
-  this->rot.y = _pose.rot.y;
-  this->rot.z = _pose.rot.z;
-  this->rot.w = _pose.rot.w;
-
   return *this;
 }
 

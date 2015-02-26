@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  *
 */
 #include <sdf/sdf.hh>
-
-#include "math/Pose.hh"
-#include "common/Console.hh"
-#include "common/MeshManager.hh"
-#include "common/Mesh.hh"
-#include "common/Material.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/MeshManager.hh"
+#include "gazebo/common/Mesh.hh"
+#include "gazebo/common/Material.hh"
 
 std::vector<std::string> params;
 

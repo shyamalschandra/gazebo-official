@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,10 @@ using namespace gazebo;
 using namespace math;
 
 const Vector3 Vector3::Zero = math::Vector3(0, 0, 0);
+const Vector3 Vector3::One = math::Vector3(1, 1, 1);
+const Vector3 Vector3::UnitX = math::Vector3(1, 0, 0);
+const Vector3 Vector3::UnitY = math::Vector3(0, 1, 0);
+const Vector3 Vector3::UnitZ = math::Vector3(0, 0, 1);
 
 //////////////////////////////////////////////////
 Vector3::Vector3()
@@ -41,12 +45,6 @@ Vector3::Vector3(const double &_x, const double &_y, const double &_z)
 
 //////////////////////////////////////////////////
 Vector3::Vector3(const Vector3 &_pt)
-    : x(_pt.x), y(_pt.y), z(_pt.z)
-{
-}
-
-//////////////////////////////////////////////////
-Vector3::Vector3(const sdf::Vector3 &_pt)
     : x(_pt.x), y(_pt.y), z(_pt.z)
 {
 }
@@ -207,16 +205,6 @@ double Vector3::GetMin() const
 }
 
 //////////////////////////////////////////////////
-Vector3 &Vector3::operator =(const sdf::Vector3 &_pt)
-{
-  this->x = _pt.x;
-  this->y = _pt.y;
-  this->z = _pt.z;
-
-  return *this;
-}
-
-//////////////////////////////////////////////////
 Vector3 &Vector3::operator =(const Vector3 &_pt)
 {
   this->x = _pt.x;
@@ -341,17 +329,10 @@ bool Vector3::operator!=(const Vector3 &_pt) const
 }
 
 //////////////////////////////////////////////////
-bool Vector3::operator!=(const sdf::Vector3 &_pt) const
-{
-  return !equal(this->x, _pt.x, 0.001) ||
-         !equal(this->y, _pt.y, 0.001) ||
-         !equal(this->z, _pt.z, 0.001);
-}
-
-//////////////////////////////////////////////////
 bool Vector3::IsFinite() const
 {
-  return finite(this->x) && finite(this->y) && finite(this->z);
+  return std::isfinite(this->x) && std::isfinite(this->y) &&
+         std::isfinite(this->z);
 }
 
 //////////////////////////////////////////////////
@@ -370,6 +351,7 @@ double Vector3::operator[](unsigned int index) const
   }
 }
 
+//////////////////////////////////////////////////
 /// Round all values to _decimalPlaces
 void Vector3::Round(int _precision)
 {
@@ -378,6 +360,7 @@ void Vector3::Round(int _precision)
   this->z = precision(this->z, _precision);
 }
 
+//////////////////////////////////////////////////
 /// Returns true if the two vectors are exacatly equal
 bool Vector3::Equal(const Vector3 &_v) const
 {

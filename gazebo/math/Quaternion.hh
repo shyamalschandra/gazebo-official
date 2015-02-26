@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,9 @@
  * limitations under the License.
  *
 */
-/* Desc: External interfaces for Gazebo
- * Author: Nate Koenig
- * Date: 03 Apr 2007
- */
 
-#ifndef _QUATERNION_HH_
-#define _QUATERNION_HH_
+#ifndef _GAZEBO_MATH_QUATERNION_HH_
+#define _GAZEBO_MATH_QUATERNION_HH_
 
 #include <math.h>
 #include <iostream>
@@ -31,6 +27,7 @@
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Matrix3.hh"
 #include "gazebo/math/Matrix4.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -41,7 +38,7 @@ namespace gazebo
 
   /// \class Quaternion Quaternion.hh math/gzmath.hh
   /// \brief A quaternion class
-  class Quaternion
+  class GAZEBO_VISIBLE Quaternion
   {
     /// \brief Default Constructor
     public: Quaternion();
@@ -74,18 +71,12 @@ namespace gazebo
     /// \param qt Quaternion to copy
     public: Quaternion(const Quaternion &_qt);
 
-    /// Deprecated
-    public: Quaternion(const sdf::Quaternion &_qt) __attribute__((deprecated));
-
     /// \brief Destructor
     public: ~Quaternion();
 
     /// \brief Equal operator
     /// \param[in] _qt Quaternion to copy
     public: Quaternion &operator =(const Quaternion &_qt);
-
-    /// Deprecated
-    public: Quaternion &operator =(const sdf::Quaternion &_qt);
 
     /// \brief Invert the quaternion
     public: void Invert();
@@ -152,7 +143,8 @@ namespace gazebo
     /// \param[in] _z z
     public: void Set(double _u, double _x, double _y, double _z);
 
-    /// \brief Set the quaternion from Euler angles
+    /// \brief Set the quaternion from Euler angles. The order of operations
+    /// are roll, pitch, yaw.
     /// \param[in] vec  Euler angle
     public: void SetFromEuler(const Vector3 &_vec);
 
@@ -281,13 +273,13 @@ namespace gazebo
     /// \brief Correct any nan
     public: inline void Correct()
             {
-              if (!finite(this->x))
+              if (!std::isfinite(this->x))
                 this->x = 0;
-              if (!finite(this->y))
+              if (!std::isfinite(this->y))
                 this->y = 0;
-              if (!finite(this->z))
+              if (!std::isfinite(this->z))
                 this->z = 0;
-              if (!finite(this->w))
+              if (!std::isfinite(this->w))
                 this->w = 1;
 
               if (math::equal(this->w, 0.0) &&
@@ -350,6 +342,14 @@ namespace gazebo
     public: static Quaternion Slerp(double _fT, const Quaternion &_rkP,
                 const Quaternion &_rkQ, bool _shortestPath = false);
 
+    /// \brief Integrate quaternion for constant angular velocity vector
+    /// along specified interval `_deltaT`.
+    /// \param[in] _angularVelocity Angular velocity vector, specified in
+    /// same reference frame as base of this quaternion.
+    /// \param[in] _deltaT Time interval in seconds to integrate over.
+    /// \return Quaternion at integrated configuration.
+    public: Quaternion Integrate(const Vector3 &_angularVelocity,
+                                 const double _deltaT) const;
 
     /// \brief Attributes of the quaternion
     public: double w;
@@ -383,13 +383,13 @@ namespace gazebo
     public: friend std::istream &operator>>(std::istream &_in,
                                              gazebo::math::Quaternion &_q)
     {
-      Angle r, p, y;
+      Angle roll, pitch, yaw;
 
       // Skip white spaces
       _in.setf(std::ios_base::skipws);
-      _in >> r >> p >> y;
+      _in >> roll >> pitch >> yaw;
 
-      _q.SetFromEuler(Vector3(*r, *p, *y));
+      _q.SetFromEuler(Vector3(*roll, *pitch, *yaw));
 
       return _in;
     }
