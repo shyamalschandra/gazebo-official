@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,13 @@ void ODEBallJoint::SetMaxForce(unsigned int /*_index*/, double /*_t*/)
 math::Angle ODEBallJoint::GetAngleImpl(unsigned int /*_index*/) const
 {
   return math::Angle(0);
+}
+
+//////////////////////////////////////////////////
+void ODEBallJoint::SetAxis(unsigned int /*_index*/,
+                            const math::Vector3 &/*_axis*/)
+{
+  gzerr << "ODEBallJoint::SetAxis not implemented" << std::endl;
 }
 
 //////////////////////////////////////////////////

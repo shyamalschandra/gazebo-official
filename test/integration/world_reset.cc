@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 #include <string.h>
 
 #include "gazebo/physics/physics.hh"
-#include "ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 #include "helper_physics_generator.hh"
 
 using namespace gazebo;
 
 typedef std::tr1::tuple<const char *, const char *, int> string2_int;
 
-class WorldResetTest : public ServerFixture,
+class WorldResetTest : public PhysicsFixture,
                        public ::testing::WithParamInterface<string2_int>
 {
   public: void WorldName(const std::string &_physicsEngine,
@@ -35,12 +35,6 @@ class WorldResetTest : public ServerFixture,
 void WorldResetTest::WorldName(const std::string &_physicsEngine,
                                const std::string &_world, int _resets)
 {
-  if (_physicsEngine == "simbody")
-  {
-    gzerr << "Abort test since simbody does not support screw joints in PR2, "
-          << "Please see issue #857.\n";
-    return;
-  }
   if (_physicsEngine == "dart")
   {
     gzerr << "Abort test since dart does not support ray sensor in PR2, "
@@ -48,13 +42,7 @@ void WorldResetTest::WorldName(const std::string &_physicsEngine,
     return;
   }
 
-  Load(_world, true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld(_world, true, _physicsEngine);
 
   double dt = physics->GetMaxStepSize();
   unsigned int steps = 250;
