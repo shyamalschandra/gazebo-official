@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,6 @@
  * limitations under the License.
  *
 */
-
-/* Desc: Base class shared by all classes in Gazebo.
- * Author: Nate Koenig
- * Date: 09 Sept. 2008
- */
-
 
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
@@ -66,7 +60,6 @@ Base::~Base()
       (*iter)->SetParent(BasePtr());
   }
   this->children.clear();
-  this->childrenEnd = this->children.end();
   if (this->sdf)
     this->sdf->Reset();
   this->sdf.reset();
@@ -112,7 +105,6 @@ void Base::Fini()
       (*iter)->Fini();
 
   this->children.clear();
-  this->childrenEnd = this->children.end();
 
   this->world.reset();
   this->parent.reset();
@@ -196,7 +188,6 @@ void Base::AddChild(BasePtr _child)
 
   // Add this _child to our list
   this->children.push_back(_child);
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -212,7 +203,6 @@ void Base::RemoveChild(unsigned int _id)
       break;
     }
   }
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -259,15 +249,12 @@ void Base::RemoveChild(const std::string &_name)
     (*iter)->Fini();
     this->children.erase(iter);
   }
-
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
 void Base::RemoveChildren()
 {
   this->children.clear();
-  this->childrenEnd = this->children.end();
 }
 
 //////////////////////////////////////////////////
@@ -296,19 +283,21 @@ BasePtr Base::GetByName(const std::string &_name)
 
   BasePtr result;
   Base_V::const_iterator iter;
-  Base_V::const_iterator iterEnd = this->childrenEnd;
 
-  for (iter =  this->children.begin();
-      iter != iterEnd && result == NULL; ++iter)
+  for (iter = this->children.begin();
+      iter != this->children.end() && result == NULL; ++iter)
     result = (*iter)->GetByName(_name);
 
   return result;
 }
 
 //////////////////////////////////////////////////
-std::string Base::GetScopedName() const
+std::string Base::GetScopedName(bool _prependWorldName) const
 {
-  return this->scopedName;
+  if (_prependWorldName)
+    return this->world->GetName() + "::" + this->scopedName;
+  else
+    return this->scopedName;
 }
 
 //////////////////////////////////////////////////
