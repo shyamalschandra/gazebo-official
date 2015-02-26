@@ -23,6 +23,10 @@ endif()
 
 configure_file (test_config.h.in ${PROJECT_BINARY_DIR}/test_config.h)
 
+if (HAVE_BULLET)
+  link_directories(${BULLET_LIBRARY_DIRS})
+endif()
+
 # Build gtest
 add_library(gtest STATIC gtest/src/gtest-all.cc)
 add_library(gtest_main STATIC gtest/src/gtest_main.cc)
@@ -35,6 +39,7 @@ set(ServerFixtureSources
   ${PROJECT_SOURCE_DIR}/gazebo/Server.cc
   ${PROJECT_SOURCE_DIR}/gazebo/Master.cc
   ${PROJECT_SOURCE_DIR}/gazebo/gazebo.cc
+  ${PROJECT_SOURCE_DIR}/test/PhysicsFixture.cc
   ${PROJECT_SOURCE_DIR}/test/ServerFixture.cc
 )
 add_library(server_fixture STATIC ${ServerFixtureSources})
