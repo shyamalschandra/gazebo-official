@@ -33,11 +33,6 @@
 
 #include "gazebo/util/system.hh"
 
-namespace boost
-{
-  class recursive_mutex;
-}
-
 namespace gazebo
 {
   namespace msgs
@@ -275,12 +270,6 @@ namespace gazebo
           const std::string &_config, const std::string &_target,
           bool _preview);
 
-      /// \brief Callback when an entity's scale has changed.
-      /// \param[in] _name Name of entity.
-      /// \param[in] _scale New scale.
-      private: void OnEntityScaleChanged(const std::string &_name,
-          const math::Vector3 &_scale);
-
       /// \brief Deselect all currently selected visuals.
       private: void DeselectAll();
 
@@ -385,12 +374,6 @@ namespace gazebo
 
       /// \brief Store the current save state of the model.
       private: enum SaveState currentSaveState;
-
-      /// \brief Mutex to protect updates
-      private: boost::recursive_mutex *updateMutex;
-
-      /// \brief A list of part names whose scale has changed externally.
-      private: std::map<std::string, math::Vector3> partScaleUpdate;
     };
     /// \}
   }

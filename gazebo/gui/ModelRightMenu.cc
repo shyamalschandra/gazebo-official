@@ -132,35 +132,30 @@ ModelRightMenu::~ModelRightMenu()
 }
 
 /////////////////////////////////////////////////
-void ModelRightMenu::Run(const std::string &_modelName, const QPoint &_pt,
-    EntityTypes _type)
+void ModelRightMenu::Run(const std::string &_modelName, const QPoint &_pt)
 {
   this->modelName = _modelName.substr(0, _modelName.find("::"));
 
   QMenu menu;
-
   menu.addAction(this->moveToAct);
   menu.addAction(this->followAct);
 
-  if (_type == EntityTypes::MODEL)
+  // menu.addAction(this->snapBelowAct);
+
+  // Create the view menu
+  QMenu *viewMenu = menu.addMenu(tr("View"));
+  for (std::vector<ViewState*>::iterator iter = this->viewStates.begin();
+       iter != this->viewStates.end(); ++iter)
   {
-    // menu.addAction(this->snapBelowAct);
+    viewMenu->addAction((*iter)->action);
 
-    // Create the view menu
-    QMenu *viewMenu = menu.addMenu(tr("View"));
-    for (std::vector<ViewState*>::iterator iter = this->viewStates.begin();
-         iter != this->viewStates.end(); ++iter)
-    {
-      viewMenu->addAction((*iter)->action);
+    std::map<std::string, bool>::iterator modelIter =
+      (*iter)->modelStates.find(this->modelName);
 
-      std::map<std::string, bool>::iterator modelIter =
-        (*iter)->modelStates.find(this->modelName);
-
-      if (modelIter == (*iter)->modelStates.end())
-        (*iter)->action->setChecked((*iter)->globalEnable);
-      else
-        (*iter)->action->setChecked(modelIter->second);
-    }
+    if (modelIter == (*iter)->modelStates.end())
+      (*iter)->action->setChecked((*iter)->globalEnable);
+    else
+      (*iter)->action->setChecked(modelIter->second);
   }
 
   if (g_copyAct && g_pasteAct)

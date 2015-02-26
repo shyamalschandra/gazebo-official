@@ -50,12 +50,14 @@
 #include "gazebo/rendering/VideoVisual.hh"
 #include "gazebo/rendering/TransmitterVisual.hh"
 
+#ifdef DEFERRED_SHADING
 #if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
 #include "gazebo/rendering/deferred_shading/SSAOLogic.hh"
 #include "gazebo/rendering/deferred_shading/GBufferSchemeHandler.hh"
 #include "gazebo/rendering/deferred_shading/NullSchemeHandler.hh"
 #include "gazebo/rendering/deferred_shading/MergeSchemeHandler.hh"
 #include "gazebo/rendering/deferred_shading/DeferredLightCP.hh"
+#endif
 #endif
 
 #include "gazebo/rendering/RTShaderSystem.hh"
@@ -315,8 +317,10 @@ void Scene::Init()
   RTShaderSystem::Instance()->AddScene(shared_from_this());
   RTShaderSystem::Instance()->ApplyShadows(shared_from_this());
 
+#ifdef DEFERRED_SHADING
   if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
     this->InitDeferredShading();
+#endif
 
   for (uint32_t i = 0; i < this->dataPtr->grids.size(); ++i)
     this->dataPtr->grids[i]->Init();
@@ -371,6 +375,7 @@ bool Scene::GetInitialized() const
 //////////////////////////////////////////////////
 void Scene::InitDeferredShading()
 {
+#ifdef DEFERRED_SHADING
 #if OGRE_VERSION_MAJOR > 1 || OGRE_VERSION_MINOR >= 8
   Ogre::CompositorManager &compMgr = Ogre::CompositorManager::getSingleton();
 
@@ -426,6 +431,7 @@ void Scene::InitDeferredShading()
   }
 
   im->setBatchesAsStaticAndUpdate(true);
+#endif
 #endif
 }
 
@@ -610,11 +616,9 @@ uint32_t Scene::GetOculusCameraCount() const
 #endif
 
 //////////////////////////////////////////////////
-UserCameraPtr Scene::CreateUserCamera(const std::string &_name,
-                                      bool _stereoEnabled)
+UserCameraPtr Scene::CreateUserCamera(const std::string &_name)
 {
-  UserCameraPtr camera(new UserCamera(_name, shared_from_this(),
-        _stereoEnabled));
+  UserCameraPtr camera(new UserCamera(_name, shared_from_this()));
   camera->Load();
   camera->Init();
   this->dataPtr->userCameras.push_back(camera);
@@ -2699,22 +2703,11 @@ void Scene::SetSky()
 /////////////////////////////////////////////////
 void Scene::SetShadowsEnabled(bool _value)
 {
-  // If a usercamera is set to stereo mode, then turn off shadows.
-  // Our shadow mapping technique disables stereo.
-  bool stereoOverride = true;
-  for (std::vector<UserCameraPtr>::iterator iter =
-       this->dataPtr->userCameras.begin();
-       iter != this->dataPtr->userCameras.end() && stereoOverride; ++iter)
-  {
-    stereoOverride = !(*iter)->StereoEnabled();
-  }
-
-  _value = _value && stereoOverride;
-
   this->dataPtr->sdf->GetElement("shadows")->Set(_value);
 
   if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
   {
+#ifdef DEFERRED_SHADING
 #if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
     this->dataPtr->manager->setShadowTechnique(
         Ogre::SHADOWTYPE_TEXTURE_ADDITIVE);
@@ -2730,6 +2723,7 @@ void Scene::SetShadowsEnabled(bool _value)
     this->dataPtr->manager->setShadowCasterRenderBackFaces(false);
     this->dataPtr->manager->setShadowTextureSelfShadow(true);
     this->dataPtr->manager->setShadowDirLightTextureOffset(1.75);
+#endif
 #endif
   }
   else if (RenderEngine::Instance()->GetRenderPathType() ==

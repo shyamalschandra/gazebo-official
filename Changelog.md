@@ -1,17 +1,8 @@
 1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
     * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
 
-1. Get and Set visibility of SelectionObj's handles, with unit test.
-    * [Pull request #1417](https://bitbucket.org/osrf/gazebo/pull-request/1417)
-
 1. Allow link selection with the mouse if parent model already selected.
     * [Pull request #1409](https://bitbucket.org/osrf/gazebo/pull-request/1409)
-
-1. Added ModelRightMenu::EntityTypes.
-    * [Pull request #1414](https://bitbucket.org/osrf/gazebo/pull-request/1414)
-
-1. Added Gazebo/CoM material.
-    * [Pull request #1439](https://bitbucket.org/osrf/gazebo/pull-request/1439)
 
  1. Model editor updates
     1. Joint preview using JointVisuals.
@@ -267,6 +258,10 @@
     * [Pull request #1271](https://bitbucket.org/osrf/gazebo/pull-request/1271)
 1. Fix loading collada meshes with unsupported input semantics.
     * [Pull request #1319](https://bitbucket.org/osrf/gazebo/pull-request/1319)
+1. Fix race condition with ImuSensor not publishing after Reset World.
+    * [Pull request #1448](https://bitbucket.org/osrf/gazebo/pull-request/1448)
+    * [Pull request #1446](https://bitbucket.org/osrf/gazebo/pull-request/1446)
+    * [Issue #236](https://bitbucket.org/osrf/gazebo/issue/236)
 
 ### Gazebo 4.0.2 (2014-09-23)
 

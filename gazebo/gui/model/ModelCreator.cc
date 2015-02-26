@@ -15,7 +15,6 @@
  *
  */
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/filesystem.hpp>
 #include <sstream>
 #include <string>
@@ -59,8 +58,6 @@ ModelCreator::ModelCreator()
 
   this->modelTemplateSDF.reset(new sdf::SDF);
   this->modelTemplateSDF->SetFromString(ModelData::GetTemplateSDFString());
-
-  this->updateMutex = new boost::recursive_mutex();
 
   this->manipMode = "";
   this->partCounter = 0;
@@ -118,10 +115,6 @@ ModelCreator::ModelCreator()
        boost::bind(&ModelCreator::OnSetSelectedEntity, this, _1, _2)));
 
   this->connections.push_back(
-      gui::Events::ConnectScaleEntity(
-      boost::bind(&ModelCreator::OnEntityScaleChanged, this, _1, _2)));
-
-  this->connections.push_back(
       event::Events::ConnectPreRender(
         boost::bind(&ModelCreator::Update, this)));
 
@@ -146,8 +139,6 @@ ModelCreator::~ModelCreator()
   this->requestPub.reset();
   this->makerPub.reset();
   this->connections.clear();
-
-  delete this->updateMutex;
 
   delete jointMaker;
 }
@@ -203,10 +194,8 @@ void ModelCreator::OnNew()
   }
   QString msg;
   QMessageBox msgBox(QMessageBox::Warning, QString("New"), msg);
-  QPushButton *cancelButton = msgBox.addButton("Cancel",
-      QMessageBox::RejectRole);
-  msgBox.setEscapeButton(cancelButton);
-  QPushButton *saveButton = new QPushButton("Save");
+  QPushButton *cancelButton = msgBox.addButton("Cancel", QMessageBox::YesRole);
+  QPushButton *saveButton = msgBox.addButton("Save", QMessageBox::YesRole);
 
   switch (this->currentSaveState)
   {
@@ -214,9 +203,8 @@ void ModelCreator::OnNew()
     {
       msg.append("Are you sure you want to close this model and open a new "
                  "canvas?\n\n");
-      QPushButton *newButton =
-          msgBox.addButton("New Canvas", QMessageBox::AcceptRole);
-      msgBox.setDefaultButton(newButton);
+      msgBox.addButton("New Canvas", QMessageBox::ApplyRole);
+      saveButton->hide();
       break;
     }
     case UNSAVED_CHANGES:
@@ -224,9 +212,7 @@ void ModelCreator::OnNew()
     {
       msg.append("You have unsaved changes. Do you want to save this model "
                  "and open a new canvas?\n\n");
-      msgBox.addButton(saveButton, QMessageBox::AcceptRole);
-      msgBox.addButton("Don't Save", QMessageBox::DestructiveRole);
-      msgBox.setDefaultButton(saveButton);
+      msgBox.addButton("Don't Save", QMessageBox::ApplyRole);
       break;
     }
     default:
@@ -327,14 +313,8 @@ void ModelCreator::OnExit()
       "your model will no longer be editable.\n\n"
       "Are you ready to exit?\n\n");
       QMessageBox msgBox(QMessageBox::NoIcon, QString("Exit"), msg);
-
-      QPushButton *cancelButton = msgBox.addButton("Cancel",
-          QMessageBox::RejectRole);
-      QPushButton *exitButton =
-          msgBox.addButton("Exit", QMessageBox::AcceptRole);
-      msgBox.setDefaultButton(exitButton);
-      msgBox.setEscapeButton(cancelButton);
-
+      msgBox.addButton("Exit", QMessageBox::ApplyRole);
+      QPushButton *cancelButton = msgBox.addButton(QMessageBox::Cancel);
       msgBox.exec();
       if (msgBox.clickedButton() == cancelButton)
       {
@@ -352,13 +332,10 @@ void ModelCreator::OnExit()
 
       QMessageBox msgBox(QMessageBox::NoIcon, QString("Exit"), msg);
       QPushButton *cancelButton = msgBox.addButton("Cancel",
-          QMessageBox::RejectRole);
-      msgBox.addButton("Don't Save, Exit", QMessageBox::DestructiveRole);
+          QMessageBox::ApplyRole);
       QPushButton *saveButton = msgBox.addButton("Save and Exit",
-          QMessageBox::AcceptRole);
-      msgBox.setDefaultButton(cancelButton);
-      msgBox.setDefaultButton(saveButton);
-
+          QMessageBox::ApplyRole);
+      msgBox.addButton("Don't Save, Exit", QMessageBox::ApplyRole);
       msgBox.exec();
       if (msgBox.clickedButton() == cancelButton)
         return;
@@ -1359,37 +1336,16 @@ void ModelCreator::ModelChanged()
 /////////////////////////////////////////////////
 void ModelCreator::Update()
 {
-  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
   // Check if any parts have been moved or resized and trigger ModelChanged
   for (auto &partsIt : this->allParts)
   {
     PartData *part = partsIt.second;
-    if (part->GetPose() != part->partVisual->GetWorldPose())
+    if (part->GetPose() != part->partVisual->GetWorldPose() ||
+        part->scale != part->partVisual->GetScale())
     {
       part->SetPose(part->partVisual->GetWorldPose());
+      part->scale = part->partVisual->GetScale();
       this->ModelChanged();
-    }
-    for (auto scaleIt : this->partScaleUpdate)
-    {
-      if (part->partVisual->GetName() == scaleIt.first)
-        part->SetScale(scaleIt.second);
-    }
-    this->partScaleUpdate.clear();
-  }
-}
-
-/////////////////////////////////////////////////
-void ModelCreator::OnEntityScaleChanged(const std::string &_name,
-  const math::Vector3 &_scale)
-{
-  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
-  for (auto partsIt : this->allParts)
-  {
-    if (_name == partsIt.first ||
-        _name.find(partsIt.first) != std::string::npos)
-    {
-      this->partScaleUpdate[partsIt.first] = _scale;
-      break;
     }
   }
 }
