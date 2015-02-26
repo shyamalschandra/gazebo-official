@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  *
 */
 
-#include "gazebo/math/Rand.hh"
+#include <sstream>
+#include <gazebo/math/Rand.hh>
+#include <gazebo/physics/World.hh>
 #include "RubblePlugin.hh"
 
 using namespace gazebo;
@@ -39,9 +41,6 @@ void RubblePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
   double minMass = _sdf->Get<double>("min_mass");
   double maxMass = _sdf->Get<double>("max_mass");
   unsigned int count = _sdf->Get<unsigned int>("count");
-
-  std::vector<CompoundObj> objects;
-  std::vector<CompoundObj>::iterator iter;
 
   for (unsigned int i = 0; i < count; ++i)
   {
@@ -108,7 +107,9 @@ void RubblePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
 
     // Disable compound objects for now.
     // bool merged = false;
-    /*for (iter = objects.begin(); iter != objects.end(); ++iter)
+    /* std::vector<CompoundObj> objects;
+       std::vector<CompoundObj>::iterator iter;
+       for (iter = objects.begin(); iter != objects.end(); ++iter)
     {
       bool x = fabs(obj.pos.x - (*iter).pos.x) <=
         (*iter).size.x * 0.5 + obj.size.x * 0.5;
@@ -371,7 +372,7 @@ void RubblePlugin::MakeCompound(const std::string &_name, CompoundObj &_obj)
                << "<iyz>" << 0.0 << "</iyz>"
                << "</inertial>";
 
-    newModelStr << inertiaStr;
+    newModelStr << inertiaStr.str();
 
     newModelStr << "    <collision name ='collision_" << i << "'>"
                 << "      <pose>" << (*iter).pose << "</pose>"
