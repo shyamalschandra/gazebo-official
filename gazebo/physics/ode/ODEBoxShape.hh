@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/BoxShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
     /// \brief ODE Box shape
-    class ODEBoxShape : public BoxShape
+    class GAZEBO_VISIBLE ODEBoxShape : public BoxShape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision.
@@ -47,7 +48,7 @@ namespace gazebo
         BoxShape::SetSize(_size);
 
         ODECollisionPtr oParent;
-        oParent = boost::shared_dynamic_cast<ODECollision>(
+        oParent = boost::dynamic_pointer_cast<ODECollision>(
             this->collisionParent);
 
         if (oParent->GetCollisionId() == NULL)

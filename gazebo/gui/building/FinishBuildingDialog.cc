@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ FinishBuildingDialog::FinishBuildingDialog(int _mode, QWidget *_parent)
 
   if (_mode == MODEL_FINISH)
     this->setWindowTitle(tr("Finish Model"));
-  else if (_mode == MODEL_FINISH)
+  else if (_mode == MODEL_SAVE)
     this->setWindowTitle(tr("Save Model"));
 
   QLabel *messageLabel = new QLabel;

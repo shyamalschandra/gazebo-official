@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@
  * Date: 08 May 2009
  */
 
-#ifndef GAZEBO_COLOR_HH
-#define GAZEBO_COLOR_HH
+#ifndef _GAZEBO_COLOR_HH_
+#define _GAZEBO_COLOR_HH_
 
 #include <iostream>
-#include <sdf/Types.hh>
-
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/math/Vector3.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,7 +36,7 @@ namespace gazebo
 
     /// \class Color Color.hh common/common.hh
     /// \brief Defines a color
-    class Color
+    class GAZEBO_VISIBLE Color
     {
       /// \brief (1, 1, 1)
       public: static const Color White;
@@ -84,9 +83,6 @@ namespace gazebo
       /// \param[in] _clr Color to copy
       public: Color(const Color &_clr);
 
-      /// Deprecated
-      public: Color(const sdf::Color &_clr) GAZEBO_DEPRECATED;
-
       /// \brief Destructor
       public: virtual ~Color();
 
@@ -124,9 +120,6 @@ namespace gazebo
       /// \param[in] _pt Color to copy
       /// \return Reference to this color
       public: Color &operator =(const Color &_pt);
-
-      /// Deprecated
-      public: Color &operator =(const sdf::Color &_clr) GAZEBO_DEPRECATED;
 
       /// \brief Array index operator
       /// \param[in] _index Color component index(0=red, 1=green, 2=blue)
@@ -235,9 +228,6 @@ namespace gazebo
       /// \param[in] _pt The color to check for inequality
       /// \return True if the this color does not equal _pt
       public: bool operator!=(const Color &_pt) const;
-
-      /// Deprecated
-      public: bool operator!=(const sdf::Color &_pt) const GAZEBO_DEPRECATED;
 
       /// \brief Clamp the color values to valid ranges
       private: void Clamp();

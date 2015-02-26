@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,13 +52,6 @@ Color::Color(float _r, float _g, float _b, const float _a)
 
 //////////////////////////////////////////////////
 Color::Color(const Color &_pt)
-: r(_pt.r), g(_pt.g), b(_pt.b), a(_pt.a)
-{
-  this->Clamp();
-}
-
-//////////////////////////////////////////////////
-Color::Color(const sdf::Color &_pt)
 : r(_pt.r), g(_pt.g), b(_pt.b), a(_pt.a)
 {
   this->Clamp();
@@ -414,17 +407,6 @@ Color &Color::operator =(const Color &_clr)
 }
 
 //////////////////////////////////////////////////
-Color &Color::operator =(const sdf::Color &_pt)
-{
-  this->r = _pt.r;
-  this->g = _pt.g;
-  this->b = _pt.b;
-  this->a = _pt.a;
-
-  return *this;
-}
-
-//////////////////////////////////////////////////
 Color Color::operator+(const Color &pt) const
 {
   return Color(this->r + pt.r, this->g + pt.g, this->b + pt.b, this->a + pt.a);
@@ -540,15 +522,6 @@ bool Color::operator ==(const Color &_pt) const
 bool Color::operator!=(const Color &_pt) const
 {
   return !(*this == _pt);
-}
-
-//////////////////////////////////////////////////
-bool Color::operator!=(const sdf::Color &_pt) const
-{
-  return !math::equal(this->r, _pt.r) ||
-         !math::equal(this->g, _pt.g) ||
-         !math::equal(this->b, _pt.b) ||
-         !math::equal(this->a, _pt.a);
 }
 
 //////////////////////////////////////////////////

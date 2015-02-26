@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
 #include "gazebo/physics/PhysicsEngine.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/Shape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,8 +45,37 @@ namespace gazebo
     /// \{
 
     /// \brief Bullet physics engine
-    class BulletPhysics : public PhysicsEngine
+    class GAZEBO_VISIBLE BulletPhysics : public PhysicsEngine
     {
+      /// \enum BulletParam
+      /// \brief Bullet physics parameter types.
+      public: enum BulletParam
+      {
+        /// \brief Solve type
+        SOLVER_TYPE,
+
+        /// \brief Constraint force mixing
+        GLOBAL_CFM,
+
+        /// \brief Error reduction parameter
+        GLOBAL_ERP,
+
+        /// \brief Number of iterations
+        PGS_ITERS,
+
+        /// \brief SOR over-relaxation parameter
+        SOR,
+
+        /// \brief Surface layer depth
+        CONTACT_SURFACE_LAYER,
+
+        /// \brief Maximum number of contacts
+        MAX_CONTACTS,
+
+        /// \brief Minimum step size
+        MIN_STEP_SIZE
+      };
+
       /// \brief Constructor
       public: BulletPhysics(WorldPtr _world);
 
@@ -128,18 +158,14 @@ namespace gazebo
       public: virtual void DebugPrint() const;
 
       /// Documentation inherited
-      public: virtual void SetParam(PhysicsParam _param,
-                  const boost::any &_value);
-
-      /// Documentation inherited
-      public: virtual void SetParam(const std::string &_key,
+      public: virtual bool SetParam(const std::string &_key,
                   const boost::any &_value);
 
       /// Documentation inherited
       public: virtual boost::any GetParam(const std::string &_key) const;
 
-      /// Documentation inherited
-      public: virtual boost::any GetParam(PhysicsParam _attr) const;
+      // Documentation inherited
+      public: virtual void SetSORPGSIters(unsigned int iters);
 
       private: btBroadphaseInterface *broadPhase;
       private: btDefaultCollisionConfiguration *collisionConfig;
