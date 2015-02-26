@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ ImportImageDialog::ImportImageDialog(QWidget *_parent)
   QPushButton *cancelButton1 = new QPushButton(tr("Cancel"));
   this->nextButton = new QPushButton(tr("Next"));
   this->nextButton->setEnabled(false);
-  connect(cancelButton1, SIGNAL(clicked()), this, SLOT(reject()));
+  connect(cancelButton1, SIGNAL(clicked()), this, SLOT(OnReject()));
   connect(this->nextButton, SIGNAL(clicked()), this, SLOT(OnNext()));
 
   QHBoxLayout *step1Buttons = new QHBoxLayout;
@@ -119,7 +119,7 @@ ImportImageDialog::ImportImageDialog(QWidget *_parent)
 
   connect(this->okButton, SIGNAL(clicked()), this, SLOT(OnAccept()));
   connect(backButton, SIGNAL(clicked()), this, SLOT(OnBack()));
-  connect(cancelButton2, SIGNAL(clicked()), this, SLOT(reject()));
+  connect(cancelButton2, SIGNAL(clicked()), this, SLOT(OnReject()));
 
   QHBoxLayout *step2Buttons = new QHBoxLayout;
   step2Buttons->addWidget(backButton);
@@ -128,8 +128,10 @@ ImportImageDialog::ImportImageDialog(QWidget *_parent)
 
   QVBoxLayout *step2Layout = new QVBoxLayout;
   step2Layout->addWidget(step2Label);
+  step2Layout->addSpacing(20);
   step2Layout->addLayout(distanceLayout);
   step2Layout->addLayout(resolutionLayout);
+  step2Layout->addSpacing(40);
   step2Layout->addLayout(step2Buttons);
 
   QWidget *step2Widget = new QWidget();
@@ -189,6 +191,13 @@ void ImportImageDialog::OnAccept()
     this->view->SetBackgroundImage(filename, this->resolutionSpin->value());
   }
   this->accept();
+}
+
+/////////////////////////////////////////////////
+void ImportImageDialog::OnReject()
+{
+  gui::editor::Events::createBuildingEditorItem(std::string());
+  this->reject();
 }
 
 /////////////////////////////////////////////////
