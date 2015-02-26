@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -327,7 +327,7 @@ void JointController::SetJointPositions(
 void JointController::SetJointPosition(
   JointPtr _joint, double _position, int _index)
 {
-  _joint->SetAngle(_index, math::Angle(_position));
+  _joint->SetPosition(_index, _position);
 }
 
 /////////////////////////////////////////////////
