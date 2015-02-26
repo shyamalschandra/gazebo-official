@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,12 +120,12 @@ TEST_F(JointControllerTest, Construction)
 {
   // Create a dummy model
   physics::ModelPtr model(new physics::Model(physics::BasePtr()));
-  EXPECT_TRUE(model);
+  EXPECT_TRUE(model != NULL);
 
   // Create the joint controller
   physics::JointControllerPtr jointController(
       new physics::JointController(model));
-  EXPECT_TRUE(jointController);
+  EXPECT_TRUE(jointController != NULL);
 
   // All values should be empty
   EXPECT_TRUE(jointController->GetJoints().empty());
@@ -144,12 +144,12 @@ TEST_F(JointControllerTest, AddJoint)
 {
   // Create a dummy model
   physics::ModelPtr model(new physics::Model(physics::BasePtr()));
-  EXPECT_TRUE(model);
+  EXPECT_TRUE(model != NULL);
 
   // Create the joint controller
   physics::JointControllerPtr jointController(
       new physics::JointController(model));
-  EXPECT_TRUE(jointController);
+  EXPECT_TRUE(jointController != NULL);
 
   physics::JointPtr joint(new FakeJoint(model));
   joint->SetName("joint");
@@ -160,17 +160,45 @@ TEST_F(JointControllerTest, AddJoint)
     jointController->GetJoints();
   EXPECT_EQ(joints.size(), 1u);
 
-  // Check the default position PID values
+  // Set a new position PID
+  jointController->SetPositionPID(joint->GetScopedName(), common::PID(4, 1, 9));
+
+  // Check the new position PID values
   std::map<std::string, common::PID> posPids =
     jointController->GetPositionPIDs();
+  EXPECT_EQ(posPids.size(), 1u);
+  EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetPGain(), 4);
+  EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetIGain(), 1);
+  EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetDGain(), 9);
+
+  // Restore the default position PID values
+  jointController->SetPositionPID(
+    joint->GetScopedName(), common::PID(1, 0.1, 0.01));
+
+  // Check the default position PID values
+  posPids = jointController->GetPositionPIDs();
   EXPECT_EQ(posPids.size(), 1u);
   EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetPGain(), 1);
   EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetIGain(), 0.1);
   EXPECT_DOUBLE_EQ(posPids[joint->GetScopedName()].GetDGain(), 0.01);
 
-  // Check the default velocity PID values
+  // Set a new velocity PID
+  jointController->SetVelocityPID(joint->GetScopedName(), common::PID(4, 1, 9));
+
+  // Check the new velocity PID values
   std::map<std::string, common::PID> velPids =
     jointController->GetVelocityPIDs();
+  EXPECT_EQ(velPids.size(), 1u);
+  EXPECT_DOUBLE_EQ(velPids[joint->GetScopedName()].GetPGain(), 4);
+  EXPECT_DOUBLE_EQ(velPids[joint->GetScopedName()].GetIGain(), 1);
+  EXPECT_DOUBLE_EQ(velPids[joint->GetScopedName()].GetDGain(), 9);
+
+  // Restore the default velocity PID values
+  jointController->SetVelocityPID(
+    joint->GetScopedName(), common::PID(1, 0.1, 0.01));
+
+  // Check the default velocity PID values
+  velPids = jointController->GetVelocityPIDs();
   EXPECT_EQ(velPids.size(), 1u);
   EXPECT_DOUBLE_EQ(velPids[joint->GetScopedName()].GetPGain(), 1);
   EXPECT_DOUBLE_EQ(velPids[joint->GetScopedName()].GetIGain(), 0.1);
@@ -215,12 +243,12 @@ TEST_F(JointControllerTest, SetJointPositions)
 {
   // Create a dummy model
   physics::ModelPtr model(new physics::Model(physics::BasePtr()));
-  EXPECT_TRUE(model);
+  EXPECT_TRUE(model != NULL);
 
   // Create the joint controller
   physics::JointControllerPtr jointController(
       new physics::JointController(model));
-  EXPECT_TRUE(jointController);
+  EXPECT_TRUE(jointController != NULL);
 
   physics::JointPtr joint1(new FakeJoint(model));
   joint1->SetName("joint1");
