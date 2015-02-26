@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ using namespace gazebo;
 GZ_REGISTER_MODEL_PLUGIN(ExceptionModelPluginConstructor)
 
 /////////////////////////////////////////////////
-ExceptionModelPluginConstructor::ExceptionModelPluginConstructor() : ModelPlugin()
+ExceptionModelPluginConstructor::ExceptionModelPluginConstructor()
+  : ModelPlugin()
 {
   throw std::runtime_error("Example error");
 }
