@@ -3,11 +3,8 @@ package gazebo.msgs;
 /// \ingroup gazebo_msgs
 /// \interface JointCmd
 /// \brief Message for joint command, used by physics::JointControlWidget
-/// \verbatim
 
-import "vector3d.proto";
-import "axis.proto";
-import "pose.proto";
+
 import "pid.proto";
 
 message JointCmd
@@ -20,4 +17,3 @@ message JointCmd
   optional PID velocity    = 5;
   optional bool reset      = 6;
 }
-/// \endverbatim

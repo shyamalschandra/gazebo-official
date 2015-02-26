@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,76 +19,69 @@
  * Date: 21 May 2003
  */
 
-#ifndef ODESLIDERJOINT_HH
-#define ODESLIDERJOINT_HH
+#ifndef _ODESLIDERJOINT_HH_
+#define _ODESLIDERJOINT_HH_
 
-#include "physics/SliderJoint.hh"
-#include "physics/ode/ODEJoint.hh"
+#include "gazebo/physics/SliderJoint.hh"
+#include "gazebo/physics/ode/ODEJoint.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
   namespace physics
   {
-    /// \ingroup gazebo_physics
-    /// \addtogroup gazebo_physics_ode ODE Physics
-    /// \{
-
     /// \brief A slider joint
-    class ODESliderJoint : public SliderJoint<ODEJoint>
+    class GAZEBO_VISIBLE ODESliderJoint : public SliderJoint<ODEJoint>
     {
       /// \brief Constructor
-      public: ODESliderJoint(dWorldID worldId, BasePtr _parent);
+      /// \param[in] _worldId ODE world id.
+      /// \param[in] _parent Pointer to the Link that is the joint' parent
+      public: ODESliderJoint(dWorldID _worldId, BasePtr _parent);
 
       /// \brief Destructor
       public: virtual ~ODESliderJoint();
 
-      /// \brief Load the ODESliderJoint
-      protected: virtual void Load(sdf::ElementPtr _sdf);
+      // Documentation inherited
+      public: virtual void Load(sdf::ElementPtr _sdf);
 
-      /// \brief Get the axis of rotation
-      public: virtual math::Vector3 GetGlobalAxis(int index) const;
+      // Documentation inherited
+      public: virtual math::Vector3 GetAnchor(unsigned int _index) const;
 
-      /// \brief Set the axis of motion
-      public: virtual void SetAxis(int index, const math::Vector3 &axis);
+      // Documentation inherited
+      public: virtual void SetAnchor(unsigned int _index,
+                                     const math::Vector3 &_anchor);
 
-      /// \brief Set joint damping, not yet implemented
-      public: virtual void SetDamping(int _index, double _damping);
+      // Documentation inherited
+      public: virtual math::Vector3 GetGlobalAxis(unsigned int _index) const;
 
-      /// \brief callback to apply damping force to joint
-      public: void ApplyDamping();
+      // Documentation inherited
+      public: virtual void SetAxis(unsigned int _index,
+                  const math::Vector3 &_axis);
 
-      /// \brief Get the position of the joint
-      public: virtual math::Angle GetAngleImpl(int index) const;
+      // Documentation inherited
+      public: virtual math::Angle GetAngleImpl(unsigned int _index) const;
 
-      /// \brief Get the rate of change
-      public: virtual double GetVelocity(int index) const;
+      // Documentation inherited
+      public: virtual double GetVelocity(unsigned int _index) const;
 
-      /// \brief Set the velocity of an axis(index).
-      public: virtual void SetVelocity(int index, double angle);
+      // Documentation inherited
+      public: virtual void SetVelocity(unsigned int _index, double _angle);
 
-      /// \brief Set the slider force
-      public: virtual void SetForce(int index, double force);
+      // Documentation inherited
+      public: virtual void SetMaxForce(unsigned int _index, double _t);
 
-      /// \brief Set the max allowed force of an axis(index).
-      public: virtual void SetMaxForce(int index, double t);
+      // Documentation inherited
+      public: virtual double GetMaxForce(unsigned int _index);
 
-      /// \brief Get the max allowed force of an axis(index).
-      public: virtual double GetMaxForce(int index);
+      // Documentation inherited
+      public: virtual double GetParam(unsigned int _parameter) const;
 
-      /// \brief Get the _parameter
-      public: virtual double GetParam(int parameter) const;
+      // Documentation inherited
+      public: virtual void SetParam(unsigned int _parameter, double _value);
 
-      /// \brief Set the _parameter
-      public: virtual void SetParam(int parameter, double value);
+      // Documentation inherited
+      protected: virtual void SetForceImpl(unsigned int _index, double _effort);
     };
-
-    /// \}
   }
 }
 #endif
-
-
-
-
-
-

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
  * limitations under the License.
  *
  */
-#include "transport/Node.hh"
-#include "transport/Transport.hh"
-#include "gui/JointControlWidget.hh"
+#include "gazebo/transport/Node.hh"
+#include "gazebo/transport/TransportIface.hh"
+#include "gazebo/gui/GuiIface.hh"
+#include "gazebo/gui/JointControlWidget.hh"
 
 using namespace gazebo;
 using namespace gui;
@@ -27,7 +28,7 @@ JointForceControl::JointForceControl(const std::string &_name,
   : QWidget(_parent), name(_name)
 {
   this->forceSpin = new QDoubleSpinBox;
-  this->forceSpin->setRange(-1000.0, 1000.0);
+  this->forceSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
   this->forceSpin->setSingleStep(0.001);
   this->forceSpin->setDecimals(3);
   this->forceSpin->setValue(0.000);
@@ -62,25 +63,25 @@ JointPIDPosControl::JointPIDPosControl(const std::string &_name,
   : QWidget(_parent), name(_name)
 {
   this->posSpin = new QDoubleSpinBox;
-  this->posSpin->setRange(-1000, 1000);
+  this->posSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
   this->posSpin->setSingleStep(0.001);
   this->posSpin->setDecimals(3);
   this->posSpin->setValue(0.000);
 
   this->pGainSpin = new QDoubleSpinBox;
-  this->pGainSpin->setMinimum(0.0);
+  this->pGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
   this->pGainSpin->setSingleStep(0.01);
   this->pGainSpin->setDecimals(3);
   this->pGainSpin->setValue(1.000);
 
   this->iGainSpin = new QDoubleSpinBox;
-  this->iGainSpin->setMinimum(0.0);
+  this->iGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
   this->iGainSpin->setSingleStep(0.01);
   this->iGainSpin->setDecimals(3);
   this->iGainSpin->setValue(0.100);
 
   this->dGainSpin = new QDoubleSpinBox;
-  this->dGainSpin->setMinimum(0.0);
+  this->dGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
   this->dGainSpin->setSingleStep(0.01);
   this->dGainSpin->setDecimals(3);
   this->dGainSpin->setValue(0.010);
@@ -164,28 +165,28 @@ JointPIDVelControl::JointPIDVelControl(const std::string &_name,
   : QWidget(_parent), name(_name)
 {
   this->posSpin = new QDoubleSpinBox;
-  posSpin->setRange(-1000, 1000);
-  posSpin->setSingleStep(0.001);
-  posSpin->setDecimals(3);
-  posSpin->setValue(0.000);
+  this->posSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
+  this->posSpin->setSingleStep(0.001);
+  this->posSpin->setDecimals(3);
+  this->posSpin->setValue(0.000);
 
   this->pGainSpin = new QDoubleSpinBox;
-  pGainSpin->setMinimum(0.0);
-  pGainSpin->setSingleStep(0.01);
-  pGainSpin->setDecimals(3);
-  pGainSpin->setValue(1.000);
+  this->pGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
+  this->pGainSpin->setSingleStep(0.01);
+  this->pGainSpin->setDecimals(3);
+  this->pGainSpin->setValue(1.000);
 
   this->iGainSpin = new QDoubleSpinBox;
-  iGainSpin->setMinimum(0.0);
-  iGainSpin->setSingleStep(0.01);
-  iGainSpin->setDecimals(3);
-  iGainSpin->setValue(0.100);
+  this->iGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
+  this->iGainSpin->setSingleStep(0.01);
+  this->iGainSpin->setDecimals(3);
+  this->iGainSpin->setValue(0.100);
 
   this->dGainSpin = new QDoubleSpinBox;
-  dGainSpin->setMinimum(0.0);
-  dGainSpin->setSingleStep(0.01);
-  dGainSpin->setDecimals(3);
-  dGainSpin->setValue(0.010);
+  this->dGainSpin->setRange(-GZ_DBL_MAX, GZ_DBL_MAX);
+  this->dGainSpin->setSingleStep(0.01);
+  this->dGainSpin->setDecimals(3);
+  this->dGainSpin->setValue(0.010);
 
   _layout->addWidget(posSpin, _index, 2);
   _layout->addWidget(pGainSpin, _index, 3);
@@ -241,19 +242,28 @@ void JointControlWidget::SetModelName(const std::string &_modelName)
   if (this->jointPub)
     this->jointPub.reset();
 
-  this->modelLabel->setText(QString::fromStdString(
-        std::string("Model: ") + _modelName));
-
-  this->jointPub = this->node->Advertise<msgs::JointCmd>(
-      std::string("~/") + _modelName + "/joint_cmd");
-
-  this->requestMsg = msgs::CreateRequest("entity_info");
-  this->requestMsg->set_data(_modelName);
-
-  msgs::Response response = transport::request("default", *this->requestMsg);
-
   msgs::Model modelMsg;
-  modelMsg.ParseFromString(response.serialized_data());
+
+  this->modelLabel->setText(QString::fromStdString(std::string("Model: ")));
+
+  // Only request info if the model has a name.
+  if (!_modelName.empty())
+  {
+    this->jointPub = this->node->Advertise<msgs::JointCmd>(
+        std::string("~/") + _modelName + "/joint_cmd");
+
+    boost::shared_ptr<msgs::Response> response = transport::request(
+        gui::get_world(), "entity_info", _modelName);
+
+    if (response->response() != "error" &&
+        response->type() == modelMsg.GetTypeName())
+    {
+      modelMsg.ParseFromString(response->serialized_data());
+    }
+  }
+
+  this->modelLabel->setText(QString::fromStdString(
+        std::string("Model: ") + modelMsg.name()));
 
   this->LayoutForceTab(modelMsg);
 
@@ -498,13 +508,16 @@ void JointControlWidget::AddScrollTab(QTabWidget *_tabPane,
   scrollArea->setLineWidth(0);
   scrollArea->setFrameShape(QFrame::NoFrame);
   scrollArea->setFrameShadow(QFrame::Plain);
-  scrollArea->setSizePolicy(QSizePolicy::Maximum,
-                             QSizePolicy::Maximum);
+  scrollArea->setSizePolicy(QSizePolicy::Minimum,
+                            QSizePolicy::Minimum);
+
+  // Make the scroll area automatically resize to the containing widget.
+  scrollArea->setWidgetResizable(true);
 
   QFrame *frame = new QFrame(scrollArea);
   frame->setObjectName("pidControl");
   frame->setLineWidth(0);
-  frame->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+  frame->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
   frame->setLayout(_tabLayout);
 
   scrollArea->setWidget(frame);
@@ -524,10 +537,16 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
   }
   this->sliders.clear();
 
+  // Don't add any widget if there are no joints
+  if (_modelMsg.joint_size() == 0)
+    return;
+
   this->forceGridLayout->addItem(new QSpacerItem(10, 20, QSizePolicy::Expanding,
                                       QSizePolicy::Minimum), 0, 0, 2);
   this->forceGridLayout->addWidget(new QLabel("Newton-meter", this), 0, 2);
-  for (int i = 0; i < _modelMsg.joint_size(); ++i)
+
+  int i = 0;
+  for (; i < _modelMsg.joint_size(); ++i)
   {
     std::string jointName = _modelMsg.joint(i).name();
 
@@ -547,6 +566,11 @@ void JointControlWidget::LayoutForceTab(msgs::Model &_modelMsg)
     connect(slider, SIGNAL(changed(double, const std::string &)),
             this, SLOT(OnForceChanged(double, const std::string &)));
   }
+
+  // Add a space at the bottom of the grid layout to consume extra space.
+  this->forceGridLayout->addItem(new QSpacerItem(10, 20, QSizePolicy::Expanding,
+                                      QSizePolicy::Expanding), i+1, 0);
+  this->forceGridLayout->setRowStretch(i+1, 2);
 }
 
 /////////////////////////////////////////////////
@@ -562,6 +586,10 @@ void JointControlWidget::LayoutPositionTab(msgs::Model &_modelMsg)
   }
   this->pidPosSliders.clear();
 
+  // Don't add any widget if there are no joints
+  if (_modelMsg.joint_size() == 0)
+    return;
+
   this->positionGridLayout->addItem(new QSpacerItem(10, 20,
         QSizePolicy::Expanding, QSizePolicy::Minimum), 0, 0, 2);
 
@@ -576,7 +604,8 @@ void JointControlWidget::LayoutPositionTab(msgs::Model &_modelMsg)
   this->positionGridLayout->addWidget(new QLabel("I Gain", this), 0, 4);
   this->positionGridLayout->addWidget(new QLabel("D Gain", this), 0, 5);
 
-  for (int i = 0; i < _modelMsg.joint_size(); ++i)
+  int i = 0;
+  for (; i < _modelMsg.joint_size(); ++i)
   {
     std::string jointName = _modelMsg.joint(i).name();
 
@@ -604,6 +633,12 @@ void JointControlWidget::LayoutPositionTab(msgs::Model &_modelMsg)
     connect(slider, SIGNAL(dChanged(double, const std::string &)),
             this, SLOT(OnDPosGainChanged(double, const std::string &)));
   }
+
+  // Add a space at the bottom of the grid layout to consume extra space.
+  this->positionGridLayout->addItem(
+      new QSpacerItem(10, 20, QSizePolicy::Expanding,
+                      QSizePolicy::Expanding), i+1, 0);
+  this->positionGridLayout->setRowStretch(i+1, 2);
 }
 
 /////////////////////////////////////////////////
@@ -619,6 +654,10 @@ void JointControlWidget::LayoutVelocityTab(msgs::Model &_modelMsg)
   }
   this->pidVelSliders.clear();
 
+  // Don't add any widget if there are no joints
+  if (_modelMsg.joint_size() == 0)
+    return;
+
   this->velocityGridLayout->addItem(
       new QSpacerItem(10, 27, QSizePolicy::Expanding,
                       QSizePolicy::Minimum), 0, 0, 2);
@@ -632,7 +671,8 @@ void JointControlWidget::LayoutVelocityTab(msgs::Model &_modelMsg)
   this->velocityGridLayout->addWidget(new QLabel("I Gain", this), 0, 4);
   this->velocityGridLayout->addWidget(new QLabel("D Gain", this), 0, 5);
 
-  for (int i = 0; i < _modelMsg.joint_size(); ++i)
+  int i = 0;
+  for (; i < _modelMsg.joint_size(); ++i)
   {
     std::string jointName = _modelMsg.joint(i).name();
 
@@ -660,4 +700,10 @@ void JointControlWidget::LayoutVelocityTab(msgs::Model &_modelMsg)
     connect(slider, SIGNAL(dChanged(double, const std::string &)),
             this, SLOT(OnDVelGainChanged(double, const std::string &)));
   }
+
+  // Add a space at the bottom of the grid layout to consume extra space.
+  this->velocityGridLayout->addItem(
+      new QSpacerItem(10, 20, QSizePolicy::Expanding,
+                      QSizePolicy::Expanding), i+1, 0);
+  this->velocityGridLayout->setRowStretch(i+1, 2);
 }
