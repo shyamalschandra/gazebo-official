@@ -617,6 +617,22 @@ ODE_API void dWorldSetQuickStepWarmStartFactor (dWorldID, dReal warm);
  */
 ODE_API void dWorldSetQuickStepExtraFrictionIterations (dWorldID, int iters);
 
+/* PGS experimental parameters */
+
+/**
+ * @brief Get option to turn on inertia ratio reduction.
+ * @ingroup world
+ */
+ODE_API bool dWorldGetQuickStepInertiaRatioReduction (dWorldID);
+
+
+/**
+ * @brief Option to turn on inertia ratio reduction.
+ * @ingroup world
+ * @param irr set to true to turn on inertia ratio reduction.
+ */
+ODE_API void dWorldSetQuickStepInertiaRatioReduction (dWorldID, bool irr);
+
 /* World contact parameter functions */
 
 /**
@@ -1292,6 +1308,7 @@ ODE_API void dBodyAddRelForceAtRelPos (dBodyID, dReal fx, dReal fy, dReal fz,
  * @ingroup bodies
  */
 ODE_API const dReal * dBodyGetForce (dBodyID);
+ODE_API const dReal * dBodyGetForceLast (dBodyID);
 
 /**
  * @brief Return the current accumulated torque vector.
@@ -1303,6 +1320,7 @@ ODE_API const dReal * dBodyGetForce (dBodyID);
  * @ingroup bodies
  */
 ODE_API const dReal * dBodyGetTorque (dBodyID);
+ODE_API const dReal * dBodyGetTorqueLast (dBodyID);
 
 /**
  * @brief Set the body force accumulation vector.
