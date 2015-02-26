@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,9 @@ namespace gazebo
 
       /// \brief Qt callback when the dialog is accepted.
       private slots: void OnAccept();
+
+      /// \brief Qt callback when the dialog is rejected.
+      private slots: void OnReject();
 
       /// \brief Qt callback when the Next button is clicked.
       private slots: void OnNext();
