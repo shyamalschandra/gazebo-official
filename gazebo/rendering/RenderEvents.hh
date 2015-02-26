@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@
 #define _RENDER_EVENTS_HH_
 
 #include <string>
-#include "common/Event.hh"
-#include "msgs/msgs.hh"
+#include "gazebo/common/Event.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,7 +31,7 @@ namespace gazebo
 
     /// \class Events Events.hh rendering/rendering.hh
     /// \brief Base class for rendering events
-    class Events
+    class GAZEBO_VISIBLE Events
     {
       /// \brief Connect to a scene created event.
       /// \param[in] _subscriber Callback to trigger when event occurs.
@@ -50,13 +51,13 @@ namespace gazebo
       /// \return Pointer the connection. This must stay in scope.
       public: template<typename T>
               static event::ConnectionPtr ConnectRemoveScene(T _subscriber)
-              { return removeScene.Connect(_subscriber); }
+              {return removeScene.Connect(_subscriber);}
 
       /// \brief Disconnect from a scene removed event.
       /// \param[in] _connection The connection to disconnect.
       public: static void DisconnectRemoveScene(
                   event::ConnectionPtr _connection)
-              { removeScene.Disconnect(_connection); }
+              {removeScene.Disconnect(_connection);}
 
       /// \brief The event used to trigger a create scene event.
       public: static event::EventT<void (const std::string &)> createScene;

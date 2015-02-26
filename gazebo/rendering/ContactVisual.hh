@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,15 @@
  * limitations under the License.
  *
 */
-/* Desc: Camera Visualization Class
- * Author: Nate Koenig
- */
 
 #ifndef _CONTACTVISUAL_HH_
 #define _CONTACTVISUAL_HH_
 
 #include <string>
-#include <vector>
 
+#include "gazebo/msgs/MessageTypes.hh"
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/msgs/msgs.hh"
-#include "gazebo/transport/TransportTypes.hh"
-
-namespace Ogre
-{
-  class Entity;
-  class SceneNode;
-}
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -41,14 +31,12 @@ namespace gazebo
     /// \addtogroup gazebo_rendering Rendering
     /// \{
 
-    class DynamicLines;
-
     /// \class ContactVisual ContactVisual.hh rendering/rendering.hh
     /// \brief Contact visualization
     ///
     /// This class visualizes contact points by drawing arrows in the 3D
     /// environment.
-    class ContactVisual : public Visual
+    class GAZEBO_VISIBLE ContactVisual : public Visual
     {
       /// \brief Constructor
       /// \param[in] _name Name of the ContactVisual
@@ -61,6 +49,10 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~ContactVisual();
 
+      /// \brief Set to true to enable contact visualization.
+      /// \param[in] _enabled True to show contacts, false to hide.
+      public: void SetEnabled(bool _enabled);
+
       /// \brief Update the Visual
       private: void Update();
 
@@ -68,33 +60,8 @@ namespace gazebo
       /// \param[in] _msg The Contact message
       private: void OnContact(ConstContactsPtr &_msg);
 
-      /// \brief Create an instanced material to a given entity.
-      /// \param[in] _ent Pointer to the entity.
-      private: void SetupInstancedMaterialToEntity(Ogre::Entity *_ent);
-
-      /// \brief Node for communication.
-      private: transport::NodePtr node;
-
-      /// \brief Subscription to the contact data.
-      private: transport::SubscriberPtr contactsSub;
-
-      /// \brief The current contact message.
-      private: boost::shared_ptr<msgs::Contacts const> contactsMsg;
-
-      /// \brief All the event connections.
-      private: std::vector<event::ConnectionPtr> connections;
-
-      /// \brief A contact point visualization.
-      private: class ContactPoint
-               {
-                 /// \brief The scene node for the contact visualization.
-                 public: Ogre::SceneNode *sceneNode;
-                 /// \brief Normal and depth for the contact point.
-                 public: DynamicLines *normal, *depth;
-               };
-
-      /// \brief All the contact points.
-      private: std::vector<ContactVisual::ContactPoint*> points;
+      /// \brief Create a new contact visualization point.
+      private: void CreateNewPoint();
     };
     /// \}
   }
