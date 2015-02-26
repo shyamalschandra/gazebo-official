@@ -3,7 +3,7 @@ package gazebo.msgs;
 /// \ingroup gazebo_msgs
 /// \interface Geometry 
 /// \brief Information about a geometry element
-/// \verbatim
+
 
 import "boxgeom.proto";
 import "cylindergeom.proto";
@@ -13,6 +13,7 @@ import "imagegeom.proto";
 import "heightmapgeom.proto";
 import "meshgeom.proto";
 import "vector3d.proto";
+import "polylinegeom.proto";
 
 message Geometry
 {
@@ -27,6 +28,8 @@ message Geometry
     MESH         = 7;
     TRIANGLE_FAN = 8;
     LINE_STRIP   = 9;
+    POLYLINE     = 10;
+    EMPTY        = 11;
   }
 
   optional Type type                = 1;
@@ -39,5 +42,5 @@ message Geometry
   optional MeshGeom      mesh       = 8;
 
   repeated Vector3d points          = 9;
+  optional Polyline polyline        = 10;
 }
-/// \endverbatim
