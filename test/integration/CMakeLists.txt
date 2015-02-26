@@ -61,6 +61,7 @@ set(tests
   nondefault_world.cc
   physics.cc
   physics_basic_controller_response.cc
+  physics_collision.cc
   physics_friction.cc
   physics_inertia_ratio.cc
   physics_link.cc
@@ -97,6 +98,8 @@ if (ENABLE_TESTS_COMPILATION)
   # Increase timeout, to account for model download time.
   set_tests_properties(${TEST_TYPE}_factory PROPERTIES TIMEOUT 500)
   set_tests_properties(${TEST_TYPE}_physics PROPERTIES TIMEOUT 500)
+
+  set_tests_properties(${TEST_TYPE}_world_clone PROPERTIES TIMEOUT 10)
 
   # Add plugin dependency
   add_dependencies(${TEST_TYPE}_joint_test SpringTestPlugin)
