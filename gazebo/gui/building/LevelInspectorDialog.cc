@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  *
 */
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/gui/building/LevelInspectorDialog.hh"
 
 using namespace gazebo;
@@ -63,10 +64,11 @@ LevelInspectorDialog::LevelInspectorDialog(QWidget *_parent) : QDialog(_parent)
       QSizePolicy::Fixed);
   this->floorTextureList.push_back(":wood.jpg");
   this->floorTextureList.push_back(":tiles.jpg");
+  this->floorTextureList.push_back(":bricks.png");
   for (unsigned int i = 0; i < this->floorTextureList.size(); ++i)
   {
     this->floorTextureComboBox->addItem(QPixmap(this->floorTextureList[i])
-        .scaled(QSize(30, 30), Qt::IgnoreAspectRatio), QString(""));
+        .scaled(QSize(90, 90), Qt::IgnoreAspectRatio), QString(""));
   }
   this->floorTextureComboBox->addItem("X");
   this->floorTextureComboBox->setCurrentIndex(
@@ -181,8 +183,7 @@ void LevelInspectorDialog::SetHeight(double _height)
 /////////////////////////////////////////////////
 void LevelInspectorDialog::SetFloorColor(const QColor _color)
 {
-  // Find index corresponding to color (only a few colors allowed so far)
-  int index = 0;
+  int index = -1;
   for (unsigned int i = 0; i < this->floorColorList.size(); ++i)
   {
     if (this->floorColorList[i] == _color)
@@ -191,6 +192,17 @@ void LevelInspectorDialog::SetFloorColor(const QColor _color)
       break;
     }
   }
+
+  if (index == -1)
+  {
+    // Add a new color
+    this->floorColorList.push_back(_color);
+    QPixmap colorIcon(15, 15);
+    colorIcon.fill(this->floorColorList.back());
+    this->floorColorComboBox->addItem(colorIcon, QString(""));
+    index = this->floorColorComboBox->count()-1;
+  }
+  GZ_ASSERT(index > 0, "Color index is broken < 0");
   this->floorColorComboBox->setCurrentIndex(index);
 }
 

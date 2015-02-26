@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 */
 
 #include <boost/filesystem.hpp>
-#include "ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 #include "gazebo/physics/physics.hh"
 #include "helper_physics_generator.hh"
 
 using namespace gazebo;
-class PR2Test : public ServerFixture,
+class PR2Test : public PhysicsFixture,
                 public testing::WithParamInterface<const char*>
 {
   public: void LoadPR2(std::string _physicsEngine);
@@ -44,7 +44,7 @@ void PR2Test::LoadPR2(std::string _physicsEngine)
   boost::filesystem::remove_all(paths->GetDefaultTestPath());
   boost::filesystem::create_directories(paths->GetDefaultTestPath());
 
-  ServerFixture::Load("worlds/empty.world", false, _physicsEngine);
+  LoadWorld("worlds/empty.world", false, _physicsEngine);
   SpawnModel("model://pr2");
 
   int i;
@@ -59,17 +59,16 @@ void PR2Test::LoadPR2(std::string _physicsEngine)
 
   sensors::SensorPtr sensor =
     sensors::get_sensor("narrow_stereo_gazebo_l_stereo_camera_sensor");
-  EXPECT_TRUE(sensor);
+  EXPECT_TRUE(sensor != NULL);
 
   sensors::CameraSensorPtr camSensor =
     boost::dynamic_pointer_cast<sensors::CameraSensor>(sensor);
-  EXPECT_TRUE(camSensor);
+  EXPECT_TRUE(camSensor != NULL);
 
   while (!camSensor->SaveFrame(paths->GetDefaultTestPath() + "/frame_10.jpg"))
     common::Time::MSleep(100);
 
-  physics::get_world("default")->GetPhysicsEngine()->SetGravity(
-      math::Vector3(-0.5, 0, -0.1));
+  physics->SetGravity(math::Vector3(-0.5, 0, -0.1));
   for (int i = 11; i < 200; i++)
   {
     std::ostringstream filename;
@@ -102,14 +101,7 @@ void PR2Test::ScrewJoint(std::string _physicsEngine)
     return;
   }
 
-  ServerFixture::Load("worlds/pr2.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // check the physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/pr2.world", true, _physicsEngine);
 
   physics::ModelPtr model = world->GetModel("pr2");
   ASSERT_TRUE(model != NULL);
@@ -153,8 +145,10 @@ void PR2Test::StaticPR2(std::string _physicsEngine)
 {
   if (_physicsEngine == "simbody")
   {
-    gzerr << "Abort test since simbody does not support screw joints in PR2, "
-          << "Please see issue #857.\n";
+    gzerr << "Abort test since simbody does not support static models "
+          << "with pose offsets, "
+          << "please see issue #860."
+          << std::endl;
     return;
   }
   if (_physicsEngine == "dart")
@@ -164,16 +158,7 @@ void PR2Test::StaticPR2(std::string _physicsEngine)
     return;
   }
 
-  ServerFixture::Load("worlds/static_pr2.world", true, _physicsEngine);
-
-  // The body of this is copied from PhysicsTest::EmptyWorld
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/static_pr2.world", true, _physicsEngine);
 
   // simulate 1 step
   world->Step(1);
