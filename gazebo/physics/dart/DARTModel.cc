@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,10 +178,10 @@ void DARTModel::BackupState()
 void DARTModel::RestoreState()
 {
   GZ_ASSERT(static_cast<size_t>(dtConfig.size()) ==
-            this->dtSkeleton->getDof(),
+            this->dtSkeleton->getNumDofs(),
             "Cannot RestoreState, invalid size");
   GZ_ASSERT(static_cast<size_t>(dtVelocity.size()) ==
-            this->dtSkeleton->getDof(),
+            this->dtSkeleton->getNumDofs(),
             "Cannot RestoreState, invalid size");
 
   this->dtSkeleton->setPositions(dtConfig);
