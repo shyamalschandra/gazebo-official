@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,6 @@ namespace gazebo
 
   namespace rendering
   {
-    class GUIOverlay;
-
     /// \addtogroup gazebo_rendering
     /// \{
 
@@ -139,12 +137,6 @@ namespace gazebo
       /// \param[in] _target The new rendering target.
       public: virtual void SetRenderTarget(Ogre::RenderTarget *_target);
 
-      /// \brief Get the GUI overlay
-      ///
-      /// An overlay allows you to draw 2D elements on the viewport.
-      /// \return Pointer to the GUIOverlay.
-      public: GUIOverlay *GetGUIOverlay();
-
       /// \brief Set whether the view controller is enabled.
       ///
       /// The view controller is used to handle user camera movements.
@@ -181,6 +173,18 @@ namespace gazebo
       /// brief Set if the user camera pose has changed in the world file.
       /// \param[in] _value True if the camera pose changed in the world file.
       public: void SetUseSDFPose(bool _value);
+
+      /// brief Enable or disable camera control through ~/user_camera/joy_twist
+      /// gz topic. Defaults to true.
+      /// \param[in] _value True to enable camera pose control by
+      /// gz topic ~/user_camera/joy_twist.
+      public: void SetJoyTwistControl(bool _value);
+
+      /// brief Enable or disable camera control through ~/user_camera/joy_pose
+      /// gz topic. Defaults to true.
+      /// \param[in] _value True to enable camera pose control by
+      /// gz topic ~/user_camera/joy_pose.
+      public: void SetJoyPoseControl(bool _value);
 
       /// \brief Set the camera to be attached to a visual.
       ///
@@ -221,37 +225,20 @@ namespace gazebo
       private: void OnMoveToVisualComplete();
 
       /// \brief Handles incoming relative joystick messages.
+      /// Incoming joystick messages are used to control
+      /// translation and rotation rates of the camera position.
       /// \param[in] _msg New joystick message.
-      private: void OnJoy(ConstJoystickPtr &_msg);
+      private: void OnJoyTwist(ConstJoystickPtr &_msg);
 
       /// \brief Handles incoming absolute joystick messages.
+      /// Incoming joystick messages are used to control
+      /// camera's world pose.
       /// \param[in] _msg New pose message.
       private: void OnJoyPose(ConstPosePtr &_msg);
 
       /// \internal
       /// \brief Pointer to private data.
       private: UserCameraPrivate *dataPtr;
-
-      /// \brief Gazebo communication node pointer.
-      private: transport::NodePtr node;
-
-      /// \brief Subscribes to relative joystick messages.
-      private: transport::SubscriberPtr joySub;
-
-      /// \brief Subscribes to absolute joystick messages.
-      private: transport::SubscriberPtr joySubAbs;
-
-      /// \brief Initial pose of camera, used in OnJoyAbs()
-      private: math::Pose initialPose;
-
-      /// \brief Has the pose been set by somebody yet?
-      private: bool poseSet;
-
-      /// \brief Ogre camera for the right Oculus screen.
-      protected: Ogre::Camera *rightCamera;
-
-      /// \brief View port for the right camera.
-      protected: Ogre::Viewport *rightViewport;
     };
     /// \}
   }
