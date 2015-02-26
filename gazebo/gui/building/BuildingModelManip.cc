@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,12 @@ std::string BuildingModelManip::GetName() const
 rendering::VisualPtr BuildingModelManip::GetVisual() const
 {
   return this->visual;
+}
+
+/////////////////////////////////////////////////
+double BuildingModelManip::GetTransparency() const
+{
+  return this->transparency;
 }
 
 /////////////////////////////////////////////////
@@ -316,7 +322,9 @@ void BuildingModelManip::OnTextureChanged(QString _texture)
 void BuildingModelManip::OnTransparencyChanged(float _transparency)
 {
   this->SetTransparency(_transparency);
-  this->maker->BuildingChanged();
+  // For now transparency is used only to aid in the preview and doesn't affect
+  // the saved building
+  // this->maker->BuildingChanged();
 }
 
 /////////////////////////////////////////////////
@@ -378,8 +386,8 @@ void BuildingModelManip::SetColor(QColor _color)
   common::Color newColor(_color.red(), _color.green(), _color.blue());
   this->color = newColor;
   this->visual->SetAmbient(this->color);
-  emit ColorChanged(_color);
   this->maker->BuildingChanged();
+  emit ColorChanged(_color);
 }
 
 /////////////////////////////////////////////////
@@ -388,25 +396,31 @@ void BuildingModelManip::SetTexture(QString _texture)
   // TODO For now setting existing material scripts.
   // Add support for custom textures.
   this->texture = "Gazebo/Grey";
-  if (_texture == ":/images/wood.png")
+  if (_texture == ":wood.jpg")
     this->texture = "Gazebo/Wood";
-  else if (_texture == ":/images/ceiling_tiled.png")
+  else if (_texture == ":tiles.jpg")
     this->texture = "Gazebo/CeilingTiled";
-  else if (_texture == ":/images/bricks.png")
+  else if (_texture == ":bricks.png")
     this->texture = "Gazebo/Bricks";
 
   // BuildingModelManip and BuildingMaker handle material names,
   // Inspectors and palette handle thumbnail uri
   this->visual->SetMaterial(this->texture);
-  this->visual->SetAmbient(this->color);
-  emit TextureChanged(_texture);
   this->maker->BuildingChanged();
+  emit TextureChanged(_texture);
 }
 
 /////////////////////////////////////////////////
 void BuildingModelManip::SetTransparency(float _transparency)
 {
-  this->visual->SetTransparency(_transparency);
+  this->transparency = _transparency;
+  this->visual->SetTransparency(this->transparency);
+}
+
+/////////////////////////////////////////////////
+void BuildingModelManip::SetVisible(bool _visible)
+{
+  this->visual->SetVisible(_visible);
 }
 
 /////////////////////////////////////////////////
@@ -425,9 +439,15 @@ int BuildingModelManip::GetLevel() const
 void BuildingModelManip::OnChangeLevel(int _level)
 {
   if (this->level > _level)
-    this->SetTransparency(1.0);
+    this->SetVisible(false);
   else if (this->level < _level)
+  {
+    this->SetVisible(true);
     this->SetTransparency(0.0);
+  }
   else
+  {
+    this->SetVisible(true);
     this->SetTransparency(0.4);
+  }
 }

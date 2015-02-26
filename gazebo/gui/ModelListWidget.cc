@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1395,6 +1395,47 @@ void ModelListWidget::FillPropertyTree(const msgs::Joint &_msg,
                                                tr("child link"));
     item->setValue(_msg.child().c_str());
     this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // joint type
+  if (_msg.has_type())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                             tr("type"));
+    std::string jointType = msgs::Convert(_msg.type());
+
+    item->setValue(jointType.c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // parent link
+  if (_msg.has_parent())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                               tr("parent link"));
+    item->setValue(_msg.parent().c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // child link
+  if (_msg.has_child())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                               tr("child link"));
+    item->setValue(_msg.child().c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
     item->setEnabled(false);
   }
 

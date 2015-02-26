@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #define _WINDOW_ITEM_HH_
 
 #include "gazebo/gui/qt.h"
-#include "gazebo/gui/building/MeasureItem.hh"
 #include "gazebo/gui/building/RectItem.hh"
 #include "gazebo/gui/building/BuildingItem.hh"
 #include "gazebo/util/system.hh"
@@ -74,9 +73,6 @@ namespace gazebo
 
         /// \brief Emit window changed Qt signals.
         public: void WindowChanged();
-
-        /// \brief Update window item when rect item is updated.
-        protected: void RectUpdated();
 
         /// \brief Depth of the window item in pixels.
         private: double windowDepth;

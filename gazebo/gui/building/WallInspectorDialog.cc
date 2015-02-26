@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  *
 */
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/gui/building/WallInspectorDialog.hh"
 
 using namespace gazebo;
@@ -172,13 +173,13 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   this->textureComboBox->setMinimumWidth(50);
   this->textureComboBox->setMinimumHeight(50);
   this->textureComboBox->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-  this->textureList.push_back(":/images/wood.png");
-  this->textureList.push_back(":/images/ceiling_tiled.png");
-  this->textureList.push_back(":/images/bricks.png");
+  this->textureList.push_back(":wood.jpg");
+  this->textureList.push_back(":tiles.jpg");
+  this->textureList.push_back(":bricks.png");
   for (unsigned int i = 0; i < this->textureList.size(); ++i)
   {
-    this->textureComboBox->addItem(QPixmap(this->textureList[i]),
-        QString(""));
+    this->textureComboBox->addItem(QPixmap(this->textureList[i]).scaled(
+        QSize(90, 90), Qt::IgnoreAspectRatio), QString(""));
   }
   this->textureComboBox->addItem("X");
   this->textureComboBox->setCurrentIndex(this->textureComboBox->count()-1);
@@ -310,21 +311,27 @@ void WallInspectorDialog::SetThickness(double _thickness)
 /////////////////////////////////////////////////
 void WallInspectorDialog::SetColor(const QColor _color)
 {
+  int index = -1;
   for (unsigned int i = 0; i < this->colorList.size(); ++i)
   {
     if (this->colorList[i] == _color)
     {
-      this->colorComboBox->setCurrentIndex(i);
-      return;
+      index = i;
+      break;
     }
   }
 
-  // Add a new color
-  this->colorList.push_back(_color);
-  QPixmap colorIcon(15, 15);
-  colorIcon.fill(this->colorList.back());
-  this->colorComboBox->addItem(colorIcon, QString(""));
-  this->colorComboBox->setCurrentIndex(this->colorComboBox->count()-1);
+  if (index == -1)
+  {
+    // Add a new color
+    this->colorList.push_back(_color);
+    QPixmap colorIcon(15, 15);
+    colorIcon.fill(this->colorList.back());
+    this->colorComboBox->addItem(colorIcon, QString(""));
+    index = this->colorComboBox->count()-1;
+  }
+  GZ_ASSERT(index > 0, "Color index is broken < 0");
+  this->colorComboBox->setCurrentIndex(index);
 }
 
 /////////////////////////////////////////////////

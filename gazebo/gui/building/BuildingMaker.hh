@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@
 #include <map>
 #include <sdf/sdf.hh>
 
-#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/KeyEvent.hh"
@@ -43,7 +42,7 @@ namespace gazebo
     class EntityMaker;
     class EditorItem;
     class BuildingModelManip;
-    class FinishBuildingDialog;
+    class SaveDialog;
 
     /// \addtogroup gazebo_gui
     /// \{
@@ -54,10 +53,17 @@ namespace gazebo
     {
       /// \enum SaveState
       /// \brief Save states for the building editor.
-      // NEVER_SAVED: The building has never been saved.
-      // ALL_SAVED: All changes have been saved.
-      // UNSAVED_CHANGES: Has been saved before, but has unsaved changes.
-      private: enum SaveState { NEVER_SAVED, ALL_SAVED, UNSAVED_CHANGES };
+      private: enum SaveState
+      {
+        // NEVER_SAVED: The building has never been saved.
+        NEVER_SAVED,
+
+        // ALL_SAVED: All changes have been saved.
+        ALL_SAVED,
+
+        // UNSAVED_CHANGES: Has been saved before, but has unsaved changes.
+        UNSAVED_CHANGES
+      };
 
       /// \brief Constructor
       public: BuildingMaker();
@@ -65,7 +71,8 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~BuildingMaker();
 
-      /// \brief TODO
+      /// \brief QT callback when entering or leaving building edit mode
+      /// \param[in] _checked True if the menu item is checked
       public: void OnEdit(bool _checked);
 
       /// \brief Set the name of this building model.
@@ -201,14 +208,6 @@ namespace gazebo
       /// \return Angle in radians.
       public: static double ConvertAngle(double _angle);
 
-      /// \brief Save model to SDF format.
-      /// \param[in] _savePath Path to save the SDF to.
-      public: void SaveToSDF(const std::string &_savePath);
-
-      /// \brief Save config file.
-      /// \param[in] _savePath Path to save the file to.
-      public: void SaveToConfig(const std::string &_savePath);
-
       /// \brief Reset the building maker and the SDF.
       public: void Reset();
 
@@ -221,13 +220,10 @@ namespace gazebo
       /// \brief Generate the SDF from building part visuals.
       public: void GenerateSDF();
 
-      /// \brief Generate the config file.
-      public: void GenerateConfig();
-
       // Documentation inherited
       public: virtual bool IsActive() const;
 
-      /// TODO
+      /// \brief Set save state upon a change to the building.
       public: void BuildingChanged();
 
       // Documentation inherited
@@ -245,9 +241,6 @@ namespace gazebo
 
       /// \brief Get a template SDF string of a simple model.
       private: std::string GetTemplateSDFString();
-
-      /// \brief Get a template config file for a simple model.
-      private: std::string GetTemplateConfigString();
 
       /// \brief Internal helper function for QPointF comparison used by the
       /// surface subsivision algorithm.
@@ -274,14 +267,12 @@ namespace gazebo
       private: void SaveModelFiles();
 
       /// \brief Callback for saving the model.
-      /// \param[in] _saveName Name to save the model.
       /// \return True if the user chose to save, false if the user cancelled.
-      private: bool OnSave(const std::string &_saveName = "");
+      private: bool OnSave();
 
       /// \brief Callback for selecting a folder and saving the model.
-      /// \param[in] _saveName Name to save the model.
       /// \return True if the user chose to save, false if the user cancelled.
-      private: bool OnSaveAs(const std::string &_saveName);
+      private: bool OnSaveAs();
 
       /// \brief Callback for when the name is changed through the Palette.
       /// \param[in] _modelName The newly entered building name.
@@ -298,25 +289,41 @@ namespace gazebo
       /// \param[in] _level The level that is currently being edited.
       private: void OnChangeLevel(int _level);
 
-      /// \brief TODO
+      /// \brief Cancel material modes.
       private: void StopMaterialModes();
 
-      /// \brief TODO
+      /// \brief Reset currently hovered visual to the properties it had before
+      /// being hovered.
+      private: void ResetHoverVis();
+
+      /// \brief Callback received when a color has been selected on the
+      /// palette.
+      /// \param[in] _color Selected color.
       private: void OnColorSelected(QColor _color);
 
-      /// \brief TODO
+      /// \brief Callback received when a texture has been selected on the
+      /// palette.
+      /// \param[in] _texture Selected texture.
       private: void OnTextureSelected(QString _texture);
 
-      /// \brief TODO
+      /// \brief Mouse event filter callback when mouse is moved.
+      /// \param[in] _event The mouse event.
+      /// \return True if the event was handled
       private: bool On3dMouseMove(const common::MouseEvent &_event);
 
-      /// \brief TODO
+      /// \brief Mouse event filter callback when mouse is pressed.
+      /// \param[in] _event The mouse event.
+      /// \return True if the event was handled
       private: bool On3dMousePress(const common::MouseEvent &_event);
 
-      /// \brief TODO
+      /// \brief Mouse event filter callback when mouse is released.
+      /// \param[in] _event The mouse event.
+      /// \return True if the event was handled
       private: bool On3dMouseRelease(const common::MouseEvent &_event);
 
-      /// \brief TODO
+      /// \brief Key event filter callback when key is pressed.
+      /// \param[in] _event The key event.
+      /// \return True if the event was handled
       private: bool On3dKeyPress(const common::KeyEvent &_event);
 
       /// \brief Conversion scale used by the Convert helper functions.
@@ -332,17 +339,17 @@ namespace gazebo
       /// \brief A template SDF of a simple box model.
       private: sdf::SDFPtr modelTemplateSDF;
 
-      /// \brief The building model's config file.
-      private: TiXmlDocument modelConfig;
-
       /// \brief Name of the building model.
       private: std::string modelName;
 
-      /// \brief The root visual of the building model.
-      private: rendering::VisualPtr modelVisual;
+      /// \brief Folder name, which is the model name without spaces.
+      private: std::string folderName;
 
-      /// \brief The pose of the building model.
-      private: math::Pose modelPose;
+      /// \brief Name of the building model preview.
+      private: static const std::string previewName;
+
+      /// \brief The root visual of the building model preview.
+      private: rendering::VisualPtr previewVisual;
 
       /// \brief Counter for the number of walls in the model.
       private: int wallCounter;
@@ -362,40 +369,24 @@ namespace gazebo
       /// \brief Store the current save state of the model.
       private: enum SaveState currentSaveState;
 
-      /// \brief Default directory to save models: ~/building_editor_models
-      private: std::string defaultPath;
-
-      /// \brief Path to where the model is saved.
-      private: std::string saveLocation;
-
-      /// \brief Name of the building model's author.
-      private: std::string authorName;
-
-      /// \brief Name of the building model's author's email.
-      private: std::string authorEmail;
-
-      /// \brief Model description.
-      private: std::string description;
-
-      /// \brief Model version.
-      private: std::string version;
-
       /// \brief A list of gui editor events connected to the building maker.
       private: std::vector<event::ConnectionPtr> connections;
 
       /// \brief Default name of building model
-      private: std::string buildingDefaultName;
+      private: static const std::string buildingDefaultName;
 
       /// \brief A dialog for setting building model name and save location.
-      private: FinishBuildingDialog *saveDialog;
+      private: SaveDialog *saveDialog;
 
-      /// \brief Visual that is currently hovered over by the mouse
+      /// \brief Visual that is currently hovered over by the mouse.
       private: rendering::VisualPtr hoverVis;
 
-      /// \brief TODO
+      /// \brief The color currently selected. If none is selected, it will be
+      /// QColor::Invalid.
       private: QColor selectedColor;
 
-      /// \brief TODO
+      /// \brief The texture currently selected. If none is selected, it will be
+      /// an empty string.
       private: QString selectedTexture;
 
       /// \brief The current level that is being edited.
