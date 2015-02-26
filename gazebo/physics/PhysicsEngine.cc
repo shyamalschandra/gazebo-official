@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,23 @@
  * limitations under the License.
  *
 */
-/* Desc: The base class for all physics engines
- * Author: Nate Koenig
- */
+#include <sdf/sdf.hh>
 
-#include "msgs/msgs.hh"
-#include "common/Exception.hh"
-#include "common/Console.hh"
-#include "common/Events.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Events.hh"
 
-#include "transport/Transport.hh"
-#include "transport/Node.hh"
+#include "gazebo/transport/TransportIface.hh"
+#include "gazebo/transport/Node.hh"
 
-#include "physics/Link.hh"
-#include "physics/World.hh"
-#include "physics/PhysicsEngine.hh"
+#include "gazebo/math/Rand.hh"
 
-#include "sdf/sdf.hh"
+#include "gazebo/physics/ContactManager.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/World.hh"
+#include "gazebo/physics/PhysicsEngine.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -42,6 +42,10 @@ PhysicsEngine::PhysicsEngine(WorldPtr _world)
   this->sdf.reset(new sdf::Element);
   sdf::initFile("physics.sdf", this->sdf);
 
+  this->targetRealTimeFactor = 0;
+  this->realTimeUpdateRate = 0;
+  this->maxStepSize = 0;
+
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init(this->world->GetName());
   this->physicsSub = this->node->Subscribe("~/physics",
@@ -49,23 +53,28 @@ PhysicsEngine::PhysicsEngine(WorldPtr _world)
 
   this->responsePub =
     this->node->Advertise<msgs::Response>("~/response");
-  this->contactPub =
-    this->node->Advertise<msgs::Contacts>("~/physics/contacts");
 
   this->requestSub = this->node->Subscribe("~/request",
                                            &PhysicsEngine::OnRequest, this);
 
   this->physicsUpdateMutex = new boost::recursive_mutex();
 
-  this->updateRateDouble = 0.0;
+  // Create and initialized the contact manager.
+  this->contactManager = new ContactManager();
+  this->contactManager->Init(this->world);
 }
 
 //////////////////////////////////////////////////
 void PhysicsEngine::Load(sdf::ElementPtr _sdf)
 {
   this->sdf->Copy(_sdf);
-  if (this->sdf->HasElement("update_rate"))
-    this->SetUpdateRate(this->sdf->GetValueDouble("update_rate"));
+
+  this->realTimeUpdateRate =
+      this->sdf->GetElement("real_time_update_rate")->Get<double>();
+  this->targetRealTimeFactor =
+      this->sdf->GetElement("real_time_factor")->Get<double>();
+  this->maxStepSize =
+      this->sdf->GetElement("max_step_size")->Get<double>();
 }
 
 //////////////////////////////////////////////////
@@ -85,12 +94,14 @@ PhysicsEngine::~PhysicsEngine()
   this->responsePub.reset();
   this->requestSub.reset();
   this->node.reset();
+
+  delete this->contactManager;
 }
 
 //////////////////////////////////////////////////
 math::Vector3 PhysicsEngine::GetGravity() const
 {
-  return this->sdf->GetValueVector3("gravity");
+  return this->sdf->Get<math::Vector3>("gravity");
 }
 
 //////////////////////////////////////////////////
@@ -99,7 +110,7 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
 {
   CollisionPtr result;
   LinkPtr link =
-    boost::shared_dynamic_cast<Link>(this->world->GetEntity(_linkName));
+    boost::dynamic_pointer_cast<Link>(this->world->GetEntity(_linkName));
 
   if (!link)
     gzerr << "Unable to find link[" << _linkName << "]\n";
@@ -110,23 +121,116 @@ CollisionPtr PhysicsEngine::CreateCollision(const std::string &_shapeType,
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::SetUpdateRate(double _value)
-{
-  this->sdf->GetElement("update_rate")->Set(_value);
-  this->updateRateDouble = _value;
-}
-
-//////////////////////////////////////////////////
-double PhysicsEngine::GetUpdateRate()
-{
-  return this->updateRateDouble;
-}
-
-//////////////////////////////////////////////////
 double PhysicsEngine::GetUpdatePeriod()
 {
-  if (this->updateRateDouble > 0)
-    return 1.0/this->updateRateDouble;
+  double updateRate = this->GetRealTimeUpdateRate();
+  if (updateRate > 0)
+    return 1.0/updateRate;
   else
     return 0;
+}
+
+//////////////////////////////////////////////////
+ModelPtr PhysicsEngine::CreateModel(BasePtr _base)
+{
+  ModelPtr ret(new Model(_base));
+  return ret;
+}
+
+//////////////////////////////////////////////////
+double PhysicsEngine::GetTargetRealTimeFactor() const
+{
+  return this->targetRealTimeFactor;
+}
+
+//////////////////////////////////////////////////
+double PhysicsEngine::GetRealTimeUpdateRate() const
+{
+  return this->realTimeUpdateRate;
+}
+
+//////////////////////////////////////////////////
+double PhysicsEngine::GetMaxStepSize() const
+{
+  return this->maxStepSize;
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetTargetRealTimeFactor(double _factor)
+{
+  this->sdf->GetElement("real_time_factor")->Set(_factor);
+  this->targetRealTimeFactor = _factor;
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetRealTimeUpdateRate(double _rate)
+{
+  this->sdf->GetElement("real_time_update_rate")->Set(_rate);
+  this->realTimeUpdateRate = _rate;
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetMaxStepSize(double _stepSize)
+{
+  this->sdf->GetElement("max_step_size")->Set(_stepSize);
+  this->maxStepSize = _stepSize;
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetWorldCFM(double /*_cfm*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetWorldERP(double /*_erp*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetAutoDisableFlag(bool /*_autoDisable*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetContactMaxCorrectingVel(double /*_vel*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetMaxContacts(unsigned int /*_maxContacts*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::OnRequest(ConstRequestPtr &/*_msg*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &/*_msg*/)
+{
+}
+
+//////////////////////////////////////////////////
+void PhysicsEngine::SetContactSurfaceLayer(double /*_layerDepth*/)
+{
+}
+
+//////////////////////////////////////////////////
+bool PhysicsEngine::SetParam(const std::string &/*_key*/,
+    const boost::any &/*_value*/)
+{
+  return true;
+}
+
+//////////////////////////////////////////////////
+boost::any PhysicsEngine::GetParam(const std::string &/*_key*/) const
+{
+  return 0;
+}
+
+//////////////////////////////////////////////////
+ContactManager *PhysicsEngine::GetContactManager() const
+{
+  return this->contactManager;
 }

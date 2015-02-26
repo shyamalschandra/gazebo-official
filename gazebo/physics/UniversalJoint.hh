@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,12 @@
  * limitations under the License.
  *
 */
-/* Desc: A universal joint
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
+#ifndef _GAZEBO_UNIVERSALJOINT_HH_
+#define _GAZEBO_UNIVERSALJOINT_HH_
 
-#ifndef UNIVERSALJOINT_HH
-#define UNIVERSALJOINT_HH
-
-#include "physics/Joint.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/physics/Joint.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,32 +28,55 @@ namespace gazebo
     /// \addtogroup gazebo_physics
     /// \{
 
-    /// \brief A universal joint
+    /// \class UniversalJoint UniversalJoint.hh physics/physics.hh
+    /// \brief A universal joint.
+    /// Axis1 and axis2 are body-fixed, with axis1 attached to parent
+    /// body and axis2 attached to child body.
     template<class T>
-    class UniversalJoint : public T
+    class GAZEBO_VISIBLE UniversalJoint : public T
     {
-      /// \brief Constructor
-      public: UniversalJoint(BasePtr _parent) : T(_parent)
-              { this->AddType(Base::UNIVERSAL_JOINT); }
+      /// \enum AxisIndex
+      /// \brief Map joint axes to corresponding link.
+      public: enum AxisIndex
+      {
+        AXIS_PARENT = 0,
+        AXIS_CHILD  = 1
+      };
 
-      /// \brief Destuctor
+      /// \brief Constructor.
+      /// \param[in] _parent Parent link of the univeral joint.
+      public: explicit UniversalJoint(BasePtr _parent) : T(_parent)
+              {this->AddType(Base::UNIVERSAL_JOINT);}
+
+      /// \brief Destuctor.
       public: virtual ~UniversalJoint()
               { }
-      /// \brief Load a UniversalJoint
-      protected: virtual void Load(sdf::ElementPtr _sdf)
-                 {
-                   T::Load(_sdf);
 
-                   this->SetAxis(0,
-                       this->sdf->GetElement("axis")->GetValueVector3("xyz"));
-                   this->SetAxis(1,
-                       this->sdf->GetElement("axis2")->GetValueVector3("xyz"));
+      // Documentation inherited.
+      public: virtual unsigned int GetAngleCount() const
+              {return 2;}
+
+      /// \brief Load a UniversalJoint.
+      /// \param[in] _sdf SDF values to load from.
+      public: virtual void Load(sdf::ElementPtr _sdf)
+              {
+                T::Load(_sdf);
+
+                /*
+                this->SetAxis(0,
+                    this->sdf->GetElement("axis")->Get<math::Vector3("xyz"));
+                this->SetAxis(1,
+                    this->sdf->GetElement("axis2")->Get<math::Vector3>("xyz"));
+                    */
+              }
+
+      /// \brief Initialize joint
+      protected: virtual void Init()
+                 {
+                   T::Init();
                  }
     };
     /// \}
   }
 }
 #endif
-
-
-

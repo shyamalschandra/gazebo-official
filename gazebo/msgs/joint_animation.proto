@@ -4,9 +4,8 @@ package gazebo.msgs;
 /// \interface JointAnimation 
 /// \brief Message for a model joint animation, does not appear to be used.
 /// \todo Document me.
-/// \verbatim
 
-import "pose.proto";
+
 import "time.proto";
 
 message JointAnimation
@@ -22,4 +21,4 @@ message JointAnimation
   repeated Time  time          = 3;
 }
 
-/// \endverbatim
+
