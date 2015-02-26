@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -171,6 +171,12 @@ void Light::LoadFromMsg(const msgs::Light &_msg)
 }
 
 //////////////////////////////////////////////////
+sdf::ElementPtr Light::CloneSDF() const
+{
+  return this->sdf->Clone();
+}
+
+//////////////////////////////////////////////////
 void Light::LoadFromMsg(ConstLightPtr &_msg)
 {
   this->LoadFromMsg(*_msg);
@@ -215,8 +221,7 @@ void Light::CreateVisual()
 
     // Create a scene node to hold the light selection object.
     Ogre::SceneNode *visSceneNode;
-    visSceneNode = this->visual->GetSceneNode()->createChildSceneNode(
-        this->GetName() + "_SELECTION_NODE_");
+    visSceneNode = this->visual->GetSceneNode()->createChildSceneNode();
 
     // Make sure the unit_sphere has been inserted.
     this->visual->InsertMesh("unit_sphere");
