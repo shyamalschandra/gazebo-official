@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,15 @@
 
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/SphericalCoordinates.hh"
+#include "test/util.hh"
 
 using namespace gazebo;
 
+class SphericalCoordinatesTest : public gazebo::testing::AutoLogFixture { };
+
 //////////////////////////////////////////////////
 // Test different constructors, default parameters
-TEST(SphericalCoordinatesTest, Constructor)
+TEST_F(SphericalCoordinatesTest, Constructor)
 {
   // Default surface type
   common::SphericalCoordinates::SurfaceType st =
@@ -65,7 +68,7 @@ TEST(SphericalCoordinatesTest, Constructor)
 
 //////////////////////////////////////////////////
 // SurfaceType Convert function
-TEST(SphericalCoordinatesTest, Convert)
+TEST_F(SphericalCoordinatesTest, Convert)
 {
   // Default surface type
   common::SphericalCoordinates::SurfaceType st =
@@ -76,7 +79,7 @@ TEST(SphericalCoordinatesTest, Convert)
 
 //////////////////////////////////////////////////
 // Test Set functions
-TEST(SphericalCoordinatesTest, SetFunctions)
+TEST_F(SphericalCoordinatesTest, SetFunctions)
 {
   // Default surface type
   common::SphericalCoordinates::SurfaceType st =
@@ -109,7 +112,7 @@ TEST(SphericalCoordinatesTest, SetFunctions)
 
 //////////////////////////////////////////////////
 // Test coordinate transformations
-TEST(SphericalCoordinatesTest, CoordinateTransforms)
+TEST_F(SphericalCoordinatesTest, CoordinateTransforms)
 {
   // Default surface type
   common::SphericalCoordinates::SurfaceType st =
@@ -181,7 +184,7 @@ TEST(SphericalCoordinatesTest, CoordinateTransforms)
 
 //////////////////////////////////////////////////
 // Test distance
-TEST(SphericalCoordinatesTest, Distance)
+TEST_F(SphericalCoordinatesTest, Distance)
 {
   math::Angle latA, longA, latB, longB;
   latA.SetFromDegree(46.250944);

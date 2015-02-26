@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,12 @@
 
 /// \brief 32bit unsigned integer minimum value
 #define GZ_UINT32_MIN std::numeric_limits<uint32_t>::min()
+
+/// \brief 32bit integer maximum value
+#define GZ_INT32_MAX std::numeric_limits<int32_t>::max()
+
+/// \brief 32bit integer minimum value
+#define GZ_INT32_MIN std::numeric_limits<int32_t>::min()
 
 
 namespace gazebo

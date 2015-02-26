@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@
 #include <string>
 #include <vector>
 
-#include "gazebo/common/Image.hh"
+#include "gazebo/common/ImageHeightmap.hh"
 #include "gazebo/common/HeightmapData.hh"
 #include "gazebo/common/Dem.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/Shape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -44,7 +45,7 @@ namespace gazebo
     /// \brief HeightmapShape collision shape builds a heightmap from
     /// an image.  The supplied image must be square with
     /// N*N+1 pixels per side, where N is an integer.
-    class HeightmapShape : public Shape
+    class GAZEBO_VISIBLE HeightmapShape : public Shape
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent Collision object.
@@ -118,17 +119,20 @@ namespace gazebo
       /// DEM support. For a list of all raster formats supported you can type
       /// the command "gdalinfo --formats".
       /// \param[in] _filename The path to the terrain file.
-      private: void LoadTerrainFile(const std::string &_filename);
+      /// \return 0 when the operation succeeds to load a file or -1 when fails.
+      private: int LoadTerrainFile(const std::string &_filename);
 
       #ifdef HAVE_GDAL
       /// \brief Load a DEM specified by _filename as a terrain file.
       /// \param[in] _filename The path to the terrain file.
-      private: void LoadDEMAsTerrain(const std::string &_filename);
+      /// \return 0 when the operation succeeds to load a file or -1 when fails.
+      private: int LoadDEMAsTerrain(const std::string &_filename);
       #endif
 
       /// \brief Load an image specified by _filename as a terrain file.
       /// \param[in] _filename The path to the terrain file.
-      private: void LoadImageAsTerrain(const std::string &_filename);
+      /// \return 0 when the operation succeeds to load a file or -1 when fails.
+      private: int LoadImageAsTerrain(const std::string &_filename);
 
       /// \brief Handle request messages.
       /// \param[in] _msg The request message.
@@ -138,7 +142,7 @@ namespace gazebo
       protected: std::vector<float> heights;
 
       /// \brief Image used to generate the heights.
-      protected: common::Image img;
+      protected: common::ImageHeightmap img;
 
       /// \brief HeightmapData used to generate the heights.
       protected: common::HeightmapData *heightmapData;

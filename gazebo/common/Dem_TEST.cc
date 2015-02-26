@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,76 +21,79 @@
 #include "gazebo/common/Dem.hh"
 #include "gazebo/math/Angle.hh"
 #include "test_config.h"
+#include "test/util.hh"
 
 using namespace gazebo;
+
+class DemTest : public gazebo::testing::AutoLogFixture { };
 
 #ifdef HAVE_GDAL
 
 /////////////////////////////////////////////////
-TEST(DemTest, MisingFile)
+TEST_F(DemTest, MisingFile)
 {
   common::Dem dem;
-  EXPECT_EQ(-1, dem.Load("/file/shouldn/never/exist.png"));
+  EXPECT_NE(dem.Load("/file/shouldn/never/exist.png"), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, NotDem)
+TEST_F(DemTest, NotDem)
 {
   common::Dem dem;
   boost::filesystem::path path;
 
   path = "file://media/materials/scripts/CMakeLists.txt";
-  EXPECT_EQ(-1, dem.Load(path.string()));
+  EXPECT_NE(dem.Load(path.string()), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, UnsupportedDem)
+TEST_F(DemTest, UnsupportedDem)
 {
   common::Dem dem;
   boost::filesystem::path path;
 
   path = "file://media/materials/textures/wood.jpg";
-  EXPECT_EQ(-1, dem.Load(path.string()));
+  EXPECT_NE(dem.Load(path.string()), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, NonSquaredDemPortrait)
+TEST_F(DemTest, NonSquaredDemPortrait)
 {
   common::Dem dem;
   boost::filesystem::path path = TEST_PATH;
 
   path /= "data/dem_portrait.tif";
-  EXPECT_EQ(0, dem.Load(path.string()));
+  EXPECT_EQ(dem.Load(path.string()), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, NonSquaredDemLandscape)
+TEST_F(DemTest, NonSquaredDemLandscape)
 {
   common::Dem dem;
   boost::filesystem::path path = TEST_PATH;
 
   path /= "data/dem_landscape.tif";
-  EXPECT_EQ(0, dem.Load(path.string()));
+  EXPECT_EQ(dem.Load(path.string()), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, SquaredDem)
+TEST_F(DemTest, SquaredDem)
 {
   common::Dem dem;
   boost::filesystem::path path = TEST_PATH;
 
   path /= "data/dem_squared.tif";
-  EXPECT_EQ(0, dem.Load(path.string()));
+  EXPECT_EQ(dem.Load(path.string()), 0);
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, BasicAPI)
+TEST_F(DemTest, BasicAPI)
 {
   common::Dem dem;
   boost::filesystem::path path = TEST_PATH;
 
   path /= "data/dem_squared.tif";
-  EXPECT_EQ(0, dem.Load(path.string()));
+  EXPECT_EQ(dem.Load(path.string()), 0);
 
   // Check the heights and widths
   EXPECT_EQ(129, static_cast<int>(dem.GetHeight()));
@@ -121,13 +124,13 @@ TEST(DemTest, BasicAPI)
 }
 
 /////////////////////////////////////////////////
-TEST(DemTest, FillHeightmap)
+TEST_F(DemTest, FillHeightmap)
 {
   common::Dem dem;
   boost::filesystem::path path = TEST_PATH;
 
   path /= "data/dem_squared.tif";
-  EXPECT_EQ(0, dem.Load(path.string()));
+  EXPECT_EQ(dem.Load(path.string()), 0);
 
   // Use FillHeightMap() to retrieve a vector<float> after some transformations
   int subsampling;
