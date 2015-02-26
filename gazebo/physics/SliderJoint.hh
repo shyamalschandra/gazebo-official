@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@
  * Date: 21 May 2003
  */
 
-#ifndef SLIDERJOINT_HH
-#define SLIDERJOINT_HH
+#ifndef _SLIDERJOINT_HH_
+#define _SLIDERJOINT_HH_
 
-#include <float.h>
-#include "physics/Joint.hh"
+#include "gazebo/physics/Joint.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -32,36 +32,30 @@ namespace gazebo
     /// \addtogroup gazebo_physics
     /// \{
 
+    /// \class SliderJoint SliderJoint.hh physics/physics.hh
     /// \brief A slider joint
     template<class T>
-    class SliderJoint : public T
+    class GAZEBO_VISIBLE SliderJoint : public T
     {
-      /// \brief Constructor
-      public: SliderJoint(BasePtr _parent) : T(_parent)
-              { this->AddType(Base::SLIDER_JOINT); }
+      /// \brief Constructor.
+      /// \param[in] _parent Parent of the joint.
+      public: explicit SliderJoint(BasePtr _parent) : T(_parent)
+              {this->AddType(Base::SLIDER_JOINT);}
 
-      /// \brief Destructor
+      /// \brief Destructor.
       public: virtual ~SliderJoint()
               {}
 
-      /// \brief Load a SliderJoint
-      protected: virtual void Load(sdf::ElementPtr _sdf)
-                 { T::Load(_sdf); }
+      /// \brief Load a SliderJoint.
+      /// \param[in] _sdf SDF values to load from
+      public: virtual void Load(sdf::ElementPtr _sdf)
+              {T::Load(_sdf);}
 
-      /// \brief Set the anchor
-      public: virtual void SetAnchor(int /*_index*/,
-                                      const math::Vector3 &_anchor)
-              {this->fakeAnchor = _anchor;}
-
-      /// \brief Get the anchor
-      public: virtual math::Vector3 GetAnchor(int /*_index*/) const
-              {return this->fakeAnchor;}
-
-      protected: math::Vector3 fakeAnchor;
+      // Documentation inherited.
+      public: virtual unsigned int GetAngleCount() const
+              {return 1;}
     };
     /// \}
   }
 }
 #endif
-
-

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
  * limitations under the License.
  *
  */
-#ifndef MODEL_LIST_WIDGET_HH
-#define MODEL_LIST_WIDGET_HH
+#ifndef _MODEL_LIST_WIDGET_HH_
+#define _MODEL_LIST_WIDGET_HH_
 
 #include <string>
 #include <list>
 #include <vector>
+#include <deque>
+#include <sdf/sdf.hh>
 
-#include "gui/qt.h"
-#include "sdf/sdf.hh"
-#include "msgs/msgs.hh"
-#include "transport/TransportTypes.hh"
-#include "rendering/RenderTypes.hh"
+#include "gazebo/gui/qt.h"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/util/system.hh"
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -49,7 +51,7 @@ namespace gazebo
   {
     class ModelEditWidget;
 
-    class ModelListWidget : public QWidget
+    class GAZEBO_VISIBLE ModelListWidget : public QWidget
     {
       Q_OBJECT
       public: ModelListWidget(QWidget *_parent = 0);
@@ -60,13 +62,17 @@ namespace gazebo
       private slots: void OnPropertyChanged(QtProperty *_item);
       private slots: void OnCustomContextMenu(const QPoint &_pt);
       private slots: void OnCurrentPropertyChanged(QtBrowserItem *_item);
-      private: void OnSetSelectedEntity(const std::string &_name);
+      private: void OnSetSelectedEntity(const std::string &_name,
+                                        const std::string &_mode);
       private: void OnResponse(ConstResponsePtr &_msg);
 
       private: void OnModelUpdate(const msgs::Model &_msg);
-      private: void OnRequest(ConstRequestPtr &_msg);
 
-      private: void OnLightMsg(ConstLightPtr &_msg);
+      /// \brief An event callback to handle light update msgs.
+      /// \param[in] _msg Light message.
+      private: void OnLightUpdate(const msgs::Light &_msg);
+
+      private: void OnRequest(ConstRequestPtr &_msg);
 
       private: void OnRemoveScene(const std::string &_name);
       private: void OnCreateScene(const std::string &_name);
@@ -123,7 +129,7 @@ namespace gazebo
                                             QTreeWidgetItem *_parent);
 
       private: void FillPropertyTree(const msgs::Model &_msg,
-                                     QtProperty *_parentItem);
+                                     QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Link &_msg,
                                      QtProperty *_parent);
@@ -135,13 +141,13 @@ namespace gazebo
                                      QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Surface &_msg,
-                                       QtProperty *_parent);
+                                     QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Visual &_msg,
-                                       QtProperty *_parent);
+                                     QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Geometry &_msg,
-                                       QtProperty *_parent);
+                                     QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Scene &_msg,
                                      QtProperty *_parent);
@@ -150,7 +156,7 @@ namespace gazebo
                                      QtProperty *_parent);
 
       private: void FillPropertyTree(const msgs::Light &_msg,
-                                       QtProperty * /*_parent*/);
+                                     QtProperty *_parent);
 
       private: void FillVector3dProperty(const msgs::Vector3d &_msg,
                                          QtProperty *_parent);
@@ -158,9 +164,21 @@ namespace gazebo
       private: void FillPoseProperty(const msgs::Pose &_msg,
                                      QtProperty *_parent);
 
+      /// \brief Fill the property tree with spherical coordinates info.
+      /// \param[in] _msg The spherical coordinates message.
+      /// \param[in] _parent Pointer to the qtproperty which will receive
+      /// the message data.
+      private: void FillPropertyTree(const msgs::SphericalCoordinates &_msg,
+                                     QtProperty *_parent);
+
+      /// \brief Add a property to a parent property or to the property tree.
+      /// \param[in] _item Pointer to the property to be added.
+      /// \param[in] _parent Pointer to the parent property, if applicable.
+      private: void AddProperty(QtProperty *_item, QtProperty *_parent);
 
       private: void ProcessModelMsgs();
       private: void ProcessLightMsgs();
+      private: void ProcessRemoveEntity();
 
       public: void InitTransport(const std::string &_name ="");
       private: void ResetTree();
@@ -192,12 +210,12 @@ namespace gazebo
 
       private: transport::SubscriberPtr responseSub;
       private: transport::SubscriberPtr requestSub;
-      private: transport::SubscriberPtr lightSub;
 
       private: QTreeWidgetItem *sceneItem;
       private: QTreeWidgetItem *physicsItem;
       private: QTreeWidgetItem *modelsItem;
       private: QTreeWidgetItem *lightsItem;
+      private: QTreeWidgetItem *sphericalCoordItem;
 
       private: QtVariantPropertyManager *variantManager;
       private: QtVariantEditorFactory *variantFactory;
@@ -217,20 +235,27 @@ namespace gazebo
       typedef std::list<msgs::Light> LightMsgs_L;
       private: LightMsgs_L lightMsgs;
 
+      typedef std::list<std::string> RemoveEntity_L;
+      private: RemoveEntity_L removeEntityList;
+
       private: msgs::Model modelMsg;
       private: msgs::Link linkMsg;
       private: msgs::Scene sceneMsg;
       private: msgs::Joint jointMsg;
       private: msgs::Physics physicsMsg;
       private: msgs::Light lightMsg;
+      private: msgs::SphericalCoordinates sphericalCoordMsg;
 
       private: bool fillPropertyTree;
       private: std::deque<std::string> fillTypes;
 
       private: msgs::Light::LightType lightType;
+
+      /// \brief Type of physics engine.
+      private: msgs::Physics_Type physicsType;
     };
 
-    class ModelListSheetDelegate: public QItemDelegate
+    class GAZEBO_VISIBLE ModelListSheetDelegate: public QItemDelegate
     {
       Q_OBJECT
       public: ModelListSheetDelegate(QTreeView *view, QWidget *parent);

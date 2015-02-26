@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  *
 */
 #include <google/protobuf/descriptor.h>
-#include "transport/IOManager.hh"
+#include <set>
+#include "gazebo/transport/IOManager.hh"
 
 #include "Master.hh"
 
-#include "gazebo_config.h"
+#include "gazebo/gazebo_config.h"
 
 using namespace gazebo;
 
@@ -29,32 +30,12 @@ Master::Master()
 {
   this->stop = false;
   this->runThread = NULL;
-
-  this->connectionMutex = new boost::recursive_mutex();
-  this->msgsMutex = new boost::recursive_mutex();
 }
 
 /////////////////////////////////////////////////
 Master::~Master()
 {
   this->Fini();
-
-  delete this->connectionMutex;
-  this->connectionMutex = NULL;
-
-  delete this->msgsMutex;
-  this->msgsMutex = NULL;
-
-  delete this->runThread;
-  this->runThread = NULL;
-
-  this->publishers.clear();
-  this->subscribers.clear();
-  this->connections.clear();
-
-  this->connection->Shutdown();
-  delete this->connection;
-  this->connection = NULL;
 }
 
 /////////////////////////////////////////////////
@@ -66,17 +47,18 @@ void Master::Init(uint16_t _port)
   }
   catch(std::exception &_e)
   {
-    gzthrow("Unable to start server[" << _e.what() << "]\n");
+    gzthrow("Unable to start server[" << _e.what() << "]. "
+            "There is probably another Gazebo process running.");
   }
 }
 
 //////////////////////////////////////////////////
-void Master::OnAccept(const transport::ConnectionPtr &new_connection)
+void Master::OnAccept(transport::ConnectionPtr _newConnection)
 {
   // Send the gazebo version string
   msgs::GzString versionMsg;
-  versionMsg.set_data(std::string("gazebo ") + GAZEBO_VERSION_FULL);
-  new_connection->EnqueueMsg(msgs::Package("version_init", versionMsg), true);
+  versionMsg.set_data(std::string("gazebo ") + GAZEBO_VERSION);
+  _newConnection->EnqueueMsg(msgs::Package("version_init", versionMsg), true);
 
   // Send all the current topic namespaces
   msgs::GzString_V namespacesMsg;
@@ -86,7 +68,7 @@ void Master::OnAccept(const transport::ConnectionPtr &new_connection)
   {
     namespacesMsg.add_data(*iter);
   }
-  new_connection->EnqueueMsg(msgs::Package("topic_namepaces_init",
+  _newConnection->EnqueueMsg(msgs::Package("topic_namepaces_init",
                               namespacesMsg), true);
 
   // Send all the publishers
@@ -98,20 +80,20 @@ void Master::OnAccept(const transport::ConnectionPtr &new_connection)
     msgs::Publish *pub = publishersMsg.add_publisher();
     pub->CopyFrom(pubiter->first);
   }
-  new_connection->EnqueueMsg(
+  _newConnection->EnqueueMsg(
       msgs::Package("publishers_init", publishersMsg), true);
 
-
   // Add the connection to our list
-  this->connectionMutex->lock();
-  int index = this->connections.size();
+  {
+    boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
+    int index = this->connections.size();
 
-  this->connections[index] = new_connection;
+    this->connections[index] = _newConnection;
 
-  // Start reading from the connection
-  new_connection->AsyncRead(
-      boost::bind(&Master::OnRead, this, index, _1));
-  this->connectionMutex->unlock();
+    // Start reading from the connection
+    _newConnection->AsyncRead(
+        boost::bind(&Master::OnRead, this, index, _1));
+  }
 }
 
 //////////////////////////////////////////////////
@@ -135,14 +117,14 @@ void Master::OnRead(const unsigned int _connectionIndex,
   // Store the message if it's not empty
   if (!_data.empty())
   {
-    this->msgsMutex->lock();
+    boost::recursive_mutex::scoped_lock lock(this->msgsMutex);
     this->msgs.push_back(std::make_pair(_connectionIndex, _data));
-    this->msgsMutex->unlock();
   }
   else
   {
-    gzerr << "Master got empty data message from["
-          << conn->GetRemotePort() << "]\n";
+    gzlog << "Master got empty data message from["
+          << conn->GetRemotePort() << "]. This is most likely fine, since"
+          << "the remote side probably terminated.\n";
   }
 }
 
@@ -169,9 +151,9 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
         worldNameMsg.data());
     if (iter == this->worldNames.end())
     {
+      boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
       this->worldNames.push_back(worldNameMsg.data());
 
-      this->connectionMutex->lock();
       Connection_M::iterator iter2;
       for (iter2 = this->connections.begin();
           iter2 != this->connections.end(); ++iter2)
@@ -179,22 +161,20 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
         iter2->second->EnqueueMsg(
             msgs::Package("topic_namespace_add", worldNameMsg));
       }
-      this->connectionMutex->unlock();
     }
   }
   else if (packet.type() == "advertise")
   {
+    boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
     msgs::Publish pub;
     pub.ParseFromString(packet.serialized_data());
 
-    this->connectionMutex->lock();
     Connection_M::iterator iter2;
     for (iter2 = this->connections.begin();
          iter2 != this->connections.end(); ++iter2)
     {
       iter2->second->EnqueueMsg(msgs::Package("publisher_add", pub));
     }
-    this->connectionMutex->unlock();
 
     this->publishers.push_back(std::make_pair(pub, conn));
 
@@ -202,11 +182,11 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
 
     // Find all subscribers of the topic
     for (iter = this->subscribers.begin();
-        iter != this->subscribers.end(); ++iter)
+         iter != this->subscribers.end(); ++iter)
     {
       if (iter->first.topic() == pub.topic())
       {
-        iter->second->EnqueueMsg(msgs::Package("publisher_update", pub));
+        iter->second->EnqueueMsg(msgs::Package("publisher_advertise", pub));
       }
     }
   }
@@ -237,7 +217,7 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
     {
       if (iter->first.topic() == sub.topic())
       {
-        conn->EnqueueMsg(msgs::Package("publisher_update", iter->first));
+        conn->EnqueueMsg(msgs::Package("publisher_subscribe", iter->first));
       }
     }
   }
@@ -257,6 +237,35 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
         pub->CopyFrom(iter->first);
       }
       conn->EnqueueMsg(msgs::Package("publisher_list", msg), true);
+    }
+    else if (req.request() == "get_topics")
+    {
+      std::set<std::string> topics;
+      msgs::GzString_V msg;
+
+      // Add all topics that are published
+      for (PubList::iterator iter = this->publishers.begin();
+          iter != this->publishers.end(); ++iter)
+      {
+        topics.insert(iter->first.topic());
+      }
+
+      // Add all topics that are subscribed
+      for (SubList::iterator iter = this->subscribers.begin();
+           iter != this->subscribers.end(); ++iter)
+      {
+        topics.insert(iter->first.topic());
+      }
+
+      // Construct the message of only unique names
+      for (std::set<std::string>::iterator iter =
+          topics.begin(); iter != topics.end(); ++iter)
+      {
+        msg.add_data(*iter);
+      }
+
+      // Send the topic list message
+      conn->EnqueueMsg(msgs::Package("topic_list", msg), true);
     }
     else if (req.request() == "topic_info")
     {
@@ -284,6 +293,11 @@ void Master::ProcessMessage(const unsigned int _connectionIndex,
       {
         if (siter->first.topic() == req.data())
         {
+          // If the topic info message type has not been set or the
+          // topic info message type is an empty string, then set the topic
+          // info message type based on a subscriber's message type.
+          if (!ti.has_msg_type() || ti.msg_type().empty())
+            ti.set_msg_type(siter->first.msg_type());
           msgs::Subscribe *sub = ti.add_subscriber();
           sub->CopyFrom(siter->first);
         }
@@ -334,55 +348,55 @@ void Master::RunOnce()
   Connection_M::iterator iter;
 
   // Process the incoming message queue
-  this->msgsMutex->lock();
-  while (this->msgs.size() > 0)
   {
-    this->ProcessMessage(this->msgs.front().first,
-        this->msgs.front().second);
-    this->msgs.pop_front();
+    boost::recursive_mutex::scoped_lock lock(this->msgsMutex);
+    while (!this->msgs.empty())
+    {
+      this->ProcessMessage(this->msgs.front().first,
+                           this->msgs.front().second);
+      this->msgs.pop_front();
+    }
   }
-  this->msgsMutex->unlock();
 
   // Process all the connections
-  this->connectionMutex->lock();
-  for (iter = this->connections.begin();
-       iter != this->connections.end();)
   {
-    if (iter->second->IsOpen())
+    boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
+    for (iter = this->connections.begin();
+        iter != this->connections.end();)
     {
-      iter->second->ProcessWriteQueue();
-      ++iter;
-    }
-    else
-    {
-      this->RemoveConnection(iter->first);
-      ++iter;
+      if (iter->second->IsOpen())
+      {
+        iter->second->ProcessWriteQueue();
+        ++iter;
+      }
+      else
+      {
+        this->RemoveConnection(iter++);
+      }
     }
   }
-  this->connectionMutex->unlock();
 }
 
 /////////////////////////////////////////////////
-void Master::RemoveConnection(unsigned int _index)
+void Master::RemoveConnection(Connection_M::iterator _connIter)
 {
   std::list< std::pair<unsigned int, std::string> >::iterator msgIter;
-  Connection_M::iterator connIter;
-  connIter = this->connections.find(_index);
 
-  if (connIter == this->connections.end() || !connIter->second)
+  if (_connIter == this->connections.end() || !_connIter->second)
     return;
 
   // Remove all messages for this connection
-  this->msgsMutex->lock();
-  msgIter = this->msgs.begin();
-  while (msgIter != this->msgs.end())
   {
-    if ((*msgIter).first == _index)
-      this->msgs.erase(msgIter++);
-    else
-      ++msgIter;
+    boost::recursive_mutex::scoped_lock lock(this->msgsMutex);
+    msgIter = this->msgs.begin();
+    while (msgIter != this->msgs.end())
+    {
+      if ((*msgIter).first == _connIter->first)
+        this->msgs.erase(msgIter++);
+      else
+        ++msgIter;
+    }
   }
-  this->msgsMutex->unlock();
 
   // Remove all publishers for this connection
   bool done = false;
@@ -392,8 +406,7 @@ void Master::RemoveConnection(unsigned int _index)
     PubList::iterator pubIter = this->publishers.begin();
     while (pubIter != this->publishers.end())
     {
-      if ((*pubIter).second->id ==
-          connIter->second->id)
+      if ((*pubIter).second->GetId() == _connIter->second->GetId())
       {
         this->RemovePublisher((*pubIter).first);
         done = false;
@@ -414,7 +427,7 @@ void Master::RemoveConnection(unsigned int _index)
     SubList::iterator subIter = this->subscribers.begin();
     while (subIter != this->subscribers.end())
     {
-      if ((*subIter).second->id == connIter->second->id)
+      if ((*subIter).second->GetId() == _connIter->second->GetId())
       {
         this->RemoveSubscriber((*subIter).first);
         done = false;
@@ -425,20 +438,21 @@ void Master::RemoveConnection(unsigned int _index)
     }
   }
 
-  this->connections.erase(connIter);
+  this->connections.erase(_connIter);
 }
 
 /////////////////////////////////////////////////
 void Master::RemovePublisher(const msgs::Publish _pub)
 {
-  this->connectionMutex->lock();
-  Connection_M::iterator iter2;
-  for (iter2 = this->connections.begin();
-      iter2 != this->connections.end(); ++iter2)
   {
-    iter2->second->EnqueueMsg(msgs::Package("publisher_del", _pub));
+    boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
+    Connection_M::iterator iter2;
+    for (iter2 = this->connections.begin();
+        iter2 != this->connections.end(); ++iter2)
+    {
+      iter2->second->EnqueueMsg(msgs::Package("publisher_del", _pub));
+    }
   }
-  this->connectionMutex->unlock();
 
   SubList::iterator iter;
   // Find all subscribers of the topic
@@ -510,6 +524,19 @@ void Master::Stop()
 void Master::Fini()
 {
   this->Stop();
+
+  if (this->connection)
+    this->connection->Shutdown();
+  this->connection.reset();
+
+  delete this->runThread;
+  this->runThread = NULL;
+
+  this->msgs.clear();
+  this->worldNames.clear();
+  this->connections.clear();
+  this->subscribers.clear();
+  this->publishers.clear();
 }
 
 //////////////////////////////////////////////////
@@ -540,18 +567,19 @@ transport::ConnectionPtr Master::FindConnection(const std::string &_host,
   transport::ConnectionPtr conn;
   Connection_M::iterator iter;
 
-  this->connectionMutex->lock();
-  for (iter = this->connections.begin();
-       iter != this->connections.end(); ++iter)
   {
-    if (iter->second->GetRemoteAddress() == _host &&
-        iter->second->GetRemotePort() == _port)
+    boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
+    for (iter = this->connections.begin();
+        iter != this->connections.end(); ++iter)
     {
-      conn = iter->second;
-      break;
+      if (iter->second->GetRemoteAddress() == _host &&
+          iter->second->GetRemotePort() == _port)
+      {
+        conn = iter->second;
+        break;
+      }
     }
   }
-  this->connectionMutex->unlock();
 
   return conn;
 }
