@@ -7,12 +7,18 @@ include_directories(SYSTEM
   ${CMAKE_CURRENT_BINARY_DIR} 
   ${CMAKE_SOURCE_DIR}/deps/opende/include
   ${CMAKE_SOURCE_DIR}/deps/opende/ou/include
-  ${CMAKE_SOURCE_DIR}/deps/libccd/include
   ${CMAKE_SOURCE_DIR}/deps/opende/OPCODE
+  ${CMAKE_SOURCE_DIR}/deps/opende/GIMPACT/include
   ${CMAKE_SOURCE_DIR}/deps/threadpool
+  ${CCD_INCLUDE_DIRS}
+)
+
+link_directories(  
+  ${CCD_LIBRARY_DIRS} 
 )
 
 add_subdirectory(OPCODE)
+add_subdirectory(GIMPACT)
 add_subdirectory(ou)
 
 CHECK_CXX_SOURCE_COMPILES("#include <alloca.h> 
@@ -199,6 +205,9 @@ src/joints/plane2d.cpp
 src/joints/pr.cpp
 src/joints/pu.cpp
 src/joints/screw.cpp
+src/joints/dhinge.cpp
+src/joints/dball.cpp
+src/joints/gearbox.cpp
 src/joints/slider.cpp
 src/joints/universal.cpp
 )
@@ -234,13 +243,18 @@ if (SSE2_FOUND OR SSE3_FOUND OR SSSE3_FOUND OR SSE4_1_FOUND OR SSE4_2_FOUND)
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSSE")
 endif()
 
-set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE}} -MF -MT -fno-strict-aliasing -DPIC ")
+set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE}} -MF -MT -fno-strict-aliasing -DPIC ")
 
 gz_add_library(gazebo_ode ${sources})
-target_link_libraries(gazebo_ode gazebo_opcode gazebo_ccd gazebo_opende_ou)
+target_link_libraries(gazebo_ode
+  gazebo_opcode
+  gazebo_gimpact
+  gazebo_opende_ou
+  ${CCD_LIBRARIES}
+  ${Boost_LIBRARIES})
 
-add_dependencies(gazebo_ode gazebo_opcode)
+add_dependencies(gazebo_ode gazebo_opcode gazebo_gimpact)
 add_dependencies(gazebo_ode gazebo_opende_ou)
 
-INSTALL_LIBRARY(gazebo_ode)
-INSTALL_INCLUDES("ode" ${headers})
+gz_install_library(gazebo_ode)
+gz_install_includes("ode" ${headers})

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig & Andrew Howard
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ namespace gazebo
 {
   class ProjectorPlugin : public ModelPlugin
   {
+    public: ProjectorPlugin():state(true) {}
+    public: ~ProjectorPlugin() {}
+
     //////////////////////////////////////////////////
     public: void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     {
@@ -31,24 +34,23 @@ namespace gazebo
       this->node->Init(_parent->GetWorld()->GetName());
 
       std::string name = std::string("~/") + _parent->GetName() + "/" +
-                          _sdf->GetValueString("projector");
+                          _sdf->Get<std::string>("projector");
 
       // Create a publisher on the ~/physics topic
       this->projectorPub = node->Advertise<msgs::Projector>(name);
 
-      this->state = true;
       this->prevTime = common::Time::GetWallTime();
 
       // Listen to the update event. This event is broadcast every
       // simulation iteration.
-      this->updateConnection = event::Events::ConnectWorldUpdateStart(
+      this->updateConnection = event::Events::ConnectWorldUpdateBegin(
           boost::bind(&ProjectorPlugin::OnUpdate, this));
     }
 
     //////////////////////////////////////////////////
     public: void OnUpdate()
     {
-      if (common::Time::GetWallTime() - this->prevTime > common::Time(2,0))
+      if (common::Time::GetWallTime() - this->prevTime > common::Time(2, 0))
       {
         this->state = !this->state;
         msgs::Projector msg;
@@ -59,8 +61,8 @@ namespace gazebo
       }
     }
 
-    private: transport::NodePtr node; 
-    private: transport::PublisherPtr projectorPub; 
+    private: transport::NodePtr node;
+    private: transport::PublisherPtr projectorPub;
     private: common::Time prevTime;
     private: event::ConnectionPtr updateConnection;
     private: bool state;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig & Andrew Howard
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
 #include <math.h>
 #include <iostream>
 
-#include "math/gzmath.h"
-#include "transport/transport.h"
+#include "gazebo/math/gzmath.hh"
+#include "gazebo/transport/transport.hh"
 #include "GazeboDriver.hh"
 #include "LaserInterface.hh"
 
@@ -163,24 +163,24 @@ void LaserInterface::Unsubscribe()
 }
 
 /////////////////////////////////////////////////
-void LaserInterface::OnScan(ConstLaserScanPtr &_msg)
+void LaserInterface::OnScan(ConstLaserScanStampedPtr &_msg)
 {
   int i;
 
-  // TODO: fix the time to get the time the laser scan was generated
-  this->datatime = gazebo::common::Time::GetWallTime().Double();
+  this->datatime = gazebo::msgs::Convert(_msg->time()).Double();
 
   double oldCount = this->data.scan.ranges_count;
 
-  this->data.scan.min_angle = _msg->angle_min();
-  this->data.scan.max_angle = _msg->angle_max();
-  this->data.scan.resolution = _msg->angle_step();
-  this->data.scan.max_range = _msg->range_max();
+  this->data.scan.min_angle = _msg->scan().angle_min();
+  this->data.scan.max_angle = _msg->scan().angle_max();
+  this->data.scan.resolution = _msg->scan().angle_step();
+  this->data.scan.max_range = _msg->scan().range_max();
   this->data.scan.ranges_count =
-    this->data.scan.intensity_count = _msg->ranges_size();
+    this->data.scan.intensity_count = _msg->scan().ranges_size();
   this->data.scan.id = this->scanId++;
 
-  if (!gazebo::math::equal(oldCount, this->data.scan.ranges_count))
+  if (!gazebo::math::equal(oldCount,
+        static_cast<double>(this->data.scan.ranges_count)))
   {
     delete [] this->data.scan.ranges;
     delete [] this->data.scan.intensity;
@@ -189,16 +189,16 @@ void LaserInterface::OnScan(ConstLaserScanPtr &_msg)
     this->data.scan.intensity = new uint8_t[this->data.scan.intensity_count];
   }
 
-  for (i = 0; i < _msg->ranges_size(); ++i)
-    this->data.scan.ranges[i] = _msg->ranges(i);
+  for (i = 0; i < _msg->scan().ranges_size(); ++i)
+    this->data.scan.ranges[i] = _msg->scan().ranges(i);
 
-  for (i = 0; i < _msg->intensities_size(); ++i)
-    this->data.scan.intensity[i] = (uint8_t)_msg->intensities(i);
+  for (i = 0; i < _msg->scan().intensities_size(); ++i)
+    this->data.scan.intensity[i] = (uint8_t)_msg->scan().intensities(i);
 
-  this->data.pose.px = _msg->world_pose().position().x();
-  this->data.pose.py = _msg->world_pose().position().y();
+  this->data.pose.px = _msg->scan().world_pose().position().x();
+  this->data.pose.py = _msg->scan().world_pose().position().y();
   this->data.pose.pa = gazebo::msgs::Convert(
-      _msg->world_pose().orientation()).GetAsEuler().z;
+      _msg->scan().world_pose().orientation()).GetAsEuler().z;
 
   if (this->data.scan.ranges_count > 0)
   {
