@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/World.hh"
+#include "gazebo/physics/WorldPrivate.hh"
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/ode/ODECollision.hh"
 #include "gazebo/physics/ode/ODESurfaceParams.hh"
@@ -182,23 +183,18 @@ void ODELink::MoveCallback(dBodyID _id)
   self->dirtyPose.pos -= cog;
 
   // TODO: this is an ugly line of code. It's like this for speed.
-  self->world->dirtyPoses.push_back(self);
+  self->world->dataPtr->dirtyPoses.push_back(self);
 
   // self->poseMutex->unlock();
 
   // get force and applied to this body
   if (_id)
   {
-    // \TODO: there are hacks here to preserve ABI
-    // see bitbucket.org/osrf/gazebo/issue/1354
-
     const dReal *dforce = dBodyGetForce(_id);
-    // After gazebo4, replace Link::linearAccel with ODELink::force
-    self->linearAccel.Set(dforce[0], dforce[1], dforce[2]);
+    self->force.Set(dforce[0], dforce[1], dforce[2]);
 
     const dReal *dtorque = dBodyGetTorque(_id);
-    // After gazebo4, replace Link::angularAccel with ODELink::torque
-    self->angularAccel.Set(dtorque[0], dtorque[1], dtorque[2]);
+    self->torque.Set(dtorque[0], dtorque[1], dtorque[2]);
   }
 }
 
@@ -393,7 +389,7 @@ void ODELink::SetLinearVel(const math::Vector3 &_vel)
   {
     dBodySetLinearVel(this->linkId, _vel.x, _vel.y, _vel.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to SetLinearVel" << std::endl;
 }
@@ -477,7 +473,7 @@ void ODELink::SetAngularVel(const math::Vector3 &_vel)
   {
     dBodySetAngularVel(this->linkId, _vel.x, _vel.y, _vel.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to SetAngularVel" << std::endl;
 }
@@ -513,7 +509,7 @@ void ODELink::SetForce(const math::Vector3 &_force)
     this->SetEnabled(true);
     dBodySetForce(this->linkId, _force.x, _force.y, _force.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to SetForce" << std::endl;
 }
@@ -526,7 +522,7 @@ void ODELink::SetTorque(const math::Vector3 &_torque)
     this->SetEnabled(true);
     dBodySetTorque(this->linkId, _torque.x, _torque.y, _torque.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to SetTorque" << std::endl;
 }
@@ -539,7 +535,7 @@ void ODELink::AddForce(const math::Vector3 &_force)
     this->SetEnabled(true);
     dBodyAddForce(this->linkId, _force.x, _force.y, _force.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddForce" << std::endl;
 }
@@ -552,7 +548,7 @@ void ODELink::AddRelativeForce(const math::Vector3 &_force)
     this->SetEnabled(true);
     dBodyAddRelForce(this->linkId, _force.x, _force.y, _force.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddRelativeForce" << std::endl;
 }
@@ -567,7 +563,7 @@ void ODELink::AddForceAtRelativePosition(const math::Vector3 &_force,
     dBodyAddForceAtRelPos(this->linkId, _force.x, _force.y, _force.z,
                           _relpos.x, _relpos.y, _relpos.z);
   }
-  else if (!this->IsStatic())
+  else
   {
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddForceAtRelativePosition"
@@ -585,7 +581,7 @@ void ODELink::AddForceAtWorldPosition(const math::Vector3 &_force,
     dBodyAddForceAtPos(this->linkId, _force.x, _force.y, _force.z,
                           _pos.x, _pos.y, _pos.z);
   }
-  else if (!this->IsStatic())
+  else
   {
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddForceAtWorldPosition"
@@ -601,7 +597,7 @@ void ODELink::AddTorque(const math::Vector3 &_torque)
     this->SetEnabled(true);
     dBodyAddTorque(this->linkId, _torque.x, _torque.y, _torque.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddTorque" << std::endl;
 }
@@ -614,7 +610,7 @@ void ODELink::AddRelativeTorque(const math::Vector3 &_torque)
     this->SetEnabled(true);
     dBodyAddRelTorque(this->linkId, _torque.x, _torque.y, _torque.z);
   }
-  else if (!this->IsStatic())
+  else
     gzlog << "ODE body for link [" << this->GetScopedName() << "]"
           << " does not exist, unable to AddRelativeTorque" << std::endl;
 }
@@ -622,19 +618,13 @@ void ODELink::AddRelativeTorque(const math::Vector3 &_torque)
 /////////////////////////////////////////////////
 math::Vector3 ODELink::GetWorldForce() const
 {
-  // \TODO: there are hacks here to preserve ABI
-  // see bitbucket.org/osrf/gazebo/issue/1354
-  // After gazebo4, replace Link::linearAccel with ODELink::force
-  return this->linearAccel;
+  return this->force;
 }
 
 //////////////////////////////////////////////////
 math::Vector3 ODELink::GetWorldTorque() const
 {
-  // \TODO: there are hacks here to preserve ABI
-  // see bitbucket.org/osrf/gazebo/issue/1354
-  // After gazebo4, replace Link::angularAccel with ODELink::torque
-  return this->angularAccel;
+  return this->torque;
 }
 
 //////////////////////////////////////////////////
