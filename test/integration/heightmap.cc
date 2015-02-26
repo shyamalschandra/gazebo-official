@@ -17,6 +17,9 @@
 
 #include <string.h>
 
+#include "gazebo/common/common.hh"
+#include "gazebo/physics/physics.hh"
+#include "gazebo/rendering/rendering.hh"
 #include "gazebo/common/SystemPaths.hh"
 #include "gazebo/rendering/RenderingIface.hh"
 #include "gazebo/rendering/Scene.hh"
@@ -24,6 +27,7 @@
 #include "helper_physics_generator.hh"
 #include "images_cmp.h"
 #include "ServerFixture.hh"
+#include "test_config.h"
 
 using namespace gazebo;
 
@@ -159,7 +163,7 @@ void HeightmapTest::WhiteNoAlpha(const std::string &_physicsEngine)
   {
     for (x = 0; x < shape->GetVertexCount().x; ++x)
     {
-      EXPECT_EQ(shape->GetHeight(x, y), 10.0);
+      EXPECT_NEAR(shape->GetHeight(x, y), 10.0, 1e-6);
     }
   }
 }

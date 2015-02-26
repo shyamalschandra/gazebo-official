@@ -15,6 +15,8 @@
  *
 */
 #include "ServerFixture.hh"
+#include "gazebo/common/common.hh"
+#include "gazebo/math/gzmath.hh"
 #include "gazebo/physics/physics.hh"
 
 using namespace gazebo;

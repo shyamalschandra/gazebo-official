@@ -14,6 +14,7 @@
  * limitations under the License.
  *
 */
+#include "gazebo/rendering/rendering.hh"
 #include "ServerFixture.hh"
 #include "images_cmp.h"
 
@@ -47,7 +48,7 @@ TEST_F(ProjectorTest, Projector)
   // PrintImage("projector_world_camera", &img, width, height, 3);
   ASSERT_EQ(diffSum, static_cast<unsigned int>(0));
   ASSERT_EQ(diffMax, static_cast<unsigned int>(0));
-  ASSERT_EQ(diffAvg, 0.0);
+  ASSERT_NEAR(diffAvg, 0.0, 1e-6);
 }
 
 int main(int argc, char **argv)

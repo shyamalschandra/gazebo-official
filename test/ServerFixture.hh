@@ -17,40 +17,18 @@
 #ifndef _GAZEBO_SERVER_FIXTURE_HH_
 #define _GAZEBO_SERVER_FIXTURE_HH_
 
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-#pragma GCC diagnostic ignored "-Wshadow"
-
-// The following is needed to enable the GetMemInfo function for OSX
-#ifdef __MACH__
-# include <mach/mach.h>
-#endif  // __MACH__
-
-#include <sdf/sdf.hh>
-
 #include <gtest/gtest.h>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
 
 #include <map>
 #include <string>
 
-#include "gazebo/transport/transport.hh"
-
-#include "gazebo/common/CommonIface.hh"
-#include "gazebo/common/SystemPaths.hh"
-#include "gazebo/common/Console.hh"
-#include "gazebo/physics/World.hh"
-#include "gazebo/physics/PhysicsTypes.hh"
-#include "gazebo/physics/PhysicsIface.hh"
-#include "gazebo/sensors/sensors.hh"
-#include "gazebo/rendering/rendering.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/math/gzmath.hh"
 #include "gazebo/msgs/msgs.hh"
-
-#include "gazebo/gazebo_config.h"
+#include "gazebo/physics/PhysicsTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/Server.hh"
-
-#include "test_config.h"
 
 namespace gazebo
 {

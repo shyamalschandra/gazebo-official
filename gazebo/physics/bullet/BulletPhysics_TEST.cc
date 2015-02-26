@@ -23,6 +23,7 @@
 #include "gazebo/physics/bullet/BulletPhysics.hh"
 #include "gazebo/physics/bullet/BulletTypes.hh"
 #include "gazebo/msgs/msgs.hh"
+#include "gazebo/transport/transport.hh"
 #include "test/ServerFixture.hh"
 
 using namespace gazebo;
@@ -207,7 +208,7 @@ void BulletPhysics_TEST::PhysicsMsgParam()
 
   transport::PublisherPtr physicsPub
        = phyNode->Advertise<msgs::Physics>("~/physics");
-  transport::PublisherPtr requestPub
+  transport::PublisherPtr localRequestPub
       = phyNode->Advertise<msgs::Request>("~/request");
   transport::SubscriberPtr responsePub = phyNode->Subscribe("~/response",
       &BulletPhysics_TEST::OnPhysicsMsgResponse, this);
@@ -226,7 +227,7 @@ void BulletPhysics_TEST::PhysicsMsgParam()
   physicsPub->Publish(physicsPubMsg);
 
   msgs::Request *requestMsg = msgs::CreateRequest("physics_info", "");
-  requestPub->Publish(*requestMsg);
+  localRequestPub->Publish(*requestMsg);
 
   int waitCount = 0, maxWaitCount = 3000;
   while (physicsResponseMsg.ByteSize() == 0 && ++waitCount < maxWaitCount)

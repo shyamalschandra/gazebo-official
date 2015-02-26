@@ -110,7 +110,7 @@ void JointTest::JointCreationDestructionTest(const std::string &_physicsEngine)
 
     // remove the joint
     {
-      bool paused = world->IsPaused();
+      bool isPaused = world->IsPaused();
       world->SetPaused(true);
       if (joint)
       {
@@ -125,7 +125,7 @@ void JointTest::JointCreationDestructionTest(const std::string &_physicsEngine)
         joint->Detach();
         joint.reset();
       }
-      world->SetPaused(paused);
+      world->SetPaused(isPaused);
     }
 
     world->Step(200);
