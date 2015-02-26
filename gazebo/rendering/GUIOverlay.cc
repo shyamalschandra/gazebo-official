@@ -210,6 +210,7 @@ bool GUIOverlay::HandleMouseEvent(const common::MouseEvent &_evt)
 
   press = false;
   release = false;
+  pos = false;
   scroll = false;
 
   CEGUI::System *system = CEGUI::System::getSingletonPtr();
