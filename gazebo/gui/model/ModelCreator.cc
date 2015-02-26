@@ -590,9 +590,39 @@ std::string ModelCreator::AddShape(PartType _type,
   }
   else if (_type == PART_MESH)
   {
-    sdf::ElementPtr meshElem = geomElem->AddElement("mesh");
-    meshElem->GetElement("scale")->Set(_size);
-    meshElem->GetElement("uri")->Set(_uri);
+    QFileInfo info(QString::fromStdString(_uri));
+    if (!info.isFile())
+    {
+      gzerr << "File [" << _uri << "] not found!" << std::endl;
+      return std::string();
+    }
+
+    if (info.completeSuffix() == "svg")
+    {
+      common::SVGLoader svgLoader(5);
+      std::vector<common::SVGPath> paths;
+      svgLoader.Parse(_uri, paths);
+      for (common::SVGPath p: paths)
+      {
+        for (std::vector<math::Vector2d> poly : p.polylines)
+        {
+          sdf::ElementPtr polylineElem = geomElem->AddElement("polyline");
+          polylineElem->GetElement("height")->Set(1.0);
+
+          for (math::Vector2d pt : poly)
+          {
+            sdf::ElementPtr pointElem = polylineElem->AddElement("point");
+            pointElem->Set(pt);
+          }
+        }
+      }
+    }
+    else
+    {
+      sdf::ElementPtr meshElem = geomElem->AddElement("mesh");
+      meshElem->GetElement("scale")->Set(_size);
+      meshElem->GetElement("uri")->Set(_uri);
+    }
   }
   else
   {
@@ -1237,8 +1267,26 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
       if (_event.button == common::MouseEvent::RIGHT)
       {
         this->inspectVis = vis->GetParent();
+
         QMenu menu;
         menu.addAction(this->inspectAct);
+
+        std::vector<JointData *> joints = this->jointMaker->GetJointDataByPart(
+            this->inspectVis->GetName());
+
+        if (!joints.empty())
+        {
+          QMenu *jointsMenu = menu.addMenu(tr("Open Joint Inspector"));
+
+          for (auto joint : joints)
+          {
+            QAction *jointAct = new QAction(tr(joint->name.c_str()), this);
+            connect(jointAct, SIGNAL(triggered()), joint,
+                SLOT(OnOpenInspector()));
+            jointsMenu->addAction(jointAct);
+          }
+        }
+
         menu.exec(QCursor::pos());
         return true;
       }
