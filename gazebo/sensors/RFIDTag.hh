@@ -1,5 +1,6 @@
-/* Copyright (C) 2012
- *     Jonas Mellin & Zakiruz Zaman
+/*
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *
+*/
 /* Desc: RFID Tag
  * Author: Jonas Mellin & Zakiruz Zaman
  * Date: 6th December 2011
@@ -27,6 +29,7 @@
 #include "gazebo/sensors/Sensor.hh"
 #include "gazebo/math/gzmath.hh"
 #include "gazebo/physics/physics.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,7 +40,7 @@ namespace gazebo
 
     /// \class RFIDTag RFIDTag.hh sensors/sensors.hh
     /// \brief RFIDTag to interact with RFIDTagSensors
-    class RFIDTag: public Sensor
+    class GAZEBO_VISIBLE RFIDTag: public Sensor
     {
       /// \brief Constructor.
       public: RFIDTag();
@@ -45,24 +48,20 @@ namespace gazebo
       /// \brief Destructor.
       public: virtual ~RFIDTag();
 
-      /// \brief Load the sensor with SDF parameters.
-      /// \param[in] _sdf SDF Sensor parameters.
-      /// \param[in] _worldName Name of world to load from.
+      // Documentation inherited
       public: virtual void Load(const std::string & _worldName,
-                                sdf::ElementPtr &_sdf);
+                                sdf::ElementPtr _sdf);
 
-      /// \brief Load the sensor with default parameters.
-      /// \param[in] _worldName Name of world to load from.
+      // Documentation inherited
       public: virtual void Load(const std::string & _worldName);
 
-      /// \brief Initialize the sensor.
+      // Documentation inherited
       public: virtual void Init();
 
-      /// \brief Update the sensor information.
-      /// \param[in] _force True if update is forced, false if not.
-      protected: virtual void UpdateImpl(bool _force);
+      // Documentation inherited
+      protected: virtual bool UpdateImpl(bool _force);
 
-      /// \brief Finalize the sensor.
+      // Documentation inherited
       public: virtual void Fini();
 
       /// \brief Returns pose of tag in world coordinate.
