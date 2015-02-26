@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -194,7 +194,8 @@ void LaserTest::LaserUnitBox(const std::string &_physicsEngine)
   double maxRange = 5.0;
   double rangeResolution = 0.02;
   unsigned int samples = 320;
-  math::Pose testPose(math::Vector3(0, 0, 0),
+  // Lift ray sensor so it's not right next to the edge
+  math::Pose testPose(math::Vector3(0, 0, 0.1),
       math::Quaternion(0, 0, 0));
   if (_physicsEngine == "bullet" && LIBBULLET_VERSION >= 2.82)
   {
