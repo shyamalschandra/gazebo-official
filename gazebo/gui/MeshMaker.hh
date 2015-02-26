@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  *
 */
-#ifndef MESHMAKER_HH
-#define MESHMAKER_HH
+#ifndef _MESHMAKER_HH_
+#define _MESHMAKER_HH_
 
 #include <string>
-#include "gui/EntityMaker.hh"
+#include "gazebo/gui/EntityMaker.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -29,7 +30,7 @@ namespace gazebo
 
   namespace gui
   {
-    class MeshMaker : public EntityMaker
+    class GAZEBO_VISIBLE MeshMaker : public EntityMaker
     {
       public: MeshMaker();
       public: virtual ~MeshMaker();

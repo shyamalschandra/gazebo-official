@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,9 @@
  * limitations under the License.
  *
 */
-/* Desc: A persepective OGRE Camera
- * Author: Nate Koenig
- * Date: 15 July 2003
- */
 
-#ifndef _RENDERING_CAMERA_HH_
-#define _RENDERING_CAMERA_HH_
+#ifndef _GAZEBO_RENDERING_CAMERA_HH_
+#define _GAZEBO_RENDERING_CAMERA_HH_
 
 #include <boost/enable_shared_from_this.hpp>
 #include <string>
@@ -28,18 +24,26 @@
 #include <list>
 #include <vector>
 #include <deque>
+#include <sdf/sdf.hh>
 
-#include "common/Event.hh"
-#include "common/Time.hh"
+#include "gazebo/msgs/msgs.hh"
 
-#include "math/Angle.hh"
-#include "math/Pose.hh"
-#include "math/Plane.hh"
-#include "math/Vector2i.hh"
+#include "gazebo/transport/Node.hh"
+#include "gazebo/transport/Subscriber.hh"
 
-#include "msgs/MessageTypes.hh"
-#include "rendering/RenderTypes.hh"
-#include "sdf/sdf.hh"
+#include "gazebo/common/Event.hh"
+#include "gazebo/common/PID.hh"
+#include "gazebo/common/Time.hh"
+
+#include "gazebo/math/Angle.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Plane.hh"
+#include "gazebo/math/Vector2i.hh"
+
+#include "gazebo/rendering/ogre_gazebo.h"
+#include "gazebo/msgs/MessageTypes.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/util/system.hh"
 
 // Forward Declarations
 namespace Ogre
@@ -50,7 +54,6 @@ namespace Ogre
   class Viewport;
   class SceneNode;
   class AnimationState;
-  class CompositorInstance;
 }
 
 namespace gazebo
@@ -62,6 +65,7 @@ namespace gazebo
     class MouseEvent;
     class ViewController;
     class Scene;
+    class CameraPrivate;
 
     /// \addtogroup gazebo_rendering Rendering
     /// \brief A set of rendering related class, functions, and definitions
@@ -71,13 +75,13 @@ namespace gazebo
     /// \brief Basic camera sensor
     ///
     /// This is the base class for all cameras.
-    class Camera : public boost::enable_shared_from_this<Camera>
+    class GAZEBO_VISIBLE Camera : public boost::enable_shared_from_this<Camera>
     {
       /// \brief Constructor
       /// \param[in] _namePrefix Unique prefix name for the camera.
       /// \param[in] _scene Scene that will contain the camera
       /// \param[in] _autoRender Almost everyone should leave this as true.
-      public: Camera(const std::string &_namePrefix, Scene *_scene,
+      public: Camera(const std::string &_namePrefix, ScenePtr _scene,
                      bool _autoRender = true);
 
       /// \brief Destructor
@@ -85,23 +89,28 @@ namespace gazebo
 
       /// \brief Load the camera with a set of parmeters
       /// \param[in] _sdf The SDF camera info
-      public: void Load(sdf::ElementPtr _sdf);
+      public: virtual void Load(sdf::ElementPtr _sdf);
 
        /// \brief Load the camera with default parmeters
-      public: void Load();
+      public: virtual void Load();
 
       /// \brief Initialize the camera
-      public: void Init();
+      public: virtual void Init();
 
       /// \brief Set the render Hz rate
       /// \param[in] _hz The Hz rate
       public: void SetRenderRate(double _hz);
 
-      /// \brief Render the camera
-      ///
+      /// \brief Get the render Hz rate
+      /// \return The Hz rate
+      public: double GetRenderRate() const;
+
+      /// \brief Render the camera.
       /// Called after the pre-render signal. This function will generate
-      /// camera images
-      public: void Render();
+      /// camera images.
+      /// \param[in] _force Force camera to render. Ignore camera update
+      /// rate.
+      public: void Render(bool _force = false);
 
       /// \brief Post render
       ///
@@ -118,11 +127,11 @@ namespace gazebo
       /// \brief Finalize the camera.
       ///
       /// This function is called before the camera is destructed
-      public: void Fini();
+      public: virtual void Fini();
 
       /// \brief Return true if the camera has been initialized
       /// \return True if initialized was successful
-      public: inline bool IsInitialized() const {return this->initialized;}
+      public: bool GetInitialized() const;
 
       /// \internal
       /// \brief Set the ID of the window this camera is rendering into.
@@ -135,11 +144,7 @@ namespace gazebo
 
       /// \brief Set the scene this camera is viewing
       /// \param[in] _scene Pointer to the scene
-      public: void SetScene(Scene *_scene);
-
-      /// \brief Get the global pose of the camera
-      /// \return Pose of the camera in the world coordinate frame
-      public: math::Pose GetWorldPose();
+      public: void SetScene(ScenePtr _scene);
 
       /// \brief Get the camera position in the world
       /// \return The world position of the camera
@@ -153,6 +158,10 @@ namespace gazebo
       /// \param[in] _pose The new math::Pose of the camera
       public: virtual void SetWorldPose(const math::Pose &_pose);
 
+      /// \brief Get the world pose.
+      /// \return The pose of the camera in the world coordinate frame.
+      public: math::Pose GetWorldPose() const;
+
       /// \brief Set the world position
       /// \param[in] _pos The new position of the camera
       public: void SetWorldPosition(const math::Vector3 &_pos);
@@ -165,18 +174,45 @@ namespace gazebo
       /// \param[in] _direction The translation vector
       public: void Translate(const math::Vector3 &_direction);
 
-      /// \brief Rotate the camera around the yaw axis
+      /// \brief Rotate the camera around the x-axis
       /// \param[in] _angle Rotation amount
-      public: void RotateYaw(math::Angle _angle);
+      /// \param[in] _relativeTo Coordinate frame to rotate in. Valid values
+      /// are Ogre::TS_LOCAL, Ogre::TS_PARENT, and Ogre::TS_WORLD. Default
+      /// is Ogre::TS_LOCAL
+      public: void Roll(const math::Angle &_angle,
+                  Ogre::Node::TransformSpace _relativeTo =
+                  Ogre::Node::TS_LOCAL);
 
-      /// \brief Rotate the camera around the pitch axis
+      /// \brief Rotate the camera around the y-axis
       /// \param[in] _angle Pitch amount
-      public: void RotatePitch(math::Angle _angle);
+      /// \param[in] _relativeTo Coordinate frame to rotate in. Valid values
+      /// are Ogre::TS_LOCAL, Ogre::TS_PARENT, and Ogre::TS_WORLD. Default
+      /// is Ogre::TS_LOCAL
+      public: void Pitch(const math::Angle &_angle,
+                  Ogre::Node::TransformSpace _relativeTo =
+                  Ogre::Node::TS_LOCAL);
+
+      /// \brief Rotate the camera around the z-axis
+      /// \param[in] _angle Rotation amount
+      /// \param[in] _relativeTo Coordinate frame to rotate in. Valid values
+      /// are Ogre::TS_LOCAL, Ogre::TS_PARENT, and Ogre::TS_WORLD. Default
+      /// Ogre::TS_WORLD
+      public: void Yaw(const math::Angle &_angle,
+                  Ogre::Node::TransformSpace _relativeTo =
+                  Ogre::Node::TS_WORLD);
+
+      /// \brief Rotate the camera around the z-axis
+      /// \param[in] _angle Rotation amount
+      public: void RotateYaw(math::Angle _angle) GAZEBO_DEPRECATED(4.0);
+
+      /// \brief Rotate the camera around the y-axis
+      /// \param[in] _angle Pitch amount
+      public: void RotatePitch(math::Angle _angle) GAZEBO_DEPRECATED(4.0);
 
       /// \brief Set the clip distances
       /// \param[in] _near Near clip distance in meters
       /// \param[in] _far Far clip distance in meters
-      public: void SetClipDist(float _near, float _far);
+      public: virtual void SetClipDist(float _near, float _far);
 
       /// \brief Set the camera FOV (horizontal)
       /// \param[in] _radians Horizontal field of view
@@ -205,7 +241,7 @@ namespace gazebo
 
       /// \brief Get the width of the image
       /// \return Image width
-      public: unsigned int GetImageWidth() const;
+      public: virtual unsigned int GetImageWidth() const;
 
       /// \brief Get the width of the off-screen render texture
       /// \return Render texture width
@@ -213,13 +249,13 @@ namespace gazebo
 
       /// \brief Get the height of the image
       /// \return Image height
-      public: unsigned int GetImageHeight() const;
+      public: virtual unsigned int GetImageHeight() const;
 
       /// \brief Get the depth of the image
       /// \return Depth of the image
       public: unsigned int GetImageDepth() const;
 
-      /// \brief Get the height of the image
+      /// \brief Get the string representation of the image format.
       /// \return String representation of the image format.
       public: std::string GetImageFormat() const;
 
@@ -259,6 +295,10 @@ namespace gazebo
       /// \param[in] _enable Set to True to enable saving of frames
       public: void EnableSaveFrame(bool _enable);
 
+      /// \brief Return the value of this->captureData.
+      /// \return True if the camera is set to capture data.
+      public: bool GetCaptureData() const;
+
       /// \brief Set the save frame pathname
       /// \param[in] _pathname Directory in which to store saved image frames
       public: void SetSaveFramePathname(const std::string &_pathname);
@@ -294,11 +334,11 @@ namespace gazebo
 
       /// \brief Get the average FPS
       /// \return The average frames per second
-      public: virtual float GetAvgFPS() {return 0;}
+      public: virtual float GetAvgFPS() const {return 0;}
 
       /// \brief Get the triangle count
       /// \return The current triangle count
-      public: virtual unsigned int GetTriangleCount() {return 0;}
+      public: virtual unsigned int GetTriangleCount() const {return 0;}
 
       /// \brief Set the aspect ratio
       /// \param[in] _ratio The aspect ratio (width / height) in pixels
@@ -323,9 +363,13 @@ namespace gazebo
       /// \return Pointer to the raw data, null if data is not available.
       public: virtual const unsigned char *GetImageData(unsigned int i = 0);
 
-      /// \brief Get the camera's name
+      /// \brief Get the camera's unscoped name
       /// \return The name of the camera
       public: std::string GetName() const;
+
+      /// \brief Get the camera's scoped name (scene_name::camera_name)
+      /// \return The name of the camera
+      public: std::string GetScopedName() const;
 
       /// \brief Set the camera's name
       /// \param[in] _name New name for the camera
@@ -342,7 +386,7 @@ namespace gazebo
       /// through the viewport
       /// \param[in] _screenx X coordinate in the camera's viewport, in pixels.
       /// \param[in] _screeny Y coordinate in the camera's viewport, in pixels.
-      /// \param[out] _origin Origing in the world coordinate frame of the
+      /// \param[out] _origin Origin in the world coordinate frame of the
       /// resulting ray
       /// \param[out] _dir Direction of the resulting ray
       public: void GetCameraToViewportRay(int _screenx, int _screeny,
@@ -353,13 +397,16 @@ namespace gazebo
       /// \param[in] _value Set to true to capture data into a memory buffer.
       public: void SetCaptureData(bool _value);
 
+      /// \brief Capture data once and save to disk
+      public: void SetCaptureDataOnce();
+
       /// \brief Set the render target
       /// \param[in] _textureName Name of the new render texture
       public: void CreateRenderTexture(const std::string &_textureName);
 
       /// \brief Get the scene this camera is in
       /// \return Pointer to scene containing this camera
-      public: Scene *GetScene() const;
+      public: ScenePtr GetScene() const;
 
       /// \brief Get point on a plane
       /// \param[in] _x X cooridnate in camera's viewport, in pixels
@@ -386,6 +433,18 @@ namespace gazebo
                   bool _inheritOrientation,
                   double _minDist = 0.0, double _maxDist = 0.0);
 
+      /// \brief Attach the camera to a scene node
+      /// \param[in] _id ID of the visual to attach the camera to
+      /// \param[in] _inheritOrientation True means camera acquires the visual's
+      /// orientation
+      /// \param[in] _minDist Minimum distance the camera is allowed to get to
+      /// the visual
+      /// \param[in] _maxDist Maximum distance the camera is allowd to get from
+      /// the visual
+      public: void AttachToVisual(uint32_t _id,
+                  bool _inheritOrientation,
+                  double _minDist = 0.0, double _maxDist = 0.0);
+
       /// \brief Set the camera to track a scene node
       /// \param[in] _visualName Name of the visual to track
       public: void TrackVisual(const std::string &_visualName);
@@ -398,7 +457,7 @@ namespace gazebo
       /// \return Direction the camera is facing
       public: math::Vector3 GetDirection() const;
 
-      /// \brief Connect a to the new image signal
+      /// \brief Connect to the new image signal
       /// \param[in] _subscriber Callback that is called when a new image is
       /// generated
       /// \return A pointer to the connection. This must be kept in scope.
@@ -441,17 +500,19 @@ namespace gazebo
       /// \return True if the _visual is in the camera's frustum
       public: bool IsVisible(const std::string &_visualName);
 
-      /// \brief Returns true if initialized
-      /// \return Ture if the camera is initialized
-      public: bool GetInitialized() const;
+      /// \brief Return true if the camera is moving due to an animation.
+      public: bool IsAnimating() const;
 
-      /// \brief Move the camera to a position. This is an animated motion
+      /// \brief Move the camera to a position (this is an animated motion).
+      /// \sa Camera::MoveToPositions
       /// \param[in] _pose End position of the camera
       /// \param[in] _time Duration of the camera's movement
       public: virtual bool MoveToPosition(const math::Pose &_pose,
                                           double _time);
 
-      /// \brief Move the camera to a series of positions
+      /// \brief Move the camera to a series of poses (this is an
+      /// animated motion).
+      /// \sa Camera::MoveToPosition
       /// \param[in] _pts Vector of poses to move to
       /// \param[in] _time Duration of the entire move
       /// \param[in] _onComplete Callback that is called when the move is
@@ -460,8 +521,19 @@ namespace gazebo
                                    double _time,
                                    boost::function<void()> _onComplete = NULL);
 
+      /// \brief Get the path to saved screenshots.
+      /// \return Path to saved screenshots.
+      public: std::string GetScreenshotPath() const;
+
+      /// \brief Get the distortion model of this camera.
+      /// \return Distortion model.
+      public: DistortionPtr GetDistortion() const;
+
       /// \brief Implementation of the render call
       protected: virtual void RenderImpl();
+
+      /// \brief Read image data from pixel buffer
+      protected: void ReadPixelBuffer();
 
       /// \brief Implementation of the Camera::TrackVisual call
       /// \param[in] _visualName Name of the visual to track
@@ -486,6 +558,19 @@ namespace gazebo
                      bool _inheritOrientation,
                      double _minDist = 0, double _maxDist = 0);
 
+      /// \brief Attach the camera to a scene node
+      /// \param[in] _id ID of the visual to attach the camera to
+      /// \param[in] _inheritOrientation True means camera acquires the visual's
+      /// orientation
+      /// \param[in] _minDist Minimum distance the camera is allowed to get to
+      /// the visual
+      /// \param[in] _maxDist Maximum distance the camera is allowd to get from
+      /// the visual
+      /// \return True on success
+      protected: virtual bool AttachToVisualImpl(uint32_t _id,
+                     bool _inheritOrientation,
+                     double _minDist = 0, double _maxDist = 0);
+
       /// \brief Attach the camera to a visual
       /// \param[in] _visual The visual to attach the camera to
       /// \param[in] _inheritOrientation True means camera acquires the visual's
@@ -498,6 +583,14 @@ namespace gazebo
       protected: virtual bool AttachToVisualImpl(VisualPtr _visual,
                      bool _inheritOrientation,
                      double _minDist = 0, double _maxDist = 0);
+
+      /// \brief Get the next frame filename based on SDF parameters
+      /// \return The frame's filename
+      protected: std::string GetFrameFilename();
+
+      /// \brief Internal function used to indicate that an animation has
+      /// completed.
+      protected: virtual void AnimationComplete();
 
       /// \brief if user requests bayer image, post process rgb from ogre
       ///        to generate bayer formats
@@ -517,75 +610,111 @@ namespace gazebo
       /// \return Integer representation of the Ogre image format
       private: static int GetOgrePixelFormat(const std::string &_format);
 
-      /// \brief Get the next frame filename based on SDF parameters
-      /// \return The frame's filename
-      protected: std::string GetFrameFilename();
+      /// \brief Receive command message.
+      /// \param[in] _msg Camera Command message.
+      private: void OnCmdMsg(ConstCameraCmdPtr &_msg);
 
-      /// \brief Create the ogre camera
+      /// \brief Create the ogre camera.
       private: void CreateCamera();
 
+      /// \brief Name of the camera.
       protected: std::string name;
 
+      /// \brief Scene scoped name of the camera.
+      protected: std::string scopedName;
+
+      /// \brief Scene scoped name of the camera with a unique ID.
+      protected: std::string scopedUniqueName;
+
+      /// \brief Camera's SDF values.
       protected: sdf::ElementPtr sdf;
 
+      /// \brief ID of the window that the camera is attached to.
       protected: unsigned int windowId;
 
-      protected: unsigned int textureWidth, textureHeight;
+      /// \brief Width of the render texture.
+      protected: unsigned int textureWidth;
 
+      /// \brief Height of the render texture.
+      protected: unsigned int textureHeight;
+
+      /// \brief The OGRE camera
       protected: Ogre::Camera *camera;
-      protected: Ogre::Viewport *viewport;
-      protected: Ogre::SceneNode *sceneNode;
-      protected: Ogre::SceneNode *pitchNode;
 
-      // Info for saving images
+      /// \brief Viewport the ogre camera uses.
+      protected: Ogre::Viewport *viewport;
+
+      /// \brief Scene node that controls camera position and orientation.
+      protected: Ogre::SceneNode *sceneNode;
+
+      /// \brief Buffer for a single image frame.
       protected: unsigned char *saveFrameBuffer;
+
+      /// \brief Buffer for a bayer image frame.
       protected: unsigned char *bayerFrameBuffer;
+
+      /// \brief Number of saved frames.
       protected: unsigned int saveCount;
 
-      protected: int imageFormat;
-      protected: int imageWidth, imageHeight;
+      /// \brief Path to saved screenshots.
+      protected: std::string screenshotPath;
 
+      /// \brief Format for saving images.
+      protected: int imageFormat;
+
+      /// \brief Save image width.
+      protected: int imageWidth;
+
+      /// \brief Save image height.
+      protected: int imageHeight;
+
+      /// \brief Target that renders frames.
       protected: Ogre::RenderTarget *renderTarget;
 
+      /// \brief Texture that receives results from rendering.
       protected: Ogre::Texture *renderTexture;
 
-      private: static unsigned int cameraCounter;
-      private: unsigned int myCount;
-
+      /// \brief True to capture frames into an image buffer.
       protected: bool captureData;
 
+      /// \brief True to capture a frame once and save to disk.
+      protected: bool captureDataOnce;
+
+      /// \brief True if new data is available.
       protected: bool newData;
 
+      /// \brief Time the last frame was rendered.
       protected: common::Time lastRenderWallTime;
 
-      protected: Scene *scene;
+      /// \brief Pointer to the scene.
+      protected: ScenePtr scene;
 
+      /// \brief Event triggered when a new frame is generated.
       protected: event::EventT<void(const unsigned char *,
                      unsigned int, unsigned int, unsigned int,
                      const std::string &)> newImageFrame;
 
+      /// \brief The camera's event connections.
       protected: std::vector<event::ConnectionPtr> connections;
+
+      /// \brief List of requests.
       protected: std::list<msgs::Request> requests;
-      private: friend class Scene;
 
-      private: sdf::ElementPtr imageElem;
-
+      /// \brief True if initialized.
       protected: bool initialized;
-      private: VisualPtr trackedVisual;
 
+      /// \brief Animation state, used to animate the camera.
       protected: Ogre::AnimationState *animState;
+
+      /// \brief Previous time the camera animation was updated.
       protected: common::Time prevAnimTime;
+
+      /// \brief User callback for when an animation completes.
       protected: boost::function<void()> onAnimationComplete;
 
-      private: Ogre::CompositorInstance *dsGBufferInstance;
-      private: Ogre::CompositorInstance *dsMergeInstance;
-
-      private: Ogre::CompositorInstance *dlGBufferInstance;
-      private: Ogre::CompositorInstance *dlMergeInstance;
-
-      private: Ogre::CompositorInstance *ssaoInstance;
-
-      private: std::deque<std::pair<math::Pose, double> > moveToPositionQueue;
+      /// \internal
+      /// \brief Pointer to private data.
+      private: CameraPrivate *dataPtr;
     };
     /// \}
   }

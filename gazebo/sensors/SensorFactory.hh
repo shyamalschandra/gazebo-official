@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@
  * Date: 18 May 2003
  */
 
-#ifndef SENSORFACTORY_HH
-#define SENSORFACTORY_HH
+#ifndef _SENSORFACTORY_HH_
+#define _SENSORFACTORY_HH_
 
 #include <string>
 #include <map>
 #include <vector>
 
-#include "sensors/SensorTypes.hh"
+#include "gazebo/sensors/SensorTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,7 +36,7 @@ namespace gazebo
   /// \brief Sensors namespace
   namespace sensors
   {
-  /// \def Sensor 
+  /// \def Sensor
   /// \brief Prototype for sensor factory functions
   typedef Sensor* (*SensorFactoryFn) ();
 
@@ -43,7 +44,7 @@ namespace gazebo
   /// \{
   /// \class SensorFactor SensorFactory.hh sensors/sensors.hh
   /// \brief The sensor factory; the class is just for namespacing purposes.
-  class SensorFactory
+  class GAZEBO_VISIBLE SensorFactory
   {
     /// \brief Register all known sensors
     ///  \li sensors::CameraSensor
@@ -53,23 +54,25 @@ namespace gazebo
     ///  \li sensors::ContactSensor
     ///  \li sensors::RFIDSensor
     ///  \li sensors::RFIDTag
+    ///  \li sensors::WirelessTransmitter
+    ///  \li sensors::WirelessReceiver
     public: static void RegisterAll();
 
     /// \brief Register a sensor class (called by sensor registration function).
-    /// \param[in] _classname Name of class of sensor to register
-    /// \param _factoryfn Function handle for registration
-    /// \TODO Nate check
-    public: static void RegisterSensor(const std::string &_classname,
+    /// \param[in] _className Name of class of sensor to register.
+    /// \param[in] _factoryfn Function handle for registration.
+    public: static void RegisterSensor(const std::string &_className,
                                        SensorFactoryFn _factoryfn);
 
     /// \brief Create a new instance of a sensor.  Used by the world when
     /// reading the world file.
-    /// \param[in] Name of sensor class
+    /// \param[in] _className Name of sensor class
     /// \return Pointer to Sensor
-    public: static SensorPtr NewSensor(const std::string &_classname);
+    public: static SensorPtr NewSensor(const std::string &_className);
 
     /// \brief Get all the sensor types
-    /// \param _types Vector of strings of the sensor types, populated by function
+    /// \param _types Vector of strings of the sensor types,
+    /// populated by function
     public: static void GetSensorTypes(std::vector<std::string> &_types);
 
     /// \brief A list of registered sensor classes
@@ -83,10 +86,11 @@ namespace gazebo
   /// @param name Sensor type name, as it appears in the world file.
   /// @param classname C++ class name for the sensor.
   #define GZ_REGISTER_STATIC_SENSOR(name, classname) \
-  Sensor *New##classname() \
+  GAZEBO_VISIBLE Sensor *New##classname() \
   { \
     return new gazebo::sensors::classname(); \
   } \
+  GAZEBO_VISIBLE \
   void Register##classname() \
   {\
     SensorFactory::RegisterSensor(name, New##classname);\
