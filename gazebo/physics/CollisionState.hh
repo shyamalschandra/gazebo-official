@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 
 #include "gazebo/physics/State.hh"
 #include "gazebo/math/Pose.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -38,7 +39,7 @@ namespace gazebo
     /// specific time during a simulation run.
     ///
     /// State of a Collision is its Pose.
-    class CollisionState : public State
+    class GAZEBO_VISIBLE CollisionState : public State
     {
       /// \brief Default constructor
       public: CollisionState();
@@ -73,6 +74,10 @@ namespace gazebo
       /// \return True if the values in the state are zero.
       public: bool IsZero() const;
 
+      /// \brief Populate a state SDF element with data from the object.
+      /// \param[out] _sdf SDF element to populate.
+      public: void FillSDF(sdf::ElementPtr _sdf);
+
       /// \brief Assignment operator
       /// \param[in] _state State value
       /// \return Reference to this
@@ -92,12 +97,12 @@ namespace gazebo
       /// \param[in] _out output stream
       /// \param[in] _state Collision state to output
       /// \return the stream
-      public: friend std::ostream &operator<<(std::ostream &_out,
-                                 const gazebo::physics::CollisionState &_state)
+      public: inline friend std::ostream &operator<<(std::ostream &_out,
+                  const gazebo::physics::CollisionState &_state)
       {
-        _out << "<collision name='" << _state.name << "'>\n"
-             << "<pose>" << _state.pose << "</pose>\n";
-        _out << "</collision>\n";
+        _out << "<collision name='" << _state.name << "'>"
+             << "<pose>" << _state.pose << "</pose>";
+        _out << "</collision>";
 
         return _out;
       }
