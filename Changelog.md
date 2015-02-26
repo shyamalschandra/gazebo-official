@@ -1,3 +1,45 @@
+1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
+    * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
+
+1. Get and Set visibility of SelectionObj's handles, with unit test.
+    * [Pull request #1417](https://bitbucket.org/osrf/gazebo/pull-request/1417)
+
+1. Allow link selection with the mouse if parent model already selected.
+    * [Pull request #1409](https://bitbucket.org/osrf/gazebo/pull-request/1409)
+
+1. Added ModelRightMenu::EntityTypes.
+    * [Pull request #1414](https://bitbucket.org/osrf/gazebo/pull-request/1414)
+
+1. Added Gazebo/CoM material.
+    * [Pull request #1439](https://bitbucket.org/osrf/gazebo/pull-request/1439)
+
+1. Added arc parameter to MeshManager::CreateTube 
+    * [Pull request #1436](https://bitbucket.org/osrf/gazebo/pull-request/1436)
+
+1. Added View Inertia and InertiaVisual, changed COMVisual to sphere proportional to mass.
+    * [Pull request #1445](https://bitbucket.org/osrf/gazebo/pull-request/1445)
+
+1. Changed the position of Save and Cancel buttons on editor dialogs
+    * [Pull request #1442](https://bitbucket.org/osrf/gazebo/pull-request/1442)
+    * [Issue #1377](https://bitbucket.org/osrf/gazebo/issue/1377)
+
+ 1. Model editor updates
+    1. Joint preview using JointVisuals.
+        * [Pull request #1369](https://bitbucket.org/osrf/gazebo/pull-request/1369)
+
+    1. Added inspector for configuring link, visual, and collision properties.
+        * [Pull request #1408](https://bitbucket.org/osrf/gazebo/pull-request/1408)
+
+    1. Saving, exiting, generalizing SaveDialog.
+        * [Pull request #1401](https://bitbucket.org/osrf/gazebo/pull-request/1401)
+
+    1. Edit existing model.
+        * [Pull request #1425](https://bitbucket.org/osrf/gazebo/pull-request/1425)
+
+    1. Add joint inspector to link's context menu.
+        * [Pull request #1449](https://bitbucket.org/osrf/gazebo/pull-request/1449)
+        * [Issue #1443](https://bitbucket.org/osrf/gazebo/issue/1443)
+
 ## Gazebo 5.0
 
 ### Gazebo 5.1.0
@@ -12,6 +54,9 @@
 
 1. C++11 support (C++11 compatible compiler is now required)
     * [Pull request #1340](https://bitbucket.org/osrf/gazebo/pull-request/1340)
+
+1. Implemented private data pointer for the ODEPhysicsPrivate class.
+    * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
 
 1. Implemented private data pointer for the World class.
     * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
@@ -192,6 +237,9 @@
 
     1. Pick textures from the palette and assign in 3D view.
         * [Pull request #1368](https://bitbucket.org/osrf/gazebo/pull-request/1368)
+
+    1. Pick custom colors from the palette and assign in 3D view.
+        * [Pull request #1382](https://bitbucket.org/osrf/gazebo/pull-request/1382)
 
 1. Model editor updates
     1. Fix adding/removing event filters .
