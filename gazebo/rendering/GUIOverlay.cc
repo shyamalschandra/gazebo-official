@@ -15,68 +15,64 @@
  *
 */
 
+#include "gazebo/rendering/GUIOverlay.hh"
 #include "gazebo/common/Console.hh"
 
 #include "gazebo/common/SystemPaths.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/transport/TransportIface.hh"
+#include "gazebo/transport/Node.hh"
 #include "gazebo/math/Vector2d.hh"
 
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/rendering/Camera.hh"
 #include "gazebo/rendering/DepthCamera.hh"
-#include "gazebo/rendering/GUIOverlayPrivate.hh"
-#include "gazebo/rendering/GUIOverlay.hh"
 
 using namespace gazebo;
 using namespace rendering;
 
 /////////////////////////////////////////////////
 GUIOverlay::GUIOverlay()
-  : dataPtr(new GUIOverlayPrivate)
 {
-  this->dataPtr->initialized = false;
+  this->initialized = false;
 #ifdef HAVE_CEGUI
-  this->dataPtr->guiRenderer = NULL;
+  this->guiRenderer = NULL;
 
-  this->dataPtr->connections.push_back(
+  this->connections.push_back(
       event::Events::ConnectPreRender(
         boost::bind(&GUIOverlay::PreRender, this)));
 #endif
-  this->dataPtr->rttImageSetCount = 0;
+  this->rttImageSetCount = 0;
 }
 
 /////////////////////////////////////////////////
 GUIOverlay::~GUIOverlay()
 {
-  this->dataPtr->initialized = false;
+  this->initialized = false;
 #ifdef HAVE_CEGUI
   CEGUI::OgreRenderer::destroySystem();
 #endif
-  delete this->dataPtr;
-  this->dataPtr = NULL;
 }
 
 /////////////////////////////////////////////////
 #ifdef HAVE_CEGUI
 void GUIOverlay::Init(Ogre::RenderTarget *_renderTarget)
 {
-  if (this->dataPtr->initialized)
+  if (this->initialized)
     return;
 
-  CEGUI::System *system = CEGUI::System::getSingletonPtr();
-
-  if (system)
-    return;
+  CEGUI::System::getSingletonPtr();
 
   std::string logPath = common::SystemPaths::Instance()->GetLogPath();
   logPath += "/cegui.log";
 
-  this->dataPtr->guiRenderer = &CEGUI::OgreRenderer::create(*_renderTarget);
+  this->guiRenderer = &CEGUI::OgreRenderer::create(*_renderTarget);
   CEGUI::OgreResourceProvider &ip =
     CEGUI::OgreRenderer::createOgreResourceProvider();
   CEGUI::OgreImageCodec &ic = CEGUI::OgreRenderer::createOgreImageCodec();
 
-  CEGUI::System::create(*((CEGUI::Renderer*)this->dataPtr->guiRenderer),
+  CEGUI::System::create(*((CEGUI::Renderer*)this->guiRenderer),
       (CEGUI::ResourceProvider*)(&ip),
       static_cast<CEGUI::XMLParser*>(0),
       (CEGUI::ImageCodec*)(&ic),
@@ -95,20 +91,19 @@ void GUIOverlay::Init(Ogre::RenderTarget *_renderTarget)
   CEGUI::FontManager::getSingleton().create("DejaVuSans-10.font");
 
   // clearing this queue actually make sure it's created
-  this->dataPtr->guiRenderer->getDefaultRenderingRoot().clearGeometry(
-      CEGUI::RQ_OVERLAY);
+  this->guiRenderer->getDefaultRenderingRoot().clearGeometry(CEGUI::RQ_OVERLAY);
 
   // Create a root window, and set it as the root window
   CEGUI::Window *rootWindow =
     CEGUI::WindowManager::getSingleton().createWindow("DefaultWindow", "root");
   rootWindow->setMousePassThroughEnabled(true);
   CEGUI::System::getSingleton().setGUISheet(rootWindow);
-  this->dataPtr->initialized = true;
+  this->initialized = true;
 }
 #else
 void GUIOverlay::Init(Ogre::RenderTarget * /*_renderTarget*/)
 {
-  this->dataPtr->initialized = true;
+  this->initialized = true;
 }
 #endif
 
@@ -116,8 +111,7 @@ void GUIOverlay::Init(Ogre::RenderTarget * /*_renderTarget*/)
 void GUIOverlay::Hide()
 {
 #ifdef HAVE_CEGUI
-  if (this->dataPtr->initialized)
-    CEGUI::System::getSingletonPtr()->getGUISheet()->hide();
+  CEGUI::System::getSingletonPtr()->getGUISheet()->hide();
 #endif
 }
 
@@ -125,8 +119,7 @@ void GUIOverlay::Hide()
 void GUIOverlay::Show()
 {
 #ifdef HAVE_CEGUI
-  if (this->dataPtr->initialized)
-    CEGUI::System::getSingletonPtr()->getGUISheet()->show();
+  CEGUI::System::getSingletonPtr()->getGUISheet()->show();
 #endif
 }
 
@@ -134,8 +127,7 @@ void GUIOverlay::Show()
 void GUIOverlay::Update()
 {
 #ifdef HAVE_CEGUI
-  if (this->dataPtr->initialized)
-    CEGUI::System::getSingleton().injectTimePulse(0.01);
+  CEGUI::System::getSingleton().injectTimePulse(0.01);
 #endif
 }
 
@@ -218,6 +210,7 @@ bool GUIOverlay::HandleMouseEvent(const common::MouseEvent &_evt)
 
   press = false;
   release = false;
+  pos = false;
   scroll = false;
 
   CEGUI::System *system = CEGUI::System::getSingletonPtr();
@@ -270,17 +263,17 @@ bool GUIOverlay::IsInitialized()
 /////////////////////////////////////////////////
 void GUIOverlay::LoadLayout(const std::string &_filename)
 {
-  this->dataPtr->layoutFilename = _filename;
+  this->layoutFilename = _filename;
 }
 
 /////////////////////////////////////////////////
 void GUIOverlay::PreRender()
 {
 #ifdef HAVE_CEGUI
-  if (this->IsInitialized() && !this->dataPtr->layoutFilename.empty())
+  if (this->IsInitialized() && !this->layoutFilename.empty())
   {
-    this->LoadLayoutImpl(this->dataPtr->layoutFilename);
-    this->dataPtr->layoutFilename.clear();
+    this->LoadLayoutImpl(this->layoutFilename);
+    this->layoutFilename.clear();
   }
 #endif
 }
@@ -320,9 +313,9 @@ CEGUI::Window *GUIOverlay::LoadLayoutImpl(const std::string &_filename)
 #ifdef HAVE_CEGUI
 void GUIOverlay::Resize(unsigned int _width, unsigned int _height)
 {
-  if (this->dataPtr->guiRenderer)
+  if (this->guiRenderer)
   {
-    this->dataPtr->guiRenderer->setDisplaySize(CEGUI::Size(_width, _height));
+    this->guiRenderer->setDisplaySize(CEGUI::Size(_width, _height));
 
     CEGUI::WindowManager *windowManager =
       CEGUI::WindowManager::getSingletonPtr();
@@ -378,12 +371,12 @@ bool GUIOverlay::AttachCameraToImage(CameraPtr &_camera,
   }
 
   Ogre::TexturePtr texPtr(_camera->GetRenderTexture());
-  CEGUI::Texture &guiTex = this->dataPtr->guiRenderer->createTexture(
+  CEGUI::Texture &guiTex = this->guiRenderer->createTexture(
       texPtr);
 
-  this->dataPtr->rttImageSetCount++;
+  this->rttImageSetCount++;
   std::ostringstream stream;
-  stream << "RTTImageset_" << this->dataPtr->rttImageSetCount;
+  stream << "RTTImageset_" << this->rttImageSetCount;
 
   CEGUI::Imageset &imageSet = CEGUI::ImagesetManager::getSingleton().create(
       stream.str().c_str(), guiTex);
