@@ -5,7 +5,7 @@ set (sources GazeboDriver.cc
              Position2dInterface.cc
              LaserInterface.cc
              CameraInterface.cc
-             ../../src/gazebo.cc
+             ../../gazebo/gazebo.cc
 )
              #Position3dInterface.cc
              #FiducialInterface.cc
@@ -18,25 +18,27 @@ set (sources GazeboDriver.cc
              #ImuInterface.cc
 
 include_directories( 
+  ${SDFormat_INCLUDE_DIRS} 
   ${PLAYER_INCLUDE_DIRS} 
-  ${PROJECT_SOURCE_DIR}/src 
-  ${PROJECT_BINARY_DIR}/src 
   ${OPENGL_INCLUDE_DIR}
   ${OGRE_INCLUDE_DIRS}
-  ${BOOST_INCLUDE_DIRS}
-  ${tinyxml_include_dirs}
+  ${Boost_INCLUDE_DIRS}
 )
 
-link_directories(${PLAYER_LINK_DIRS} ${boost_library_dirs})
+link_directories( 
+  ${SDFormat_LIBRARY_DIRS} 
+)
+
+link_directories(${PLAYER_LINK_DIRS} ${Boost_LIBRARY_DIRS})
 
 gz_add_library(gazebo_player ${sources})
 target_link_libraries(gazebo_player ${PLAYER_LINK_LIBS}
-gazebo_player
 gazebo_common
 gazebo_transport
 gazebo_msgs
 gazebo_math
+gazebo_util
 )
 
-INSTALL_LIBRARY(gazebo_player)
-#INSTALL_INCLUDES("player" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/physics.h)
+gz_install_library(gazebo_player)
+#gz_install_includes("player" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/physics.h)

@@ -116,10 +116,10 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
     }
 
     // set right hand side and cfm value for normal
-    dReal erp = info->erp;
+    dReal local_erp = info->erp;
     if ( contact.surface.mode & dContactSoftERP )
-        erp = contact.surface.soft_erp;
-    dReal k = info->fps * erp;
+        local_erp = contact.surface.soft_erp;
+    dReal k = info->fps * local_erp;
 
     // experimental - check relative acceleration at the contact
 
@@ -158,15 +158,20 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
     info->c[0] = pushout;
 
     // note: this cap should not limit bounce velocity
-    dReal maxvel;
+    // if contactp is not specified per body, use the global max_vel specified in world
+    // otherwise, use the body max_vel, but truncated by world max_vel.
+    dReal maxvel = world->contactp.max_vel;
     if (node[0].body->contactp != NULL && (node[1].body && node[1].body->contactp != NULL))
       maxvel = std::min(node[0].body->contactp->max_vel,node[1].body->contactp->max_vel);
-    else if (node[0].body->contactp != NULL)
+    else if (node[0].body && node[0].body->contactp != NULL)
       maxvel = node[0].body->contactp->max_vel;
     else if (node[1].body && node[1].body->contactp != NULL)
       maxvel = node[1].body->contactp->max_vel;
-    else
+
+    // truncate everything by world max_vel
+    if (maxvel > world->contactp.max_vel)
       maxvel = world->contactp.max_vel;
+
     info->c_v_max[0] = maxvel;
 
     // deal with bounce
@@ -208,6 +213,12 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
             t1[1] = contact.fdir1[1];
             t1[2] = contact.fdir1[2];
             dCalcVectorCross3( t2, normal, t1 );
+
+            // if fdir1 is parallel to normal, revert to dPlaneSpace
+            if (_dequal(t2[0], 0.0) &&
+                _dequal(t2[1], 0.0) &&
+                _dequal(t2[2], 0.0))
+              dPlaneSpace( normal, t1, t2 );
         }
         else
         {
