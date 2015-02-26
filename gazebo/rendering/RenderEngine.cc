@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -264,7 +264,6 @@ unsigned int RenderEngine::GetSceneCount() const
 void RenderEngine::PreRender()
 {
   this->root->_fireFrameStarted();
-  this->root->_fireFrameRenderingQueued();
 }
 
 //////////////////////////////////////////////////
@@ -275,8 +274,10 @@ void RenderEngine::Render()
 //////////////////////////////////////////////////
 void RenderEngine::PostRender()
 {
-  // _fireFrameRenderingQueued needs to be here for CEGUI to work
-  // this->root->_fireFrameRenderingQueued();
+  // _fireFrameRenderingQueued was here for CEGUI to work. Leaving because
+  // it shouldn't harm anything, and we don't want to introduce
+  // a regression.
+  this->root->_fireFrameRenderingQueued();
   this->root->_fireFrameEnded();
 }
 

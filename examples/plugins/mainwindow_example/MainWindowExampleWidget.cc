@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  *
 */
 #include <sstream>
+#include <vector>
+
 #include <gazebo/msgs/msgs.hh>
-#include "MainWindowExampleWidget.hh"
 #include <gazebo/gui/gui.hh>
 #include <gazebo/gui/MainWindow.hh>
+
+#include "MainWindowExampleWidget.hh"
 
 using namespace gazebo;
 

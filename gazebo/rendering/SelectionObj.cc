@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -475,7 +475,8 @@ void SelectionObj::CreateRotateVisual()
       dPtr->rotYVisual->GetSceneNode()->createChildSceneNode(
       "__SELECTION_OBJ__ROT_NODE_Y__"  + this->GetName());
   yNode->attachObject(rotYObj);
-  rotYObj->getUserObjectBindings().setUserAny(Ogre::Any(std::string("rot_y")));
+  rotYObj->getUserObjectBindings().setUserAny(
+      Ogre::Any(std::string("rot_y")));
   rotYObj->setRenderQueueGroup(Ogre::RENDER_QUEUE_OVERLAY);
 
   Ogre::MovableObject *rotZObj =
@@ -485,7 +486,8 @@ void SelectionObj::CreateRotateVisual()
       dPtr->rotZVisual->GetSceneNode()->createChildSceneNode(
       "__SELECTION_OBJ__ROT_NODE_Z__"  + this->GetName());
   zNode->attachObject(rotZObj);
-  rotZObj->getUserObjectBindings().setUserAny(Ogre::Any(std::string("rot_z")));
+  rotZObj->getUserObjectBindings().setUserAny(
+      Ogre::Any(std::string("rot_z")));
   rotZObj->setRenderQueueGroup(Ogre::RENDER_QUEUE_OVERLAY);
 
   dPtr->rotXVisual->Load();
