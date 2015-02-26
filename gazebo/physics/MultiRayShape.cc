@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  *
 */
-#include "common/Exception.hh"
-#include "msgs/msgs.hh"
-#include "physics/MultiRayShape.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/physics/MultiRayShape.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -50,7 +50,6 @@ void MultiRayShape::Init()
   int vertSamples = 1;
   // double vertResolution = 1.0;
   double vertMinAngle = 0;
-  double vertMaxAngle = 0;
 
   double minRange, maxRange;
 
@@ -63,7 +62,7 @@ void MultiRayShape::Init()
   {
     this->vertElem = this->scanElem->GetElement("vertical");
     vertMinAngle = this->vertElem->Get<double>("min_angle");
-    vertMaxAngle = this->vertElem->Get<double>("max_angle");
+    double vertMaxAngle = this->vertElem->Get<double>("max_angle");
     vertSamples = this->vertElem->Get<unsigned int>("samples");
     // vertResolution = this->vertElem->Get<double>("resolution");
     pDiff = vertMaxAngle - vertMinAngle;
@@ -91,7 +90,9 @@ void MultiRayShape::Init()
       pitchAngle = (vertSamples == 1)? 0 :
         j * pDiff / (vertSamples - 1) + vertMinAngle;
 
-      ray.SetFromEuler(math::Vector3(0.0, pitchAngle, yawAngle));
+      // since we're rotating a unit x vector, a pitch rotation will now be
+      // around the negative y axis
+      ray.SetFromEuler(math::Vector3(0.0, -pitchAngle, yawAngle));
       axis = this->offset.rot * ray * math::Vector3(1.0, 0.0, 0.0);
 
       start = (axis * minRange) + this->offset.pos;
@@ -103,9 +104,23 @@ void MultiRayShape::Init()
 }
 
 //////////////////////////////////////////////////
-double MultiRayShape::GetRange(int _index)
+void MultiRayShape::SetScale(const math::Vector3 &_scale)
 {
-  if (_index < 0 || _index >= static_cast<int>(this->rays.size()))
+  if (this->scale == _scale)
+    return;
+
+  this->scale = _scale;
+
+  for (unsigned int i = 0; i < this->rays.size(); ++i)
+  {
+    this->rays[i]->SetScale(this->scale);
+  }
+}
+
+//////////////////////////////////////////////////
+double MultiRayShape::GetRange(unsigned int _index)
+{
+  if (_index >= this->rays.size())
   {
     std::ostringstream stream;
     stream << "index[" << _index << "] out of range[0-"
@@ -113,13 +128,14 @@ double MultiRayShape::GetRange(int _index)
     gzthrow(stream.str());
   }
 
-  return this->rays[_index]->GetLength();
+  // Add min range, because we measured from min range.
+  return this->GetMinRange() + this->rays[_index]->GetLength();
 }
 
 //////////////////////////////////////////////////
-double MultiRayShape::GetRetro(int _index)
+double MultiRayShape::GetRetro(unsigned int _index)
 {
-  if (_index < 0 || _index >= static_cast<int>(this->rays.size()))
+  if (_index >= this->rays.size())
   {
     std::ostringstream stream;
     stream << "index[" << _index << "] out of range[0-"
@@ -131,9 +147,9 @@ double MultiRayShape::GetRetro(int _index)
 }
 
 //////////////////////////////////////////////////
-int MultiRayShape::GetFiducial(int _index)
+int MultiRayShape::GetFiducial(unsigned int _index)
 {
-  if (_index < 0 || _index >= static_cast<int>(this->rays.size()))
+  if (_index >= this->rays.size())
   {
     std::ostringstream stream;
     stream << "index[" << _index << "] out of range[0-"
@@ -147,14 +163,15 @@ int MultiRayShape::GetFiducial(int _index)
 //////////////////////////////////////////////////
 void MultiRayShape::Update()
 {
-  double maxRange = this->rangeElem->Get<double>("max");
+  // The measurable range is (max-min)
+  double fullRange = this->GetMaxRange() - this->GetMinRange();
 
   // Reset the ray lengths and mark the collisions as dirty (so they get
   // redrawn)
   unsigned int ray_size = this->rays.size();
   for (unsigned int i = 0; i < ray_size; i++)
   {
-    this->rays[i]->SetLength(maxRange);
+    this->rays[i]->SetLength(fullRange);
     this->rays[i]->SetRetro(0.0);
 
     // Get the global points of the line
