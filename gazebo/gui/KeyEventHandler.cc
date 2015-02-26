@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ using namespace gui;
 /////////////////////////////////////////////////
 KeyEventHandler::KeyEventHandler()
 {
+  autoRepeat = false;
 }
 
 /////////////////////////////////////////////////
@@ -57,15 +58,27 @@ void KeyEventHandler::RemoveReleaseFilter(const std::string &_name)
 }
 
 /////////////////////////////////////////////////
-void KeyEventHandler::HandlePress(const common::KeyEvent &_event)
+bool KeyEventHandler::HandlePress(const common::KeyEvent &_event)
 {
-  this->Handle(_event, this->pressFilters);
+  return this->Handle(_event, this->pressFilters);
 }
 
 /////////////////////////////////////////////////
-void KeyEventHandler::HandleRelease(const common::KeyEvent &_event)
+bool KeyEventHandler::HandleRelease(const common::KeyEvent &_event)
 {
-  this->Handle(_event, this->releaseFilters);
+  return this->Handle(_event, this->releaseFilters);
+}
+
+/////////////////////////////////////////////////
+bool KeyEventHandler::GetAutoRepeat() const
+{
+  return this->autoRepeat;
+}
+
+/////////////////////////////////////////////////
+void KeyEventHandler::SetAutoRepeat(const bool _autorepeat)
+{
+  this->autoRepeat = _autorepeat;
 }
 
 /////////////////////////////////////////////////
@@ -83,17 +96,18 @@ void KeyEventHandler::Add(const std::string &_name,
 void KeyEventHandler::Remove(const std::string &_name,
     std::list<Filter> &_list)
 {
-  std::remove(_list.begin(), _list.end(), _name);
+  _list.remove(Filter(_name, NULL));
 }
 
 /////////////////////////////////////////////////
-void KeyEventHandler::Handle(const common::KeyEvent &_event,
+bool KeyEventHandler::Handle(const common::KeyEvent &_event,
     std::list<Filter> &_list)
 {
   for (std::list<Filter>::iterator iter = _list.begin();
        iter != _list.end(); ++iter)
   {
     if ((*iter).func(_event))
-      break;
+      return true;
   }
+  return false;
 }
