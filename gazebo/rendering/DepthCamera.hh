@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,17 @@
 #define _RENDERING_DEPTHCAMERA_HH_
 #include <string>
 
-#include "common/Event.hh"
-#include "common/Time.hh"
+#include <sdf/sdf.hh>
 
-#include "math/Angle.hh"
-#include "math/Pose.hh"
-#include "math/Vector2i.hh"
+#include "gazebo/common/Event.hh"
+#include "gazebo/common/Time.hh"
 
-#include "sdf/sdf.hh"
+#include "gazebo/math/Angle.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Vector2i.hh"
 
-#include "rendering/Camera.hh"
+#include "gazebo/rendering/Camera.hh"
+#include "gazebo/util/system.hh"
 
 namespace Ogre
 {
@@ -53,21 +54,21 @@ namespace gazebo
 
     /// \class DepthCamera DepthCamera.hh rendering/rendering.hh
     /// \brief Depth camera used to render depth data into an image buffer
-    class DepthCamera : public Camera
+    class GAZEBO_VISIBLE DepthCamera : public Camera
     {
       /// \brief Constructor
       /// \param[in] _namePrefix Unique prefix name for the camera.
       /// \param[in] _scene Scene that will contain the camera
       /// \param[in] _autoRender Almost everyone should leave this as true.
       public: DepthCamera(const std::string &_namePrefix,
-                          Scene *_scene, bool _autoRender = true);
+                          ScenePtr _scene, bool _autoRender = true);
 
       /// \brief Destructor
       public: virtual ~DepthCamera();
 
       /// \brief Load the camera with a set of parmeters
       /// \param[in] _sdf The SDF camera info
-      public: void Load(sdf::ElementPtr &_sdf);
+      public: void Load(sdf::ElementPtr _sdf);
 
        /// \brief Load the camera with default parmeters
       public: void Load();

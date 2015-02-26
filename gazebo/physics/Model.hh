@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,13 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <boost/thread/recursive_mutex.hpp>
 
 #include "gazebo/common/CommonTypes.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
-
 #include "gazebo/physics/ModelState.hh"
 #include "gazebo/physics/Entity.hh"
+#include "gazebo/util/system.hh"
 
 namespace boost
 {
@@ -41,7 +42,6 @@ namespace gazebo
 {
   namespace physics
   {
-    class JointController;
     class Gripper;
 
     /// \addtogroup gazebo_physics
@@ -49,7 +49,7 @@ namespace gazebo
 
     /// \class Model Model.hh physics/physics.hh
     /// \brief A model is a collection of links, joints, and plugins.
-    class Model : public Entity
+    class GAZEBO_VISIBLE Model : public Entity
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent object.
@@ -61,6 +61,9 @@ namespace gazebo
       /// \brief Load the model.
       /// \param[in] _sdf SDF parameters to load from.
       public: void Load(sdf::ElementPtr _sdf);
+
+      /// \brief Load all the joints.
+      public: void LoadJoints();
 
       /// \brief Initialize the model.
       public: virtual void Init();
@@ -82,9 +85,14 @@ namespace gazebo
       /// \brief Remove a child.
       /// \param[in] _child Remove a child entity.
       public: virtual void RemoveChild(EntityPtr _child);
+      using Base::RemoveChild;
 
       /// \brief Reset the model.
       public: void Reset();
+
+      /// \brief Reset the velocity, acceleration, force and torque of
+      /// all child links.
+      public: void ResetPhysicsStates();
 
       /// \brief Set the linear velocity of the model, and all its links.
       /// \param[in] _vel The new linear velocity.
@@ -144,34 +152,31 @@ namespace gazebo
       /// \return Get the number of joints.
       public: unsigned int GetJointCount() const;
 
-      /// \brief Construct and return a vector of Link's in this model.
-      /// Note this constructs the vector of Link's on the fly, could be costly.
-      /// \return A vector of Link's in this model.
-      public: Link_V GetAllLinks() const;
+      /// \brief Construct and return a vector of Link's in this model
+      /// Note this constructs the vector of Link's on the fly, could be costly
+      /// \return a vector of Link's in this model
+      public: const Link_V &GetLinks() const;
 
-      /// \brief Get a joint by index.
-      /// \param[in] _index Index of the joint.
-      /// \return A pointer to the joint, NULL if the index is invalid.
-      public: JointPtr GetJoint(unsigned int _index) const;
+      /// \brief Get the joints.
+      /// \return Vector of joints.
+      public: const Joint_V &GetJoints() const;
 
-      /// \brief Get a joint.
-      /// \param[in] _name The name of the joint, specified in the world file.
-      /// \return Pointer to the joint, NULL if the name is invalid.
-      public: JointPtr GetJoint(const std::string &_name);
+      /// \brief Get a joint
+      /// \param name The name of the joint, specified in the world file
+      /// \return Pointer to the joint
+      public: JointPtr GetJoint(const std::string &name);
 
+      /// \cond
+      /// This is an internal function
       /// \brief Get a link by id.
       /// \return Pointer to the link, NULL if the id is invalid.
       public: LinkPtr GetLinkById(unsigned int _id) const;
+      /// \endcond
 
       /// \brief Get a link by name.
       /// \param[in] _name Name of the link to get.
       /// \return Pointer to the link, NULL if the name is invalid.
       public: LinkPtr GetLink(const std::string &_name ="canonical") const;
-
-      /// \brief Get a child link by index.
-      /// \param[in] _index Index of the link.
-      /// \return Point to the link, NULL if the index is invalid.
-      public: LinkPtr GetLink(unsigned int _index) const;
 
       /// \brief Set the gravity mode of the model.
       /// \param[in] _value False to turn gravity on for the model.
@@ -187,12 +192,9 @@ namespace gazebo
       /// \param[in] _retro Retro reflectance value.
       public: void SetLaserRetro(const float _retro);
 
-      /// \brief DEPRECATED
-      public: void FillModelMsg(msgs::Model &_msg) GAZEBO_DEPRECATED;
-
       /// \brief Fill a model message.
       /// \param[in] _msg Message to fill using this model's data.
-      public: void FillMsg(msgs::Model &_msg);
+      public: virtual void FillMsg(msgs::Model &_msg);
 
       /// \brief Update parameters from a model message.
       /// \param[in] _msg Message to process.
@@ -203,7 +205,7 @@ namespace gazebo
       /// \param[in] _jointName Name of the joint to set.
       /// \param[in] _position Position to set the joint to.
       public: void SetJointPosition(const std::string &_jointName,
-                                    double _position);
+                                    double _position, int _index = 0);
 
       /// \brief Set the positions of a set of joints.
       /// \sa JointController::SetJointPositions.
@@ -216,8 +218,8 @@ namespace gazebo
       /// \param[in] _onComplete Callback function for when the animation
       /// completes.
       public: void SetJointAnimation(
-                 const std::map<std::string, common::NumericAnimationPtr> _anim,
-                 boost::function<void()> _onComplete = NULL);
+               const std::map<std::string, common::NumericAnimationPtr> &_anims,
+               boost::function<void()> _onComplete = NULL);
 
       /// \brief Stop the current animations.
       public: virtual void StopAnimation();
@@ -243,13 +245,13 @@ namespace gazebo
       /// \sa Model::AttachStaticModel.
       public: void DetachStaticModel(const std::string &_model);
 
-      /// \brief Get the current model state.
-      /// \return The current model state.
-      public: ModelState GetState();
-
       /// \brief Set the current model state.
       /// \param[in] _state State to set the model to.
       public: void SetState(const ModelState &_state);
+
+      /// \brief Set the scale of model.
+      /// \param[in] _scale Scale to set the model to.
+      public: void SetScale(const math::Vector3 &_scale);
 
       /// \brief Enable all the links in all the models.
       /// \param[in] _enabled True to enable all the links.
@@ -278,13 +280,59 @@ namespace gazebo
       /// \param[in] _disable If true, the model is allowed to auto disable.
       public: void SetAutoDisable(bool _disable);
 
+      /// \brief Return the value of the SDF <allow_auto_disable> element.
+      /// \return True if auto disable is allowed for this model.
+      public: bool GetAutoDisable() const;
+
       /// \brief Load all plugins
       ///
       /// Load all plugins specified in the SDF for the model.
       public: void LoadPlugins();
 
+      /// \brief Get the number of plugins this model has.
+      /// \return Number of plugins associated with this model.
+      public: unsigned int GetPluginCount() const;
+
+      /// \brief Get the number of sensors attached to this model.
+      /// This will count all the sensors attached to all the links.
+      /// \return Number of sensors.
+      public: unsigned int GetSensorCount() const;
+
+      /// \brief Get a handle to the Controller for the joints in this model.
+      /// \return A handle to the Controller for the joints in this model.
+      public: JointControllerPtr GetJointController();
+
+      /// \brief Get a gripper based on an index.
+      /// \return A pointer to a Gripper. Null if the _index is invalid.
+      public: GripperPtr GetGripper(size_t _index) const;
+
+      /// \brief Get the number of grippers in this model.
+      /// \return Size of this->grippers array.
+      /// \sa Model::GetGripper()
+      public: size_t GetGripperCount() const;
+
+      /// \brief Returns the potential energy of all links
+      /// and joint springs in the model.
+      /// \return this link's potential energy,
+      public: double GetWorldEnergyPotential() const;
+
+      /// \brief Returns sum of the kinetic energies of all links
+      /// in this model.  Computed using link's CoG velocity in
+      /// the inertial (world) frame.
+      /// \return this link's kinetic energy
+      public: double GetWorldEnergyKinetic() const;
+
+      /// \brief Returns this model's total energy, or
+      /// sum of Model::GetWorldEnergyPotential() and
+      /// Model::GetWorldEnergyKinetic().
+      /// \return this link's total energy
+      public: double GetWorldEnergy() const;
+
       /// \brief Callback when the pose of the model has been changed.
       protected: virtual void OnPoseChange();
+
+      /// \brief Load all the links.
+      private: void LoadLinks();
 
       /// \brief Load a joint helper function.
       /// \param[in] _sdf SDF parameter.
@@ -298,20 +346,34 @@ namespace gazebo
       /// \param[in] _sdf SDF parameter.
       private: void LoadGripper(sdf::ElementPtr _sdf);
 
+      /// \brief Remove a link from the model's cached list of links.
+      /// This does not delete the link.
+      /// \param[in] _name Name of the link to remove.
+      private: void RemoveLink(const std::string &_name);
+
+      /// used by Model::AttachStaticModel
+      protected: std::vector<ModelPtr> attachedModels;
+
+      /// used by Model::AttachStaticModel
+      protected: std::vector<math::Pose> attachedModelsOffset;
+
+      /// \brief Publisher for joint info.
+      protected: transport::PublisherPtr jointPub;
+
       /// \brief The canonical link of the model.
       private: LinkPtr canonicalLink;
 
       /// \brief All the joints in the model.
       private: Joint_V joints;
 
+      /// \brief Cached list of links. This is here for performance.
+      private: Link_V links;
+
       /// \brief All the grippers in the model.
-      private: std::vector<Gripper*> grippers;
+      private: std::vector<GripperPtr> grippers;
 
       /// \brief All the model plugins.
       private: std::vector<ModelPluginPtr> plugins;
-
-      /// \brief Publisher for joint info.
-      private: transport::PublisherPtr jointPub;
 
       /// \brief The joint animations.
       private: std::map<std::string, common::NumericAnimationPtr>
@@ -320,20 +382,11 @@ namespace gazebo
       /// \brief Callback used when a joint animation completes.
       private: boost::function<void()> onJointAnimationComplete;
 
-      /// \brief Previous time of the animation update.
-      private: common::Time prevAnimationTime;
-
       /// \brief Mutex used during the update cycle.
-      private: boost::recursive_mutex *updateMutex;
+      private: mutable boost::recursive_mutex updateMutex;
 
       /// \brief Controller for the joints.
-      private: JointController *jointController;
-
-      /// \brief Used by Model::AttachStaticModel.
-      protected: std::vector<ModelPtr> attachedModels;
-
-      /// \brief used by Model::AttachStaticModel.
-      protected: std::vector<math::Pose> attachedModelsOffset;
+      private: JointControllerPtr jointController;
     };
     /// \}
   }
