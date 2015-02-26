@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,10 +170,6 @@ namespace gazebo
       /// \return Joint viscous damping coefficient for this joint.
       public: double GetDamping(unsigned int _index);
 
-      /// \brief Callback to apply damping force to joint.
-      /// Deprecated by ApplySpringStiffnessDamping.
-      public: virtual void ApplyDamping() GAZEBO_DEPRECATED(3.0);
-
       /// \brief Callback to apply spring stiffness and viscous damping
       /// effects to joint.
       /// \TODO: rename to ApplySpringStiffnessDamping()
@@ -286,7 +282,17 @@ namespace gazebo
       /// \return Velocity limit specified in SDF
       public: virtual double GetVelocityLimit(unsigned int _index);
 
+      /// \brief Set the velocity limit on a joint axis.
+      /// \param[in] _index Index of the axis to set.
+      /// \param[in] _velocity Velocity limit for the axis.
+      public: virtual void SetVelocityLimit(unsigned int _index,
+                                                  double _velocity);
+
       /// \brief Set the velocity of an axis(index).
+      /// In ODE and Bullet, the SetVelocityMaximal function is used to
+      /// set the velocity of the child link relative to the parent.
+      /// In Simbody and DART, this function updates the velocity state,
+      /// which has a recursive effect on the rest of the chain.
       /// \param[in] _index Index of the axis.
       /// \param[in] _vel Velocity.
       public: virtual void SetVelocity(unsigned int _index, double _vel) = 0;
@@ -356,14 +362,17 @@ namespace gazebo
       /// of the simulation scales.
       /// \param[in] _index Index of the axis.
       /// \param[in] _force Maximum force that can be applied to the axis.
-      public: virtual void SetMaxForce(unsigned int _index, double _force) = 0;
+      public: virtual void SetMaxForce(unsigned int _index, double _force)
+              GAZEBO_DEPRECATED(5.0) = 0;
 
-      /// \brief Get the max allowed force of an axis(index).
+      /// \brief Get the max allowed force of an axis(index) when using
+      /// Joint::SetVelocity.
       /// Note that the unit of force should be consistent with the rest
       /// of the simulation scales.
       /// \param[in] _index Index of the axis.
       /// \return The maximum force.
-      public: virtual double GetMaxForce(unsigned int _index) = 0;
+      public: virtual double GetMaxForce(unsigned int _index)
+              GAZEBO_DEPRECATED(5.0) = 0;
 
       /// \brief Get the angle of rotation of an axis(index)
       /// \param[in] _index Index of the axis.
@@ -378,13 +387,43 @@ namespace gazebo
       /// this Joint as a scalar inside the Joint class, so
       /// this call will NOT move the joint dynamically for a static Model.
       /// But if this Model is not static, then it is updated dynamically.
-      /// The child link of this joint is updated based on position change.
+      /// The child links of this joint are updated based on position change.
       /// And all the links connected to the child link of this joint
       /// except through the parent link of this joint moves with the child
       /// link.
       /// \param[in] _index Index of the axis.
       /// \param[in] _angle Angle to set the joint to.
-      public: void SetAngle(unsigned int _index, math::Angle _angle);
+      public: void SetAngle(unsigned int _index, math::Angle _angle)
+              GAZEBO_DEPRECATED(4.0);
+
+      /// \brief The child links of this joint are updated based on desired
+      /// position.  And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// unspecified, pure kinematic teleportation.
+      /// \return returns true if operation succeeds, false if it fails.
+      public: virtual bool SetPosition(unsigned int _index, double _position);
+
+      /// \brief Helper function for maximal coordinate solver SetPosition.
+      /// The child links of this joint are updated based on position change.
+      /// And all the links connected to the child link of this joint
+      /// except through the parent link of this joint moves with the child
+      /// link.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _position Position to set the joint to.
+      /// \return returns true if operation succeeds, false if it fails.
+      protected: bool SetPositionMaximal(unsigned int _index, double _position);
+
+      /// \brief Helper function for maximal coordinate solver SetVelocity.
+      /// The velocity of the child link of this joint is updated relative
+      /// to the current parent velocity.
+      /// It currently does not act recursively.
+      /// \param[in] _index Index of the joint axis (degree of freedom).
+      /// \param[in] _velocity Velocity to set at this joint.
+      /// \return returns true if operation succeeds, false if it fails.
+      protected: bool SetVelocityMaximal(unsigned int _index, double _velocity);
 
       /// \brief Get the forces applied to the center of mass of a physics::Link
       /// due to the existence of this Joint.
@@ -405,6 +444,10 @@ namespace gazebo
 
       /// \brief Set a non-generic parameter for the joint.
       /// replaces SetAttribute(Attribute, int, double)
+      /// List of parameters:
+      ///  "friction"     Axis Coulomb joint friction coefficient.
+      ///  "hi_stop"      Axis upper limit.
+      ///  "lo_stop"      Axis lower limit.
       /// \param[in] _key String key.
       /// \param[in] _index Index of the axis.
       /// \param[in] _value Value of the attribute.
@@ -412,29 +455,12 @@ namespace gazebo
                                     unsigned int _index,
                                     const boost::any &_value) = 0;
 
-      /// \brief Set a non-generic parameter for the joint.
-      /// replaces SetAttribute(Attribute, int, double)
-      /// Deprecated by bool SetParam
-      /// \param[in] _key String key.
-      /// \param[in] _index Index of the axis.
-      /// \param[in] _value Value of the attribute.
-      public: virtual void SetAttribute(const std::string &_key,
-                                        unsigned int _index,
-                                        const boost::any &_value)
-                                        GAZEBO_DEPRECATED(3.0) = 0;
-
       /// \brief Get a non-generic parameter for the joint.
+      /// \sa SetParam(const std::string &, unsigned int, const boost::any)
       /// \param[in] _key String key.
       /// \param[in] _index Index of the axis.
       public: virtual double GetParam(const std::string &_key,
-                                          unsigned int _index) = 0;
-
-      /// \brief Get a non-generic parameter for the joint.
-      /// Deprecated by GetParam
-      /// \param[in] _key String key.
-      /// \param[in] _index Index of the axis.
-      public: virtual double GetAttribute(const std::string &_key,
-                unsigned int _index) GAZEBO_DEPRECATED(3.0) = 0;
+                                      unsigned int _index);
 
       /// \brief Get the child link
       /// \return Pointer to the child link.
@@ -443,6 +469,10 @@ namespace gazebo
       /// \brief Get the parent link.
       /// \return Pointer to the parent link.
       public: LinkPtr GetParent() const;
+
+      /// \brief Get the joint type as msgs::Joint::Type.
+      /// \return Joint type.
+      public: msgs::Joint::Type GetMsgType() const;
 
       /// \brief Fill a joint message.
       /// \param[out] _msg Message to fill with this joint's properties.
@@ -497,12 +527,7 @@ namespace gazebo
       public: virtual void SetProvideFeedback(bool _enable);
 
       /// \brief Cache Joint Force Torque Values if necessary for physics engine
-      public: virtual void CacheForceTorque() { }
-
-      /// \brief Get damping coefficient of this joint
-      /// Depreated, use GetDamping(_index) instead.
-      /// \return viscous joint damping coefficient
-      public: double GetDampingCoefficient() const GAZEBO_DEPRECATED(3.0);
+      public: virtual void CacheForceTorque();
 
       /// \brief Set joint stop stiffness.
       /// \param[in] _index joint axis index.
@@ -633,12 +658,7 @@ namespace gazebo
       /// \brief Anchor link.
       protected: LinkPtr anchorLink;
 
-      /// \brief joint dissipationCoefficient
-      /// Deprecated: not used, replaced by dissipationCoefficient array
-      protected: double dampingCoefficient;
-
       /// \brief joint viscous damping coefficient
-      /// Replaces dampingCoefficient
       protected: double dissipationCoefficient[MAX_JOINT_AXIS];
 
       /// \brief joint stiffnessCoefficient
@@ -665,11 +685,6 @@ namespace gazebo
       /// \brief Cache Joint force torque values in case physics engine
       /// clears them at the end of update step.
       protected: JointWrench wrench;
-
-      /// \brief option to use implicit damping
-      /// Deprecated, pushing this flag into individual physics engine,
-      /// for example: ODEJoint::useImplicitSpringDamper.
-      protected: bool useCFMDamping;
 
       /// \brief Flags that are set to true if an axis value is expressed
       /// in the parent model frame. Otherwise use the joint frame.

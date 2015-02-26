@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,11 +67,10 @@ void SimbodyJoint::Load(sdf::ElementPtr _sdf)
     {
       sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
 
-      /// \TODO: switch to GetElement so default values apply
-      /// \TODO: check all physics engines
-      if (dynamicsElem->HasElement("damping"))
+      if (dynamicsElem && dynamicsElem->HasElement("friction"))
       {
-        this->dissipationCoefficient[0] = dynamicsElem->Get<double>("damping");
+        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
+        gzlog << "joint friction not implemented\n";
       }
     }
   }
@@ -83,11 +82,10 @@ void SimbodyJoint::Load(sdf::ElementPtr _sdf)
     {
       sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
 
-      /// \TODO: switch to GetElement so default values apply
-      /// \TODO: check all physics engines
-      if (dynamicsElem->HasElement("damping"))
+      if (dynamicsElem && dynamicsElem->HasElement("friction"))
       {
-        this->dissipationCoefficient[1] = dynamicsElem->Get<double>("damping");
+        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
+        gzlog << "joint friction not implemented\n";
       }
     }
   }
@@ -431,18 +429,21 @@ void SimbodyJoint::SetStiffnessDamping(unsigned int _index,
     this->dissipationCoefficient[_index] = _damping;
     this->springReferencePosition[_index] = _reference;
 
-    // set damper coefficient
-    this->damper[_index].setDamping(
-      this->simbodyPhysics->integ->updAdvancedState(),
-      _damping);
+    if (this->physicsInitialized)
+    {
+      // set damper coefficient
+      this->damper[_index].setDamping(
+        this->simbodyPhysics->integ->updAdvancedState(),
+        _damping);
 
-    // set spring stiffness and reference position
-    this->spring[_index].setStiffness(
-      this->simbodyPhysics->integ->updAdvancedState(),
-      _stiffness);
-    this->spring[_index].setQZero(
-      this->simbodyPhysics->integ->updAdvancedState(),
-      _reference);
+      // set spring stiffness and reference position
+      this->spring[_index].setStiffness(
+        this->simbodyPhysics->integ->updAdvancedState(),
+        _stiffness);
+      this->spring[_index].setQZero(
+        this->simbodyPhysics->integ->updAdvancedState(),
+        _reference);
+    }
   }
   else
     gzerr << "SetStiffnessDamping _index too large.\n";
@@ -451,7 +452,8 @@ void SimbodyJoint::SetStiffnessDamping(unsigned int _index,
 //////////////////////////////////////////////////
 math::Vector3 SimbodyJoint::GetAnchor(unsigned int /*_index*/) const
 {
-  return this->GetWorldPose().pos;
+  gzerr << "Not implement in Simbody\n";
+  return math::Vector3();
 }
 
 //////////////////////////////////////////////////
@@ -469,20 +471,6 @@ math::Vector3 SimbodyJoint::GetLinkTorque(unsigned int /*_index*/) const
 }
 
 //////////////////////////////////////////////////
-void SimbodyJoint::SetAttribute(Attribute, unsigned int /*_index*/,
-    double /*_value*/)
-{
-  gzerr << "Not implement in Simbody\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyJoint::SetAttribute(const std::string &_key,
-    unsigned int _index, const boost::any &_value)
-{
-  this->SetParam(_key, _index, _value);
-}
-
-//////////////////////////////////////////////////
 bool SimbodyJoint::SetParam(const std::string &/*_key*/,
     unsigned int /*_index*/, const boost::any &/*_value*/)
 {
@@ -491,16 +479,9 @@ bool SimbodyJoint::SetParam(const std::string &/*_key*/,
 }
 
 //////////////////////////////////////////////////
-double SimbodyJoint::GetAttribute(const std::string &_key, unsigned int _index)
+double SimbodyJoint::GetParam(const std::string &_key, unsigned int _index)
 {
-  return this->GetParam(_key, _index);
-}
-//////////////////////////////////////////////////
-double SimbodyJoint::GetParam(const std::string &/*_key*/,
-    unsigned int /*_index*/)
-{
-  gzerr << "Not implement in Simbody\n";
-  return 0;
+  return Joint::GetParam(_key, _index);
 }
 
 //////////////////////////////////////////////////
