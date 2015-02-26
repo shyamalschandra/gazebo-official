@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,19 @@
 #include "gazebo/sensors/Sensor.hh"
 
 void RegisterCameraSensor();
-void RegisterDepthCameraSensor();
-// void RegisterGpuRaySensor();
-void RegisterRaySensor();
 void RegisterContactSensor();
+void RegisterDepthCameraSensor();
+void RegisterMultiCameraSensor();
+void RegisterGpsSensor();
+void RegisterGpuRaySensor();
+void RegisterImuSensor();
+void RegisterRaySensor();
 void RegisterRFIDSensor();
 void RegisterRFIDTag();
+void RegisterSonarSensor();
+void RegisterForceTorqueSensor();
+void RegisterWirelessTransmitter();
+void RegisterWirelessReceiver();
 
 using namespace gazebo;
 using namespace sensors;
@@ -41,12 +48,19 @@ std::map<std::string, SensorFactoryFn> SensorFactory::sensorMap;
 void SensorFactory::RegisterAll()
 {
   RegisterCameraSensor();
-  RegisterDepthCameraSensor();
-  // RegisterGpuRaySensor();
-  RegisterRaySensor();
   RegisterContactSensor();
+  RegisterDepthCameraSensor();
+  RegisterMultiCameraSensor();
+  RegisterGpsSensor();
+  RegisterGpuRaySensor();
+  RegisterImuSensor();
+  RegisterRaySensor();
   RegisterRFIDSensor();
   RegisterRFIDTag();
+  RegisterSonarSensor();
+  RegisterForceTorqueSensor();
+  RegisterWirelessTransmitter();
+  RegisterWirelessReceiver();
 }
 
 /////////////////////////////////////////////////

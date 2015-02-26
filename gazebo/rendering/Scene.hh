@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,36 +14,34 @@
  * limitations under the License.
  *
 */
+
 #ifndef _SCENE_HH_
 #define _SCENE_HH_
 
-#include <vector>
-#include <map>
 #include <string>
-#include <list>
+#include <vector>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "sdf/sdf.hh"
-#include "msgs/msgs.hh"
+#include <sdf/sdf.hh>
 
-#include "rendering/RenderTypes.hh"
-
-#include "transport/TransportTypes.hh"
-#include "common/Events.hh"
-#include "common/Color.hh"
-#include "math/Vector2i.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/common/Color.hh"
+#include "gazebo/gazebo_config.h"
+#include "gazebo/math/Vector2i.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/rendering/RenderTypes.hh"
+#include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace SkyX
 {
   class SkyX;
-  class BasicController;
 }
 
 namespace Ogre
 {
   class SceneManager;
-  class RaySceneQuery;
   class Node;
   class Entity;
   class Mesh;
@@ -51,20 +49,14 @@ namespace Ogre
   class Quaternion;
 }
 
-namespace boost
-{
-  class mutex;
-}
-
 namespace gazebo
 {
   namespace rendering
   {
-    class Projector;
-    class Light;
     class Visual;
     class Grid;
     class Heightmap;
+    class ScenePrivate;
 
     /// \addtogroup gazebo_rendering
     /// \{
@@ -73,8 +65,15 @@ namespace gazebo
     /// \brief Representation of an entire scene graph.
     ///
     /// Maintains all the Visuals, Lights, and Cameras for a World.
-    class Scene : public boost::enable_shared_from_this<Scene>
+    class GAZEBO_VISIBLE Scene : public boost::enable_shared_from_this<Scene>
     {
+      public: enum SkyXMode {
+        GZ_SKYX_ALL = 0x0FFFFFFF,
+        GZ_SKYX_CLOUDS = 0x0000001,
+        GZ_SKYX_MOON = 0x0000002,
+        GZ_SKYX_NONE = 0
+      };
+
       /// \brief Constructor.
       private: Scene() {}
 
@@ -84,7 +83,8 @@ namespace gazebo
       /// this should be set to true for user interfaces, and false for
       /// sensor generation.
       public: Scene(const std::string &_name,
-                    bool _enableVisualizations = false);
+                    bool _enableVisualizations = false,
+                    bool _isServer = false);
 
       /// \brief Destructor
       public: virtual ~Scene();
@@ -151,12 +151,23 @@ namespace gazebo
       public: CameraPtr CreateCamera(const std::string &_name,
                                      bool _autoRender = true);
 
+#ifdef HAVE_OCULUS
+      /// \brief Create an oculus rift camera
+      /// \param[in] _name Name of the new camera.
+      /// \return Pointer to the new camera.
+      public: OculusCameraPtr CreateOculusCamera(const std::string &_name);
+
+      /// \brief Get the number of cameras in this scene
+      /// \return Number of cameras.
+      public: uint32_t GetOculusCameraCount() const;
+#endif
+
       /// \brief Create depth camera
       /// \param[in] _name Name of the new camera.
       /// \param[in] _autoRender True to allow Gazebo to automatically
       /// render the camera. This should almost always be true.
       /// \return Pointer to the new camera.
-     public: DepthCameraPtr CreateDepthCamera(const std::string &_name,
+      public: DepthCameraPtr CreateDepthCamera(const std::string &_name,
                                                bool _autoRender = true);
 
       /// \brief Create laser that generates data from rendering.
@@ -164,11 +175,11 @@ namespace gazebo
       /// \param[in] _autoRender True to allow Gazebo to automatically
       /// render the camera. This should almost always be true.
       /// \return Pointer to the new laser.
-      // public: GpuLaserPtr CreateGpuLaser(const std::string &_name,
-      //                                   bool _autoRender = true);
+      public: GpuLaserPtr CreateGpuLaser(const std::string &_name,
+                                         bool _autoRender = true);
 
       /// \brief Get the number of cameras in this scene
-      /// \return Number of lasers.
+      /// \return Number of cameras.
       public: uint32_t GetCameraCount() const;
 
       /// \brief Get a camera based on an index. Index must be between
@@ -200,6 +211,10 @@ namespace gazebo
       /// invalid.
       public: UserCameraPtr GetUserCamera(uint32_t _index) const;
 
+      /// \brief Remove a camera from the scene
+      /// \param[in] _name Name of the camera.
+      public: void RemoveCamera(const std::string &_name);
+
       /// \brief Get a light by name.
       /// \param[in] _name Name of the light to get.
       /// \return Pointer to the light, or NULL if the light was not found.
@@ -215,8 +230,15 @@ namespace gazebo
       /// \return Pointer to the Light or NULL if index was invalid.
       public: LightPtr GetLight(uint32_t _index) const;
 
-      /// \brief Get a visual by name
+      /// \brief Get a visual by name.
+      /// \param[in] _name Name of the visual to retrieve.
+      /// \return Pointer to the visual, NULL if not found.
       public: VisualPtr GetVisual(const std::string &_name) const;
+
+      /// \brief Get a visual by id.
+      /// \param[in] _id ID of the visual to retrieve.
+      /// \return Pointer to the visual, NULL if not found.
+      public: VisualPtr GetVisual(uint32_t _id) const;
 
       /// \brief Select a visual by name.
       /// \param[in] _name Name of the visual to select.
@@ -226,13 +248,13 @@ namespace gazebo
 
       /// \brief Get an entity at a pixel location using a camera. Used for
       ///        mouse picking.
-      /// \param[in] camera The ogre camera, used to do mouse picking
-      /// \param[in] mousePos The position of the mouse in screen coordinates
+      /// \param[in] _camera The ogre camera, used to do mouse picking
+      /// \param[in] _mousePos The position of the mouse in screen coordinates
       /// \param[out] _mod Used for object manipulation
       /// \return The selected entity, or NULL
       public: VisualPtr GetVisualAt(CameraPtr _camera,
                                     const math::Vector2i &_mousePos,
-                                    std::string &mod);
+                                    std::string &_mod);
 
       /// \brief Move the visual to be ontop of the nearest visual below it.
       /// \param[in] _visualName Name of the visual to move.
@@ -268,12 +290,20 @@ namespace gazebo
                                         std::vector<VisualPtr> &_visuals);
 
 
+      /// \brief Get the Z-value of the first object below the given point.
+      /// \param[in] _pt Position to search below for a visual.
+      /// \return The Z-value of the nearest visual below the point. Zero
+      /// is returned if no visual is found.
+      public: double GetHeightBelowPoint(const math::Vector3 &_pt);
+
       /// \brief Get the world pos of a the first contact at a pixel location.
       /// \param[in] _camera Pointer to the camera.
       /// \param[in] _mousePos 2D position of the mouse in pixels.
-      /// \return 3D position of the first contact point.
-      public: math::Vector3 GetFirstContact(CameraPtr _camera,
-                                            const math::Vector2i &_mousePos);
+      /// \param[out] _position 3D position of the first contact point.
+      /// \return True if a valid object was hit by the raycast.
+      public: bool GetFirstContact(CameraPtr _camera,
+                                   const math::Vector2i &_mousePos,
+                                   math::Vector3 &_position);
 
       /// \brief Print the scene graph to std_out.
       public: void PrintSceneGraph();
@@ -327,6 +357,14 @@ namespace gazebo
       /// \param[in] _vis Visual to remove.
       public: void RemoveVisual(VisualPtr _vis);
 
+      /// \brief Add a light to the scene
+      /// \param[in] _light Light to add.
+      public: void AddLight(LightPtr _light);
+
+      /// \brief Remove a light to the scene
+      /// \param[in] _light Light to Remove.
+      public: void RemoveLight(LightPtr _light);
+
       /// \brief Set the grid on or off
       /// \param[in] _enabled Set to true to turn on the grid
       public: void SetGrid(bool _enabled);
@@ -347,17 +385,70 @@ namespace gazebo
       /// \brief Clear rendering::Scene
       public: void Clear();
 
-      /// \brief Clone a visual.
-      /// \param[in] _visualName Name of the visual to clone.
-      /// \param[in] _newName New name of the visual.
-      /// \return Pointer to the cloned visual.
-      public: VisualPtr CloneVisual(const std::string &_visualName,
-                                    const std::string &_newName);
-
       /// \brief Get the currently selected visual.
       /// \return Pointer to the currently selected visual, or NULL if
       /// nothing is selected.
       public: VisualPtr GetSelectedVisual() const;
+
+      /// \brief Enable or disable wireframe for all visuals.
+      /// \param[in] _show True to enable wireframe for all visuals.
+      public: void SetWireframe(bool _show);
+
+      /// \brief Enable or disable transparency for all visuals.
+      /// \param[in] _show True to enable transparency for all visuals.
+      public: void SetTransparent(bool _show);
+
+      /// \brief Enable or disable center of mass visualization.
+      /// \param[in] _show True to enable center of mass visualization.
+      public: void ShowCOMs(bool _show);
+
+      /// \brief Enable or disable joint visualization.
+      /// \param[in] _show True to enable joint visualization.
+      public: void ShowJoints(bool _show);
+
+      /// \brief Enable or disable collision visualization.
+      /// \param[in] _show True to enable collision visualization.
+      public: void ShowCollisions(bool _show);
+
+      /// \brief Enable or disable contact visualization.
+      /// \param[in] _show True to enable contact visualization.
+      public: void ShowContacts(bool _show);
+
+      /// \brief Display clouds in the sky.
+      /// \param[in] _show True to display clouds.
+      public: void ShowClouds(bool _show);
+
+      /// \brief Get whether or not clouds are displayed.
+      /// \return True if clouds are displayed.
+      public: bool GetShowClouds() const;
+
+
+      /// \brief Set SkyX mode to enable/disable skyx components such as
+      /// clouds and moon.
+      /// \param[in] _mode SkyX mode bitmask.
+      /// \sa Scene::SkyXMode
+      public: void SetSkyXMode(unsigned int _mode);
+
+      /// \brief Get the sky in the scene.
+      /// \return Pointer to the sky.
+      public: SkyX::SkyX *GetSkyX() const;
+
+      /// \brief Return true if the Scene has been initialized.
+      public: bool GetInitialized() const;
+
+      /// \brief Get the scene simulation time.
+      /// Note this is different from World::GetSimTime() because
+      /// there is a lag between the time new poses are sent out by World
+      /// and when they are received and applied by the Scene.
+      /// \return The current simulation time in Scene
+      public: common::Time GetSimTime() const;
+
+      /// \brief Get the number of visuals.
+      /// \return The number of visuals in the Scene.
+      public: uint32_t GetVisualCount() const;
+
+      /// \brief Remove all projectors.
+      public: void RemoveProjectors();
 
       /// \brief Helper function to setup the sky.
       private: void SetSky();
@@ -375,16 +466,24 @@ namespace gazebo
                                              const math::Vector2i &_mousePos,
                                              bool _ignorSelectionObj);
 
-      // \brief Get the mesh information for the given mesh.
+      /// \brief Get the mesh information for the given mesh.
+      /// \param[in] _mesh Mesh to get info about.
+      /// \param[out] _count Number of vertices in the mesh.
+      /// \param[out] _vertices Array of the vertices.
+      /// \param[out] _indexCount Number if indices.
+      /// \param[out] _indices Array of the indices.
+      /// \param[in] _position Position of the mesh.
+      /// \param[in] _orient Orientation of the mesh.
+      /// \param[in] _scale Scale of the mesh
       // Code found in Wiki: www.ogre3d.org/wiki/index.php/RetrieveVertexData
-      private: void GetMeshInformation(const Ogre::Mesh *mesh,
-                                       size_t &vertex_count,
-                                       Ogre::Vector3* &vertices,
-                                       size_t &index_count,
-                                       uint64_t* &indices,
-                                       const Ogre::Vector3 &position,
-                                       const Ogre::Quaternion &orient,
-                                       const Ogre::Vector3 &scale);
+      private: void GetMeshInformation(const Ogre::Mesh *_mesh,
+                                       size_t &_vertexCount,
+                                       Ogre::Vector3* &_vertices,
+                                       size_t &_indexCount,
+                                       uint64_t* &_indices,
+                                       const Ogre::Vector3 &_position,
+                                       const Ogre::Quaternion &_orient,
+                                       const Ogre::Vector3 &_scale);
 
       /// \brief Print scene graph.
       /// \param[in] _prefix String to prefix each line of output with.
@@ -423,7 +522,7 @@ namespace gazebo
 
       /// \brief Proces a scene message.
       /// \param[in] _msg The message data.
-      private: void ProcessSceneMsg(ConstScenePtr &_msg);
+      private: bool ProcessSceneMsg(ConstScenePtr &_msg);
 
       /// \brief Process a model message.
       /// \param[in] _msg The message data.
@@ -447,7 +546,7 @@ namespace gazebo
 
       /// \brief Process a light message.
       /// \param[in] _msg The message data.
-      private: void ProcessLightMsg(ConstLightPtr &_msg);
+      private: bool ProcessLightMsg(ConstLightPtr &_msg);
 
       /// \brief Process a request message.
       /// \param[in] _msg The message data.
@@ -467,7 +566,7 @@ namespace gazebo
 
       /// \brief Pose message callback.
       /// \param[in] _msg The message data.
-      private: void OnPoseMsg(ConstPosePtr &_msg);
+      private: void OnPoseMsg(ConstPosesStampedPtr &_msg);
 
       /// \brief Skeleton animation callback.
       /// \param[in] _msg The message data.
@@ -484,205 +583,9 @@ namespace gazebo
       private: void CreateCOMVisual(sdf::ElementPtr _elem,
                                     VisualPtr _linkVisual);
 
-      /// \brief Name of the scene.
-      private: std::string name;
-
-      /// \brief Scene SDF element.
-      private: sdf::ElementPtr sdf;
-
-      /// \brief All the cameras.
-      private: std::vector<CameraPtr> cameras;
-
-      /// \brief All the user cameras.
-      private: std::vector<UserCameraPtr> userCameras;
-
-      /// \brief The ogre scene manager.
-      private: Ogre::SceneManager *manager;
-
-      /// \brief A ray query used to locate distances to visuals.
-      private: Ogre::RaySceneQuery *raySceneQuery;
-
-      /// \brief All the grids in the scene.
-      private: std::vector<Grid *> grids;
-
-      /// \brief Unique ID counter.
-      private: static uint32_t idCounter;
-
-      /// \brief The unique ID of this scene.
-      private: uint32_t id;
-
-      /// \brief String form of the id.
-      private: std::string idString;
-
-      /// \def VisualMsgs_L
-      /// \brief List of visual messages.
-      typedef std::list<boost::shared_ptr<msgs::Visual const> > VisualMsgs_L;
-
-      /// \brief List of visual messages to process.
-      private: VisualMsgs_L visualMsgs;
-
-      /// \def LightMsgs_L.
-      /// \brief List of light messages.
-      typedef std::list<boost::shared_ptr<msgs::Light const> > LightMsgs_L;
-
-      /// \brief List of light message to process.
-      private: LightMsgs_L lightMsgs;
-
-      /// \def PoseMsgs_L.
-      /// \brief List of messages.
-      typedef std::list<boost::shared_ptr<msgs::Pose const> > PoseMsgs_L;
-
-      /// \brief List of pose message to process.
-      private: PoseMsgs_L poseMsgs;
-
-      /// \def SceneMsgs_L
-      /// \brief List of scene messages.
-      typedef std::list<boost::shared_ptr<msgs::Scene const> > SceneMsgs_L;
-
-      /// \brief List of scene message to process.
-      private: SceneMsgs_L sceneMsgs;
-
-      /// \def JointMsgs_L
-      /// \brief List of joint messages.
-      typedef std::list<boost::shared_ptr<msgs::Joint const> > JointMsgs_L;
-
-      /// \brief List of joint message to process.
-      private: JointMsgs_L jointMsgs;
-
-      /// \def LinkMsgs_L
-      /// \brief List of link messages.
-      typedef std::list<boost::shared_ptr<msgs::Link const> > LinkMsgs_L;
-
-      /// \brief List of link message to process.
-      private: LinkMsgs_L linkMsgs;
-
-      /// \def ModelMsgs_L
-      /// \brief List of model messages.
-      typedef std::list<boost::shared_ptr<msgs::Model const> > ModelMsgs_L;
-      /// \brief List of model message to process.
-      private: ModelMsgs_L modelMsgs;
-
-      /// \def SensorMsgs_L
-      /// \brief List of sensor messages.
-      typedef std::list<boost::shared_ptr<msgs::Sensor const> > SensorMsgs_L;
-
-      /// \brief List of sensor message to process.
-      private: SensorMsgs_L sensorMsgs;
-
-      /// \def RequestMsgs_L
-      /// \brief List of request messages.
-      typedef std::list<boost::shared_ptr<msgs::Request const> > RequestMsgs_L;
-      /// \brief List of request message to process.
-      private: RequestMsgs_L requestMsgs;
-
-      /// \def Visual_M
-      /// \brief Map of visuals and their names.
-      typedef std::map<std::string, VisualPtr> Visual_M;
-
-      /// \brief Map of all the visuals in this scene.
-      private: Visual_M visuals;
-
-      /// \def Light_M
-      /// \brief Map of lights
-      typedef std::map<std::string, LightPtr> Light_M;
-
-      /// \brief Map of all the lights in this scene.
-      private: Light_M lights;
-
-      /// \def SkeletonPoseMsgs_L
-      /// \brief List of skeleton messages.
-      typedef std::list<boost::shared_ptr<msgs::PoseAnimation const> >
-                                                          SkeletonPoseMsgs_L;
-      /// \brief List of skeleton message to process.
-      private: SkeletonPoseMsgs_L skeletonPoseMsgs;
-
-      /// \brief A message used to select an object.
-      private: boost::shared_ptr<msgs::Selection const> selectionMsg;
-
-      /// \brief Mutex to lock the various message buffers.
-      private: boost::mutex *receiveMutex;
-
-      /// \brief Communication Node
-      private: transport::NodePtr node;
-
-      /// \brief Subscribe to sensor topic
-      private: transport::SubscriberPtr sensorSub;
-
-      /// \brief Subscribe to scene topic
-      private: transport::SubscriberPtr sceneSub;
-
-      /// \brief Subscribe to the request topic
-      private: transport::SubscriberPtr requestSub;
-
-      /// \brief Subscribe to visual topic
-      private: transport::SubscriberPtr visSub;
-
-      /// \brief Subscribe to light topics
-      private: transport::SubscriberPtr lightSub;
-
-      /// \brief Subscribe to pose updates
-      private: transport::SubscriberPtr poseSub;
-
-      /// \brief Subscribe to joint updates.
-      private: transport::SubscriberPtr jointSub;
-
-      /// \brief Subscribe to selection updates.
-      private: transport::SubscriberPtr selectionSub;
-
-      /// \brief Subscribe to reponses.
-      private: transport::SubscriberPtr responseSub;
-
-      /// \brief Subscribe to skeleton pose updates.
-      private: transport::SubscriberPtr skeletonPoseSub;
-
-      /// \brief Subscribe to sky updates.
-      private: transport::SubscriberPtr skySub;
-
-      /// \brief Subscribe to model info updates
-      private: transport::SubscriberPtr modelInfoSub;
-
-      /// \brief Publish light updates.
-      private: transport::PublisherPtr lightPub;
-
-      /// \brief Respond to requests.
-      private: transport::PublisherPtr responsePub;
-
-      /// \brief Publish requests
-      private: transport::PublisherPtr requestPub;
-
-      /// \brief Event connections
-      private: std::vector<event::ConnectionPtr> connections;
-
-      /// \brief The top level in our tree of visuals
-      private: VisualPtr worldVisual;
-
-      /// \brief Pointer to a visual selected by a user via the GUI.
-      private: VisualPtr selectedVis;
-
-      /// \brief Selection mode (normal or move). Normal means the the
-      /// object is just selection, and not being moved by the user. Move
-      /// means the object is being actively moved by the user and the Scene
-      /// should then ignore pose updates from the physics engine until
-      /// after the move is complete.
-      private: std::string selectionMode;
-
-      /// \brief Keep around our request message.
-      private: msgs::Request *requestMsg;
-
-      /// \brief True if visualizations should be rendered.
-      private: bool enableVisualizations;
-
-      /// \brief The heightmap, if any.
-      private: Heightmap *heightmap;
-
-      /// \brief All the projectors.
-      private: std::map<std::string, Projector *> projectors;
-
-      /// \brief Pointer to the sky.
-      public: SkyX::SkyX *skyx;
-
-      /// \brief Controls the sky.
-      private: SkyX::BasicController *skyxController;
+      /// \internal
+      /// \brief Pointer to private data.
+      private: ScenePrivate *dataPtr;
     };
     /// \}
   }
