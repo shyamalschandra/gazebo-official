@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ MeasureItem::MeasureItem(const QPointF &_start, const QPointF &_end)
   this->setAcceptHoverEvents(true);
 
   this->SetLine(_start, _end);
-  this->setZValue(5);
+  this->zValueSelected = 8;
+  this->setZValue(this->zValueSelected);
   this->ShowHandles(false);
 
   this->value = 0;
@@ -55,7 +56,7 @@ void MeasureItem::paint(QPainter *_painter,
 
   QPen measurePen;
   measurePen.setStyle(Qt::SolidLine);
-  measurePen.setColor(QColor(247, 142, 30));
+  measurePen.setColor(QColor(247, 142, 30, 120));
   double tipLength = 10;
   measurePen.setWidth(3);
   _painter->setPen(measurePen);
@@ -76,7 +77,7 @@ void MeasureItem::paint(QPainter *_painter,
 
   // Value
   std::ostringstream stream;
-  stream << std::fixed << std::setprecision(4)
+  stream << std::fixed << std::setprecision(3)
          << this->value << " m";
 
   double margin = 10;
