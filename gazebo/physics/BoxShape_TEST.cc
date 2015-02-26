@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,14 @@
  *
 */
 
-#include "test/ServerFixture.hh"
+#include "gazebo/physics/BoxShape.hh"
+#include "test/util.hh"
 
 using namespace gazebo;
 
-TEST(BoxShapeTest, Scale)
+class BoxShapeTest : public gazebo::testing::AutoLogFixture { };
+
+TEST_F(BoxShapeTest, Scale)
 {
   std::ostringstream boxStr;
   boxStr << "<sdf version ='" << SDF_VERSION << "'>"
@@ -41,17 +44,17 @@ TEST(BoxShapeTest, Scale)
 
   physics::BoxShapePtr box(new physics::BoxShape(physics::CollisionPtr()));
   sdf::ElementPtr elem = boxSDF->root;
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   elem = elem->GetElement("model");
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   elem = elem->GetElement("link");
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   elem = elem->GetElement("collision");
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   elem = elem->GetElement("geometry");
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   elem = elem->GetElement("box");
-  ASSERT_TRUE(elem);
+  ASSERT_TRUE(elem != NULL);
   box->Load(elem);
 
   // Test scaling with unit size
