@@ -21,7 +21,6 @@
 #include <vector>
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/building/EditorItem.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,8 +35,7 @@ namespace gazebo
 
     /// \class PolylineItem PolylineItem.hh
     /// \brief 2D polyline.
-    class GAZEBO_VISIBLE PolylineItem
-      : public EditorItem, public QGraphicsPathItem
+    class PolylineItem : public EditorItem, public QGraphicsPathItem
     {
       /// \brief Constructor
       /// param[in] _start Start position of the polyline item in pixel
