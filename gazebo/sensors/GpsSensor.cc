@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ GpsSensor::~GpsSensor()
 }
 
 /////////////////////////////////////////////////
-void GpsSensor::Load(const std::string &_worldName, sdf::ElementPtr &_sdf)
+void GpsSensor::Load(const std::string &_worldName, sdf::ElementPtr _sdf)
 {
   Sensor::Load(_worldName, _sdf);
 }
@@ -83,9 +83,9 @@ void GpsSensor::Load(const std::string &_worldName)
   // Load velocity noise parameters
   {
     sdf::ElementPtr velElem = gpsElem->GetElement("velocity_sensing");
-    this->horizontalPositionNoise = NoiseFactory::NewNoiseModel(
+    this->horizontalVelocityNoise = NoiseFactory::NewNoiseModel(
       velElem->GetElement("horizontal")->GetElement("noise"));
-    this->verticalPositionNoise = NoiseFactory::NewNoiseModel(
+    this->verticalVelocityNoise = NoiseFactory::NewNoiseModel(
       velElem->GetElement("vertical")->GetElement("noise"));
   }
 }
