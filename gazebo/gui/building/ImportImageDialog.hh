@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ namespace gazebo
   namespace gui
   {
     class EditorView;
+    class ImportImageView;
 
     /// \addtogroup gazebo_gui
     /// \{
@@ -44,13 +45,62 @@ namespace gazebo
       /// \param[in] _string File name string.
       signals: void SetFileName(QString _string);
 
+      /// \brief Qt callback when a file is selected.
       private slots: void OnSelectFile();
+
+      /// \brief Qt callback when the dialog is accepted.
       private slots: void OnAccept();
 
-      private: QLineEdit *fileLineEdit;
-      private: QDoubleSpinBox *resolutionSpin;
+      /// \brief Qt callback when the dialog is rejected.
+      private slots: void OnReject();
 
+      /// \brief Qt callback when the Next button is clicked.
+      private slots: void OnNext();
+
+      /// \brief Qt callback when the Back button is clicked.
+      private slots: void OnBack();
+
+      /// \brief Qt callback when the distance spin's value is changed.
+      private slots: void OnChangeDistance(double _distance);
+
+      /// \brief Qt callback when the resolution spin's value is changed.
+      private slots: void OnChangeResolution(double _resolution);
+
+      /// \brief Distance spin box.
+      public: QDoubleSpinBox *distanceSpin;
+
+      /// \brief Resolution spin box.
+      public: QDoubleSpinBox *resolutionSpin;
+
+      /// \brief Building editor 2D view.
       private: EditorView *view;
+
+      /// \brief Stacked layout of steps 1 and 2.
+      private: QStackedLayout *stackedStepLayout;
+
+      /// \brief Next button.
+      private: QPushButton *nextButton;
+
+      /// \brief Ok button.
+      private: QPushButton *okButton;
+
+      /// \brief File path line edit.
+      private: QLineEdit *fileLineEdit;
+
+      /// \brief Import image view width.
+      private: int imageDisplayWidth;
+
+      /// \brief Import image view height.
+      private: int imageDisplayHeight;
+
+      /// \brief Import image view.
+      private: ImportImageView *importImageView;
+
+      /// \brief Point where measure line starts.
+      private: QPointF measureLineStart;
+
+      /// \brief Indicates whether currently drawing a line or not.
+      private: bool drawingLine;
     };
     /// \}
   }

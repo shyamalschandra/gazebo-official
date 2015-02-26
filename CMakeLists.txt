@@ -9,8 +9,7 @@ project (Gazebo)
 string (TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 string (TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
-set (GAZEBO_VERSION_NAME "lithium")
-set (GAZEBO_MAJOR_VERSION 4)
+set (GAZEBO_MAJOR_VERSION 5)
 set (GAZEBO_MINOR_VERSION 0)
 # The patch version may have been bumped for prerelease purposes; be sure to
 # check gazebo-release/ubuntu/debian/changelog@default to determine what the
@@ -311,7 +310,10 @@ else (build_errors)
 
   foreach (b ${Boost_LIBRARIES})
     get_filename_component(bname ${b} NAME_WE)
-    string (REPLACE "lib" "-l" bname "${bname}")
+    # Prefix always -l
+    set (bname "-l${bname}")
+    # Remove the prefix lib (not always present, like in pthread)
+    string (REPLACE "lib" "" bname "${bname}")
     set (Boost_PKGCONFIG_LIBS "${Boost_PKGCONFIG_LIBS} ${bname}")
   endforeach(b)
 
@@ -350,7 +352,7 @@ else (build_errors)
     gazebo_transport
     gazebo_util)
 
-  if (NOT HAVE_CCD)
+  if (NOT CCD_FOUND)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_ccd)
   endif()
 
@@ -366,7 +368,7 @@ else (build_errors)
     set(PKG_LIBRARIES ${PKG_LIBRARIES} gazebo_rendering_deferred)
   endif()
 
-  set(PKG_DEPENDS Boost Protobuf SDFormat)
+  set(PKG_DEPENDS Boost Protobuf SDFormat OGRE)
 
   set(cmake_conf_file "cmake/gazebo-config.cmake")
   set(cmake_conf_version_file "cmake/gazebo-config-version.cmake")
