@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,25 @@
 class ModelTest : public ServerFixture
 {
 };
+
+/////////////////////////////////////////////////
+// This tests getting links from a model.
+TEST_F(ModelTest, GetLinksV)
+{
+  Load("worlds/joint_test.world");
+  physics::ModelPtr model = GetModel("model_1");
+
+  // This for-loop would cause a seg-fault in gazebo 3.0 and before.
+  for (physics::Link_V::const_iterator iter = model->GetLinks().begin();
+       iter != model->GetLinks().end(); ++iter)
+  {
+    EXPECT_TRUE(*iter != NULL);
+    EXPECT_FALSE((*iter)->GetName().empty());
+    EXPECT_STREQ((*iter)->GetName().c_str(), "link_1");
+  }
+
+  EXPECT_EQ(model->GetLinks().size(), 1u);
+}
 
 /////////////////////////////////////////////////
 // This tests getting the scoped name of a model.
