@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * limitations under the License.
  *
 */
-/* Desc: Base class for all models.
- * Author: Nathan Koenig and Andrew Howard
- * Date: 8 May 2003
- */
 
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/Link.hh"
@@ -65,30 +61,41 @@ void SimbodyModel::Init()
       boost::static_pointer_cast<SimbodyModel>(*iter)->Init();
   }
 
-  // Initialize the joints last.
-  for (Joint_V::iterator iter = this->joints.begin();
-       iter != this->joints.end(); ++iter)
+  for (unsigned int i = 0; i < this->GetGripperCount(); ++i)
   {
-    (*iter)->Init();
-  }
-
-  for (std::vector<Gripper*>::iterator iter = this->grippers.begin();
-       iter != this->grippers.end(); ++iter)
-  {
-    (*iter)->Init();
+    this->GetGripper(i)->Init();
   }
 
   // rebuild simbody state
   // this needs to happen before this->joints are used
   physics::SimbodyPhysicsPtr simbodyPhysics =
-    boost::shared_dynamic_cast<physics::SimbodyPhysics>(
+    boost::dynamic_pointer_cast<physics::SimbodyPhysics>(
       this->GetWorld()->GetPhysicsEngine());
   if (simbodyPhysics)
-    simbodyPhysics->InitModel(this);
+    simbodyPhysics->InitModel(
+        boost::static_pointer_cast<Model>(shared_from_this()));
+
+  // Initialize the joints last.
+  Joint_V myJoints = this->GetJoints();
+  for (Joint_V::iterator iter = myJoints.begin();
+       iter != myJoints.end(); ++iter)
+  {
+    try
+    {
+      (*iter)->Init();
+    }
+    catch(...)
+    {
+      gzerr << "Init failed for joint ["
+            << (*iter)->GetScopedName() << "]"
+            << std::endl;
+      return;
+    }
+  }
 
   // Initialize the joints messages for visualizer
-  for (Joint_V::iterator iter = this->joints.begin();
-       iter != this->joints.end(); ++iter)
+  for (Joint_V::iterator iter = myJoints.begin();
+       iter != myJoints.end(); ++iter)
   {
     // The following message used to be filled and sent in Model::LoadJoint
     // It is moved here, after Joint::Init, so that the joint properties
@@ -99,18 +106,16 @@ void SimbodyModel::Init()
   }
 }
 
-/*
 //////////////////////////////////////////////////
-void SimbodyModel::FillMsg(msgs::Model &_msg)
-{
-  // rebuild simbody state
-  // this needs to happen before this->joints are used
-  physics::SimbodyPhysicsPtr simbodyPhysics =
-    boost::shared_dynamic_cast<physics::SimbodyPhysics>(
-      this->GetWorld()->GetPhysicsEngine());
-  if (simbodyPhysics)
-    simbodyPhysics->InitModel(this);
-
-  Model::FillMsg(_msg);
-}
-*/
+// void SimbodyModel::FillMsg(msgs::Model &_msg)
+// {
+//   // rebuild simbody state
+//   // this needs to happen before this->joints are used
+//   physics::SimbodyPhysicsPtr simbodyPhysics =
+//     boost::dynamic_pointer_cast<physics::SimbodyPhysics>(
+//       this->GetWorld()->GetPhysicsEngine());
+//   if (simbodyPhysics)
+//     simbodyPhysics->InitModel(this);
+//
+//   Model::FillMsg(_msg);
+// }

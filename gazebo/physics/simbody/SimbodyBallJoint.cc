@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  * limitations under the License.
  *
 */
-/* Desc: A ball joint
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
 
-#include "gazebo/common/Exception.hh"
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
+#include "gazebo/common/Exception.hh"
 
 #include "gazebo/physics/simbody/SimbodyTypes.hh"
 #include "gazebo/physics/simbody/SimbodyLink.hh"
@@ -30,10 +27,11 @@ using namespace gazebo;
 using namespace physics;
 
 //////////////////////////////////////////////////
-SimbodyBallJoint::SimbodyBallJoint(SimTK::MultibodySystem *_world,
+SimbodyBallJoint::SimbodyBallJoint(SimTK::MultibodySystem * /*_world*/,
                                    BasePtr _parent)
     : BallJoint<SimbodyJoint>(_parent)
 {
+  this->physicsInitialized = false;
 }
 
 //////////////////////////////////////////////////
@@ -42,106 +40,98 @@ SimbodyBallJoint::~SimbodyBallJoint()
 }
 
 //////////////////////////////////////////////////
-math::Vector3 SimbodyBallJoint::GetAnchor(int /*_index*/) const
+void SimbodyBallJoint::Load(sdf::ElementPtr _sdf)
+{
+  BallJoint<SimbodyJoint>::Load(_sdf);
+}
+
+//////////////////////////////////////////////////
+math::Vector3 SimbodyBallJoint::GetAnchor(unsigned int /*_index*/) const
 {
   return this->anchorPos;
 }
 
-//////////////////////////////////////////////////
-void SimbodyBallJoint::SetAnchor(int /*_index*/,
-                                const math::Vector3 &/*_anchor*/)
-{
-  gzerr << "Not implemented\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyBallJoint::SetDamping(int /*_index*/, double /*_damping*/)
-{
-  gzerr << "Not implemented\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyBallJoint::Attach(LinkPtr _one, LinkPtr _two)
-{
-  BallJoint<SimbodyJoint>::Attach(_one, _two);
-
-  SimbodyLinkPtr simbodyChildLink =
-    boost::shared_static_cast<SimbodyLink>(this->childLink);
-  SimbodyLinkPtr simbodyParentLink =
-    boost::shared_static_cast<SimbodyLink>(this->parentLink);
-
-  if (!simbodyChildLink || !simbodyParentLink)
-    gzthrow("Requires simbody bodies");
-
-  math::Vector3 pivotA, pivotB;
-
-  // Compute the pivot point, based on the anchorPos
-  pivotA = this->anchorPos + this->childLink->GetWorldPose().pos
-                           - this->parentLink->GetWorldPose().pos;
-  pivotB = this->anchorPos;
-
-  // Add the joint to the world
-
-  // Allows access to impulse
-}
-
 /////////////////////////////////////////////////
-void SimbodyBallJoint::SetVelocity(int /*_index*/, double /*_angle*/)
+void SimbodyBallJoint::SetVelocity(unsigned int /*_index*/, double /*_angle*/)
 {
   gzerr << "Not implemented\n";
 }
 
 /////////////////////////////////////////////////
-double SimbodyBallJoint::GetVelocity(int /*_index*/) const
+double SimbodyBallJoint::GetVelocity(unsigned int /*_index*/) const
 {
   gzerr << "Not implemented\n";
   return 0;
 }
 
 /////////////////////////////////////////////////
-double SimbodyBallJoint::GetMaxForce(int /*_index*/)
+double SimbodyBallJoint::GetMaxForce(unsigned int /*_index*/)
 {
   gzerr << "Not implemented\n";
   return 0;
 }
 
 /////////////////////////////////////////////////
-void SimbodyBallJoint::SetMaxForce(int /*_index*/, double /*_t*/)
+void SimbodyBallJoint::SetMaxForce(unsigned int /*_index*/, double /*_t*/)
 {
   gzerr << "Not implemented\n";
   return;
 }
 
 /////////////////////////////////////////////////
-math::Angle SimbodyBallJoint::GetAngle(int /*_index*/) const
+math::Vector3 SimbodyBallJoint::GetGlobalAxis(unsigned int /*_index*/) const
 {
   gzerr << "Not implemented\n";
-  return 0;
-}
-
-/////////////////////////////////////////////////
-math::Vector3 SimbodyBallJoint::GetGlobalAxis(int /*_index*/) const
-{
   return math::Vector3();
 }
 
 /////////////////////////////////////////////////
-math::Angle SimbodyBallJoint::GetAngleImpl(int /*_index*/) const
+math::Angle SimbodyBallJoint::GetAngleImpl(unsigned int /*_index*/) const
 {
+  gzerr << "Not implemented\n";
   return math::Angle();
 }
 
 //////////////////////////////////////////////////
-void SimbodyBallJoint::SetHighStop(int /*_index*/,
-                                   const math::Angle &/*_angle*/)
+void SimbodyBallJoint::SetForceImpl(unsigned int /*_index*/, double /*_torque*/)
 {
-  gzerr << "Not implemented\n";
+  gzerr << "Not implemented";
 }
 
 //////////////////////////////////////////////////
-void SimbodyBallJoint::SetLowStop(int /*_index*/,
+void SimbodyBallJoint::SetAxis(unsigned int /*_index*/,
+                               const math::Vector3 &/*_axis*/)
+{
+  gzerr << "SimbodyBallJoint::SetAxis not implemented" << std::endl;
+}
+
+//////////////////////////////////////////////////
+math::Angle SimbodyBallJoint::GetHighStop(unsigned int /*_index*/)
+{
+  gzerr << "SimbodyBallJoint::GetHighStop not implemented" << std::endl;
+  return math::Angle();
+}
+
+//////////////////////////////////////////////////
+math::Angle SimbodyBallJoint::GetLowStop(unsigned int /*_index*/)
+{
+  gzerr << "SimbodyBallJoint::GetLowStop not implemented" << std::endl;
+  return math::Angle();
+}
+
+//////////////////////////////////////////////////
+bool SimbodyBallJoint::SetHighStop(unsigned int /*_index*/,
+                                   const math::Angle &/*_angle*/)
+{
+  gzerr << "SimbodyBallJoint::SetHighStop not implemented" << std::endl;
+  return false;
+}
+
+//////////////////////////////////////////////////
+bool SimbodyBallJoint::SetLowStop(unsigned int /*_index*/,
                                   const math::Angle &/*_angle*/)
 {
-  gzerr << "Not implemented\n";
+  gzerr << "SimbodyBallJoint::SetLowStop not implemented" << std::endl;
+  return false;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,12 @@
  * limitations under the License.
  *
 */
-/* Desc: Base class for all models
- * Author: Nathan Koenig and Andrew Howard
- * Date: 8 May 2003
- */
 
-#ifndef SIMBODYMODEL_HH_
-#define SIMBODYMODEL_HH_
-
-#include <string>
-#include <map>
-#include <vector>
+#ifndef _SIMBODY_MODEL_HH_
+#define _SIMBODY_MODEL_HH_
 
 #include "gazebo/physics/Model.hh"
-
-namespace boost
-{
-  class recursive_mutex;
-}
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -42,7 +30,7 @@ namespace gazebo
 
     /// \class SimbodyModel SimbodyModel.hh physics/physics.hh
     /// \brief A model is a collection of links, joints, and plugins.
-    class SimbodyModel : public Model
+    class GAZEBO_VISIBLE SimbodyModel : public Model
     {
       /// \brief Constructor.
       /// \param[in] _parent Parent object.
@@ -51,11 +39,10 @@ namespace gazebo
       /// \brief Destructor.
       public: virtual ~SimbodyModel();
 
-      /// \brief Load the model.
-      /// \param[in] _sdf SDF parameters to load from.
-      public: void Load(sdf::ElementPtr _sdf);
+      // Documentation inherited
+      public: virtual void Load(sdf::ElementPtr _sdf);
 
-      /// \brief Initialize the model.
+      // Documentation inherited
       public: virtual void Init();
     };
     /// \}

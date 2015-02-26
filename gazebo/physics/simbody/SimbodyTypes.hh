@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 */
 
 #include <boost/shared_ptr.hpp>
+#include "gazebo/util/system.hh"
 
 /// \file
 /// \ingroup gazebo_physics
@@ -31,10 +32,24 @@ namespace gazebo
     class SimbodyPhysics;
     class SimbodyRayShape;
 
+    /// \def SimbodyPhysicsPtr
+    /// \brief Boost shared point to SimbodyPhysics
     typedef boost::shared_ptr<SimbodyPhysics> SimbodyPhysicsPtr;
+
+    /// \def SimbodyCollisionPtr
+    /// \brief Boost shared point to SimbodyCollision
     typedef boost::shared_ptr<SimbodyCollision> SimbodyCollisionPtr;
+
+    /// \def SimbodyLinkPtr
+    /// \brief Boost shared point to SimbodyLink
     typedef boost::shared_ptr<SimbodyLink> SimbodyLinkPtr;
+
+    /// \def SimbodyModelPtr
+    /// \brief Boost shared point to SimbodyModel
     typedef boost::shared_ptr<SimbodyModel> SimbodyModelPtr;
+
+    /// \def SimbodyRayShapePtr
+    /// \brief Boost shared point to SimbodyRayShape
     typedef boost::shared_ptr<SimbodyRayShape> SimbodyRayShapePtr;
   }
 }
