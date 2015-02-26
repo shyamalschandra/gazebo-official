@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,24 @@
  * limitations under the License.
  *
  */
-#include "common/Color.hh"
-#include "math/Pose.hh"
-#include "math/Vector3.hh"
-#include "math/Vector2d.hh"
+#include "gazebo/common/Assert.hh"
+#include "gazebo/math/Pose.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Vector2d.hh"
 
-#include "sdf/interface/parser.hh"
-#include "sdf/interface/SDF.hh"
+#include "gazebo/sdf/interface/parser.hh"
+#include "gazebo/sdf/interface/SDF.hh"
 
 using namespace sdf;
+
+void sdf::addURIPath(const std::string &/*_uri*/, const std::string &/*_path*/)
+{
+}
+
+void sdf::setFindCallback(
+    boost::function<std::string (const std::string &)> /*_cb*/)
+{
+}
 
 std::string SDF::version = SDF_VERSION;
 
@@ -35,7 +44,6 @@ Element::Element()
 /////////////////////////////////////////////////
 Element::~Element()
 {
-  this->parent.reset();
   for (Param_V::iterator iter = this->attributes.begin();
       iter != this->attributes.end(); ++iter)
   {
@@ -59,6 +67,7 @@ Element::~Element()
 
   this->value.reset();
 
+  this->parent.reset();
   // this->Reset();
 }
 
@@ -124,6 +133,13 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
     const std::string &_type, const std::string &_defaultValue, bool _required,
     const std::string &_description)
 {
+  if (_type == "char")
+  {
+    boost::shared_ptr<ParamT<char> > param(
+        new ParamT<char>(_key, _defaultValue, _required, _type,
+                           _description));
+    return param;
+  }
   if (_type == "double")
   {
     boost::shared_ptr<ParamT<double> > param(
@@ -198,6 +214,13 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
                                        _type, _description));
     return param;
   }
+  else if (_type == "quaternion")
+  {
+    boost::shared_ptr<ParamT<gazebo::math::Quaternion> > param(
+        new ParamT<gazebo::math::Quaternion>(_key, _defaultValue, _required,
+                                       _type, _description));
+    return param;
+  }
   else if (_type == "time")
   {
     boost::shared_ptr<ParamT<gazebo::common::Time> > param(
@@ -207,7 +230,6 @@ boost::shared_ptr<Param> Element::CreateParam(const std::string &_key,
   }
   else
   {
-    gzerr << "Unknown attribute _type[" << _type << "]\n";
     return boost::shared_ptr<Param>();
   }
 }
@@ -335,19 +357,22 @@ void Element::PrintDescription(std::string _prefix)
 }
 
 /////////////////////////////////////////////////
-void Element::PrintDocRightPane(std::string &_html, int _spacing)
+void Element::PrintDocRightPane(std::string &_html, int _spacing, int &_index)
 {
   std::ostringstream stream;
   ElementPtr_V::iterator eiter;
+
+  int start = _index++;
 
   std::string childHTML;
   for (eiter = this->elementDescriptions.begin();
       eiter != this->elementDescriptions.end(); ++eiter)
   {
-    (*eiter)->PrintDocRightPane(childHTML, _spacing + 4);
+    (*eiter)->PrintDocRightPane(childHTML, _spacing + 4, _index);
   }
 
-  stream << "<a name=\"" << this->name << "\">&lt" << this->name << "&gt</a>";
+  stream << "<a name=\"" << this->name << start
+         << "\">&lt" << this->name << "&gt</a>";
 
   stream << "<div style='padding-left:" << _spacing << "px;'>\n";
 
@@ -364,7 +389,12 @@ void Element::PrintDocRightPane(std::string &_html, int _spacing)
 
   stream << "<font style='font-weight:bold'>Type: </font>";
   if (this->value)
-    stream << this->value->GetTypeName() << "\n";
+  {
+    stream << this->value->GetTypeName()
+           << "&nbsp;&nbsp;&nbsp;\n"
+           << "<font style='font-weight:bold'>Default: </font>"
+           << this->value->GetDefaultAsString() << '\n';
+  }
   else
     stream << "n/a\n";
 
@@ -427,7 +457,8 @@ void Element::PrintDocLeftPane(std::string &_html, int _spacing, int &_index)
   }
 
   stream << "<a id='" << start << "' onclick='highlight(" << start
-         << ");' href=\"#" << this->name << "\">&lt" << this->name << "&gt</a>";
+         << ");' href=\"#" << this->name << start
+         << "\">&lt" << this->name << "&gt</a>";
 
   stream << "<div style='padding-left:" << _spacing << "px;'>\n";
 
@@ -679,12 +710,6 @@ ElementPtr Element::GetNextElement(const std::string &_name) const
 }
 
 /////////////////////////////////////////////////
-ElementPtr Element::GetOrCreateElement(const std::string &_name)
-{
-  return this->GetElement(_name);
-}
-
-/////////////////////////////////////////////////
 ElementPtr Element::GetElement(const std::string &_name)
 {
   if (this->HasElement(_name))
@@ -734,7 +759,11 @@ ElementPtr Element::AddElement(const std::string &_name)
       for (iter2 = elem->elementDescriptions.begin();
            iter2 != elem->elementDescriptions.end(); ++iter2)
       {
-        elem->AddElement((*iter2)->name);
+        // add only required child element
+        if ((*iter2)->GetRequired() == "1")
+        {
+          elem->AddElement((*iter2)->name);
+        }
       }
 
       return this->elements.back();
@@ -750,7 +779,17 @@ bool Element::GetValueBool(const std::string &_key)
   bool result = false;
 
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a bool.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -763,6 +802,7 @@ bool Element::GetValueBool(const std::string &_key)
     else
       gzerr << "Unable to find value for key[" << _key << "]\n";
   }
+
   return result;
 }
 
@@ -770,8 +810,19 @@ bool Element::GetValueBool(const std::string &_key)
 int Element::GetValueInt(const std::string &_key)
 {
   int result = 0;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as an int.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -791,8 +842,19 @@ int Element::GetValueInt(const std::string &_key)
 float Element::GetValueFloat(const std::string &_key)
 {
   float result = 0.0;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a float.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -812,12 +874,21 @@ float Element::GetValueFloat(const std::string &_key)
 double Element::GetValueDouble(const std::string &_key)
 {
   double result = 0.0;
+
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<double>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<double>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a double.\n";
+    }
   }
   else
   {
@@ -840,10 +911,18 @@ unsigned int Element::GetValueUInt(const std::string &_key)
   unsigned int result = 0;
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<unsigned int>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<unsigned int>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as an unsigned int.\n";
+    }
   }
   else
   {
@@ -864,12 +943,21 @@ unsigned int Element::GetValueUInt(const std::string &_key)
 char Element::GetValueChar(const std::string &_key)
 {
   char result = '\0';
+
   if (_key.empty())
   {
-    if (this->value->IsStr())
-      result = boost::lexical_cast<char>(this->value->GetAsString());
+    if (this->value)
+    {
+      if (this->value->IsStr())
+        result = boost::lexical_cast<char>(this->value->GetAsString());
+      else
+        this->value->Get(result);
+    }
     else
-      this->value->Get(result);
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a char.\n";
+    }
   }
   else
   {
@@ -890,8 +978,19 @@ char Element::GetValueChar(const std::string &_key)
 std::string Element::GetValueString(const std::string &_key)
 {
   std::string result = "";
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value, returning empty string.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -911,8 +1010,19 @@ std::string Element::GetValueString(const std::string &_key)
 gazebo::math::Vector3 Element::GetValueVector3(const std::string &_key)
 {
   gazebo::math::Vector3 result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a vector3.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -932,8 +1042,19 @@ gazebo::math::Vector3 Element::GetValueVector3(const std::string &_key)
 gazebo::math::Vector2d Element::GetValueVector2d(const std::string &_key)
 {
   gazebo::math::Vector2d result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a vector2d.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -953,8 +1074,19 @@ gazebo::math::Vector2d Element::GetValueVector2d(const std::string &_key)
 gazebo::math::Quaternion Element::GetValueQuaternion(const std::string &_key)
 {
   gazebo::math::Quaternion result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a quaternion.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -974,8 +1106,19 @@ gazebo::math::Quaternion Element::GetValueQuaternion(const std::string &_key)
 gazebo::math::Pose Element::GetValuePose(const std::string &_key)
 {
   gazebo::math::Pose result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a pose.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -995,8 +1138,19 @@ gazebo::math::Pose Element::GetValuePose(const std::string &_key)
 gazebo::common::Color Element::GetValueColor(const std::string &_key)
 {
   gazebo::common::Color result;
+
   if (_key.empty())
-    this->value->Get(result);
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a color.\n";
+    }
+  }
   else
   {
     ParamPtr param = this->GetAttribute(_key);
@@ -1013,8 +1167,79 @@ gazebo::common::Color Element::GetValueColor(const std::string &_key)
 }
 
 /////////////////////////////////////////////////
+gazebo::common::Time Element::GetValueTime(const std::string &_key)
+{
+  gazebo::common::Time result;
+
+  if (_key.empty())
+  {
+    if (this->value)
+    {
+      this->value->Get(result);
+    }
+    else
+    {
+      gzwarn << "Parameter [" << this->GetName()
+             << "] has no value when attempting to get as a time.\n";
+    }
+  }
+  else
+  {
+    ParamPtr param = this->GetAttribute(_key);
+    if (param)
+      param->Get(result);
+    else if (this->HasElement(_key))
+      result = this->GetElementImpl(_key)->GetValueTime();
+    else if (this->HasElementDescription(_key))
+      result = this->GetElementDescription(_key)->GetValueTime();
+    else
+      gzerr << "Unable to find value for key[" << _key << "]\n";
+  }
+  return result;
+}
+
+/////////////////////////////////////////////////
+void Element::RemoveFromParent()
+{
+  if (this->parent)
+  {
+    ElementPtr_V::iterator iter;
+    iter = std::find(this->parent->elements.begin(),
+        this->parent->elements.end(), shared_from_this());
+
+    if (iter != this->parent->elements.end())
+    {
+      this->parent->elements.erase(iter);
+      this->parent.reset();
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+void Element::RemoveChild(ElementPtr _child)
+{
+  GZ_ASSERT(_child, "Cannot remove a NULL child pointer");
+
+  ElementPtr_V::iterator iter;
+  iter = std::find(this->elements.begin(),
+                   this->elements.end(), _child);
+
+  if (iter != this->elements.end())
+  {
+    _child->SetParent(ElementPtr());
+    this->elements.erase(iter);
+  }
+}
+
+/////////////////////////////////////////////////
 void Element::ClearElements()
 {
+  for (sdf::ElementPtr_V::iterator iter = this->elements.begin();
+      iter != this->elements.end(); ++iter)
+  {
+    (*iter)->ClearElements();
+  }
+
   this->elements.clear();
 }
 
@@ -1032,30 +1257,35 @@ void Element::Update()
   {
     (*iter)->Update();
   }
+
+  if (this->value)
+    this->value->Update();
 }
 
 /////////////////////////////////////////////////
 void Element::Reset()
 {
-  this->parent.reset();
-
   for (ElementPtr_V::iterator iter = this->elements.begin();
       iter != this->elements.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
 
   for (ElementPtr_V::iterator iter = this->elementDescriptions.begin();
       iter != this->elementDescriptions.end(); ++iter)
   {
-    (*iter)->Reset();
+    if (*iter)
+      (*iter)->Reset();
     (*iter).reset();
   }
   this->elements.clear();
   this->elementDescriptions.clear();
 
   this->value.reset();
+
+  this->parent.reset();
 }
 
 /////////////////////////////////////////////////
@@ -1275,61 +1505,14 @@ void SDF::PrintValues()
 }
 
 /////////////////////////////////////////////////
-//void SDF::PrintDoc()
-//{
-//  std::string divs, html;
-//  int index = 0;
-//  this->root->PrintDoc(divs, html, 10, index);
-//
-//  std::cout << "<!DOCTYPE HTML>\n"
-//  << "<html>\n"
-//  << "<head>\n"
-//  << "  <link href='style.css' rel='stylesheet' type='text/css'>\n"
-//  << "  <script type='text/javascript'"
-//  << "  src='http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js'>"
-//  << "  </script>\n"
-//  << "  <script type='text/javascript' src='animatedcollapse.js'>\n"
-//  << "  /***********************************************\n"
-//  << "   * Animated Collapsible DIV v2.4- (c) Dynamic Drive DHTML code\n"
-//  << "   * library (www.dynamicdrive.com)\n"
-//  << "   * This notice MUST stay intact for legal use\n"
-//  << "   * Visit Dynamic Drive at http://www.dynamicdrive.com/ for this\n"
-//  << "   * script and 100s more\n"
-//  << "   ***********************************************/\n"
-//  << "  </script>\n"
-//  << "  <script type='text/javascript'>\n";
-//
-//  std::cout << divs << "\n";
-//
-//  std::cout << "animatedcollapse.ontoggle=function($, divobj, state)\n"
-//      << "{ }\n animatedcollapse.init()\n </script>\n";
-//  std::cout << "</head>\n<body>\n";
-//
-//  std::cout << "<div style='padding:4px'>\n"
-//            << "<h1>SDF " << SDF::version << "</h1>\n";
-//
-//  std::cout << "<p>The Simulation Description Format (SDF) is an XML file "
-//    << "format used to describe all the elements in a simulation "
-//    << "environment.\n</p>";
-//
-//  std::cout << "<div style='margin-left: 20px'>\n";
-//  std::cout << html;
-//  std::cout << "</div>\n";
-//
-//  std::cout << "</div>\n";
-//
-//  std::cout << "
-//    </body>
-//    </html>";
-//}
-
 void SDF::PrintDoc()
 {
   std::string html, html2;
   int index = 0;
   this->root->PrintDocLeftPane(html, 10, index);
 
-  this->root->PrintDocRightPane(html2, 10);
+  index = 0;
+  this->root->PrintDocRightPane(html2, 10, index);
 
   std::cout << "<!DOCTYPE HTML>\n"
   << "<html>\n"
@@ -1384,13 +1567,37 @@ void SDF::PrintDoc()
   std::cout << "<ul><li><b>Left Panel:</b> List of all the SDF elements.</li>";
   std::cout << "<li><b>Right Panel:</b> Descriptions of all the SDF "
             << "elements.</li>";
-  std::cout << "<li><b>Selection:</b> Click an element in the Left Panel "
+  std::cout << "<li><b>Selection:</b> Clicking an element in the Left Panel "
             << "moves the corresponding description to the top of the Right "
             << "Panel.</li>";
-  std::cout << "<li><b>Search:</b> Use your web-browser's built in 'find' "
+  std::cout << "<li><b>Search:</b> Use your web-browser's built in 'Find' "
             << "function to locate a specific element."
             << "</li></ul>";
   std::cout << "</blockquote>";
+
+  std::cout << "</br>\n";
+
+  std::cout << "<h3>Meta-Tags</h3>\n";
+  std::cout << "<blockquote>";
+  std::cout << "Meta-tags are processed by the parser before the final "
+            << "SDF file is generated.";
+  std::cout << "<ul>";
+
+  std::cout << "<li><b>&ltinclude&gt</b>: Include an SDF model file "
+            << "within the current SDF file."
+            << "<ul style='margin-left:12px'>"
+            << "<li><b>&lt;uri&gt;</b>: URI of SDF model file to include.</li>"
+            << "<li><b>&lt;name&gt;</b>: Name of the included SDF model.</li>"
+            << "<li><b>&lt;pose&gt;</b>: Pose of the included SDF model, "
+            << "specified as &lt;pose&gt;x y z roll pitch yaw&lt;/pose&gt;, "
+            << "with x, y, and z representing a position in meters, and roll, "
+            << "pitch, and yaw representing Euler angles in radians.</li>"
+            << "</ul>"
+            << "</li>";
+
+  std::cout << "</ul>";
+  std::cout << "</blockquote>";
+
 
   std::cout << "</div>\n";
 
@@ -1432,13 +1639,13 @@ std::string SDF::ToString() const
 {
   std::ostringstream stream;
 
-  if (this->root->GetName() != "gazebo")
-    stream << "<gazebo version='" << SDF::version << "'>\n";
+  if (this->root->GetName() != "sdf")
+    stream << "<sdf version='" << SDF::version << "'>\n";
 
   stream << this->root->ToString("");
 
-  if (this->root->GetName() != "gazebo")
-    stream << "</gazebo>";
+  if (this->root->GetName() != "sdf")
+    stream << "</sdf>";
 
   return stream.str();
 }
@@ -1446,7 +1653,7 @@ std::string SDF::ToString() const
 /////////////////////////////////////////////////
 void SDF::SetFromString(const std::string &_sdfData)
 {
-  sdf::initFile("gazebo.sdf", this->root);
+  sdf::initFile("root.sdf", this->root);
   if (!sdf::readString(_sdfData, this->root))
   {
     gzerr << "Unable to parse sdf string[" << _sdfData << "]\n";

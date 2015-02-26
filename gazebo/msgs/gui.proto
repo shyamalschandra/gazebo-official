@@ -3,14 +3,13 @@ package gazebo.msgs;
 /// \ingroup gazebo_msgs
 /// \interface GUI 
 /// \brief Message for a GUI
-/// \verbatim
 
 import "gui_camera.proto";
+import "plugin.proto";
 
 message GUI
 {
   optional bool fullscreen  = 1;
   optional GUICamera camera = 2;
+  repeated Plugin plugin    = 3;
 }
-
-/// \endverbatim

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  *
 */
-#ifndef BOX_HH
-#define BOX_HH
+#ifndef _BOX_HH_
+#define _BOX_HH_
 
 #include <iostream>
-#include "math/Vector3.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -27,16 +28,18 @@ namespace gazebo
     /// \addtogroup gazebo_math
     /// \{
 
+    /// \class Box Box.hh math/gzmath.hh
     /// \brief Mathematical representation of a box and related functions.
-    class Box
+    class GAZEBO_VISIBLE Box
     {
       /// \brief Default constructor
       public: Box();
 
-      /// \brief Constructor
-      /// \param[in] _min Minimum corner of the box
-      /// \param[in] _max Maximum corner of the box
-      public: Box(const Vector3 &_min, const Vector3 &_max);
+      /// \brief Constructor. This constructor will compute the box's
+      /// minumum and maximum corners based on the two arguments.
+      /// \param[in] _vec1 One corner of the box
+      /// \param[in] _vec2 Another corner of the box
+      public: Box(const Vector3 &_vec1, const Vector3 &_vec2);
 
       /// \brief Copy Constructor
       /// \param[in]  _b Box to copy
@@ -87,7 +90,7 @@ namespace gazebo
       /// \brief Equality test operatoer
       /// \param[in] _b Box to test
       /// \return True if equal
-      public: bool operator==(const Box &_b);
+      public: bool operator==(const Box &_b) const;
 
       /// \brief Subtract a vector from the min and max values
       /// \param _v The vector to use during subtraction
