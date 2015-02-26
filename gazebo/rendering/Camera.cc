@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/Conversions.hh"
 #include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/Distortion.hh"
 #include "gazebo/rendering/CameraPrivate.hh"
 #include "gazebo/rendering/Camera.hh"
 
@@ -186,6 +187,12 @@ void Camera::Load()
   {
     this->dataPtr->cmdSub = this->dataPtr->node->Subscribe(
         "~/" + this->GetName() + "/cmd", &Camera::OnCmdMsg, this, true);
+  }
+
+  if (this->sdf->HasElement("distortion"))
+  {
+    this->dataPtr->distortion.reset(new Distortion());
+    this->dataPtr->distortion->Load(this->sdf->GetElement("distortion"));
   }
 }
 
@@ -396,7 +403,6 @@ void Camera::RenderImpl()
 //////////////////////////////////////////////////
 void Camera::ReadPixelBuffer()
 {
-  return;
   if (this->newData && (this->captureData || this->captureDataOnce))
   {
     size_t size;
@@ -440,9 +446,7 @@ void Camera::ReadPixelBuffer()
       Ogre::Viewport *vp = rtt->addViewport(this->camera);
       vp->setClearEveryFrame(true);
       vp->setShadowsEnabled(true);
-      vp->setOverlaysEnabled(true);
-
-      vp->setDrawBuffer(Ogre::CBT_BACK_LEFT);
+      vp->setOverlaysEnabled(false);
     }
 
     // This update is only needed for client side data captures
@@ -572,26 +576,44 @@ void Camera::SetWorldRotation(const math::Quaternion &_quant)
 }
 
 //////////////////////////////////////////////////
-void Camera::Translate(const math::Vector3 &direction)
+void Camera::Translate(const math::Vector3 &_direction)
 {
-  Ogre::Vector3 vec(direction.x, direction.y, direction.z);
-
   this->sceneNode->translate(this->sceneNode->getOrientation() *
-      this->sceneNode->getOrientation() * vec);
+      Conversions::Convert(_direction));
+}
+
+//////////////////////////////////////////////////
+void Camera::Roll(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->pitch(Ogre::Radian(_angle.Radian()), _relativeTo);
+}
+
+//////////////////////////////////////////////////
+void Camera::Yaw(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->roll(Ogre::Radian(_angle.Radian()), _relativeTo);
+}
+
+//////////////////////////////////////////////////
+void Camera::Pitch(const math::Angle &_angle,
+    Ogre::Node::TransformSpace _relativeTo)
+{
+  this->sceneNode->yaw(Ogre::Radian(_angle.Radian()), _relativeTo);
 }
 
 //////////////////////////////////////////////////
 void Camera::RotateYaw(math::Angle _angle)
 {
-  this->sceneNode->roll(Ogre::Radian(_angle.Radian()), Ogre::Node::TS_WORLD);
+  this->Yaw(_angle);
 }
 
 //////////////////////////////////////////////////
 void Camera::RotatePitch(math::Angle _angle)
 {
-  this->sceneNode->yaw(Ogre::Radian(_angle.Radian()));
+  this->Pitch(_angle);
 }
-
 
 //////////////////////////////////////////////////
 void Camera::SetClipDist()
@@ -1200,7 +1222,6 @@ void Camera::SetCaptureDataOnce()
 //////////////////////////////////////////////////
 void Camera::CreateRenderTexture(const std::string &_textureName)
 {
-  return;
   int fsaa = 4;
 
   // Full-screen anti-aliasing only works correctly in 1.8 and above
@@ -1276,7 +1297,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
     this->viewport = this->renderTarget->addViewport(this->camera);
     this->viewport->setClearEveryFrame(true);
     this->viewport->setShadowsEnabled(true);
-    this->viewport->setOverlaysEnabled(true);
+    this->viewport->setOverlaysEnabled(false);
 
     RTShaderSystem::AttachViewport(this->viewport, this->GetScene());
 
@@ -1294,7 +1315,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
     this->camera->setFOVy(Ogre::Radian(vfov));
 
     // Setup Deferred rendering for the camera
-    /*if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
+    if (RenderEngine::Instance()->GetRenderPathType() == RenderEngine::DEFERRED)
     {
       // Deferred shading GBuffer compositor
       this->dataPtr->dsGBufferInstance =
@@ -1328,12 +1349,13 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
       this->dataPtr->dlMergeInstance->setEnabled(true);
 
       // this->dataPtr->this->ssaoInstance->setEnabled(false);
-    }*/
+    }
 
+    if (this->dataPtr->distortion)
+      this->dataPtr->distortion->SetCamera(shared_from_this());
 
-    /*if (this->GetScene()->skyx != NULL)
-      this->renderTarget->addListener(this->GetScene()->skyx);
-      */
+    if (this->GetScene()->GetSkyX() != NULL)
+      this->renderTarget->addListener(this->GetScene()->GetSkyX());
   }
 }
 
@@ -1680,4 +1702,10 @@ void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
 {
   boost::mutex::scoped_lock lock(this->dataPtr->receiveMutex);
   this->dataPtr->commandMsgs.push_back(_msg);
+}
+
+//////////////////////////////////////////////////
+DistortionPtr Camera::GetDistortion() const
+{
+  return this->dataPtr->distortion;
 }

@@ -21,7 +21,6 @@
 #include <vector>
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/building/EditorItem.hh"
-#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,8 +35,7 @@ namespace gazebo
 
     /// \class PolylineItem PolylineItem.hh
     /// \brief 2D polyline.
-    class GAZEBO_VISIBLE PolylineItem
-      : public EditorItem, public QGraphicsPathItem
+    class PolylineItem : public EditorItem, public QGraphicsPathItem
     {
       /// \brief Constructor
       /// param[in] _start Start position of the polyline item in pixel
@@ -87,10 +85,6 @@ namespace gazebo
       /// \brief Set the thickness of the polyline item.
       /// \param[in] _thickness Thickness in pixels.
       public: void SetThickness(double _thickness);
-
-      /// \brief Set the color of the polyline item.
-      /// \param[in] _color Color.
-      public: void SetColor(QColor _color);
 
       /// \brief Set the position of the polyline item.
       /// \param[in] _pos Position in pixel coordinates.
@@ -183,7 +177,7 @@ namespace gazebo
       /// \param[in] _painter Qt painter object.
       /// \param[in] _option Qt style options for the item.
       /// \param[in] _widget Qt widget being painted on.
-      private: virtual void paint(QPainter *_painter,
+      private: void paint(QPainter *_painter,
           const QStyleOptionGraphicsItem *_option, QWidget *_widget);
 
       /// \brief Draw bounding box
@@ -215,9 +209,6 @@ namespace gazebo
 
       /// \brief Thickness of the polyline in pixels
       private: double lineThickness;
-
-      /// \brief Color of the polyline
-      private: QColor lineColor;
     };
     /// \}
   }
