@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
  * Date: 22 Nov 2009
  */
 
-#include "common/Timer.hh"
+#include "gazebo/common/Timer.hh"
 
 using namespace gazebo;
 using namespace common;
 
-
 //////////////////////////////////////////////////
 Timer::Timer()
+  : reset(true), running(false)
 {
 }
 
@@ -38,17 +38,46 @@ Timer::~Timer()
 //////////////////////////////////////////////////
 void Timer::Start()
 {
-  this->start = Time::GetWallTime();
+  if (this->reset)
+  {
+    this->start = Time::GetWallTime();
+    this->reset = false;
+  }
+
+  this->running = true;
+}
+
+//////////////////////////////////////////////////
+void Timer::Stop()
+{
+  this->stop = Time::GetWallTime();
+  this->running = false;
+}
+
+//////////////////////////////////////////////////
+void Timer::Reset()
+{
+  this->running = false;
+  this->reset = true;
+  this->start = this->stop = Time::GetWallTime();
+}
+
+//////////////////////////////////////////////////
+bool Timer::GetRunning() const
+{
+  return this->running;
 }
 
 //////////////////////////////////////////////////
 Time Timer::GetElapsed() const
 {
-  Time currentTime;
+  if (this->running)
+  {
+    Time currentTime;
+    currentTime = Time::GetWallTime();
 
-  currentTime = Time::GetWallTime();
-
-  return currentTime - this->start;
+    return currentTime - this->start;
+  }
+  else
+    return this->stop - this->start;
 }
-
-
