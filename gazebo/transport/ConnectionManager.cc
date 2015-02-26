@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  *
 */
 
-#include "msgs/msgs.hh"
-#include "common/Events.hh"
-#include "transport/TopicManager.hh"
-#include "transport/ConnectionManager.hh"
+#include "gazebo/msgs/msgs.hh"
+#include "gazebo/common/Console.hh"
+#include "gazebo/common/Events.hh"
+#include "gazebo/transport/TopicManager.hh"
+#include "gazebo/transport/ConnectionManager.hh"
 
-#include "gazebo_config.h"
+#include "gazebo/gazebo_config.h"
 
 using namespace gazebo;
 using namespace transport;
@@ -34,6 +35,24 @@ class TopicManagerProcessTask : public tbb::task
             TopicManager::Instance()->ProcessNodes();
             return NULL;
           }
+};
+
+/// TBB task to establish subscriber to publisher connection.
+class TopicManagerConnectionTask : public tbb::task
+{
+  /// \brief Constructor.
+  /// \param[in] _pub Publish message
+  public: TopicManagerConnectionTask(msgs::Publish _pub) : pub(_pub) {}
+
+  /// Implements the necessary execute function
+  public: tbb::task *execute()
+          {
+            TopicManager::Instance()->ConnectSubToPub(pub);
+            return NULL;
+          }
+
+  /// \brief Publish message
+  private: msgs::Publish pub;
 };
 
 //////////////////////////////////////////////////
@@ -62,7 +81,8 @@ ConnectionManager::~ConnectionManager()
 
 //////////////////////////////////////////////////
 bool ConnectionManager::Init(const std::string &_masterHost,
-                             unsigned int master_port)
+                             unsigned int _masterPort,
+                             uint32_t _timeoutIterations)
 {
   this->stop = false;
   this->masterConn.reset(new Connection());
@@ -73,19 +93,31 @@ bool ConnectionManager::Init(const std::string &_masterHost,
   this->serverConn->Listen(0,
       boost::bind(&ConnectionManager::OnAccept, this, _1));
 
-  gzmsg << "Waiting for master";
-  while (!this->masterConn->Connect(_masterHost, master_port) &&
-         this->IsRunning())
+  gzmsg << "Waiting for master." << std::endl;
+  uint32_t timeoutCount = 0;
+  uint32_t waitDurationMS = 1000;
+
+  while (!this->masterConn->Connect(_masterHost, _masterPort) &&
+      this->IsRunning() && timeoutCount < _timeoutIterations)
   {
-    printf(".");
-    fflush(stdout);
-    common::Time::MSleep(1000);
+    ++timeoutCount;
+
+    if (timeoutCount < _timeoutIterations)
+      common::Time::MSleep(waitDurationMS);
   }
-  printf("\n");
+
+
+  if (timeoutCount >= _timeoutIterations)
+  {
+    gzerr << "Failed to connect to master in "
+          << (timeoutCount * waitDurationMS) / 1000.0 << " seconds."
+          << std::endl;
+    return false;
+  }
 
   if (!this->IsRunning())
   {
-    gzerr << "Connection Manager is not running\n";
+    gzerr << "Connection Manager is not running" << std::endl;
     return false;
   }
 
@@ -99,7 +131,7 @@ bool ConnectionManager::Init(const std::string &_masterHost,
   }
   catch(...)
   {
-    gzerr << "Unable to read from master\n";
+    gzerr << "Unable to read from master" << std::endl;
     return false;
   }
 
@@ -114,16 +146,16 @@ bool ConnectionManager::Init(const std::string &_masterHost,
     {
       // TODO: set some flag.. maybe start "serverConn" when initialized
       gzmsg << "Connected to gazebo master @ "
-            << this->masterConn->GetRemoteURI() << "\n";
+            << this->masterConn->GetRemoteURI() << std::endl;
     }
     else
     {
       // TODO: MAke this a proper error
-      gzerr << "Conflicting gazebo versions\n";
+      gzerr << "Conflicting gazebo versions" << std::endl;
     }
   }
   else
-    gzerr << "Didn't receive an init from the master\n";
+    gzerr << "Didn't receive an init from the master" << std::endl;
 
   packet.ParseFromString(namespacesData);
   if (packet.type() == "topic_namepaces_init")
@@ -139,7 +171,7 @@ bool ConnectionManager::Init(const std::string &_masterHost,
     this->namespaceCondition.notify_all();
   }
   else
-    gzerr << "Did not get topic_namespaces_init msg from master\n";
+    gzerr << "Did not get topic_namespaces_init msg from master" << std::endl;
 
   packet.ParseFromString(publishersData);
   if (packet.type() == "publishers_init")
@@ -155,7 +187,7 @@ bool ConnectionManager::Init(const std::string &_masterHost,
     }
   }
   else
-    gzerr << "Did not get publishers_init msg from master\n";
+    gzerr << "Did not get publishers_init msg from master" << std::endl;
 
   this->masterConn->AsyncRead(
       boost::bind(&ConnectionManager::OnMasterRead, this, _1));
@@ -164,7 +196,7 @@ bool ConnectionManager::Init(const std::string &_masterHost,
 
   // Tell the user what address will be publicized to other nodes.
   gzmsg << "Publicized address: "
-        << this->masterConn->GetLocalHostname() << "\n";
+        << this->masterConn->GetLocalHostname() << std::endl;
 
   return true;
 }
@@ -216,8 +248,8 @@ void ConnectionManager::RunUpdate()
 {
   std::list<ConnectionPtr>::iterator iter;
   std::list<ConnectionPtr>::iterator endIter;
-  unsigned int msize = 0;
 
+  unsigned int msize = 0;
   {
     boost::recursive_mutex::scoped_lock lock(this->masterMessagesMutex);
     msize = this->masterMessages.size();
@@ -226,7 +258,6 @@ void ConnectionManager::RunUpdate()
   while (msize > 0)
   {
     this->ProcessMessage(this->masterMessages.front());
-
     {
       boost::recursive_mutex::scoped_lock lock(this->masterMessagesMutex);
       this->masterMessages.pop_front();
@@ -243,7 +274,6 @@ void ConnectionManager::RunUpdate()
   //   TopicManagerProcessTask();
   // tbb::task::enqueue(*task);
   TopicManager::Instance()->ProcessNodes();
-
   {
     boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
     iter = this->connections.begin();
@@ -347,15 +377,40 @@ void ConnectionManager::ProcessMessage(const std::string &_data)
     this->namespaces.push_back(std::string(result.data()));
     this->namespaceCondition.notify_all();
   }
-
-  // Publisher_update. This occurs when we try to subscribe to a topic, and
-  // the master informs us of a remote host that is publishing on our
-  // requested topic
+  // FIXME "publisher_update" is currently not used and have been separated out
+  // into "publisher_subscribe" and "publisher_advertise". This is implemented
+  // as a workaround to address transport blocking issue when gzclient connects
+  // to gzserver, see issue #714. "publisher_advertise", intended
+  // for gzserver when gzclient connects, is parallelized and made non-blocking.
   else if (packet.type() == "publisher_update")
   {
     msgs::Publish pub;
     pub.ParseFromString(packet.serialized_data());
-
+    if (pub.host() != this->serverConn->GetLocalAddress() ||
+        pub.port() != this->serverConn->GetLocalPort())
+    {
+      TopicManager::Instance()->ConnectSubToPub(pub);
+    }
+  }
+  else if (packet.type() == "publisher_advertise")
+  {
+    msgs::Publish pub;
+    pub.ParseFromString(packet.serialized_data());
+    if (pub.host() != this->serverConn->GetLocalAddress() ||
+        pub.port() != this->serverConn->GetLocalPort())
+    {
+      TopicManagerConnectionTask *task = new(tbb::task::allocate_root())
+      TopicManagerConnectionTask(pub);
+      tbb::task::enqueue(*task);
+    }
+  }
+  // publisher_subscribe. This occurs when we try to subscribe to a topic, and
+  // the master informs us of a remote host that is publishing on our
+  // requested topic
+  else if (packet.type() == "publisher_subscribe")
+  {
+    msgs::Publish pub;
+    pub.ParseFromString(packet.serialized_data());
     if (pub.host() != this->serverConn->GetLocalAddress() ||
         pub.port() != this->serverConn->GetLocalPort())
     {
@@ -389,7 +444,7 @@ void ConnectionManager::ProcessMessage(const std::string &_data)
 }
 
 //////////////////////////////////////////////////
-void ConnectionManager::OnAccept(const ConnectionPtr &_newConnection)
+void ConnectionManager::OnAccept(ConnectionPtr _newConnection)
 {
   _newConnection->AsyncRead(
       boost::bind(&ConnectionManager::OnRead, this, _newConnection, _1));
@@ -400,7 +455,7 @@ void ConnectionManager::OnAccept(const ConnectionPtr &_newConnection)
 }
 
 //////////////////////////////////////////////////
-void ConnectionManager::OnRead(const ConnectionPtr &_connection,
+void ConnectionManager::OnRead(ConnectionPtr _connection,
                                const std::string &_data)
 {
   if (_data.empty())
@@ -493,20 +548,14 @@ void ConnectionManager::GetAllPublishers(std::list<msgs::Publish> &_publishers)
 void ConnectionManager::GetTopicNamespaces(std::list<std::string> &_namespaces)
 {
   if (!this->initialized)
+  {
+    gzerr << "Not initialized\n";
     return;
+  }
 
   _namespaces.clear();
 
   boost::mutex::scoped_lock lock(this->namespaceMutex);
-
-  if (!this->namespaces.size())
-  {
-    if (!this->namespaceCondition.timed_wait(lock,
-          boost::posix_time::milliseconds(60000)))
-    {
-      gzerr << "Unable to get namespaces from master\n";
-    }
-  }
 
   for (std::list<std::string>::iterator iter = this->namespaces.begin();
        iter != this->namespaces.end(); ++iter)
@@ -573,8 +622,8 @@ void ConnectionManager::Subscribe(const std::string &_topic,
 }
 
 //////////////////////////////////////////////////
-ConnectionPtr ConnectionManager::ConnectToRemoteHost(const std::string &host,
-                                                     unsigned int port)
+ConnectionPtr ConnectionManager::ConnectToRemoteHost(const std::string &_host,
+                                                     unsigned int _port)
 {
   ConnectionPtr conn;
 
@@ -582,12 +631,12 @@ ConnectionPtr ConnectionManager::ConnectToRemoteHost(const std::string &host,
     return conn;
 
   // Sharing connections is broken
-  // conn = this->FindConnection(host, port);
+  // conn = this->FindConnection(_host, _port);
   // if (!conn)
   {
     // Connect to the remote host
     conn.reset(new Connection());
-    if (conn->Connect(host, port))
+    if (conn->Connect(_host, _port))
     {
       boost::recursive_mutex::scoped_lock lock(this->connectionMutex);
       this->connections.push_back(conn);
@@ -598,8 +647,6 @@ ConnectionPtr ConnectionManager::ConnectToRemoteHost(const std::string &host,
       return ConnectionPtr();
     }
   }
-  // else
-  //  printf("Found Connections\n");
 
   return conn;
 }

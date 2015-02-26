@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2014 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 
+#include <sdf/sdf.hh>
+
 #include <gazebo/gazebo.hh>
-#include <gazebo/sdf/sdf.hh>
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/physics/WorldState.hh>
 #include <gazebo/common/Time.hh>
@@ -631,7 +632,7 @@ class StateFilter : public FilterBase
             result << this->filter.Filter(state);
 
             if (this->xmlOutput)
-              result << "</sdf></state>\n";
+              result << "</state></sdf>\n";
 
             this->prevTime = state.GetSimTime();
             return result.str();
@@ -955,7 +956,12 @@ void record(bool _start)
 
   gazebo::transport::PublisherPtr pub =
     node->Advertise<gazebo::msgs::LogControl>("~/log/control");
-  pub->WaitForConnection();
+
+  if (!pub->WaitForConnection(gazebo::common::Time(10, 0)))
+  {
+    gzerr << "Unable to create a connection to topic ~/log/control.\n";
+    return;
+  }
 
   gazebo::msgs::LogControl msg;
   _start ? msg.set_start(true) : msg.set_stop(true);
