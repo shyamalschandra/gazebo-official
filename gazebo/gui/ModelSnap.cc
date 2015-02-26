@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ ModelSnap::ModelSnap()
   this->dataPtr->selectedTriangleDirty = false;
   this->dataPtr->hoverTriangleDirty = false;
   this->dataPtr->snapLines = NULL;
-  this->dataPtr->snapLevel = "model";
 
   this->dataPtr->updateMutex = new boost::recursive_mutex();
 }
@@ -114,7 +113,8 @@ void ModelSnap::Reset()
 
   if (this->dataPtr->snapVisual)
   {
-    this->dataPtr->snapVisual->SetVisible(false);
+    if (this->dataPtr->snapVisual->GetVisible())
+      this->dataPtr->snapVisual->SetVisible(false);
     if (this->dataPtr->snapVisual->GetParent())
     {
       this->dataPtr->snapVisual->GetParent()->DetachVisual(
@@ -195,17 +195,28 @@ void ModelSnap::OnMouseReleaseEvent(const common::MouseEvent &_event)
   if (vis && !vis->IsPlane() &&
       this->dataPtr->mouseEvent.button == common::MouseEvent::LEFT)
   {
+    // Parent model or parent link
+    rendering::VisualPtr currentParent = vis->GetRootVisual();
+    rendering::VisualPtr previousParent;
+    if (gui::get_entity_id(currentParent->GetName()))
+    {
+      if (this->dataPtr->selectedVis)
+        previousParent = this->dataPtr->selectedVis->GetRootVisual();
+    }
+    else
+    {
+      currentParent = vis->GetParent();
+      if (this->dataPtr->selectedVis)
+        previousParent = this->dataPtr->selectedVis->GetParent();
+    }
+
     // Select first triangle on any mesh
     // Update triangle if the new triangle is on the same model/link
-    if (!this->dataPtr->selectedVis ||
-        (this->dataPtr->snapLevel == "model" &&
-        vis->GetRootVisual()  == this->dataPtr->selectedVis->GetRootVisual())
-        || (this->dataPtr->snapLevel == "link" &&
-        vis->GetParent() == this->dataPtr->selectedVis->GetParent()))
+    if (!this->dataPtr->selectedVis || (currentParent  == previousParent))
     {
       math::Vector3 intersect;
       this->dataPtr->rayQuery->SelectMeshTriangle(_event.pos.x, _event.pos.y,
-          vis->GetRootVisual(), intersect, this->dataPtr->selectedTriangle);
+          currentParent, intersect, this->dataPtr->selectedTriangle);
 
       if (!this->dataPtr->selectedTriangle.empty())
       {
@@ -215,7 +226,7 @@ void ModelSnap::OnMouseReleaseEvent(const common::MouseEvent &_event)
       if (!this->dataPtr->renderConnection)
       {
         this->dataPtr->renderConnection = event::Events::ConnectRender(
-              boost::bind(&ModelSnap::Update, this));
+            boost::bind(&ModelSnap::Update, this));
       }
     }
     else
@@ -224,20 +235,12 @@ void ModelSnap::OnMouseReleaseEvent(const common::MouseEvent &_event)
       math::Vector3 intersect;
       std::vector<math::Vector3> vertices;
       this->dataPtr->rayQuery->SelectMeshTriangle(_event.pos.x, _event.pos.y,
-          vis->GetRootVisual(), intersect, vertices);
+          currentParent, intersect, vertices);
 
       if (!vertices.empty())
       {
-        if (this->dataPtr->snapLevel == "model")
-        {
-          this->Snap(this->dataPtr->selectedTriangle, vertices,
-              this->dataPtr->selectedVis->GetRootVisual());
-        }
-        else
-        {
-          this->Snap(this->dataPtr->selectedTriangle, vertices,
-              this->dataPtr->selectedVis->GetParent());
-        }
+        this->Snap(this->dataPtr->selectedTriangle, vertices, previousParent);
+
         this->Reset();
         gui::Events::manipMode("select");
       }
@@ -294,7 +297,7 @@ void ModelSnap::GetSnapTransform(const std::vector<math::Vector3> &_triangleSrc,
   else
     _rot.SetFromAxis((v.Cross(u)).Normalize(), angle);
 
-  // Get translation needed for snapping
+  // Get translation needed for alignment
   // taking into account the rotated position of the mesh
   _trans = centroidDest - (_rot * (centroidSrc - _poseSrc.pos) + _poseSrc.pos);
 }
@@ -439,10 +442,4 @@ void ModelSnap::Update()
     }
     this->dataPtr->selectedTriangleDirty = false;
   }
-}
-
-/////////////////////////////////////////////////
-void ModelSnap::SetSnapLevel(const std::string &_snapLevel)
-{
-  this->dataPtr->snapLevel = _snapLevel;
 }

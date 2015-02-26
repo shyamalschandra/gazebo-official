@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,11 +89,6 @@ namespace gazebo
       /// \brief Process an object translate mouse release event.
       /// \param[in] _event Mouse event.
       public: void OnMouseReleaseEvent(const common::MouseEvent &_event);
-
-      /// \brief Set the snap level.
-      /// \param[in] _snapLevel Choose "model" to snap models to each other or
-      /// "link" to snap links within a model.
-      public: void SetSnapLevel(const std::string &_snapLevel);
 
       /// \brief Publish visual's pose to the server
       /// \param[in] _vis Pointer to the visual whose pose is to be published.
