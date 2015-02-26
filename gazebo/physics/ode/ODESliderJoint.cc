@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,12 @@
  */
 #include <boost/bind.hpp>
 
-#include "gazebo_config.h"
-#include "common/Console.hh"
+#include "gazebo/gazebo_config.h"
+#include "gazebo/common/Console.hh"
 
-#include "physics/Link.hh"
-#include "physics/ode/ODESliderJoint.hh"
+#include "gazebo/physics/Model.hh"
+#include "gazebo/physics/Link.hh"
+#include "gazebo/physics/ode/ODESliderJoint.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -40,6 +41,8 @@ ODESliderJoint::ODESliderJoint(dWorldID _worldId, BasePtr _parent)
 //////////////////////////////////////////////////
 ODESliderJoint::~ODESliderJoint()
 {
+  if (this->applyDamping)
+    physics::Joint::DisconnectJointUpdate(this->applyDamping);
 }
 
 //////////////////////////////////////////////////
@@ -49,97 +52,120 @@ void ODESliderJoint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-math::Vector3 ODESliderJoint::GetGlobalAxis(int /*_index*/) const
+math::Vector3 ODESliderJoint::GetGlobalAxis(unsigned int /*_index*/) const
 {
   dVector3 result;
-  dJointGetSliderAxis(this->jointId, result);
+  if (this->jointId)
+    dJointGetSliderAxis(this->jointId, result);
+  else
+    gzerr << "ODE Joint ID is invalid\n";
+
   return math::Vector3(result[0], result[1], result[2]);
 }
 
 //////////////////////////////////////////////////
-math::Angle ODESliderJoint::GetAngleImpl(int /*_index*/) const
+math::Angle ODESliderJoint::GetAngleImpl(unsigned int /*_index*/) const
 {
   math::Angle result;
   if (this->jointId)
     result = dJointGetSliderPosition(this->jointId);
+  else
+    gzerr << "ODE Joint ID is invalid\n";
+
   return result;
 }
 
 //////////////////////////////////////////////////
-double ODESliderJoint::GetVelocity(int /*index*/) const
+double ODESliderJoint::GetVelocity(unsigned int /*index*/) const
 {
-  double result = dJointGetSliderPositionRate(this->jointId);
+  double result = 0;
+  if (this->jointId)
+    result = dJointGetSliderPositionRate(this->jointId);
+  else
+    gzerr << "ODE Joint ID is invalid\n";
+
   return result;
 }
 
 //////////////////////////////////////////////////
-void ODESliderJoint::SetVelocity(int /*index*/, double _angle)
+void ODESliderJoint::SetVelocity(unsigned int _index, double _angle)
 {
-  this->SetParam(dParamVel, _angle);
+  this->SetVelocityMaximal(_index, _angle);
 }
 
 //////////////////////////////////////////////////
-void ODESliderJoint::SetAxis(int /*index*/, const math::Vector3 &_axis)
-{
-  if (this->childLink)
-    this->childLink->SetEnabled(true);
-  if (this->parentLink) this->parentLink->SetEnabled(true);
-
-  dJointSetSliderAxis(this->jointId, _axis.x, _axis.y, _axis.z);
-}
-
-//////////////////////////////////////////////////
-void ODESliderJoint::SetDamping(int /*index*/, double _damping)
-{
-  this->damping_coefficient = _damping;
-  dJointSetDamping(this->jointId, this->damping_coefficient);
-}
-
-//////////////////////////////////////////////////
-void ODESliderJoint::ApplyDamping()
-{
-  double damping_force = this->damping_coefficient * this->GetVelocity(0);
-  this->SetForce(0, damping_force);
-}
-
-//////////////////////////////////////////////////
-void ODESliderJoint::SetForce(int /*index*/, double _force)
+void ODESliderJoint::SetAxis(unsigned int /*index*/, const math::Vector3 &_axis)
 {
   if (this->childLink)
     this->childLink->SetEnabled(true);
   if (this->parentLink)
     this->parentLink->SetEnabled(true);
 
-  dJointAddSliderForce(this->jointId, _force);
+  // ODE needs global axis
+  math::Quaternion axisFrame = this->GetAxisFrame(0);
+  math::Vector3 globalAxis = axisFrame.RotateVector(_axis);
+
+  if (this->jointId)
+  {
+    dJointSetSliderAxis(this->jointId,
+                        globalAxis.x, globalAxis.y, globalAxis.z);
+  }
+  else
+    gzerr << "ODE Joint ID is invalid\n";
 }
 
 //////////////////////////////////////////////////
-void ODESliderJoint::SetParam(int _parameter, double _value)
+void ODESliderJoint::SetForceImpl(unsigned int /*_index*/, double _effort)
+{
+  if (this->jointId)
+    dJointAddSliderForce(this->jointId, _effort);
+  else
+    gzerr << "ODE Joint ID is invalid\n";
+}
+
+//////////////////////////////////////////////////
+void ODESliderJoint::SetParam(unsigned int _parameter, double _value)
 {
   ODEJoint::SetParam(_parameter, _value);
   dJointSetSliderParam(this->jointId, _parameter, _value);
 }
 
 //////////////////////////////////////////////////
-double ODESliderJoint::GetParam(int _parameter) const
+double ODESliderJoint::GetParam(unsigned int _parameter) const
 {
-  double result = dJointGetSliderParam(this->jointId, _parameter);
+  double result = 0;
+
+  if (this->jointId)
+    result = dJointGetSliderParam(this->jointId, _parameter);
+  else
+    gzerr << "ODE Joint ID is invalid\n";
+
   return result;
 }
 
 //////////////////////////////////////////////////
-void ODESliderJoint::SetMaxForce(int /*_index*/, double _t)
+void ODESliderJoint::SetMaxForce(unsigned int /*_index*/, double _t)
 {
   this->SetParam(dParamFMax, _t);
 }
 
 //////////////////////////////////////////////////
-double ODESliderJoint::GetMaxForce(int /*_index*/)
+double ODESliderJoint::GetMaxForce(unsigned int /*_index*/)
 {
   return this->GetParam(dParamFMax);
 }
 
+//////////////////////////////////////////////////
+math::Vector3 ODESliderJoint::GetAnchor(unsigned int /*_index*/) const
+{
+  dVector3 result;
+  gzlog << "ODESliderJoint::GetAnchor not implemented.\n";
+  return math::Vector3(result[0], result[1], result[2]);
+}
 
-
-
-
+//////////////////////////////////////////////////
+void ODESliderJoint::SetAnchor(unsigned int /*_index*/,
+  const math::Vector3 &/*_anchor*/)
+{
+  gzlog << "ODESliderJoint::SetAnchor not implemented.\n";
+}
