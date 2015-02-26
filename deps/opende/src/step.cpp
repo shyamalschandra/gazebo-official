@@ -456,6 +456,7 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     // force mixing vector `cfm', and LCP low and high bound vectors, and an
     // 'findex' vector.
     dReal *lo, *hi, *J, *A, *rhs;
+    dReal *c_v_max;
     int *findex;
 
     {
@@ -472,6 +473,10 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
 
       findex = context->AllocateArray<int> (mlocal);
       for (int i=0; i<mlocal; ++i) findex[i] = -1;
+
+
+      c_v_max = context->AllocateArray<dReal> (mlocal);
+      for(int i=0; i<mlocal; i++) c_v_max[i] = world->contactp.max_vel;
 
       int mskip = dPAD(mlocal);
       A = context->AllocateArray<dReal> (mlocal*mskip);
@@ -552,6 +557,8 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
           Jinfo.lo = lo + ofsi;
           Jinfo.hi = hi + ofsi;
           Jinfo.findex = findex + ofsi;
+          Jinfo.c_v_max = c_v_max + ofsi;
+            
 
 #ifdef USE_JOINT_DAMPING
           /*******************************************************/
@@ -882,6 +889,14 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     dxBody *const *const bodyend = body + nb;
     for (dxBody *const *bodycurr = body; bodycurr != bodyend; ++bodycurr) {
       dxBody *b = *bodycurr;
+      b->facc_last[0] = b->facc[0];
+      b->facc_last[1] = b->facc[1];
+      b->facc_last[2] = b->facc[2];
+      b->facc_last[3] = b->facc[3];
+      b->tacc_last[0] = b->tacc[0];
+      b->tacc_last[1] = b->tacc[1];
+      b->tacc_last[2] = b->tacc[2];
+      b->tacc_last[3] = b->tacc[3];
       b->facc[0] = 0;
       b->facc[1] = 0;
       b->facc[2] = 0;
@@ -962,6 +977,7 @@ size_t dxEstimateStepMemoryRequirements (dxBody * const * /*body*/, int nb, dxJo
       sub1_res2 += dEFFICIENT_SIZE(sizeof(dReal) * mskip * m); // for A
       sub1_res2 += 3 * dEFFICIENT_SIZE(sizeof(dReal) * m); // for lo, hi, rhs
       sub1_res2 += dEFFICIENT_SIZE(sizeof(int) * m); // for findex
+      sub1_res2 += dEFFICIENT_SIZE(sizeof(dReal) * m); // for c_v_max
 #ifdef USE_JOINT_DAMPING
       sub1_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 12 * m_damp); // for J_damp
       sub1_res2 += dEFFICIENT_SIZE(sizeof(dReal) * m_damp); // for coeff_damp
