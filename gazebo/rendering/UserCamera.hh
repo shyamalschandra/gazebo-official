@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,6 @@ namespace gazebo
 
   namespace rendering
   {
-    class GUIOverlay;
-
     /// \addtogroup gazebo_rendering
     /// \{
 
@@ -51,6 +49,9 @@ namespace gazebo
       /// \brief Load the user camera.
       /// \param[in] _sdf Parameters for the camera.
       public: void Load(sdf::ElementPtr _sdf);
+
+      // Documentation inherited
+      public: virtual void SetClipDist(float _near, float _far);
 
       /// \brief Generic load function
       public: void Load();
@@ -135,12 +136,6 @@ namespace gazebo
       /// Use this only if you really know what you're doing.
       /// \param[in] _target The new rendering target.
       public: virtual void SetRenderTarget(Ogre::RenderTarget *_target);
-
-      /// \brief Get the GUI overlay
-      ///
-      /// An overlay allows you to draw 2D elements on the viewport.
-      /// \return Pointer to the GUIOverlay.
-      public: GUIOverlay *GetGUIOverlay();
 
       /// \brief Set whether the view controller is enabled.
       ///
