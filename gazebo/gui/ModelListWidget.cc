@@ -509,8 +509,7 @@ void ModelListWidget::OnCustomContextMenu(const QPoint &_pt)
   if (i >= 0)
   {
     g_modelRightMenu->Run(item->text(0).toStdString(),
-                          this->modelTreeWidget->mapToGlobal(_pt),
-                          ModelRightMenu::EntityTypes::MODEL);
+                          this->modelTreeWidget->mapToGlobal(_pt));
     return;
   }
 
@@ -519,16 +518,7 @@ void ModelListWidget::OnCustomContextMenu(const QPoint &_pt)
   if (i >= 0)
   {
     g_modelRightMenu->Run(item->text(0).toStdString(),
-                          this->modelTreeWidget->mapToGlobal(_pt),
-                          ModelRightMenu::EntityTypes::LIGHT);
-  }
-
-  // Check to see if the selected item is a link
-  if (item->data(3, Qt::UserRole).toString().toStdString() == "Link")
-  {
-    g_modelRightMenu->Run(item->data(0, Qt::UserRole).toString().toStdString(),
-                          this->modelTreeWidget->mapToGlobal(_pt),
-                          ModelRightMenu::EntityTypes::LINK);
+                          this->modelTreeWidget->mapToGlobal(_pt));
   }
 }
 
@@ -1405,6 +1395,47 @@ void ModelListWidget::FillPropertyTree(const msgs::Joint &_msg,
                                                tr("child link"));
     item->setValue(_msg.child().c_str());
     this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // joint type
+  if (_msg.has_type())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                             tr("type"));
+    std::string jointType = msgs::Convert(_msg.type());
+
+    item->setValue(jointType.c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // parent link
+  if (_msg.has_parent())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                               tr("parent link"));
+    item->setValue(_msg.parent().c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
+    item->setEnabled(false);
+  }
+
+  // child link
+  if (_msg.has_child())
+  {
+    item = this->variantManager->addProperty(QVariant::String,
+                                               tr("child link"));
+    item->setValue(_msg.child().c_str());
+    if (_parent)
+      _parent->addSubProperty(item);
+    else
+      this->propTreeBrowser->addProperty(item);
     item->setEnabled(false);
   }
 

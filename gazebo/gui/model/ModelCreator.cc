@@ -15,7 +15,6 @@
  *
  */
 
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/filesystem.hpp>
 #include <sstream>
 #include <string>
@@ -59,8 +58,6 @@ ModelCreator::ModelCreator()
 
   this->modelTemplateSDF.reset(new sdf::SDF);
   this->modelTemplateSDF->SetFromString(ModelData::GetTemplateSDFString());
-
-  this->updateMutex = new boost::recursive_mutex();
 
   this->manipMode = "";
   this->partCounter = 0;
@@ -118,10 +115,6 @@ ModelCreator::ModelCreator()
        boost::bind(&ModelCreator::OnSetSelectedEntity, this, _1, _2)));
 
   this->connections.push_back(
-      gui::Events::ConnectScaleEntity(
-      boost::bind(&ModelCreator::OnEntityScaleChanged, this, _1, _2)));
-
-  this->connections.push_back(
       event::Events::ConnectPreRender(
         boost::bind(&ModelCreator::Update, this)));
 
@@ -146,8 +139,6 @@ ModelCreator::~ModelCreator()
   this->requestPub.reset();
   this->makerPub.reset();
   this->connections.clear();
-
-  delete this->updateMutex;
 
   delete jointMaker;
 }
@@ -1345,37 +1336,16 @@ void ModelCreator::ModelChanged()
 /////////////////////////////////////////////////
 void ModelCreator::Update()
 {
-  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
   // Check if any parts have been moved or resized and trigger ModelChanged
   for (auto &partsIt : this->allParts)
   {
     PartData *part = partsIt.second;
-    if (part->GetPose() != part->partVisual->GetWorldPose())
+    if (part->GetPose() != part->partVisual->GetWorldPose() ||
+        part->scale != part->partVisual->GetScale())
     {
       part->SetPose(part->partVisual->GetWorldPose());
+      part->scale = part->partVisual->GetScale();
       this->ModelChanged();
-    }
-    for (auto scaleIt : this->partScaleUpdate)
-    {
-      if (part->partVisual->GetName() == scaleIt.first)
-        part->SetScale(scaleIt.second);
-    }
-    this->partScaleUpdate.clear();
-  }
-}
-
-/////////////////////////////////////////////////
-void ModelCreator::OnEntityScaleChanged(const std::string &_name,
-  const math::Vector3 &_scale)
-{
-  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
-  for (auto partsIt : this->allParts)
-  {
-    if (_name == partsIt.first ||
-        _name.find(partsIt.first) != std::string::npos)
-    {
-      this->partScaleUpdate[partsIt.first] = _scale;
-      break;
     }
   }
 }

@@ -168,9 +168,8 @@ RenderWidget::RenderWidget(QWidget *_parent)
 
   this->timer = new QTimer(this);
   connect(this->timer, SIGNAL(timeout()), this, SLOT(update()));
-
-  // Set update rate. 30Hz is good.
-  this->timer->start(1000.0 / 30.0);
+  float fps = 30.0;
+  this->timer->start(1000.0 / fps);
 
   this->connections.push_back(
       gui::Events::ConnectFollow(

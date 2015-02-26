@@ -1,14 +1,8 @@
 1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
     * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
 
-1. Get and Set visibility of SelectionObj's handles, with unit test.
-    * [Pull request #1417](https://bitbucket.org/osrf/gazebo/pull-request/1417)
-
 1. Allow link selection with the mouse if parent model already selected.
     * [Pull request #1409](https://bitbucket.org/osrf/gazebo/pull-request/1409)
-
-1. Added ModelRightMenu::EntityTypes.
-    * [Pull request #1414](https://bitbucket.org/osrf/gazebo/pull-request/1414)
 
  1. Model editor updates
     1. Joint preview using JointVisuals.
@@ -23,6 +17,9 @@
 ## Gazebo 5.0
 
 ### Gazebo 5.1.0
+1. Added Joint Msg-to-SDF conversion functions and test.
+    * [Pull request #1419](https://bitbucket.org/osrf/gazebo/pull-request/1419)
+
 1. Added Visual, Material Msg-to-SDF conversion functions and ShaderType to string conversion functions.
     * [Pull request #1415](https://bitbucket.org/osrf/gazebo/pull-request/1415)
 
@@ -124,6 +121,10 @@
 
 1. Fixed crash on "permission denied" bug, added insert_model integration test.
     * [Pull request #1329](https://bitbucket.org/osrf/gazebo/pull-request/1329/)
+
+1. Enable simbody joint tests, implement `SimbodyJoint::GetParam`, create
+   `Joint::GetParam`, fix bug in `BulletHingeJoint::SetParam`.
+    * [Pull request #1404](https://bitbucket.org/osrf/gazebo/pull-request/1404/)
 
 1. Building editor updates
     1. Fixed inspector resizing.
@@ -257,6 +258,10 @@
     * [Pull request #1271](https://bitbucket.org/osrf/gazebo/pull-request/1271)
 1. Fix loading collada meshes with unsupported input semantics.
     * [Pull request #1319](https://bitbucket.org/osrf/gazebo/pull-request/1319)
+1. Fix race condition with ImuSensor not publishing after Reset World.
+    * [Pull request #1448](https://bitbucket.org/osrf/gazebo/pull-request/1448)
+    * [Pull request #1446](https://bitbucket.org/osrf/gazebo/pull-request/1446)
+    * [Issue #236](https://bitbucket.org/osrf/gazebo/issue/236)
 
 ### Gazebo 4.0.2 (2014-09-23)
 
