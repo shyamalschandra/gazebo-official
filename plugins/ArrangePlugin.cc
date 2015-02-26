@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  *
 */
 
+#include <gazebo/common/Assert.hh>
 #include <gazebo/common/Console.hh>
 #include <gazebo/physics/Model.hh>
 #include <gazebo/physics/World.hh>
@@ -37,6 +38,8 @@ ArrangePlugin::~ArrangePlugin()
 /////////////////////////////////////////////////
 void ArrangePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
 {
+  GZ_ASSERT(_world, "ArrangePlugin world pointer is NULL");
+  GZ_ASSERT(_sdf, "ArrangePlugin sdf pointer is NULL");
   this->world = _world;
   this->sdf = _sdf;
 
@@ -50,13 +53,33 @@ void ArrangePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
       {
         // Add names to map
         std::string modelName = elem->Get<std::string>();
-        ObjectPtr object(new Object);
-        object->model = world->GetModel(modelName);
-        object->pose = object->model->GetWorldPose();
-        this->objects[modelName] = object;
+        physics::ModelPtr model = world->GetModel(modelName);
+        if (model)
+        {
+          ObjectPtr object(new Object);
+          object->model = model;
+          object->pose = model->GetWorldPose();
+          this->objects[modelName] = object;
+        }
+        else
+        {
+          gzerr << "Unable to get model ["
+                << modelName
+                << "], skipping"
+                << std::endl;
+        }
 
         elem = elem->GetNextElement(elemName);
       }
+    }
+  }
+
+  // Get name of topic to listen on
+  {
+    const std::string elemName = "topic_name";
+    if (this->sdf->HasElement(elemName))
+    {
+      this->eventTopicName = this->sdf->Get<std::string>(elemName);
     }
   }
 
@@ -99,7 +122,10 @@ void ArrangePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
             // Read pose model attribute
             if (!poseElem->HasAttribute("model"))
             {
-              gzerr << "pose element missing model attribute" << std::endl;
+              gzerr << "In arrangement ["
+                    << arrangementName
+                    << "], a pose element is missing the model attribute"
+                    << std::endl;
               continue;
             }
             std::string poseName = poseElem->Get<std::string>("model");
@@ -109,17 +135,19 @@ void ArrangePlugin::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
           }
         }
         this->arrangements[arrangementName] = poses;
-        gzdbg << "Loaded arrangement ["
-              << arrangementName
-              << "] with "
-              << poses.size()
-              << " poses"
-              << std::endl;
 
         elem = elem->GetNextElement(elemName);
       }
     }
   }
+
+  // Subscribe to the topic specified in the world file
+
+  this->node = transport::NodePtr(new transport::Node());
+  this->node->Init(_world->GetName());
+
+  sub = this->node->Subscribe(this->eventTopicName,
+                              &ArrangePlugin::ArrangementCallback, this);
 }
 
 /////////////////////////////////////////////////
@@ -133,6 +161,12 @@ void ArrangePlugin::Init()
 void ArrangePlugin::Reset()
 {
   this->SetArrangement(this->currentArrangementName);
+}
+
+void ArrangePlugin::ArrangementCallback(ConstGzStringPtr &_msg)
+{
+  // Set arrangement to the requested id
+  this->SetArrangement(_msg->data());
 }
 
 /////////////////////////////////////////////////
