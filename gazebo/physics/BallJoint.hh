@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@
  * Date: 21 May 2003
  */
 
-#ifndef BALLJOINT_HH
-#define BALLJOINT_HH
+#ifndef _BALLJOINT_HH_
+#define _BALLJOINT_HH_
 
-#include "Joint.hh"
+#include "gazebo/physics/Joint.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -31,13 +32,16 @@ namespace gazebo
     /// \addtogroup gazebo_physics
     /// \{
 
-    /// \class BallJoint BallJoint.hh physics/BallJoint.hh
-    /// \brief A ball joint
+    /// \class BallJoint BallJoint.hh physics/physics.hh
+    /// \brief Base class for a ball joint
+    ///
+    /// Each physics engine should implement this class.
     template< class T>
-    class BallJoint : public T
+    class GAZEBO_VISIBLE BallJoint : public T
     {
       /// \brief Constructor
-      public: BallJoint(BasePtr _parent) : T(_parent)
+      /// \param[in] _parent Pointer to the parent link.
+      public: explicit BallJoint(BasePtr _parent) : T(_parent)
               {
                 this->AddType(Base::BALL_JOINT);
               }
@@ -47,28 +51,27 @@ namespace gazebo
               {
               }
 
-      /// \brief Template to ::Load the BallJoint
-      protected: void Load(sdf::ElementPtr _sdf)
-                 { T::Load(_sdf); }
-      /// \brief Set the axis of rotation
-      public: virtual void SetAxis(int /*_index*/,
-                                   const math::Vector3 &/*_axis*/)
-              {}
-      /// \brief Set the high stop of an axis(index).
-      public: virtual void SetHighStop(int /*_index*/,
-                                       math::Angle /*_angle*/) {}
-      /// \brief Set the low stop of an axis(index).
-      public: virtual void SetLowStop(int /*_index*/, math::Angle /*_angle*/) {}
-      /// \brief Get the high stop of an axis(index).
-      public: virtual math::Angle GetHighStop(int /*_index*/)
-              {return math::Angle();}
-      /// \brief Get the low stop of an axis(index).
-      public: virtual math::Angle GetLowStop(int /*_index*/)
-              { return math::Angle();}
+      /// \internal
+      public: virtual unsigned int GetAngleCount() const
+              {
+                return 0;
+              }
+
+      /// \brief Template to ::Load the BallJoint.
+      /// \param[in] _sdf SDF to load the joint from.
+      public: void Load(sdf::ElementPtr _sdf)
+              {
+                T::Load(_sdf);
+              }
+
+
+      /// \brief Initialize joint
+      protected: virtual void Init()
+                 {
+                   T::Init();
+                 }
     };
     /// \}
   }
 }
 #endif
-
-
