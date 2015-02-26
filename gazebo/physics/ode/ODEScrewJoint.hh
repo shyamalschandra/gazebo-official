@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  * limitations under the License.
  *
 */
-/* Desc: A screw or primastic joint
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
-
 #ifndef _ODESCREWJOINT_HH_
 #define _ODESCREWJOINT_HH_
 
@@ -94,11 +89,12 @@ namespace gazebo
       public: virtual void SetParam(unsigned int _parameter, double _value);
 
       // Documentation inherited.
-      public: virtual void SetAttribute(const std::string &_key, int _index,
+      public: virtual bool SetParam(const std::string &_key,
+                                        unsigned int _index,
                                         const boost::any &_value);
 
       // Documentation inherited.
-      public: virtual double GetAttribute(const std::string &_key,
+      public: virtual double GetParam(const std::string &_key,
                                                 unsigned int _index);
 
       // Documentation inherited

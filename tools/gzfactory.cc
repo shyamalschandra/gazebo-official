@@ -24,25 +24,14 @@ using namespace gazebo;
 namespace po = boost::program_options;
 
 /////////////////////////////////////////////////
-void help(po::options_description &_options)
+void help()
 {
-  std::cerr << "gzfactory -- DEPRECATED(see 'gz help model')\n\n";
-
-  std::cerr << "`gzfactory` <spawn|delete> [options]\n\n";
-
-  std::cerr << "Spawn or delete models into or from a "
-    << "running Gazebo simulation.\n\n";
-
-  std::cerr << "Commands:\n"
-    << "    spawn   Spawn new model. Must specify a SDF model file.\n"
-    << "    delete  Delete existing model. Must specify model name.\n\n";
-
-  std::cerr << _options << "\n\n";
-
-  std::cerr << "See also:\n"
-    << "Example and more information about gazebo gzfactory and "
-    << "other command line tools can be found at:"
-    << "http://gazebosim.org/user_guide/started__commandlinetools.html\n";
+  std::cerr << "This tool for spawning or deleting models into or from a "
+            << "running Gazebo simulation.\n\n"
+            << "  gzfactory <spawn|delete> [options]\n"
+            << "    spawn   : Spawn new model. Must specify a SDF model file.\n"
+            << "    delete  : Delete existing model. Must specify model name.\n"
+            << "\n\n";
 }
 
 /////////////////////////////////////////////////
@@ -175,24 +164,24 @@ void Delete(po::variables_map &vm)
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-  po::options_description v_desc("Options");
+  po::options_description v_desc("Allowed options");
   v_desc.add_options()
-    ("help,h", "Produce this help message.")
+    ("help,h", "produce this help message")
     ("sdf,f", po::value<std::string>(), "SDF model file.")
     ("world-name,w", po::value<std::string>(), "Name of Gazebo world.")
     ("model-name,m", po::value<std::string>(), "Model name.")
-    ("pose-x,x", po::value<double>(), "Set model x position.")
-    ("pose-y,y", po::value<double>(), "Set model y position.")
-    ("pose-z,z", po::value<double>(), "Set model z positione.")
-    ("pose-R,R", po::value<double>(), "Set model roll orientation in radians.")
-    ("pose-P,P", po::value<double>(), "Set model pitch orientation in radians.")
-    ("pose-Y,Y", po::value<double>(), "Set model yaw orientation in radians.");
+    ("pose-x,x", po::value<double>(), "set model x position.")
+    ("pose-y,y", po::value<double>(), "set model y position.")
+    ("pose-z,z", po::value<double>(), "set model z positione.")
+    ("pose-R,R", po::value<double>(), "set model roll orientation in radians.")
+    ("pose-P,P", po::value<double>(), "set model pitch orientation in radians.")
+    ("pose-Y,Y", po::value<double>(), "set model yaw orientation in radians.");
 
   po::options_description h_desc("Hidden options");
   h_desc.add_options()
     ("command", po::value<std::string>(), "<spawn|delete>");
 
-  po::options_description desc("Options");
+  po::options_description desc("Allowed options");
   desc.add(v_desc).add(h_desc);
 
   po::positional_options_description p_desc;
@@ -213,7 +202,8 @@ int main(int argc, char **argv)
 
   if (vm.count("help") || argc < 2)
   {
-    help(v_desc);
+    help();
+    std::cout << v_desc << "\n";
     return -1;
   }
 

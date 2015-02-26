@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  *
  */
+
+#include <string>
 
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
@@ -95,19 +97,37 @@ void SimbodyScrewJoint::SetAxis(unsigned int /*_index*/,
 
 //////////////////////////////////////////////////
 void SimbodyScrewJoint::SetThreadPitch(unsigned int /*_index*/,
-    double /*_threadPitch*/)
+    double _threadPitch)
 {
   gzdbg << "SimbodyScrewJoint::SetThreadPitch: setting thread pitch is "
-        << "not yet implemented.  The pitch are set during joint construction "
+        << "not yet tested.  The pitch are set during joint construction "
         << "in SimbodyPhysics.cc for now.\n";
+  this->SetThreadPitch(_threadPitch);
 }
 
 //////////////////////////////////////////////////
 void SimbodyScrewJoint::SetThreadPitch(double /*_threadPitch*/)
 {
-  gzdbg << "SimbodyScrewJoint::SetThreadPitch: setting thread pitch is "
-        << "not yet implemented.  The pitch are set during joint construction "
+  gzerr << "SimbodyScrewJoint::SetThreadPitch: setting thread pitch is "
+        << "not yet tested.  The pitch are set during joint construction "
         << "in SimbodyPhysics.cc for now.\n";
+  /* need to figure out how to down cast correctly
+  if (this->physicsInitialized &&
+      this->simbodyPhysics->simbodyPhysicsInitialized)
+  {
+    // downcast mobod to screw mobod first
+    // the way pitch is defined in simbody is -1.0 / gazebo thread pitch
+    SimTK::MobilizedBody::Screw screw =
+      static_cast<SimTK::MobilizedBody::Screw>(this->mobod);
+    screw.setDefaultPitch(-1.0/_threadPitch);
+  }
+  else
+  {
+    gzwarn << "SimbodyScrewJoint physics not initialized yet, or failed"
+           << " to initialize. Returning thread pitch from SDF.\n"
+    return this->threadPitch;
+  }
+  */
 }
 
 //////////////////////////////////////////////////
@@ -140,14 +160,26 @@ math::Vector3 SimbodyScrewJoint::GetGlobalAxis(unsigned int _index) const
       this->simbodyPhysics->simbodyPhysicsStepped &&
       _index < this->GetAngleCount())
   {
-    const SimTK::Transform &X_OM = this->mobod.getOutboardFrame(
-      this->simbodyPhysics->integ->getState());
+    if (!this->mobod.isEmptyHandle())
+    {
+      const SimTK::Transform &X_OM = this->mobod.getOutboardFrame(
+        this->simbodyPhysics->integ->getState());
 
-    // express Z-axis of X_OM in world frame
-    SimTK::Vec3 z_W(this->mobod.expressVectorInGroundFrame(
-      this->simbodyPhysics->integ->getState(), X_OM.z()));
+      // express Z-axis of X_OM in world frame
+      SimTK::Vec3 z_W(this->mobod.expressVectorInGroundFrame(
+        this->simbodyPhysics->integ->getState(), X_OM.z()));
 
-    return SimbodyPhysics::Vec3ToVector3(z_W);
+      return SimbodyPhysics::Vec3ToVector3(z_W);
+    }
+    else
+    {
+      gzerr << "Joint mobod not initialized correctly.  Returning"
+            << " initial axis vector in world frame (not valid if"
+            << " joint frame has moved). Please file"
+            << " a report on issue tracker.\n";
+      return this->GetAxisFrame(_index).RotateVector(
+        this->GetLocalAxis(_index));
+    }
   }
   else
   {
@@ -164,22 +196,8 @@ math::Vector3 SimbodyScrewJoint::GetGlobalAxis(unsigned int _index) const
             << "global axis.\n";
       // if local axis specified in model frame (to be changed)
       // switch to code below if issue #494 is to be addressed
-      return this->model->GetWorldPose().rot.RotateVector(
+      return this->GetAxisFrame(_index).RotateVector(
         this->GetLocalAxis(_index));
-
-      // if local axis specified in joint frame (Issue #494)
-      // Remember to remove include of Model.hh when switching.
-      // if (this->childLink)
-      // {
-      //   math::Pose jointPose =
-      //    this->anchorPose + this->childLink->GetWorldPose();
-      //   return jointPose.rot.RotateVector(this->GetLocalAxis(_index));
-      // }
-      // else
-      // {
-      //   gzerr << "Joint [" << this->GetName() << "] missing child link.\n";
-      //   return math::Vector3(SimTK::NaN, SimTK::NaN, SimTK::NaN);
-      // }
     }
   }
 }
@@ -192,8 +210,27 @@ math::Angle SimbodyScrewJoint::GetAngleImpl(unsigned int _index) const
     if (this->physicsInitialized &&
         this->simbodyPhysics->simbodyPhysicsInitialized)
     {
-      return math::Angle(this->mobod.getOneQ(
-        this->simbodyPhysics->integ->getState(), _index));
+      if (!this->mobod.isEmptyHandle())
+      {
+        // simbody screw joint only has one dof
+        // _index=0: angular dof
+        // _index=1: linear dof
+        math::Angle angle(this->mobod.getOneQ(
+          this->simbodyPhysics->integ->getState(), 0));
+        if (_index == 1)
+        {
+          // return linear position
+          // thread pitch units rad/m
+          angle /= math::Angle(this->threadPitch);
+        }
+        return angle;
+      }
+      else
+      {
+        gzerr << "Joint mobod not initialized correctly.  Please file"
+              << " a report on issue tracker.\n";
+        return math::Angle(0.0);
+      }
     }
     else
     {
@@ -219,28 +256,25 @@ double SimbodyScrewJoint::GetThreadPitch(unsigned int /*_index*/)
 //////////////////////////////////////////////////
 double SimbodyScrewJoint::GetThreadPitch()
 {
-  return this->threadPitch;
-
-  /* if we want to get active thread pitch, use below
-  /// \TODO: deprecate _index parameter, thread pitch is a property of the
-  /// joint, not related to an axis.
-  if (this->physicsInitialized &&
+  if (!this->mobod.isEmptyHandle() && this->physicsInitialized &&
       this->simbodyPhysics->simbodyPhysicsInitialized)
   {
     // downcast mobod to screw mobod first
-    return SimTK::MobilizedBody::Screw::downcast(this->mobod).getDefaultPitch();
+    // the way pitch is defined in simbody is -1.0 / gazebo thread pitch
+    return
+      -1.0/SimTK::MobilizedBody::Screw::downcast(this->mobod).getDefaultPitch();
   }
   else
   {
-    gzdbg << "SimbodyScrewJoint::GetThreadPitch() failed, "
-          << " simbody not yet initialized\n";
-    return 0.0;
+    gzwarn << "SimbodyScrewJoint physics not initialized yet, or failed"
+           << " to initialize. Returning thread pitch from SDF.\n";
+    return this->threadPitch;
   }
-  */
 }
 
 //////////////////////////////////////////////////
-void SimbodyScrewJoint::SetAttribute(const std::string &_key, int _index,
+bool SimbodyScrewJoint::SetParam(const std::string &_key,
+  unsigned int _index,
   const boost::any &_value)
 {
   if (_key  == "thread_pitch")
@@ -249,20 +283,259 @@ void SimbodyScrewJoint::SetAttribute(const std::string &_key, int _index,
     {
       this->threadPitch = boost::any_cast<double>(_value);
     }
-    catch(boost::bad_any_cast &e)
+    catch(const boost::bad_any_cast &e)
     {
       gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
     }
   }
   else
-    SimbodyJoint::SetAttribute(_key, _index, _value);
+    return SimbodyJoint::SetParam(_key, _index, _value);
+
+  return true;
 }
+
 //////////////////////////////////////////////////
-double SimbodyScrewJoint::GetAttribute(const std::string &_key,
+double SimbodyScrewJoint::GetParam(const std::string &_key,
   unsigned int _index)
 {
   if (_key  == "thread_pitch")
     return this->threadPitch;
   else
-    return SimbodyJoint::GetAttribute(_key, _index);
+    return SimbodyJoint::GetParam(_key, _index);
+}
+
+//////////////////////////////////////////////////
+bool SimbodyScrewJoint::SetHighStop(
+  unsigned int _index, const math::Angle &_angle)
+{
+  Joint::SetHighStop(_index, _angle);
+
+  if (_index < this->GetAngleCount())
+  {
+    if (this->physicsInitialized)
+    {
+      // check if limitForce is initialized
+      if (this->limitForce[_index].isEmptyHandle())
+      {
+        gzerr << "child link is NULL, force element not initialized, "
+              << "SetHighStop failed. Please file a report on issue tracker.\n";
+        return false;
+      }
+
+      if (_index == 0)
+      {
+        // angular limit is specified
+        this->limitForce[0].setBounds(
+          this->simbodyPhysics->integ->updAdvancedState(),
+          this->GetLowStop(_index).Radian(), _angle.Radian());
+      }
+      else if (_index == 1)
+      {
+        double tp = this->GetThreadPitch();
+        if (math::equal(tp, 0.0))
+        {
+          gzerr << "thread pitch should not be zero (joint is a slider?)"
+                << " using thread pitch = 1.0e6\n";
+          tp = 1.0e6;
+        }
+        // onlye angular limiting force element is added for
+        // screw joints in SimbodyPhysics.cc
+        if (tp > 0)
+        {
+          // incoming _angle is the linear dof, which is _angle / thread_pitch.
+          // convert linear limit to angular limit
+          double upper = _angle.Radian() / tp;
+          this->limitForce[0].setBounds(
+            this->simbodyPhysics->integ->updAdvancedState(),
+            this->GetLowStop(_index).Radian(), upper);
+        }
+        else
+        {
+          // incoming _angle is the linear dof, which is _angle / thread_pitch.
+          // convert linear limit to angular limit
+          // tp is negative, this is actually upper linear limit, or the
+          // lower angular limit.
+          double lower = _angle.Radian() / tp;
+          this->limitForce[0].setBounds(
+            this->simbodyPhysics->integ->updAdvancedState(),
+            lower, this->GetHighStop(_index).Radian());
+        }
+      }
+      else
+      {
+        gzerr << "Should never be here. Joint index invalid limit not set.\n";
+        return false;
+      }
+    }
+    else
+    {
+      gzerr << "SetHighStop: State not initialized, SetHighStop failed.\n";
+      return false;
+    }
+  }
+  else
+  {
+    gzerr << "SetHighStop: index out of bounds.\n";
+    return false;
+  }
+  return true;
+}
+
+//////////////////////////////////////////////////
+bool SimbodyScrewJoint::SetLowStop(
+  unsigned int _index, const math::Angle &_angle)
+{
+  Joint::SetLowStop(_index, _angle);
+
+  if (_index < this->GetAngleCount())
+  {
+    if (this->physicsInitialized)
+    {
+      // check if limitForce is initialized
+      if (this->limitForce[_index].isEmptyHandle())
+      {
+        gzerr << "child link is NULL, force element not initialized, "
+              << "SetHighStop failed. Please file a report on issue tracker.\n";
+        return false;
+      }
+
+      if (_index == 0)
+      {
+        // angular limit is specified
+        this->limitForce[0].setBounds(
+          this->simbodyPhysics->integ->updAdvancedState(),
+          _angle.Radian(),
+          this->GetHighStop(_index).Radian());
+      }
+      else if (_index == 1)
+      {
+        double tp = this->GetThreadPitch();
+        if (math::equal(tp, 0.0))
+        {
+          gzerr << "thread pitch should not be zero (joint is a slider?)"
+                << " using thread pitch = 1.0e6\n";
+          tp = 1.0e6;
+        }
+        // onlye angular limiting force element is added for
+        // screw joints in SimbodyPhysics.cc
+        if (tp > 0)
+        {
+          // incoming _angle is the linear dof, which is _angle / thread_pitch.
+          // convert linear limit to angular limit
+          double lower = _angle.Radian() / tp;
+          this->limitForce[0].setBounds(
+            this->simbodyPhysics->integ->updAdvancedState(),
+            lower, this->GetHighStop(_index).Radian());
+        }
+        else
+        {
+          // incoming _angle is the linear dof, which is _angle / thread_pitch.
+          // convert linear limit to angular limit
+          // tp is negative, this is actually lower linear limit, or the
+          // upper angular limit.
+          double upper = _angle.Radian() / tp;
+          this->limitForce[0].setBounds(
+            this->simbodyPhysics->integ->updAdvancedState(),
+            this->GetHighStop(_index).Radian(), upper);
+        }
+      }
+      else
+      {
+        gzerr << "Should never be here. Joint index invalid limit not set.\n";
+        return false;
+      }
+    }
+    else
+    {
+      gzerr << "SetLowStop: State not initialized, SetLowStop failed.\n";
+      return false;
+    }
+  }
+  else
+  {
+    gzerr << "SetLowStop: index out of bounds.\n";
+    return false;
+  }
+  return true;
+}
+
+//////////////////////////////////////////////////
+math::Angle SimbodyScrewJoint::GetHighStop(unsigned int _index)
+{
+  if (_index >= this->GetAngleCount())
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get high stop\n";
+    /// \TODO: should return NaN
+    return math::Angle(0.0);
+  }
+  else if (_index == 0)
+  {
+    return this->GetUpperLimit(0);
+  }
+  else if (_index == 1)
+  {
+    double tp = this->GetThreadPitch();
+    if (math::equal(tp, 0.0))
+    {
+      gzerr << "thread pitch should not be zero (joint is a slider?)"
+            << " using thread pitch = 1.0e6\n";
+      tp = 1.0e6;
+    }
+    if (tp > 0)
+    {
+      return this->GetUpperLimit(0) / tp;
+    }
+    else
+    {
+      return this->GetLowerLimit(0) / tp;
+    }
+  }
+  else
+  {
+    gzerr << "Should not be here in code, GetAngleCount > 2?\n";
+    /// \TODO: should return NaN
+    return math::Angle(0.0);
+  }
+}
+
+//////////////////////////////////////////////////
+math::Angle SimbodyScrewJoint::GetLowStop(unsigned int _index)
+{
+  if (_index >= this->GetAngleCount())
+  {
+    gzerr << "Invalid joint index [" << _index
+          << "] when trying to get low stop\n";
+    /// \TODO: should return NaN
+    return math::Angle(0.0);
+  }
+  else if (_index == 0)
+  {
+    return this->GetLowerLimit(0);
+  }
+  else if (_index == 1)
+  {
+    double tp = this->GetThreadPitch();
+    if (math::equal(tp, 0.0))
+    {
+      gzerr << "thread pitch should not be zero (joint is a slider?)"
+            << " using thread pitch = 1.0e6\n";
+      tp = 1.0e6;
+    }
+    if (tp > 0)
+    {
+      return this->GetLowerLimit(0) / tp;
+    }
+    else
+    {
+      return this->GetUpperLimit(0) / tp;
+    }
+  }
+  else
+  {
+    gzerr << "Should not be here in code, GetAngleCount > 2?\n";
+    /// \TODO: should return NaN
+    return math::Angle(0.0);
+  }
 }
