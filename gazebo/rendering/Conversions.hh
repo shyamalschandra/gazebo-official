@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 #ifndef _CONVERSIONS_HH_
 #define _CONVERSIONS_HH_
 
-#include "rendering/ogre_gazebo.h"
+#include "gazebo/rendering/ogre_gazebo.h"
 
-#include "common/Color.hh"
-#include "math/Vector3.hh"
-#include "math/Vector4.hh"
-#include "math/Quaternion.hh"
+#include "gazebo/common/Color.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/math/Quaternion.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,12 +34,17 @@ namespace gazebo
     /// \brief Conversions Conversions.hh rendering/Conversions.hh
     /// \brief A set of utility function to convert between Gazebo and Ogre
     /// data types
-    class Conversions
+    class GAZEBO_VISIBLE Conversions
     {
       /// \brief Return the equivalent ogre color
       /// \param[in] _clr Gazebo color to convert
       /// \return Ogre color value
       public: static Ogre::ColourValue Convert(const common::Color &_clr);
+
+      /// \brief Return the equivalent gazebo color
+      /// \param[in] _clr Ogre color to convert
+      /// \return Gazebo color value
+      public: static common::Color Convert(const Ogre::ColourValue &_clr);
 
       /// \brief return Ogre Vector from Gazebo Vector3
       /// \param[in] _v Gazebo vector
@@ -50,16 +55,6 @@ namespace gazebo
       /// \param[in] _v Ogre vector
       /// \return Gazebo vector
       public: static math::Vector3 Convert(const Ogre::Vector3 &_v);
-
-      /// \brief return Ogre Vector4 from Gazebo Vector4
-      /// \param[in] _v Gazebo vector4
-      /// \return Ogre vector4
-      public: static Ogre::Vector4 Convert(const math::Vector4 &_v);
-
-      /// \brief return gazebo Vector4 from ogre Vector4
-      /// \param[in] _v Ogre vector4
-      /// \return Gazebo vector4
-      public: static math::Vector4 Convert(const Ogre::Vector4 &_v);
 
       /// \brief Gazebo quaternion to Ogre quaternion
       /// \param[in] _v Gazebo quaternion

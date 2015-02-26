@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  *
 */
-#include "rendering/Conversions.hh"
+#include "gazebo/rendering/Conversions.hh"
 
 using namespace gazebo;
 using namespace rendering;
@@ -24,6 +24,12 @@ using namespace rendering;
 Ogre::ColourValue Conversions::Convert(const common::Color &_color)
 {
   return Ogre::ColourValue(_color.r, _color.g, _color.b, _color.a);
+}
+
+//////////////////////////////////////////////////
+common::Color Conversions::Convert(const Ogre::ColourValue &_clr)
+{
+  return common::Color(_clr.r, _clr.g, _clr.b, _clr.a);
 }
 
 //////////////////////////////////////////////////
@@ -50,14 +56,5 @@ math::Quaternion Conversions::Convert(const Ogre::Quaternion &_v)
   return math::Quaternion(_v.w, _v.x, _v.y, _v.z);
 }
 
-//////////////////////////////////////////////////
-Ogre::Vector4 Conversions::Convert(const math::Vector4 &_v)
-{
-  return Ogre::Vector4(_v.x, _v.y, _v.z, _v.w);
-}
 
-//////////////////////////////////////////////////
-math::Vector4 Conversions::Convert(const Ogre::Vector4 &_v)
-{
-  return math::Vector4(_v.x, _v.y, _v.z, _v.w);
-}
+
