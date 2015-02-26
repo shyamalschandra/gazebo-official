@@ -157,8 +157,6 @@ void ImuSensor::Load(const std::string &_worldName)
             "]. Must be a link\n");
   }
   this->referencePose = this->pose + this->parentEntity->GetWorldPose();
-  this->lastLinearVel = this->referencePose.rot.RotateVector(
-    this->parentEntity->GetWorldLinearVel());
 }
 
 //////////////////////////////////////////////////
@@ -243,8 +241,6 @@ bool ImuSensor::UpdateImpl(bool /*_force*/)
 
   double dt = (timestamp - this->lastMeasurementTime).Double();
 
-  this->lastMeasurementTime = timestamp;
-
   if (dt > 0.0)
   {
     boost::mutex::scoped_lock lock(this->mutex);
@@ -258,22 +254,30 @@ bool ImuSensor::UpdateImpl(bool /*_force*/)
     math::Pose parentEntityPose = this->parentEntity->GetWorldPose();
     math::Pose imuPose = this->pose + parentEntityPose;
 
-    // Set the IMU angular velocity
-    math::Vector3 imuWorldAngularVel
-        = msgs::Convert(msg.angular_velocity());
+    // Get and rotate IMU parent angular velocity from world to IMU sensor frame
+    math::Vector3 parentEntityWorldAngularVel =
+      msgs::Convert(msg.angular_velocity());
+      // this->parentEntity->GetWorldAngularVel();
+    math::Vector3 imuWorldAngularVel =
+      imuPose.rot.GetInverse().RotateVector(parentEntityWorldAngularVel);
+    // Set IMU angular velocity
+    msgs::Set(this->imuMsg.mutable_angular_velocity(), imuWorldAngularVel);
 
-    msgs::Set(this->imuMsg.mutable_angular_velocity(),
-              imuPose.rot.GetInverse().RotateVector(
-              imuWorldAngularVel));
+    // Get the correct accel for imu's that are at an offset from parent link
+    math::Vector3 parentEntityWorldLinearAccel =
+      msgs::Convert(msg.linear_acceleration());
+      // this->parentEntity->GetWorldLinearAccel();
+    math::Vector3 parentEntityWorldAngularAccel =
+      msgs::Convert(msg.angular_acceleration());
+      // this->parentEntity->GetWorldAngularAccel();
+    math::Vector3 r = parentEntityPose.pos - imuPose.pos;
+    math::Vector3 imuWorldLinearAccel = parentEntityWorldLinearAccel +
+      parentEntityWorldAngularAccel.Cross(r) +
+      parentEntityWorldAngularVel.Cross(parentEntityWorldAngularVel.Cross(r));
 
-    // Compute and set the IMU linear acceleration
-    math::Vector3 imuWorldLinearVel
-        = msgs::Convert(msg.linear_velocity());
-    // Get the correct vel for imu's that are at an offset from parent link
-    imuWorldLinearVel +=
-        imuWorldAngularVel.Cross(parentEntityPose.pos - imuPose.pos);
+    // Rotate IMU linear acceleration from world frame to imu frame
     this->linearAcc = imuPose.rot.GetInverse().RotateVector(
-      (imuWorldLinearVel - this->lastLinearVel) / dt);
+      imuWorldLinearAccel);
 
     // Add contribution from gravity
     this->linearAcc -= imuPose.rot.GetInverse().RotateVector(this->gravity);
@@ -283,7 +287,7 @@ bool ImuSensor::UpdateImpl(bool /*_force*/)
     msgs::Set(this->imuMsg.mutable_orientation(),
               (imuPose - this->referencePose).rot);
 
-    this->lastLinearVel = imuWorldLinearVel;
+    this->lastMeasurementTime = timestamp;
 
     if (this->noiseActive)
     {
