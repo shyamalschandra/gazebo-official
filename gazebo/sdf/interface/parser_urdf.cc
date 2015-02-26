@@ -15,14 +15,14 @@
  *
 */
 #include <urdf_parser/urdf_parser.h>
-#include <sdf/interface/parser_urdf.hh>
-#include <sdf/sdf.hh>
 
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <string>
 
+#include "gazebo/sdf/interface/parser_urdf.hh"
+#include "gazebo/sdf/sdf.hh"
 #include "gazebo/common/SystemPaths.hh"
 
 namespace urdf2gazebo
@@ -348,12 +348,6 @@ void URDF2Gazebo::ParseGazeboExtension(TiXmlDocument &_urdfXml)
         else
           gazebo->selfCollide = false;
       }
-      else if (childElem->ValueStr() == "maxContacts")
-      {
-          gazebo->isMaxContacts = true;
-          gazebo->maxContacts = boost::lexical_cast<int>(
-            this->GetKeyValueAsString(childElem).c_str());
-      }
       else if (childElem->ValueStr() == "laserRetro")
       {
           gazebo->isLaserRetro = true;
@@ -386,7 +380,6 @@ void URDF2Gazebo::ParseGazeboExtension(TiXmlDocument &_urdfXml)
       }
       else if (childElem->ValueStr() == "provideFeedback")
       {
-          gazebo->isProvideFeedback = true;
           std::string valueStr = this->GetKeyValueAsString(childElem);
 
           if (lowerStr(valueStr) == "true" || lowerStr(valueStr) == "yes" ||
@@ -397,7 +390,6 @@ void URDF2Gazebo::ParseGazeboExtension(TiXmlDocument &_urdfXml)
       }
       else if (childElem->ValueStr() == "cfmDamping")
       {
-          gazebo->isCFMDamping = true;
           std::string valueStr = this->GetKeyValueAsString(childElem);
 
           if (lowerStr(valueStr) == "true" || lowerStr(valueStr) == "yes" ||
@@ -464,9 +456,6 @@ void URDF2Gazebo::InsertGazeboExtensionCollision(TiXmlElement *_elem,
         if ((*ge)->isLaserRetro)
           this->AddKeyValue(_elem, "laser_retro",
                       this->Values2str(1, &(*ge)->laserRetro));
-        if ((*ge)->isMaxContacts)
-          this->AddKeyValue(_elem, "max_contacts",
-                      boost::lexical_cast<std::string>((*ge)->maxContacts));
 
         contact->LinkEndChild(contactOde);
         surface->LinkEndChild(contact);
@@ -489,27 +478,11 @@ void URDF2Gazebo::InsertGazeboExtensionVisual(TiXmlElement *_elem,
     for (std::vector<GazeboExtension*>::iterator ge = gazeboIt->second.begin();
          ge != gazeboIt->second.end(); ++ge)
     {
-      if (_linkName.find((*ge)->oldLinkName) != std::string::npos)
+      if ((*ge)->oldLinkName == _linkName)
       {
         // insert material block
         if (!(*ge)->material.empty())
-        {
-          // new sdf needs <material><script>...</script></material>
-          TiXmlElement *materialElem = new TiXmlElement("material");
-          TiXmlElement *scriptElem = new TiXmlElement("script");
-          if (scriptElem && materialElem)
-          {
-            this->AddKeyValue(scriptElem, "name", (*ge)->material);
-            materialElem->LinkEndChild(scriptElem);
-            _elem->LinkEndChild(materialElem);
-            // this->AddKeyValue(_elem, "material", (*ge)->material);
-          }
-          else
-          {
-            // Memory allocation error
-            gzerr << "Memory allocation error while processing <material>.\n";
-          }
-        }
+            this->AddKeyValue(_elem, "material", (*ge)->material);
       }
     }
   }
@@ -578,38 +551,17 @@ void URDF2Gazebo::InsertGazeboExtensionJoint(TiXmlElement *_elem,
            ge = gazeboIt->second.begin();
            ge != gazeboIt->second.end(); ++ge)
       {
-        TiXmlElement *physics = _elem->FirstChildElement("physics");
-        bool newPhysics = false;
-        if (physics == NULL)
-        {
-          physics = new TiXmlElement("physics");
-          newPhysics = true;
-        }
-
-        TiXmlElement *physicsOde = physics->FirstChildElement("ode");
-        bool newPhysicsOde = false;
-        if (physicsOde == NULL)
-        {
-          physicsOde = new TiXmlElement("ode");
-          newPhysicsOde = true;
-        }
-
-        TiXmlElement *limit = physicsOde->FirstChildElement("limit");
-        bool newLimit = false;
-        if (limit == NULL)
-        {
-          limit = new TiXmlElement("limit");
-          newLimit = true;
-        }
-
+        TiXmlElement *physics     = new TiXmlElement("physics");
+        TiXmlElement *physicsOde = new TiXmlElement("ode");
+        TiXmlElement *limit       = new TiXmlElement("limit");
         // insert stopCfm, stopErp, fudgeFactor
         if ((*ge)->isStopCfm)
         {
-          this->AddKeyValue(limit, "cfm", this->Values2str(1, &(*ge)->stopCfm));
+          this->AddKeyValue(limit, "erp", this->Values2str(1, &(*ge)->stopCfm));
         }
         if ((*ge)->isStopErp)
         {
-          this->AddKeyValue(limit, "erp", this->Values2str(1, &(*ge)->stopErp));
+          this->AddKeyValue(limit, "cfm", this->Values2str(1, &(*ge)->stopErp));
         }
         /* gone
         if ((*ge)->isInitialJointPosition)
@@ -618,34 +570,25 @@ void URDF2Gazebo::InsertGazeboExtensionJoint(TiXmlElement *_elem,
         */
 
         // insert provideFeedback
-        if ((*ge)->isProvideFeedback)
-        {
-          if ((*ge)->provideFeedback)
-              this->AddKeyValue(physicsOde, "provide_feedback", "true");
-          else
-              this->AddKeyValue(physicsOde, "provide_feedback", "false");
-        }
+        if ((*ge)->provideFeedback)
+            this->AddKeyValue(physicsOde, "provide_feedback", "true");
+        else
+            this->AddKeyValue(physicsOde, "provide_feedback", "false");
 
         // insert cfmDamping
-        if ((*ge)->isCFMDamping)
-        {
-          if ((*ge)->cfmDamping)
-              this->AddKeyValue(physicsOde, "cfm_damping", "true");
-          else
-              this->AddKeyValue(physicsOde, "cfm_damping", "false");
-        }
+        if ((*ge)->cfmDamping)
+            this->AddKeyValue(physicsOde, "cfm_damping", "true");
+        else
+            this->AddKeyValue(physicsOde, "cfm_damping", "false");
 
         // insert fudgeFactor
         if ((*ge)->isFudgeFactor)
           this->AddKeyValue(physicsOde, "fudge_factor",
                       this->Values2str(1, &(*ge)->fudgeFactor));
 
-        if (newLimit)
-          physicsOde->LinkEndChild(limit);
-        if (newPhysicsOde)
-          physics->LinkEndChild(physicsOde);
-        if (newPhysics)
-          _elem->LinkEndChild(physics);
+        physics->LinkEndChild(physicsOde);
+        physicsOde->LinkEndChild(limit);
+        _elem->LinkEndChild(physics);
       }
     }
   }
@@ -1200,24 +1143,24 @@ void URDF2Gazebo::CreateSDF(TiXmlElement *_root,
       ((!_link->inertial) || gazebo::math::equal(_link->inertial->mass, 0.0)))
     {
       if (!_link->child_links.empty())
-        gzlog << "urdf2gazebo: link[" << _link->name
+        gzwarn << "urdf2gazebo: link[" << _link->name
                << "] has no inertia, ["
                << static_cast<int>(_link->child_links.size())
                << "] children links ignored\n.";
 
       if (!_link->child_joints.empty())
-        gzlog << "urdf2gazebo: link[" << _link->name
+        gzwarn << "urdf2gazebo: link[" << _link->name
                << "] has no inertia, ["
                << static_cast<int>(_link->child_links.size())
                << "] children joints ignored\n.";
 
       if (_link->parent_joint)
-        gzlog << "urdf2gazebo: link[" << _link->name
+        gzwarn << "urdf2gazebo: link[" << _link->name
                << "] has no inertia, "
                << "parent joint [" << _link->parent_joint->name
                << "] ignored\n.";
 
-        gzlog << "urdf2gazebo: link[" << _link->name
+        gzwarn << "urdf2gazebo: link[" << _link->name
                << "] has no inertia, not modeled in gazebo\n";
       return;
     }
@@ -1284,7 +1227,7 @@ void URDF2Gazebo::CreateLink(TiXmlElement *_root,
     _currentTransform = localTransform * _currentTransform;
   }
   else
-    gzlog << "[" << _link->name << "] has no parent joint\n";
+    gzdbg << "[" << _link->name << "] has no parent joint\n";
 
   // create origin tag for this element
   this->AddTransform(elem, _currentTransform);
