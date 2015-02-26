@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nate Koenig
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #define MESHLOADER_HH
 
 #include <string>
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -30,8 +31,9 @@ namespace gazebo
     /// \addtogroup gazebo_common Common
     /// \{
 
+    /// \class MeshLoader MeshLoader.hh common/common.hh
     /// \brief Base class for loading meshes
-    class MeshLoader
+    class GAZEBO_VISIBLE MeshLoader
     {
       /// \brief Constructor
       public: MeshLoader();
@@ -40,9 +42,9 @@ namespace gazebo
       public: virtual ~MeshLoader();
 
       /// \brief Load a 3D mesh
-      /// \param[in] the path to the mesh
+      /// \param[in] _filename the path to the mesh
       /// \return a pointer to the created mesh
-      public: virtual Mesh *Load(const std::string &filename) = 0;
+      public: virtual Mesh *Load(const std::string &_filename) = 0;
     };
     /// \}
   }
