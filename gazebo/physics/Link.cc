@@ -56,6 +56,7 @@ Link::Link(EntityPtr _parent)
   this->publishDataMutex = new boost::recursive_mutex();
 }
 
+
 //////////////////////////////////////////////////
 Link::~Link()
 {
@@ -103,7 +104,6 @@ Link::~Link()
 
   this->requestPub.reset();
   this->dataPub.reset();
-  this->wrenchSub.reset();
   this->connections.clear();
 
   delete this->publishDataMutex;
@@ -216,10 +216,6 @@ void Link::Load(sdf::ElementPtr _sdf)
   if (needUpdate)
     this->connections.push_back(event::Events::ConnectWorldUpdateBegin(
           boost::bind(&Link::Update, this, _1)));
-
-  std::string topicName = "~/" + this->GetScopedName() + "/wrench";
-  boost::replace_all(topicName, "::", "/");
-  this->wrenchSub = this->node->Subscribe(topicName, &Link::OnWrenchMsg, this);
 }
 
 //////////////////////////////////////////////////
@@ -1329,35 +1325,4 @@ msgs::Visual Link::GetVisualMessage(const std::string &_name) const
     result = iter->second;
 
   return result;
-}
-
-//////////////////////////////////////////////////
-void Link::OnWrenchMsg(ConstWrenchPtr &_msg)
-{
-  math::Vector3 pos = math::Vector3::Zero;
-  if (_msg->has_position())
-  {
-    pos = msgs::Convert(_msg->position());
-  }
-  if (_msg->has_force())
-  {
-    math::Vector3 force = msgs::Convert(_msg->force());
-
-    // rotate force to relative position, because we don't have an
-    // AddRelativeForceAtRelativePosition
-    force = this->GetWorldPose().rot.RotateVector(force);
-
-//    gzdbg << "Pos: " << pos.x << "  " << pos.y << "  " << pos.z
-//          << "  Force: " << force.x << "  " << force.y << "  " << force.z << std::endl;
-
-    // AddForceAtRelativePosition seems to be relative to the CoM
-   pos = pos - this->inertial->GetCoG();
-
-    this->AddForceAtRelativePosition(force, pos);
-  }
-  if (_msg->has_torque())
-  {
-    const math::Vector3 torque = msgs::Convert(_msg->torque());
-    this->AddRelativeTorque(torque);
-  }
 }

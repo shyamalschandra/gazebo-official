@@ -123,8 +123,6 @@ namespace gazebo
 
       /// \brief Helper function to get the distance moved by the mouse.
       /// \param[in] _camera Pointer to user camera.
-      /// \param[in] _start Start point.
-      /// \param[in] _end End point.
       /// \param[in] _pose Pose of origin.
       /// \param[in] _axis Movement axis.
       /// \param[in] _local True to get distance in local frame.
