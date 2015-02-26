@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <map>
 #include <string>
 #include <boost/shared_ptr.hpp>
+#include "gazebo/util/system.hh"
 
 /////////////////////////////////////////////////////////////////////////////
 // Defines
@@ -96,10 +97,14 @@ namespace gazebo
     class Param;
     class PoseAnimation;
     class SkeletonAnimation;
+    class SphericalCoordinates;
     class Time;
 
     template <typename T>
     class ParamT;
+
+    /// \brief Speed of light.
+    static const double SpeedOfLight = 299792458;
 
     /// \def Param_V
     /// \brief std::vector of Param*
@@ -124,6 +129,10 @@ namespace gazebo
     /// \def DiagnosticTimerPtr
     /// \brief boost::shared_ptr to a DiagnosticTimer class
     typedef boost::shared_ptr<DiagnosticTimer> DiagnosticTimerPtr;
+
+    /// \def SphericalCoordinatesPtr
+    /// \brief Boost shared pointer to a SphericalCoordinates object
+    typedef boost::shared_ptr<SphericalCoordinates> SphericalCoordinatesPtr;
   }
 
   namespace event

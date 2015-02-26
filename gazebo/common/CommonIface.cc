@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,29 @@
 */
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include "gazebo/common/SystemPaths.hh"
+
+#include <gazebo/gazebo_config.h>
+#include <gazebo/common/ffmpeg_inc.h>
+
 #include "gazebo/common/CommonIface.hh"
+#include "gazebo/common/Exception.hh"
+#include "gazebo/common/SystemPaths.hh"
 
 using namespace gazebo;
+
+/////////////////////////////////////////////////
+void common::load()
+{
+#ifdef HAVE_FFMPEG
+  static bool first = true;
+  if (first)
+  {
+    first = false;
+    avcodec_register_all();
+    av_register_all();
+  }
+#endif
+}
 
 /////////////////////////////////////////////////
 void common::add_search_path_suffix(const std::string &_suffix)
