@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,12 +151,26 @@ math::Angle ODEScrewJoint::GetAngleImpl(unsigned int _index) const
 }
 
 //////////////////////////////////////////////////
-double ODEScrewJoint::GetVelocity(unsigned int /*index*/) const
+double ODEScrewJoint::GetVelocity(unsigned int _index) const
 {
   double result = 0;
 
   if (this->jointId)
-    result = dJointGetScrewPositionRate(this->jointId);
+  {
+    if (_index < this->GetAngleCount())
+    {
+      if (_index == 0)
+        result = dJointGetScrewAngleRate(this->jointId);
+      else if (_index == 1)
+        result = dJointGetScrewPositionRate(this->jointId);
+    }
+    else
+    {
+      gzwarn << "ODEScrewJoint::GetAngleImpl(" << _index
+             << "): invalid index exceeds allowed range("
+             << this->GetAngleCount() << ").\n";
+    }
+  }
   else
     gzerr << "ODE Joint ID is invalid\n";
 
