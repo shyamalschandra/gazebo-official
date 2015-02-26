@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "gazebo/common/Exception.hh"
 
 #include "gazebo/transport/TransportTypes.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -39,7 +40,7 @@ namespace gazebo
 
     /// \class CallbackHelper CallbackHelper.hh transport/transport.hh
     /// \brief A helper class to handle callbacks when messages arrive
-    class CallbackHelper
+    class GAZEBO_VISIBLE CallbackHelper
     {
       /// \brief Constructor
       /// \param[in] _latching Set to true to make the callback helper
@@ -56,7 +57,11 @@ namespace gazebo
       /// \brief Process new incoming data
       /// \param[in] _newdata Incoming data to be processed
       /// \return true if successfully processed; false otherwise
-      public: virtual bool HandleData(const std::string &_newdata) = 0;
+      /// \param[in] _cb If non-null, callback to be invoked which signals
+      /// that transmission is complete.
+      /// \param[in] _id ID associated with the message data.
+      public: virtual bool HandleData(const std::string &_newdata,
+                  boost::function<void(uint32_t)> _cb, uint32_t _id) = 0;
 
       /// \brief Process new incoming message
       /// \param[in] _newMsg Incoming message to be processed
@@ -71,6 +76,11 @@ namespace gazebo
       /// \brief Is the callback latching?
       /// \return true if the callback is latching, false otherwise
       public: bool GetLatching() const;
+
+      /// \brief Set whether this callback is latching.
+      /// This function should only be used by the Transport library.
+      /// \param[in] _latch False to turn off latching.
+      public: void SetLatching(bool _latch);
 
       /// \brief Get the unique ID of this callback.
       /// \return The unique ID of this callback.
@@ -94,7 +104,7 @@ namespace gazebo
     /// \class CallbackHelperT CallbackHelper.hh transport/transport.hh
     /// \brief Callback helper Template
     template<class M>
-    class CallbackHelperT : public CallbackHelper
+    class GAZEBO_VISIBLE CallbackHelperT : public CallbackHelper
     {
       /// \brief Constructor
       /// \param[in] _cb boost function to call on incoming messages
@@ -126,11 +136,14 @@ namespace gazebo
               }
 
       // documentation inherited
-      public: virtual bool HandleData(const std::string &_newdata)
+      public: virtual bool HandleData(const std::string &_newdata,
+                  boost::function<void(uint32_t)> _cb, uint32_t _id)
               {
                 boost::shared_ptr<M> m(new M);
                 m->ParseFromString(_newdata);
                 this->callback(m);
+                if (!_cb.empty())
+                  _cb(_id);
                 return true;
               }
 
@@ -155,7 +168,7 @@ namespace gazebo
     /// \brief Used to connect publishers to subscribers, where the
     /// subscriber wants the raw data from the publisher. Raw means that the
     /// data has not been converted into a protobuf message.
-    class RawCallbackHelper : public CallbackHelper
+    class GAZEBO_VISIBLE RawCallbackHelper : public CallbackHelper
     {
       /// \brief Constructor
       /// \param[in] _cb boost function to call on incoming messages
@@ -175,9 +188,12 @@ namespace gazebo
               }
 
       // documentation inherited
-      public: virtual bool HandleData(const std::string &_newdata)
+      public: virtual bool HandleData(const std::string &_newdata,
+                  boost::function<void(uint32_t)> _cb, uint32_t _id)
               {
                 this->callback(_newdata);
+                if (!_cb.empty())
+                  _cb(_id);
                 return true;
               }
 
