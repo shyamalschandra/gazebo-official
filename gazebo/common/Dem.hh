@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  *
 */
 
-#ifndef _DEM_HH_
-#define _DEM_HH_
+#ifndef _GAZEBO_DEM_HH_
+#define _GAZEBO_DEM_HH_
 
 #include <gazebo/gazebo_config.h>
+#include <gazebo/util/system.hh>
 
 #ifdef HAVE_GDAL
-# include <gdal/gdal_priv.h>
 # include <string>
 # include <vector>
 
@@ -32,12 +32,14 @@ namespace gazebo
 {
   namespace common
   {
+    class DemPrivate;
+
     /// \addtogroup gazebo_common Common
     /// \{
 
     /// \class DEM DEM.hh common/common.hh
     /// \brief Encapsulates a DEM (Digital Elevation Model) file.
-    class Dem : public HeightmapData
+    class GAZEBO_VISIBLE Dem : public HeightmapData
     {
       /// \brief Constructor.
       public: Dem();
@@ -47,7 +49,7 @@ namespace gazebo
 
       /// \brief Load a DEM file.
       /// \param[in] _filename the path to the terrain file.
-      /// \return 0 when the operation succeeds to open a file or -1 when fails.
+      /// \return 0 when the operation succeeds to open a file.
       public: int Load(const std::string &_filename="");
 
       /// \brief Get the elevation of a terrain's point in meters.
@@ -56,11 +58,11 @@ namespace gazebo
       /// \return Terrain's elevation at (x,y) in meters.
       public: double GetElevation(double _x, double _y);
 
-      /// \brief Get the minimum terrain's elevation in meters.
+      /// \brief Get the terrain's minimum elevation in meters.
       /// \return The minimum elevation (meters).
       public: float GetMinElevation() const;
 
-      /// \brief Get the maximum terrain's elevation in meters.
+      /// \brief Get the terrain's maximum elevation in meters.
       /// \return The maximum elevation (meters).
       public: float GetMaxElevation() const;
 
@@ -124,31 +126,12 @@ namespace gazebo
       /// \brief Get the terrain file as a data array. Due to the Ogre
       /// constrains, the data might be stored in a bigger vector representing
       /// a squared terrain with padding.
-      private: void LoadData();
+      /// \return 0 when the operation succeeds to open a file.
+      private: int LoadData();
 
-      /// \brief A set of associated raster bands.
-      private: GDALDataset *dataSet;
-
-      /// \brief A pointer to the band.
-      private: GDALRasterBand *band;
-
-      /// \brief Real width of the world in meters.
-      private: double worldWidth;
-
-      /// \brief Real height of the world in meters.
-      private: double worldHeight;
-
-      /// \brief Terrain's side (after the padding).
-      private: unsigned int side;
-
-      /// \brief Minimum elevation in meters.
-      private: double minElevation;
-
-      /// \brief Maximum elevation in meters.
-      private: double maxElevation;
-
-      /// \brief DEM data converted to be OGRE-compatible.
-      private: std::vector<float> demData;
+      /// internal
+      /// \brief Pointer to the private data.
+      private: DemPrivate *dataPtr;
     };
     /// \}
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  *
 */
 
-#ifndef _HEIGHTMAPDATA_HH_
-#define _HEIGHTMAPDATA_HH_
+#ifndef _GAZEBO_HEIGHTMAPDATA_HH_
+#define _GAZEBO_HEIGHTMAPDATA_HH_
 
 #include <vector>
-#include "gazebo/common/Color.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -28,11 +29,11 @@ namespace gazebo
     /// \addtogroup gazebo_common Common
     /// \{
 
-    /// \class HeighmapData HeighmapData.hh common/common.hh
-    /// \brief Encapsulates a generic heightmap data file
-    class HeightmapData
+    /// \class HeightmapData HeightmapData.hh common/common.hh
+    /// \brief Encapsulates a generic heightmap data file.
+    class GAZEBO_VISIBLE HeightmapData
     {
-      /// \brief Destructor
+      /// \brief Destructor.
       public: virtual ~HeightmapData() {}
 
       /// \brief Create a lookup table of the terrain's height.
@@ -65,5 +66,4 @@ namespace gazebo
     /// \}
   }
 }
-
 #endif
