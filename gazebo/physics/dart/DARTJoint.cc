@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -291,10 +291,6 @@ void DARTJoint::SetStiffnessDamping(unsigned int _index,
                << "] or child[" << childStatic << "] is static.\n";
       }
     }
-
-    /// \TODO: add spring force element
-    gzdbg << "Joint [" << this->GetName()
-           << "] stiffness not implement in DART\n";
   }
   else
   {
@@ -458,71 +454,60 @@ math::Vector3 DARTJoint::GetLinkTorque(unsigned int _index) const
 bool DARTJoint::SetParam(const std::string &_key, unsigned int _index,
                              const boost::any &_value)
 {
-  if (_key == "hi_stop")
+  if (_index >= this->GetAngleCount())
   {
-    try
+    gzerr << "Invalid index [" << _index << "]" << std::endl;
+    return false;
+  }
+
+  try
+  {
+    if (_key == "hi_stop")
     {
       this->SetHighStop(_index, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
-    {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
-      return false;
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
+    else if (_key == "lo_stop")
     {
       this->SetLowStop(_index, boost::any_cast<double>(_value));
     }
-    catch(const boost::bad_any_cast &e)
+    else if (_key == "friction")
     {
-      gzerr << "boost any_cast error:" << e.what() << "\n";
+      this->dtJoint->setCoulombFriction(_index,
+        boost::any_cast<double>(_value));
+    }
+    else
+    {
+      gzerr << "SetParam: unrecognized parameter ["
+            << _key
+            << "]"
+            << std::endl;
       return false;
     }
   }
-  else
+  catch(const boost::bad_any_cast &e)
   {
-    gzerr << "Unable to handle joint attribute[" << _key << "]\n";
+    gzerr << "SetParam(" << _key << ")"
+          << " boost any_cast error:" << e.what()
+          << std::endl;
     return false;
   }
   return true;
 }
 
 //////////////////////////////////////////////////
-double DARTJoint::GetParam(const std::string& _key,
-                               unsigned int _index)
+double DARTJoint::GetParam(const std::string& _key, unsigned int _index)
 {
-  if (_key == "hi_stop")
+  if (_index >= this->GetAngleCount())
   {
-    try
-    {
-      return this->GetHighStop(_index).Radian();
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else if (_key == "lo_stop")
-  {
-    try
-    {
-      return this->GetLowStop(_index).Radian();
-    }
-    catch(common::Exception &e)
-    {
-      gzerr << "GetParam error:" << e.GetErrorStr() << "\n";
-      return 0;
-    }
-  }
-  else
-  {
-    gzerr << "Unable to get joint attribute[" << _key << "]\n";
+    gzerr << "Invalid index [" << _index << "]" << std::endl;
     return 0;
   }
+
+  if (_key == "friction")
+  {
+    return this->dtJoint->getCoulombFriction(_index);
+  }
+  return Joint::GetParam(_key, _index);
 }
 
 //////////////////////////////////////////////////
@@ -600,7 +585,7 @@ unsigned int DARTJoint::GetAngleCount() const
 {
   unsigned int angleCount = 0;
 
-  angleCount = this->dtJoint->getDof();
+  angleCount = this->dtJoint->getNumDofs();
 
   return angleCount;
 }

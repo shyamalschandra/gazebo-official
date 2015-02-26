@@ -22,6 +22,7 @@ if(HAVE_DART)
 endif()
 
 set(tests
+  351_world_step.cc
   494_joint_axis_frame.cc
   624_collision_world_pose.cc
   876_random_number_generator.cc
@@ -31,6 +32,8 @@ set(tests
   1112_force_torque_model_removal.cc
   1124_collision_pose.cc
   1146_collision_bounding_box.cc
+  1208_world_plugin_init.cc
+  1375_world_reset.cc
 )
 
 gz_build_tests(${tests})
@@ -47,3 +50,9 @@ set(dri_tests
 )
 
 gz_build_dri_tests(${dri_tests})
+
+if (ENABLE_TESTS_COMPILATION)
+  add_dependencies(${TEST_TYPE}_1112_force_torque_model_removal
+                   ForceTorqueModelRemovalTestPlugin)
+  add_dependencies(${TEST_TYPE}_1208_world_plugin_init Issue1208Plugin)
+endif()
