@@ -5,7 +5,6 @@ package gazebo.msgs;
 /// \brief A message statiscs about a world
 
 
-import "header.proto";
 import "time.proto";
 
 message WorldStatistics
@@ -17,5 +16,3 @@ message WorldStatistics
   required uint64 iterations = 6;
   optional int32 model_count = 7;
 }
-
-
