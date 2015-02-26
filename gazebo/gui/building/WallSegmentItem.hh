@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Open Source Robotics Foundation
+ * Copyright (C) 2014-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,9 +108,6 @@ namespace gazebo
 
       /// \brief Height of the wall segment in meters.
       private: double wallHeight;
-
-      /// \brief Scale for converting pixels to metric units.
-      private: double scale;
 
       /// \brief This wall segment's measure item.
       private: MeasureItem *measure;
