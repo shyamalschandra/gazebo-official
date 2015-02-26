@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,13 @@
  * limitations under the License.
  *
 */
-/* Desc: Box shape
- * Author: Nate Koenig
- * Date: 14 Oct 2009
- */
 
 #ifndef _SIMBODY_BOXSHAPE_HH_
 #define _SIMBODY_BOXSHAPE_HH_
 
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/BoxShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +31,7 @@ namespace gazebo
     /// \{
 
     /// \brief Simbody box collision
-    class SimbodyBoxShape : public BoxShape
+    class GAZEBO_VISIBLE SimbodyBoxShape : public BoxShape
     {
       /// \brief Constructor
       public: SimbodyBoxShape(CollisionPtr _parent) : BoxShape(_parent) {}
@@ -42,15 +39,39 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~SimbodyBoxShape() {}
 
-      /// \brief Set the size of the box
+      // Documentation inherited
       public: void SetSize(const math::Vector3 &_size)
               {
-                BoxShape::SetSize(_size);
-                SimbodyCollisionPtr bParent;
-                bParent = boost::shared_dynamic_cast<SimbodyCollision>(
-                    this->collisionParent);
+                if (_size.x < 0 || _size.y < 0 || _size.z < 0)
+                {
+                  gzerr << "Box shape does not support negative size\n";
+                  return;
+                }
+                math::Vector3 size = _size;
+                if (math::equal(size.x, 0.0))
+                {
+                  // Warn user, but still create shape with very small value
+                  // otherwise later resize operations using setLocalScaling
+                  // will not be possible
+                  gzwarn << "Setting box shape's x to zero \n";
+                  size.x = 1e-4;
+                }
+                if (math::equal(size.y, 0.0))
+                {
+                  gzwarn << "Setting box shape's y to zero \n";
+                  size.y = 1e-4;
+                }
+                if (math::equal(size.z, 0.0))
+                {
+                  gzwarn << "Setting box shape's z to zero \n";
+                  size.z = 1e-4;
+                }
 
-                /// Simbody requires the half-extents of the box
+                BoxShape::SetSize(size);
+
+                SimbodyCollisionPtr bParent;
+                bParent = boost::dynamic_pointer_cast<SimbodyCollision>(
+                    this->collisionParent);
               }
     };
     /// \}

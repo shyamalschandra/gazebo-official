@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
  * limitations under the License.
  *
 */
-/* Desc: A body that has a box shape
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
 
-#ifndef _SIMBODYHINGEJOINT_HH_
-#define _SIMBODYHINGEJOINT_HH_
+#ifndef _SIMBODY_HINGEJOINT_HH_
+#define _SIMBODY_HINGEJOINT_HH_
+
+#include <vector>
 
 #include "gazebo/math/Angle.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/physics/HingeJoint.hh"
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -37,7 +36,7 @@ namespace gazebo
     /// \{
 
     /// \brief A single axis hinge joint
-    class SimbodyHingeJoint : public HingeJoint<SimbodyJoint>
+    class GAZEBO_VISIBLE SimbodyHingeJoint : public HingeJoint<SimbodyJoint>
     {
       ///  Constructor
       public: SimbodyHingeJoint(SimTK::MultibodySystem *world, BasePtr _parent);
@@ -45,53 +44,44 @@ namespace gazebo
       /// Destructor
       public: virtual ~SimbodyHingeJoint();
 
-      /// \brief Load the SimbodyHingeJoint
+      // Documentation inherited.
       protected: virtual void Load(sdf::ElementPtr _sdf);
 
-      /// \brief Get the anchor point
-      public: virtual math::Vector3 GetAnchor(int _index) const;
+      // Documentation inherited.
+      public: void SetAxis(unsigned int _index, const math::Vector3 &_axis);
 
-      /// \brief Set the anchor point
-      public: virtual void SetAnchor(int _index, const math::Vector3 &_anchor);
+      // Documentation inherited.
+      public: virtual void SetVelocity(unsigned int _index, double _rate);
 
-      /// \brief Set the axis of rotation
-      public: void SetAxis(int _index, const math::Vector3 &_axis);
+      // Documentation inherited.
+      public: virtual double GetVelocity(unsigned int _index) const;
 
-      /// \brief Set joint damping, not yet implemented
-      public: virtual void SetDamping(int _index, double _damping);
+      // Documentation inherited.
+      public: virtual void SetMaxForce(unsigned int _index, double _t);
 
-       /// \brief Set the velocity of an axis(index).
-      public: virtual void SetVelocity(int _index, double _angle);
+      // Documentation inherited.
+      public: virtual double GetMaxForce(unsigned int _index);
 
-      /// \brief Get the rotation rate
-      public: virtual double GetVelocity(int _index) const;
+      // Documentation inherited.
+      public: virtual math::Vector3 GetGlobalAxis(unsigned int _index) const;
 
-      /// \brief Set the max allowed force of an axis(index).
-      public: virtual void SetMaxForce(int _index, double _t);
+      /// \brief save simbody state for spawning
+      public: virtual void SaveSimbodyState(const SimTK::State &_state);
 
-      /// \brief Get the max allowed force of an axis(index).
-      public: virtual double GetMaxForce(int _index);
+      /// \brief restore  simbody state for spawning
+      public: virtual void RestoreSimbodyState(SimTK::State &_state);
 
-      /// \brief Set the torque of a joint.
-      public: void SetForce(int _index, double _torque);
+      // Documentation inherited.
+      protected: virtual math::Angle GetAngleImpl(unsigned int _index) const;
 
-      /// \brief Set the high stop of an axis(index).
-      public: virtual void SetHighStop(int _index, const math::Angle &_angle);
+      // Documentation inherited.
+      protected: virtual void SetForceImpl(unsigned int _index, double _torque);
 
-      /// \brief Set the low stop of an axis(index).
-      public: virtual void SetLowStop(int _index, const math::Angle &_angle);
+      /// \brief save simbody state for reconstructing simbody model graph
+      private: std::vector<double> simbodyQ;
 
-      /// \brief Get the high stop of an axis(index).
-      public: virtual math::Angle GetHighStop(int _index);
-
-      /// \brief Get the low stop of an axis(index).
-      public: virtual math::Angle GetLowStop(int _index);
-
-      /// \brief Get the axis of rotation
-      public: virtual math::Vector3 GetGlobalAxis(int _index) const;
-
-      /// \brief Get the angle of rotation
-      public: virtual math::Angle GetAngleImpl(int _index) const;
+      /// \brief save simbody state for reconstructing simbody model graph
+      private: std::vector<double> simbodyU;
     };
     /// \}
   }

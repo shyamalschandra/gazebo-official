@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,16 @@
  * limitations under the License.
  *
 */
-/* Desc: A slider or primastic joint
- * Author: Nate Koenig
- * Date: 24 May 2009
- */
 
-#ifndef _SIMBODYSLIDERJOINT_HH_
-#define _SIMBODYSLIDERJOINT_HH_
+#ifndef _SIMBODY_SLIDERJOINT_HH_
+#define _SIMBODY_SLIDERJOINT_HH_
+
 #include "gazebo/math/Angle.hh"
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/physics/simbody/SimbodyJoint.hh"
 #include "gazebo/physics/SliderJoint.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -36,66 +34,47 @@ namespace gazebo
     /// \{
 
     /// \brief A slider joint
-    class SimbodySliderJoint : public SliderJoint<SimbodyJoint>
+    class GAZEBO_VISIBLE SimbodySliderJoint : public SliderJoint<SimbodyJoint>
     {
       /// \brief Constructor
+      /// \param[in] _world Pointer to the Simbody world.
+      /// \param[in] _parent Parent of the screw joint.
       public: SimbodySliderJoint(SimTK::MultibodySystem *world,
                                  BasePtr _parent);
 
       /// \brief Destructor
       public: virtual ~SimbodySliderJoint();
 
-      /// \brief Load the SimbodySliderJoint
+      // Documentation inherited.
+      public: virtual void SetAxis(unsigned int _index,
+                  const math::Vector3 &_axis);
+
+      // Documentation inherited.
+      public: virtual void SetVelocity(unsigned int _index, double _rate);
+
+      // Documentation inherited.
+      public: virtual double GetVelocity(unsigned int _index) const;
+
+      // Documentation inherited.
+      public: virtual void SetMaxForce(unsigned int _index, double _t);
+
+      // Documentation inherited.
+      public: virtual double GetMaxForce(unsigned int _index);
+
+      // Documentation inherited.
+      public: virtual math::Vector3 GetGlobalAxis(unsigned int _index) const;
+
+      // Documentation inherited.
+      public: virtual math::Angle GetAngleImpl(unsigned int _index) const;
+
+      // Documentation inherited.
       protected: virtual void Load(sdf::ElementPtr _sdf);
 
-      /// \brief Attach the two bodies with this joint
-      public: void Attach(LinkPtr _one, LinkPtr _two);
-
-      /// \brief Set the axis of motion
-      public: void SetAxis(int _index, const math::Vector3 &_axis);
-
-      /// \brief Set joint damping, not yet implemented
-      public: virtual void SetDamping(int _index, const double _damping);
-
-      /// \brief Set the high stop of an axis(index).
-      public: virtual void SetHighStop(int _index, const math::Angle &_angle);
-
-      /// \brief Set the low stop of an axis(index).
-      public: virtual void SetLowStop(int _index, const math::Angle &_angle);
-
-      /// \brief Get the high stop of an axis(index).
-      public: virtual math::Angle GetHighStop(int _index);
-
-      /// \brief Get the low stop of an axis(index).
-      public: virtual math::Angle GetLowStop(int _index);
-
-      /// \brief Get the position of the joint
-      public: virtual math::Angle GetAngle(int _index) const;
-
-      /// \brief Get the rate of change
-      public: virtual double GetVelocity(int _index) const;
-
-       /// \brief Set the velocity of an axis(index).
-      public: virtual void SetVelocity(int _index, double _angle);
-
-      /// \brief Set the slider force
-      public: virtual void SetForce(int _index, double _force);
-
-      /// \brief Set the max allowed force of an axis(index).
-      public: virtual void SetMaxForce(int _index, double _t);
-
-      /// \brief Get the max allowed force of an axis(index).
-      public: virtual double GetMaxForce(int _index);
-
-      /// \brief Get the axis of rotation
-      public: virtual math::Vector3 GetGlobalAxis(int _index) const;
-
-      /// \brief Get the angle of rotation
-      public: virtual math::Angle GetAngleImpl(int _index) const;
+      // Documentation inherited.
+      protected: virtual void SetForceImpl(unsigned int _index, double _force);
     };
 
   /// \}
   }
 }
 #endif
-

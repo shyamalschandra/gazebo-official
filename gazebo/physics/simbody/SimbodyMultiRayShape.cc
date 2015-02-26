@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
  * limitations under the License.
  *
  */
+
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/simbody/SimbodyTypes.hh"
 #include "gazebo/physics/simbody/SimbodyLink.hh"
@@ -30,7 +31,7 @@ SimbodyMultiRayShape::SimbodyMultiRayShape(CollisionPtr _parent)
 : MultiRayShape(_parent)
 {
   this->SetName("Simbody Multiray Shape");
-  this->physicsEngine = boost::shared_static_cast<SimbodyPhysics>(
+  this->physicsEngine = boost::static_pointer_cast<SimbodyPhysics>(
       this->collisionParent->GetWorld()->GetPhysicsEngine());
 }
 

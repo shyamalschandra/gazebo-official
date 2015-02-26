@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,13 @@
  * limitations under the License.
  *
 */
-/* Desc: Cylinder shape
- * Author: Nate Koenig
- * Date: 14 Oct 2009
- */
 
 #ifndef _SIMBODY_CYLINDERSHAPE_HH_
 #define _SIMBODY_CYLINDERSHAPE_HH_
 
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/CylinderShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,7 +31,7 @@ namespace gazebo
     /// \{
 
     /// \brief Cylinder collision
-    class SimbodyCylinderShape : public CylinderShape
+    class GAZEBO_VISIBLE SimbodyCylinderShape : public CylinderShape
     {
       /// \brief Constructor
       public: SimbodyCylinderShape(CollisionPtr _parent)
@@ -43,12 +40,36 @@ namespace gazebo
       /// \brief Destructor
       public: virtual ~SimbodyCylinderShape() {}
 
-      /// \brief Set the size of the cylinder
+      // Documentation inherited
       public: void SetSize(double _radius, double _length)
               {
+                if (_radius < 0)
+                {
+                  gzerr << "Cylinder shape does not support negative radius\n";
+                  return;
+                }
+                if (_length < 0)
+                {
+                  gzerr << "Cylinder shape does not support negative length\n";
+                  return;
+                }
+                if (math::equal(_radius, 0.0))
+                {
+                  // Warn user, but still create shape with very small value
+                  // otherwise later resize operations using setLocalScaling
+                  // will not be possible
+                  gzwarn << "Setting cylinder shape's radius to zero \n";
+                  _radius = 1e-4;
+                }
+                if (math::equal(_length, 0.0))
+                {
+                  gzwarn << "Setting cylinder shape's length to zero \n";
+                  _length = 1e-4;
+                }
+
                 CylinderShape::SetSize(_radius, _length);
                 SimbodyCollisionPtr bParent;
-                bParent = boost::shared_dynamic_cast<SimbodyCollision>(
+                bParent = boost::dynamic_pointer_cast<SimbodyCollision>(
                     this->collisionParent);
 
                 // set collision shape

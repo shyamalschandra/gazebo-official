@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  *
 */
-/* Desc: Sphere collisionetry
- * Author: Nate Koenig
- * Date: 21 May 2009
- */
 
-#ifndef _SIMBODY_SPHERESHAPE_HH_
-#define _SIMBODY_SPHERESHAPE_HH_
+#ifndef _SIMBODY_SPHERE_SHAPE_HH_
+#define _SIMBODY_SPHERE_SHAPE_HH_
 
-#include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/SphereShape.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -34,20 +30,35 @@ namespace gazebo
     /// \{
 
     /// \brief Simbody sphere collision
-    class SimbodySphereShape : public SphereShape
+    class GAZEBO_VISIBLE SimbodySphereShape : public SphereShape
     {
       /// \brief Constructor
+      /// \param[in] _parent Collision parent pointer
       public: SimbodySphereShape(CollisionPtr _parent) : SphereShape(_parent) {}
 
       /// \brief Destructor
       public: virtual ~SimbodySphereShape() {}
 
-      /// \brief Set the radius
-      public: void SetRadius(double _radius)
+      // Documentation inherited.
+      public: virtual void SetRadius(double _radius)
               {
+                if (_radius < 0)
+                {
+                  gzerr << "Sphere shape does not support negative radius\n";
+                  return;
+                }
+                if (math::equal(_radius, 0.0))
+                {
+                  // Warn user, but still create shape with very small value
+                  // otherwise later resize operations using setLocalScaling
+                  // will not be possible
+                  gzwarn << "Setting sphere shape's radius to zero \n";
+                  _radius = 1e-4;
+                }
+
                 SphereShape::SetRadius(_radius);
                 SimbodyCollisionPtr bParent;
-                bParent = boost::shared_dynamic_cast<SimbodyCollision>(
+                bParent = boost::dynamic_pointer_cast<SimbodyCollision>(
                     this->collisionParent);
 
                 // set collision shape

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  *
 */
-/* Desc: A SimbodyHingeJoint
- * Author: Nate Koenig, Andrew Howard
- * Date: 21 May 2003
- */
+
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
 
+#include "gazebo/physics/Model.hh"
 #include "gazebo/physics/simbody/SimbodyLink.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/simbody/SimbodyHingeJoint.hh"
@@ -48,189 +47,197 @@ void SimbodyHingeJoint::Load(sdf::ElementPtr _sdf)
 }
 
 //////////////////////////////////////////////////
-math::Vector3 SimbodyHingeJoint::GetAnchor(int /*_index*/) const
-{
-  gzerr << "Not implemented...\n";
-  return math::Vector3();
-}
-
-//////////////////////////////////////////////////
-void SimbodyHingeJoint::SetAnchor(int /*_index*/,
-                                 const math::Vector3 &/*_anchor*/)
-{
-  gzerr << "SetAnchor Not implemented...\n";
-  // The anchor (pivot in Simbody lingo), can only be set on creation
-}
-
-//////////////////////////////////////////////////
-void SimbodyHingeJoint::SetAxis(int /*_index*/, const math::Vector3 &/*_axis*/)
+void SimbodyHingeJoint::SetAxis(unsigned int /*_index*/,
+    const math::Vector3 &/*_axis*/)
 {
   // Simbody seems to handle setAxis improperly. It readjust all the pivot
   // points
-  gzerr << "SetAxis Not implemented...\n";
+  gzdbg << "SetAxis: setting axis is not yet implemented.  The axis are set "
+        << " during joint construction in SimbodyPhysics.cc for now.\n";
 }
 
 //////////////////////////////////////////////////
-void SimbodyHingeJoint::SetDamping(int /*index*/, double /*_damping*/)
-{
-  gzerr << "SetDamping Not implemented\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyHingeJoint::SetVelocity(int /*_index*/, double /*_angle*/)
-{
-  gzerr << "SetVelocity Not implemented...\n";
-}
-
-//////////////////////////////////////////////////
-double SimbodyHingeJoint::GetVelocity(int _index) const
+void SimbodyHingeJoint::SetVelocity(unsigned int _index, double _rate)
 {
   if (_index < this->GetAngleCount())
-    return this->mobod.getOneU(
-      this->simbodyPhysics->integ->getState(),
-      SimTK::MobilizerUIndex(_index));
+  {
+    this->mobod.setOneU(
+      this->simbodyPhysics->integ->updAdvancedState(),
+      SimTK::MobilizerUIndex(_index), _rate);
+    this->simbodyPhysics->system.realize(
+      this->simbodyPhysics->integ->getAdvancedState(), SimTK::Stage::Velocity);
+  }
   else
+    gzerr << "SetVelocity _index too large.\n";
+}
+
+//////////////////////////////////////////////////
+double SimbodyHingeJoint::GetVelocity(unsigned int _index) const
+{
+  if (_index < this->GetAngleCount())
+  {
+    if (this->physicsInitialized &&
+        this->simbodyPhysics->simbodyPhysicsInitialized)
+      return this->mobod.getOneU(
+        this->simbodyPhysics->integ->getState(),
+        SimTK::MobilizerUIndex(_index));
+    else
+    {
+      gzdbg << "GetVelocity() simbody not yet initialized, "
+            << "initial velocity should be zero until restart from "
+            << "state has been implemented.\n";
+      return 0.0;
+    }
+  }
+  else
+  {
     gzerr << "Invalid index for joint, returning NaN\n";
-  return SimTK::NaN;
+    return SimTK::NaN;
+  }
 }
 
 //////////////////////////////////////////////////
-void SimbodyHingeJoint::SetMaxForce(int /*_index*/, double _t)
+void SimbodyHingeJoint::SetMaxForce(unsigned int /*_index*/, double /*_t*/)
 {
-  gzerr << "Not implemented...\n";
+  gzdbg << "SetMaxForce: doesn't make sense in simbody...\n";
 }
 
 //////////////////////////////////////////////////
-double SimbodyHingeJoint::GetMaxForce(int /*_index*/)
+double SimbodyHingeJoint::GetMaxForce(unsigned int /*_index*/)
 {
-  gzerr << "Not implemented...\n";
+  gzdbg << "GetMaxForce: doesn't make sense in simbody...\n";
   return 0;
 }
 
 //////////////////////////////////////////////////
-void SimbodyHingeJoint::SetForce(int _index, double _torque)
+void SimbodyHingeJoint::SetForceImpl(unsigned int _index, double _torque)
 {
-  SimbodyJoint::SetForce(_index, _torque);
-
-  if (_index < this->GetAngleCount())
+  if (_index < this->GetAngleCount() && this->physicsInitialized)
     this->simbodyPhysics->discreteForces.setOneMobilityForce(
       this->simbodyPhysics->integ->updAdvancedState(),
       this->mobod, SimTK::MobilizerUIndex(_index), _torque);
 }
 
 //////////////////////////////////////////////////
-void SimbodyHingeJoint::SetHighStop(int _index,
-                                   const math::Angle &_angle)
+math::Vector3 SimbodyHingeJoint::GetGlobalAxis(unsigned int _index) const
 {
-  gzdbg << "SetHighStop\n";
+  if (this->simbodyPhysics &&
+      this->simbodyPhysics->simbodyPhysicsStepped &&
+      _index < this->GetAngleCount())
+  {
+    if (!this->mobod.isEmptyHandle())
+    {
+      const SimTK::Transform &X_OM = this->mobod.getOutboardFrame(
+        this->simbodyPhysics->integ->getState());
+
+      // express Z-axis of X_OM in world frame
+      SimTK::Vec3 z_W(this->mobod.expressVectorInGroundFrame(
+        this->simbodyPhysics->integ->getState(), X_OM.z()));
+
+      return SimbodyPhysics::Vec3ToVector3(z_W);
+    }
+    else
+    {
+      gzerr << "Joint mobod not initialized correctly.  Returning"
+            << " initial axis vector in world frame (not valid if"
+            << " joint frame has moved). Please file"
+            << " a report on issue tracker.\n";
+      return this->GetAxisFrame(_index).RotateVector(
+        this->GetLocalAxis(_index));
+    }
+  }
+  else
+  {
+    if (_index >= this->GetAngleCount())
+    {
+      gzerr << "index out of bound\n";
+      return math::Vector3(SimTK::NaN, SimTK::NaN, SimTK::NaN);
+    }
+    else
+    {
+      gzdbg << "GetGlobalAxis() sibmody physics engine not initialized yet, "
+            << "use local axis and initial pose to compute "
+            << "global axis.\n";
+      // if local axis specified in model frame (to be changed)
+      // switch to code below if issue #494 is to be addressed
+      return this->GetAxisFrame(_index).RotateVector(
+        this->GetLocalAxis(_index));
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+math::Angle SimbodyHingeJoint::GetAngleImpl(unsigned int _index) const
+{
   if (_index < this->GetAngleCount())
   {
-    if (this->physicsInitialized)
+    if (this->physicsInitialized &&
+        this->simbodyPhysics->simbodyPhysicsInitialized)
     {
-      if (this->limitForce)
-        this->limitForce->setBounds(
-          this->simbodyPhysics->integ->updAdvancedState(),
-          this->limitForce->getLowerBound(
-            this->simbodyPhysics->integ->updAdvancedState()),
-          _angle.Radian()
-          );
+      if (!this->mobod.isEmptyHandle())
+      {
+        return math::Angle(this->mobod.getOneQ(
+          this->simbodyPhysics->integ->getState(), _index));
+      }
       else
-        gzdbg << "limitForce for joint ["
-              << this->GetName() << "] is NULL, new model added?\n";
+      {
+        gzerr << "Joint mobod not initialized correctly.  Please file"
+              << " a report on issue tracker.\n";
+        return math::Angle(0.0);
+      }
     }
     else
     {
-      gzerr << "SetHighStop: State not initialized.\n";
-    }
-  }
-  else
-    gzerr << "SetHighStop: index out of bounds.\n";
-}
-
-//////////////////////////////////////////////////
-void SimbodyHingeJoint::SetLowStop(int _index,
-                                  const math::Angle &_angle)
-{
-  gzdbg << "SetLowStop\n";
-  if (_index < this->GetAngleCount())
-  {
-    if (this->physicsInitialized)
-    {
-      if (this->limitForce)
-        this->limitForce->setBounds(
-          this->simbodyPhysics->integ->updAdvancedState(),
-          _angle.Radian(),
-          this->limitForce->getUpperBound(
-            this->simbodyPhysics->integ->updAdvancedState())
-          );
-      else
-        gzdbg << "limitForce for joint ["
-              << this->GetName() << "] is NULL, new model added?\n";
-    }
-    else
-    {
-      gzerr << "SetLowStop: State not initialized.\n";
-    }
-  }
-  else
-    gzerr << "SetLowStop: index out of bounds.\n";
-}
-
-//////////////////////////////////////////////////
-math::Angle SimbodyHingeJoint::GetHighStop(int /*_index*/)
-{
-  math::Angle result;
-  // gzerr << "Not implemented...\n";
-  return result;
-}
-
-//////////////////////////////////////////////////
-math::Angle SimbodyHingeJoint::GetLowStop(int /*_index*/)
-{
-  math::Angle result;
-  // gzerr << "Not implemented...\n";
-  return result;
-}
-
-//////////////////////////////////////////////////
-math::Vector3 SimbodyHingeJoint::GetGlobalAxis(int _index) const
-{
-  if (this->simbodyPhysics->simbodyPhysicsStepped &&
-      _index < static_cast<int>(this->GetAngleCount()))
-  {
-    const SimTK::Transform &X_OM = this->mobod.getOutboardFrame(
-      this->simbodyPhysics->integ->getState());
-
-    // express Z-axis of X_OM in world frame
-    SimTK::Vec3 z_W(this->mobod.expressVectorInGroundFrame(
-      this->simbodyPhysics->integ->getState(), X_OM.z()));
-
-    return SimbodyPhysics::Vec3ToVector3(z_W);
-  }
-  else
-  {
-    gzerr << "index out of bound\n";
-    return math::Vector3();
-  }
-}
-
-//////////////////////////////////////////////////
-math::Angle SimbodyHingeJoint::GetAngleImpl(int _index) const
-{
-  if (_index < static_cast<int>(this->GetAngleCount()))
-  {
-    if (this->simbodyPhysics->simbodyPhysicsInitialized)
-      return math::Angle(this->mobod.getOneQ(
-        this->simbodyPhysics->integ->getState(), _index));
-    else
-    {
-      gzwarn << "simbody not yet initialized\n";
-      return math::Angle();
+      gzdbg << "GetAngleImpl() simbody not yet initialized, "
+            << "initial angle should be zero until <initial_angle> "
+            << "is implemented.\n";
+      return math::Angle(0.0);
     }
   }
   else
   {
     gzerr << "index out of bound\n";
-    return math::Angle();
+    return math::Angle(SimTK::NaN);
+  }
+}
+
+//////////////////////////////////////////////////
+void SimbodyHingeJoint::SaveSimbodyState(const SimTK::State &_state)
+{
+  if (!this->mobod.isEmptyHandle())
+  {
+    if (this->simbodyQ.empty())
+      this->simbodyQ.resize(this->mobod.getNumQ(_state));
+
+    if (this->simbodyU.empty())
+      this->simbodyU.resize(this->mobod.getNumU(_state));
+
+    for (unsigned int i = 0; i < this->simbodyQ.size(); ++i)
+      this->simbodyQ[i] = this->mobod.getOneQ(_state, i);
+
+    for (unsigned int i = 0; i < this->simbodyU.size(); ++i)
+      this->simbodyU[i] = this->mobod.getOneU(_state, i);
+  }
+  else
+  {
+    // gzerr << "debug: joint name: " << this->GetScopedName() << "\n";
+  }
+}
+
+//////////////////////////////////////////////////
+void SimbodyHingeJoint::RestoreSimbodyState(SimTK::State &_state)
+{
+  if (!this->mobod.isEmptyHandle())
+  {
+    for (unsigned int i = 0; i < this->simbodyQ.size(); ++i)
+      this->mobod.setOneQ(_state, i, this->simbodyQ[i]);
+
+    for (unsigned int i = 0; i < this->simbodyU.size(); ++i)
+      this->mobod.setOneU(_state, i, this->simbodyU[i]);
+  }
+  else
+  {
+    // gzerr << "restoring model [" << this->GetScopedName()
+    //       << "] failed due to uninitialized mobod\n";
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * limitations under the License.
  *
 */
-/* Desc: A ray
- * Author: Nate Koenig
- * Date: 24 May 2009
- */
 
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/simbody/SimbodyLink.hh"
@@ -36,7 +32,7 @@ SimbodyRayShape::SimbodyRayShape(PhysicsEnginePtr _physicsEngine)
   this->SetName("Simbody Ray Shape");
 
   this->physicsEngine =
-    boost::shared_static_cast<SimbodyPhysics>(_physicsEngine);
+    boost::static_pointer_cast<SimbodyPhysics>(_physicsEngine);
 }
 
 //////////////////////////////////////////////////
@@ -44,7 +40,7 @@ SimbodyRayShape::SimbodyRayShape(CollisionPtr _parent)
     : RayShape(_parent)
 {
   this->SetName("Simbody Ray Shape");
-  this->physicsEngine = boost::shared_static_cast<SimbodyPhysics>(
+  this->physicsEngine = boost::static_pointer_cast<SimbodyPhysics>(
       this->collisionParent->GetWorld()->GetPhysicsEngine());
 }
 
@@ -64,7 +60,7 @@ void SimbodyRayShape::GetIntersection(double &_dist, std::string &_entity)
   _dist = 0;
   _entity = "";
 
-  if (this->physicsEngine && this->collisionParent)
+  if (this->physicsEngine)
   {
   }
 }
@@ -75,5 +71,4 @@ void SimbodyRayShape::SetPoints(const math::Vector3 &_posStart,
 {
   this->globalStartPos = _posStart;
   this->globalEndPos = _posEnd;
-
 }

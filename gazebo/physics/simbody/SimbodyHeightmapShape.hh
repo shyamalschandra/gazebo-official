@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,16 @@
  * limitations under the License.
  *
 */
-/* Desc: Heightmap collision
- * Author: Nate Koenig
- * Date: 8 May 2003
- */
 
-#ifndef _SIMBODYHEIGHTMAPGEOM_HH_
-#define _SIMBODYHEIGHTMAPGEOM_HH_
+#ifndef _SIMBODY_HEIGHTMAPGEOM_HH_
+#define _SIMBODY_HEIGHTMAPGEOM_HH_
+
 #include <string>
 
 #include "gazebo/physics/HeightmapShape.hh"
 #include "gazebo/physics/simbody/SimbodyPhysics.hh"
 #include "gazebo/physics/Collision.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -35,16 +33,16 @@ namespace gazebo
     /// \addtogroup gazebo_physics_simbody Simbody Physics
     /// \{
 
-    /// \brief Height map collision
-    class SimbodyHeightmapShape : public HeightmapShape
+    /// \brief Height map collision.
+    class GAZEBO_VISIBLE SimbodyHeightmapShape : public HeightmapShape
     {
-      /// \brief Constructor
+      /// \brief Constructor.
       public: SimbodyHeightmapShape(CollisionPtr _parent);
 
-      /// \brief Destructor
+      /// \brief Destructor.
       public: virtual ~SimbodyHeightmapShape();
 
-      /// \brief Load the heightmap
+      // Documentation inherited.
       public: virtual void Init();
     };
     /// \}
