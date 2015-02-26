@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ ServerFixture::ServerFixture()
   this->gotImage = 0;
   this->imgData = NULL;
   this->serverThread = NULL;
+  this->uniqueCounter = 0;
 
   gzLogInit("test-", "test.log");
   gazebo::common::Console::SetQuiet(false);
@@ -224,17 +225,17 @@ void ServerFixture::RunServer(const std::string &_worldFilename, bool _paused,
   if (!rendering::get_scene(
         gazebo::physics::get_world()->GetName()))
   {
-    rendering::create_scene(
-        gazebo::physics::get_world()->GetName(), false, true);
+    ASSERT_NO_THROW(rendering::create_scene(
+        gazebo::physics::get_world()->GetName(), false, true));
   }
 
-  this->SetPause(_paused);
+  ASSERT_NO_THROW(this->SetPause(_paused));
 
-  this->server->Run();
+  ASSERT_NO_THROW(this->server->Run());
 
   ASSERT_NO_THROW(this->server->Fini());
 
-  delete this->server;
+  ASSERT_NO_THROW(delete this->server);
   this->server = NULL;
 }
 
@@ -426,7 +427,7 @@ void ServerFixture::GetFrame(const std::string &_cameraName,
     unsigned int &_height)
 {
   sensors::SensorPtr sensor = sensors::get_sensor(_cameraName);
-  EXPECT_TRUE(sensor);
+  EXPECT_TRUE(sensor != NULL);
   sensors::CameraSensorPtr camSensor =
     boost::dynamic_pointer_cast<sensors::CameraSensor>(sensor);
 
@@ -451,6 +452,34 @@ void ServerFixture::GetFrame(const std::string &_cameraName,
     common::Time::MSleep(100);
 
   camSensor->GetCamera()->DisconnectNewImageFrame(c);
+}
+
+/////////////////////////////////////////////////
+physics::ModelPtr ServerFixture::SpawnModel(const msgs::Model &_msg)
+{
+  std::ostringstream stream;
+  stream << "<sdf version='" << SDF_VERSION << "'>"
+         << msgs::ToSDF(_msg)
+         << "</sdf>";
+
+  physics::WorldPtr world = physics::get_world();
+  world->InsertModelString(stream.str());
+
+  common::Time wait(10, 0);
+  common::Time wallStart = common::Time::GetWallTime();
+  unsigned int waitCount = 0;
+  while (wait > (common::Time::GetWallTime() - wallStart) &&
+         !this->HasEntity(_msg.name()))
+  {
+    common::Time::MSleep(10);
+    if (++waitCount % 100 == 0)
+    {
+      gzwarn << "Waiting " << waitCount / 100 << " seconds for "
+             << "box to spawn." << std::endl;
+    }
+  }
+
+  return world->GetModel(_msg.name());
 }
 
 /////////////////////////////////////////////////
@@ -1049,28 +1078,17 @@ void ServerFixture::SpawnCylinder(const std::string &_name,
 {
   msgs::Factory msg;
   std::ostringstream newModelStr;
+  msgs::Model model;
+  model.set_name(_name);
+  model.set_is_static(_static);
+  msgs::Set(model.mutable_pose(), math::Pose(_pos, _rpy));
+  msgs::AddCylinderLink(model, 1.0, 0.5, 1.0);
+  auto link = model.mutable_link(0);
+  link->set_name("body");
+  link->mutable_collision(0)->set_name("geom");
 
   newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "  <collision name ='geom'>"
-    << "    <geometry>"
-    << "      <cylinder>"
-    << "        <radius>.5</radius><length>1.0</length>"
-    << "      </cylinder>"
-    << "    </geometry>"
-    << "  </collision>"
-    << "  <visual name ='visual'>"
-    << "    <geometry>"
-    << "      <cylinder>"
-    << "        <radius>.5</radius><length>1.0</length>"
-    << "      </cylinder>"
-    << "    </geometry>"
-    << "  </visual>"
-    << "</link>"
-    << "</model>"
+    << msgs::ModelToSDF(model)->ToString("")
     << "</sdf>";
 
   msg.set_sdf(newModelStr.str());
@@ -1124,27 +1142,19 @@ void ServerFixture::SpawnSphere(const std::string &_name,
 {
   msgs::Factory msg;
   std::ostringstream newModelStr;
+  msgs::Model model;
+  model.set_name(_name);
+  model.set_is_static(_static);
+  msgs::Set(model.mutable_pose(), math::Pose(_pos, _rpy));
+  msgs::AddSphereLink(model, 1.0, _radius);
+  auto link = model.mutable_link(0);
+  link->set_name("body");
+  link->mutable_collision(0)->set_name("geom");
+  msgs::Set(link->mutable_inertial()->mutable_pose(),
+            math::Pose(_cog, math::Quaternion()));
 
   newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "  <inertial>"
-    << "    <pose>" << _cog << " 0 0 0</pose>"
-    << "  </inertial>"
-    << "  <collision name ='geom'>"
-    << "    <geometry>"
-    << "      <sphere><radius>" << _radius << "</radius></sphere>"
-    << "    </geometry>"
-    << "  </collision>"
-    << "  <visual name ='visual'>"
-    << "    <geometry>"
-    << "      <sphere><radius>" << _radius << "</radius></sphere>"
-    << "    </geometry>"
-    << "  </visual>"
-    << "</link>"
-    << "</model>"
+    << msgs::ModelToSDF(model)->ToString("")
     << "</sdf>";
 
   msg.set_sdf(newModelStr.str());
@@ -1162,24 +1172,17 @@ void ServerFixture::SpawnBox(const std::string &_name,
 {
   msgs::Factory msg;
   std::ostringstream newModelStr;
+  msgs::Model model;
+  model.set_name(_name);
+  model.set_is_static(_static);
+  msgs::Set(model.mutable_pose(), math::Pose(_pos, _rpy));
+  msgs::AddBoxLink(model, 1.0, _size);
+  auto link = model.mutable_link(0);
+  link->set_name("body");
+  link->mutable_collision(0)->set_name("geom");
 
   newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "  <collision name ='geom'>"
-    << "    <geometry>"
-    << "      <box><size>" << _size << "</size></box>"
-    << "    </geometry>"
-    << "  </collision>"
-    << "  <visual name ='visual'>"
-    << "    <geometry>"
-    << "      <box><size>" << _size << "</size></box>"
-    << "    </geometry>"
-    << "  </visual>"
-    << "</link>"
-    << "</model>"
+    << msgs::ModelToSDF(model)->ToString("")
     << "</sdf>";
 
   msg.set_sdf(newModelStr.str());
@@ -1236,14 +1239,15 @@ void ServerFixture::SpawnEmptyLink(const std::string &_name,
 {
   msgs::Factory msg;
   std::ostringstream newModelStr;
+  msgs::Model model;
+  model.set_name(_name);
+  model.set_is_static(_static);
+  msgs::Set(model.mutable_pose(), math::Pose(_pos, _rpy));
+  model.add_link();
+  model.mutable_link(0)->set_name("body");
 
   newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "</link>"
-    << "</model>"
+    << msgs::ModelToSDF(model)->ToString("")
     << "</sdf>";
 
   msg.set_sdf(newModelStr.str());
@@ -1358,4 +1362,12 @@ void ServerFixture::GetMemInfo(double &_resident, double &_share)
   gzerr << "Unsupported architecture\n";
   return;
 #endif
+}
+
+/////////////////////////////////////////////////
+std::string ServerFixture::GetUniqueString(const std::string &_prefix)
+{
+  std::ostringstream stream;
+  stream << _prefix << this->uniqueCounter++;
+  return stream.str();
 }
