@@ -56,7 +56,6 @@ Link::Link(EntityPtr _parent)
   this->publishDataMutex = new boost::recursive_mutex();
 }
 
-
 //////////////////////////////////////////////////
 Link::~Link()
 {
