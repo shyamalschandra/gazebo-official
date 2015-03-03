@@ -1328,7 +1328,7 @@ boost::any ODEPhysics::GetParam(const std::string &_key) const
     return dWorldGetQuickStepExtraFrictionIterations (this->dataPtr->worldId);
   else
   {
-    gzwarn << _key << " is not supported in ode" << std::endl;
-    return 0;
+    //gzwarn << _key << " is not supported in ode" << std::endl;
+    return PhysicsEngine::GetParam(_key);
   }
 }
