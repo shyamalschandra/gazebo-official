@@ -30,6 +30,9 @@
     * [Pull request #1454](https://bitbucket.org/osrf/gazebo/pull-request/1454)
     * [Issue #1455](https://bitbucket.org/osrf/gazebo/issue/1455)
 
+1. Implemented AddLinkForce for ODE.
+    * [Pull request #1456](https://bitbucket.org/osrf/gazebo/pull-request/1456)
+
  1. Model editor updates
     1. Joint preview using JointVisuals.
         * [Pull request #1369](https://bitbucket.org/osrf/gazebo/pull-request/1369)
