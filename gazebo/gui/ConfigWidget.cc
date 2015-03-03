@@ -606,6 +606,11 @@ QWidget *ConfigWidget::Parse(google::protobuf::Message *_msg,  bool _update,
                   dimensions.z = dimensions.x;
                   break;
                 }
+                else if (geomMsgName == "PolylineGeom")
+                {
+                  continue;
+                  break;
+                }
               }
               this->UpdateGeometryWidget(configChildWidget,
                   geometryTypeStr, dimensions);
@@ -1117,6 +1122,7 @@ ConfigChildWidget *ConfigWidget::CreateGeometryWidget(
   geometryComboBox->addItem(tr("cylinder"));
   geometryComboBox->addItem(tr("sphere"));
   geometryComboBox->addItem(tr("mesh"));
+  geometryComboBox->addItem(tr("polyline"));
 
   QDoubleSpinBox *geomSizeXSpinBox = new QDoubleSpinBox;
   geomSizeXSpinBox->setRange(-1000, 1000);
@@ -1439,6 +1445,12 @@ void ConfigWidget::UpdateMsg(google::protobuf::Message *_msg,
               geomValueMsg->GetReflection()->SetDouble(geomValueMsg,
                   geomRadiusField, radius);
             }
+            else if (geomType == "polyline")
+            {
+              const google::protobuf::EnumValueDescriptor *geometryType =
+                  typeEnumDescriptor->FindValueByName("POLYLINE");
+              geomReflection->SetEnum(valueMsg, typeField, geometryType);
+            }
           }
           // update pose msg field
           else if (field->message_type()->name() == "Pose")
@@ -1738,6 +1750,10 @@ void ConfigWidget::UpdateGeometryWidget(ConfigChildWidget *_widget,
     qobject_cast<QDoubleSpinBox *>(_widget->widgets[4])->setValue(
         _dimensions.x*0.5);
   }
+  else if (_value == "polyline")
+  {
+    // do nothing
+  }
 
   if (isMesh)
     qobject_cast<QLineEdit *>(_widget->widgets[6])->setText(tr(_uri.c_str()));
@@ -1918,6 +1934,10 @@ std::string ConfigWidget::GetGeometryWidgetValue(ConfigChildWidget *_widget,
     _dimensions.y = _dimensions.x;
     _dimensions.z = _dimensions.x;
   }
+  else if (value == "polyline")
+  {
+    // do nothing
+  }
   else
   {
     gzerr << "Error getting geometry dimensions for type: '" << value << "'"
@@ -1991,19 +2011,26 @@ void GeometryConfigWidget::GeometryChanged(const QString _text)
     bool isMesh = (textStr == "mesh");
     if (textStr == "box" || isMesh)
     {
+      this->geomDimensionWidget->show();
       this->geomDimensionWidget->setCurrentIndex(0);
     }
     else if (textStr == "cylinder")
     {
+      this->geomDimensionWidget->show();
       this->geomDimensionWidget->setCurrentIndex(1);
       this->geomLengthSpinBox->show();
       this->geomLengthLabel->show();
     }
     else if (textStr == "sphere")
     {
+      this->geomDimensionWidget->show();
       this->geomDimensionWidget->setCurrentIndex(1);
       this->geomLengthSpinBox->hide();
       this->geomLengthLabel->hide();
+    }
+    else if (textStr == "polyline")
+    {
+      this->geomDimensionWidget->hide();
     }
 
     this->geomFilenameLabel->setVisible(isMesh);

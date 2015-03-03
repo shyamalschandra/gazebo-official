@@ -21,6 +21,7 @@
 #include <string>
 
 #include "gazebo/common/Exception.hh"
+#include "gazebo/common/SVGLoader.hh"
 
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Material.hh"
@@ -551,7 +552,7 @@ void ModelCreator::AddJoint(const std::string &_type)
 /////////////////////////////////////////////////
 std::string ModelCreator::AddShape(PartType _type,
     const math::Vector3 &_size, const math::Pose &_pose,
-    const std::string &_uri)
+    const std::string &_uri, unsigned int _samples)
 {
   if (!this->previewVisual)
   {
@@ -590,9 +591,71 @@ std::string ModelCreator::AddShape(PartType _type,
   }
   else if (_type == PART_MESH)
   {
-    sdf::ElementPtr meshElem = geomElem->AddElement("mesh");
-    meshElem->GetElement("scale")->Set(_size);
-    meshElem->GetElement("uri")->Set(_uri);
+    QFileInfo info(QString::fromStdString(_uri));
+    if (!info.isFile())
+    {
+      gzerr << "File [" << _uri << "] not found!" << std::endl;
+      return std::string();
+    }
+
+    if (info.completeSuffix().toLower() == "svg")
+    {
+      common::SVGLoader svgLoader(_samples);
+      std::vector<common::SVGPath> paths;
+      svgLoader.Parse(_uri, paths);
+
+      if (paths.empty())
+      {
+        gzerr << "No paths found on file [" << _uri << "]" << std::endl;
+        return std::string();
+      }
+
+      // Find extreme values to center the polylines
+      math::Vector2d min(paths[0].polylines[0][0]);
+      math::Vector2d max(min);
+      for (common::SVGPath p : paths)
+      {
+        for (std::vector<math::Vector2d> poly : p.polylines)
+        {
+          for (math::Vector2d pt : poly)
+          {
+            if (pt.x < min.x)
+              min.x = pt.x;
+            if (pt.y < min.y)
+              min.y = pt.y;
+            if (pt.x > max.x)
+              max.x = pt.x;
+            if (pt.y > max.y)
+              max.y = pt.y;
+          }
+        }
+      }
+
+      for (common::SVGPath p : paths)
+      {
+        for (std::vector<math::Vector2d> poly : p.polylines)
+        {
+          sdf::ElementPtr polylineElem = geomElem->AddElement("polyline");
+          polylineElem->GetElement("height")->Set(_size.z);
+
+          for (math::Vector2d pt : poly)
+          {
+            // Translate to center
+            pt = pt - min - (max-min)*0.5;
+            // Swap X and Y so Z will point up
+            // (in 2D it points into the screen)
+            sdf::ElementPtr pointElem = polylineElem->AddElement("point");
+            pointElem->Set(math::Vector2d(pt.y*_size.y, pt.x*_size.x));
+          }
+        }
+      }
+    }
+    else
+    {
+      sdf::ElementPtr meshElem = geomElem->AddElement("mesh");
+      meshElem->GetElement("scale")->Set(_size);
+      meshElem->GetElement("uri")->Set(_uri);
+    }
   }
   else
   {
@@ -611,7 +674,10 @@ std::string ModelCreator::AddShape(PartType _type,
 
   // insert over ground plane for now
   math::Vector3 linkPos = linkVisual->GetWorldPose().pos;
-  linkPos.z = _size.z * 0.5;
+  if (_type != PART_MESH)
+  {
+    linkPos.z = _size.z * 0.5;
+  }
   // override orientation as it's more natural to insert objects upright rather
   // than inserting it in the model frame.
   linkVisual->SetWorldPose(math::Pose(linkPos, math::Quaternion()));
