@@ -226,7 +226,9 @@ bool PhysicsEngine::SetParam(const std::string &/*_key*/,
 //////////////////////////////////////////////////
 boost::any PhysicsEngine::GetParam(const std::string &/*_key*/) const
 {
-  return 0;
+  boost::any value;
+  this->GetParam(_key, value);
+  return value;
 }
 
 //////////////////////////////////////////////////
