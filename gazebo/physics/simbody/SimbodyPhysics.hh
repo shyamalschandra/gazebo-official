@@ -216,7 +216,7 @@ namespace gazebo
       public: bool simbodyPhysicsStepped;
 
       // Documentation inherited
-      public: virtual boost::any GetParam(const std::string &_key) const;
+      public: virtual bool GetParam(const std::string &_key) const;
 
       // Documentation inherited
       public: virtual bool SetParam(const std::string &_key,

@@ -269,7 +269,7 @@ namespace gazebo
       /// \param[in] _key Key of the accessed param
       /// \param[out] _value Value of the accessed param
       /// \return True if the parameter was successfully retrieved
-      public: template<typename Type> bool GetParam(
+      public: template<typename Type> virtual bool GetParam(
                   const std::string &_key, Type &_value) const;
 
       /// \brief Debug print out of the physic engine state.
