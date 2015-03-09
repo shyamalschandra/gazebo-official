@@ -26,6 +26,7 @@ namespace gazebo
   namespace gui
   {
     class BuildingEditorPalette;
+    class BuildingEditorWidget;
 
     /// \class TerrainEditor TerrainEditor.hh gui/gui.hh
     /// \brief Interface to the terrain editor.
@@ -67,15 +68,25 @@ namespace gazebo
       /// \brief Contains all the building editor tools.
       private: BuildingEditorPalette *buildingPalette;
 
+      /// \brief Building editor widget for creating a building model
+      private: BuildingEditorWidget *buildingEditorWidget;
+
       /// \brief Create menus
       private: void CreateMenus();
 
       /// \brief Our custom menubar
       private: QMenuBar *menuBar;
 
+      /// \brief Action to save model.
       private: QAction *saveAct;
+
+      /// \brief Action to save model as.
       private: QAction *saveAsAct;
+
+      /// \brief Action to start a new model.
       private: QAction *newAct;
+
+      /// \brief Action to exit the editor.
       private: QAction *exitAct;
     };
   }
