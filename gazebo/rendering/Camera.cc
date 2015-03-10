@@ -383,8 +383,8 @@ void Camera::Update()
 void Camera::Render(bool _force)
 {
   if (this->initialized && (_force ||
-       common::Time::GetWallTime() - this->lastRenderWallTime >=
-        this->dataPtr->renderPeriod))
+      common::Time::GetWallTime() - this->lastRenderWallTime >=
+      this->dataPtr->renderPeriod))
   {
     this->newData = true;
     this->RenderImpl();
@@ -1711,4 +1711,32 @@ void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
 DistortionPtr Camera::GetDistortion() const
 {
   return this->dataPtr->distortion;
+}
+
+//////////////////////////////////////////////////
+float Camera::GetAvgFPS() const
+{
+  float avgFPS = 0;
+
+  if (this->renderTarget)
+  {
+    float lastFPS, bestFPS, worstFPS = 0;
+    this->renderTarget->getStatistics(lastFPS, avgFPS, bestFPS, worstFPS);
+  }
+
+  return avgFPS;
+}
+
+//////////////////////////////////////////////////
+float Camera::GetLastFPS() const
+{
+  float lastFPS = 0;
+
+  if (this->renderTarget)
+  {
+    float avgFPS, bestFPS, worstFPS = 0;
+    this->renderTarget->getStatistics(lastFPS, avgFPS, bestFPS, worstFPS);
+  }
+
+  return lastFPS;
 }

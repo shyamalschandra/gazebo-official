@@ -379,20 +379,6 @@ void UserCamera::SetViewportDimensions(float /*x_*/, float /*y_*/,
 }
 
 //////////////////////////////////////////////////
-float UserCamera::GetAvgFPS() const
-{
-  float avgFPS = 0;
-
-  if (this->renderTarget)
-  {
-    float lastFPS, bestFPS, worstFPS = 0;
-    this->renderTarget->getStatistics(lastFPS, avgFPS, bestFPS, worstFPS);
-  }
-
-  return avgFPS;
-}
-
-//////////////////////////////////////////////////
 unsigned int UserCamera::GetTriangleCount() const
 {
   return RenderEngine::Instance()->GetWindowManager()->GetTriangleCount(
