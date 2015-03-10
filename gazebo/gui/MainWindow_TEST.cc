@@ -35,6 +35,37 @@ void OnRequest(ConstRequestPtr &_msg)
 }
 
 /////////////////////////////////////////////////
+void MainWindow_TEST::SceneDestruction()
+{
+  this->resMaxPercentChange = 5.0;
+  this->shareMaxPercentChange = 2.0;
+
+  this->Load("worlds/shapes.world", false, false, false);
+
+  gazebo::gui::MainWindow *mainWindow = new gazebo::gui::MainWindow();
+  QVERIFY(mainWindow != NULL);
+
+  // Create the main window.
+  mainWindow->Load();
+
+  mainWindow->Init();
+  mainWindow->show();
+
+  // Get the user camera and scene
+  gazebo::rendering::UserCameraPtr cam = gazebo::gui::get_active_camera();
+  QVERIFY(cam != NULL);
+  gazebo::rendering::ScenePtr scene = cam->GetScene();
+  QVERIFY(scene != NULL);
+
+  cam->Fini();
+  mainWindow->close();
+  delete mainWindow;
+
+  // verify that this test case has the only scene shared pointer remaining.
+  QVERIFY(scene.use_count() == 1u);
+}
+
+/////////////////////////////////////////////////
 void MainWindow_TEST::UserCameraFPS()
 {
   this->resMaxPercentChange = 5.0;
@@ -91,9 +122,6 @@ void MainWindow_TEST::CopyPaste()
 
   // Create the main window.
   mainWindow->Load();
-
-  gazebo::rendering::create_scene(
-      gazebo::physics::get_world()->GetName(), false);
 
   mainWindow->Init();
   mainWindow->show();
@@ -159,7 +187,13 @@ void MainWindow_TEST::CopyPaste()
     QTest::mouseClick(glWidget, Qt::LeftButton, Qt::NoModifier, moveTo);
     QTest::qWait(500);
 
-    QCoreApplication::processEvents();
+    // Process some events, and draw the screen
+    for (unsigned int i = 0; i < 10; ++i)
+    {
+      gazebo::common::Time::MSleep(30);
+      QCoreApplication::processEvents();
+      mainWindow->repaint();
+    }
 
     // Verify there is a clone of the model
     gazebo::rendering::VisualPtr modelVisClone;
