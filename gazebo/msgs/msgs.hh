@@ -56,7 +56,7 @@ namespace gazebo
     /// \param[in] _message Message to initialize
     /// \param[in] _id Optional string id
     GAZEBO_VISIBLE
-    void Init(google::protobuf::Message &_message, const std::string &_id ="");
+    void Init(gazebo::msgs::Message &_message, const std::string &_id ="");
 
     /// \brief Time stamp a header
     /// \param[in] _header Header to stamp
@@ -71,7 +71,7 @@ namespace gazebo
     /// \cond
     GAZEBO_VISIBLE
     std::string Package(const std::string &type,
-        const google::protobuf::Message &message);
+        const gazebo::msgs::Message &message);
     /// \endcond
 
     /// \brief Convert a math::Vector3 to a msgs::Vector3d
@@ -479,15 +479,15 @@ namespace gazebo
 
     /// \cond
     GAZEBO_VISIBLE
-    const google::protobuf::FieldDescriptor *GetFD(
-        google::protobuf::Message &message, const std::string &name);
+    const gazebo::msgs::FieldDescriptor *GetFD(
+        gazebo::msgs::Message &message, const std::string &name);
     /// \endcond
 
     /// \brief Get the header from a protobuf message
     /// \param[in] _message A google protobuf message
     /// \return A pointer to the message's header
     GAZEBO_VISIBLE
-    msgs::Header *GetHeader(google::protobuf::Message &_message);
+    msgs::Header *GetHeader(gazebo::msgs::Message &_message);
 
     /// \}
   }
