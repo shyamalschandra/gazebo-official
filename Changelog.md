@@ -38,6 +38,9 @@
     * [Pull request #1454](https://bitbucket.org/osrf/gazebo/pull-request/1454)
     * [Issue #1455](https://bitbucket.org/osrf/gazebo/issue/1455)
 
+1. Abstract message types so protobuf is not explicit in the msgs API
+    * [Pull request #1513](https://bitbucket.org/osrf/gazebo/pull-request/1513)
+
 1. Added Matrix3::Inverse() and tests 
     * [Pull request #1481](https://bitbucket.org/osrf/gazebo/pull-request/1481)
 
