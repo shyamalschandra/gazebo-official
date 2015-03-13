@@ -54,21 +54,21 @@ namespace gazebo
       return request;
     }
 
-    const google::protobuf::FieldDescriptor *GetFD(
-        google::protobuf::Message &message, const std::string &name)
+    const gazebo::msgs::FieldDescriptor *GetFD(
+        gazebo::msgs::Message &message, const std::string &name)
     {
       return message.GetDescriptor()->FindFieldByName(name);
     }
 
-    msgs::Header *GetHeader(google::protobuf::Message &message)
+    msgs::Header *GetHeader(gazebo::msgs::Message &message)
     {
-      google::protobuf::Message *msg = NULL;
+      gazebo::msgs::Message *msg = NULL;
 
       if (GetFD(message, "str_id"))
         msg = &message;
       else
       {
-        const google::protobuf::FieldDescriptor *fd;
+        const gazebo::msgs::FieldDescriptor *fd;
         fd = GetFD(message, "header");
 
         if (fd)
@@ -78,7 +78,7 @@ namespace gazebo
       return (msgs::Header*)msg;
     }
 
-    void Init(google::protobuf::Message &_message, const std::string &_id)
+    void Init(gazebo::msgs::Message &_message, const std::string &_id)
     {
       msgs::Header *header = GetHeader(_message);
 
@@ -104,7 +104,7 @@ namespace gazebo
     }
 
     std::string Package(const std::string &type,
-        const google::protobuf::Message &message)
+        const gazebo::msgs::Message &message)
     {
       std::string data;
       msgs::Packet pkg;
