@@ -190,7 +190,16 @@ if (PKG_CONFIG_FOUND)
   # Find OGRE
   execute_process(COMMAND pkg-config --modversion OGRE
                   OUTPUT_VARIABLE OGRE_VERSION)
-  string(REPLACE "\n" "" OGRE_VERSION ${OGRE_VERSION})
+
+  string (REGEX REPLACE "^([0-9]+).*" "\\1"
+    OGRE_MAJOR_VERSION "${OGRE_VERSION}")
+  string (REGEX REPLACE "^[0-9]+\\.([0-9]+).*" "\\1"
+    OGRE_MINOR_VERSION "${OGRE_VERSION}")
+  string (REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1"
+    OGRE_PATCH_VERSION ${OGRE_VERSION})
+
+  set(OGRE_VERSION
+    ${OGRE_MAJOR_VERSION}.${OGRE_MINOR_VERSION}.${OGRE_PATCH_VERSION})
 
   pkg_check_modules(OGRE-RTShaderSystem
                     OGRE-RTShaderSystem>=${MIN_OGRE_VERSION})
@@ -370,13 +379,10 @@ endif ()
 
 ########################################
 # Find SDFormat
-find_package(SDFormat 2.3.1)
-if (NOT SDFormat_FOUND)
-  find_package(SDFormat 3)
-endif()
+find_package(SDFormat 3.0.0)
 if (NOT SDFormat_FOUND)
   message (STATUS "Looking for SDFormat - not found")
-  BUILD_ERROR ("Missing: SDF version >=2.3.1. Required for reading and writing SDF files.")
+  BUILD_ERROR ("Missing: SDF version >=3.0.0. Required for reading and writing SDF files.")
 else()
   message (STATUS "Looking for SDFormat - found")
 endif()
