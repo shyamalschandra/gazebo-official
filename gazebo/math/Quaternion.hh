@@ -338,7 +338,7 @@ namespace gazebo
     /// \param[in] _rkP the beginning quaternion
     /// \param[in] _rkQ the end quaternion
     /// \param[in] _shortestPath when true, the rotation may be inverted to
-    /// get to minimize rotation
+    /// minimize rotation
     public: static Quaternion Slerp(double _fT, const Quaternion &_rkP,
                 const Quaternion &_rkQ, bool _shortestPath = false);
 
