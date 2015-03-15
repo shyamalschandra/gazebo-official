@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,6 +227,32 @@ bool PhysicsEngine::SetParam(const std::string &/*_key*/,
 boost::any PhysicsEngine::GetParam(const std::string &/*_key*/) const
 {
   return 0;
+}
+
+//////////////////////////////////////////////////
+bool PhysicsEngine::GetParam(const std::string &_key,
+    boost::any &_value) const
+{
+  if (_key == "type")
+    _value = this->GetType();
+  else if (_key == "max_step_size")
+    _value = this->GetMaxStepSize();
+  else if (_key == "real_time_update_rate")
+    _value = this->GetRealTimeUpdateRate();
+  else if (_key == "real_time_factor")
+    _value = this->GetTargetRealTimeFactor();
+  else if (_key == "gravity")
+    _value = this->GetGravity();
+  else if (_key == "magnetic_field")
+    _value = this->sdf->Get<math::Vector3>("magnetic_field");
+  else
+  {
+    gzwarn << "Key [" << _key << "] is not supported in " << this->GetType()
+           << std::endl;
+    return false;
+  }
+
+  return true;
 }
 
 //////////////////////////////////////////////////
