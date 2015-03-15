@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -256,6 +256,14 @@ namespace gazebo
       /// \sa SetParam
       /// \return The value of the parameter
       public: virtual boost::any GetParam(const std::string &_key) const;
+
+      /// \brief Get a parameter from the physics engine with a boolean to
+      /// indicate success or failure
+      /// \param[in] _key Key of the accessed param
+      /// \param[out] _value Value of the accessed param
+      /// \return True if the parameter was successfully retrieved
+      public: virtual bool GetParam(const std::string &_key,
+                  boost::any &_value) const;
 
       /// \brief Debug print out of the physic engine state.
       public: virtual void DebugPrint() const = 0;
