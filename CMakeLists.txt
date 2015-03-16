@@ -319,8 +319,6 @@ else (build_errors)
 
   # set additional ldflags for osx
   if (APPLE)
-    # append stdc++
-    set (APPLE_PKGCONFIG_LIBS "${APPLE_PKGCONFIG_LIBS} -lstdc++")
   ENDIF (APPLE)
 
   foreach (pkgconfig ${pkgconfig_files})
