@@ -19,42 +19,16 @@
 #define _GAZEBO_OCULUS_CAMERA_HH_
 
 #include <string>
-#include <vector>
 
 #include "gazebo/rendering/Camera.hh"
-#include "gazebo/rendering/RenderTypes.hh"
-#include "gazebo/common/CommonTypes.hh"
-
-namespace OVR
-{
-  class HMDDevice;
-  class SensorFusion;
-  class DeviceManager;
-  class SensorDevice;
-
-  namespace Util
-  {
-    class MagCalibration;
-    namespace Render
-    {
-      class StereoConfig;
-    }
-  }
-}
-
-namespace Ogre
-{
-  class CompositorInstance;
-}
+// #include "gazebo/rendering/RenderTypes.hh"
+// #include "gazebo/common/CommonTypes.hh"
 
 namespace gazebo
 {
   namespace rendering
   {
-    class OrbitViewController;
-    class FPSViewController;
-    class Visual;
-    class SelectionBuffer;
+    class OculusCameraPrivate;
 
     /// \addtogroup gazebo_rendering
     /// \{
@@ -138,6 +112,9 @@ namespace gazebo
       /// \return True when Oculus is ready to use.
       public: bool Ready();
 
+      // Documentation inherited
+      protected: virtual void RenderImpl();
+
       /// \brief Set the camera to be attached to a visual.
       ///
       /// This causes the camera to move in relation to the specified visual.
@@ -167,44 +144,9 @@ namespace gazebo
       /// \brief Apply distorsion to the render target.
       private: void Oculus();
 
-      /// \brief Ogre camera for the right Oculus screen.
-      protected: Ogre::Camera *rightCamera;
-
-      /// \brief View poer for the right camera.
-      protected: Ogre::Viewport *rightViewport;
-
-      /// \brief Ogre Compositors
-      private: Ogre::CompositorInstance *compositors[2];
-
-      /// \brief Oculus deviceManager. Manages when the devices are inserted,
-      /// removed, or the number of devices present.
-      private: OVR::DeviceManager *deviceManager;
-
-      /// \brief An Oculus Head-Mounted display.
-      private: OVR::HMDDevice *hmd;
-
-      /// \brief Maintains a scene stereo state.
-      private: OVR::Util::Render::StereoConfig *stereoConfig;
-
-      /// \brief An interface to sensor data
-      private: OVR::SensorDevice *sensor;
-
-      /// \brief Accumulates sensor notification messages to keep track of
-      /// orientation.
-      private: OVR::SensorFusion *sensorFusion;
-
-      /// \brief Horizontal projection center offset as a distance away from the
-      /// one-eye [-1,1] unit viewport.
-      private: float centerOffset;
-
-      /// \brief Transport node for using gazebo pub/sub.
-      private: transport::NodePtr node;
-
-      /// \brief Subscriber used to receive updates on world_control topic.
-      private: transport::SubscriberPtr controlSub;
-
-      /// \brief True when Oculus is connected and ready to use.
-      private: bool ready;
+      /// \internal
+      /// \brief Pointer to private data.
+      private: OculusCameraPrivate *dataPtr;
     };
     /// \}
   }
