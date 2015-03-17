@@ -215,9 +215,6 @@ void Scene::Clear()
   delete this->dataPtr->skyx;
   this->dataPtr->skyx = NULL;
 
-  delete this->dataPtr->skyxController;
-  this->dataPtr->skyxController = NULL;
-
   while (!this->dataPtr->visuals.empty())
     this->RemoveVisual(this->dataPtr->visuals.begin()->first);
 
