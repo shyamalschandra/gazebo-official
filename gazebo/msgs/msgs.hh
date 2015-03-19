@@ -483,8 +483,8 @@ namespace gazebo
         gazebo::msgs::Message &message, const std::string &name);
     /// \endcond
 
-    /// \brief Get the header from a protobuf message
-    /// \param[in] _message A google protobuf message
+    /// \brief Get the header from a message
+    /// \param[in] _message A message
     /// \return A pointer to the message's header
     GAZEBO_VISIBLE
     msgs::Header *GetHeader(gazebo::msgs::Message &_message);
