@@ -15,7 +15,6 @@
  *
 */
 
-#include <google/protobuf/descriptor.h>
 #include <algorithm>
 
 #include "gazebo/math/Vector3.hh"
