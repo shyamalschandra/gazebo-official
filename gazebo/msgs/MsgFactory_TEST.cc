@@ -51,7 +51,7 @@ std::string custom_exec(const std::string &_cmd)
 /// Check for null when asked for a bad message type
 TEST_F(MsgFactory, BadMsgType)
 {
-  boost::shared_ptr<google::protobuf::Message> msg =
+  boost::shared_ptr<gazebo::msgs::Message> msg =
     gazebo::msgs::MsgFactory::NewMsg("bad");
   EXPECT_EQ(NULL, msg.get());
 }

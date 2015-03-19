@@ -5,16 +5,6 @@
 # undef TYPE_BOOL
 #endif
 
-#include <google/protobuf/message.h>
-namespace gazebo
-{
-  /// \ingroup gazebo_msgs Messages
-  /// \brief Messages namespace
-  namespace msgs
-  {
-    typedef google::protobuf::FieldDescriptor FieldDescriptor;
-    typedef google::protobuf::Message Message;
-  }
-}
+#include <gazebo/msgs/MessageTypedef.hh>
 
 ${message_headers}
