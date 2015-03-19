@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+
+#ifdef _WIN32
+  // Ensure that Winsock2.h is included before Windows.h, which can get
+  // pulled in by anybody (e.g., Boost).
+  #include <Winsock2.h>
+#endif
+
 #include <iomanip>
 
 #include "gazebo/rendering/UserCamera.hh"
@@ -228,6 +235,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
       }
     }
   }
+  std::cerr << "render widget constr done " << std::endl;
 }
 
 /////////////////////////////////////////////////
@@ -243,6 +251,7 @@ RenderWidget::~RenderWidget()
 /////////////////////////////////////////////////
 void RenderWidget::update()
 {
+    std::cerr << " render widget update 1 " << std::endl;
   if (this->clear)
   {
     rendering::remove_scene(this->clearName);
@@ -256,11 +265,14 @@ void RenderWidget::update()
     return;
   }
 
+    std::cerr << " render widget update 3 " << std::endl;
   rendering::UserCameraPtr cam = this->glWidget->GetCamera();
 
   if (!cam || !cam->GetInitialized())
   {
+    std::cerr << " preRender " << std::endl;
     event::Events::preRender();
+    std::cerr << " renderwidget done preRender " << std::endl;
     return;
   }
 

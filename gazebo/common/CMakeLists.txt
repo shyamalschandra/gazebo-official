@@ -1,5 +1,9 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 
+if (WIN32)
+ add_definitions(-DBUILDING_DLL_GZ_COMMON)
+endif()
+
 if (HAVE_OPENAL)
   include_directories(${OPENAL_INCLUDE_DIR})
 endif()
@@ -13,6 +17,17 @@ endif()
 if (HAVE_GDAL)
   include_directories(${GDAL_INCLUDE_DIR})
 endif()
+
+if (CURL_FOUND)
+  include_directories(${CURL_INCLUDEDIR})
+  link_directories(${CURL_LIBDIR})
+  if (WIN32)
+    add_definitions(-DCURL_STATICLIB)
+  endif()
+endif()
+
+include_directories(${tinyxml_INCLUDE_DIRS})
+link_directories(${tinyxml_LIBRARY_DIRS})
 
 set (sources
   Animation.cc
@@ -49,6 +64,15 @@ set (sources
   Timer.cc
   Video.cc
 )
+
+if (NOT USE_EXTERNAL_TINYXML)
+  include_directories (${CMAKE_SOURCE_DIR}/deps/win/tinyxml)
+  set (sources ${sources}
+       ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinystr.cpp
+       ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinyxml.cpp
+       ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinyxmlerror.cpp
+       ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinyxmlparser.cpp)
+endif()
 
 set (headers
   Animation.hh
@@ -147,6 +171,8 @@ foreach (hdr ${headers})
 endforeach()
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/common.hh.in ${CMAKE_CURRENT_BINARY_DIR}/common.hh )
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILDING_DLL_GZ_COMMON")
+
 gz_add_library(gazebo_common ${sources})
 
 set_property(
@@ -179,11 +205,14 @@ target_link_libraries(gazebo_common
   ${libtar_LIBRARIES}
   ${TBB_LIBRARIES}
   ${SDFormat_LIBRARIES}
-  pthread
 )
 
-if (NOT APPLE)
-  # rt is used for clock_gettime, which is not available on apple
+if (UNIX)
+  target_link_libraries(gazebo_common pthread)
+endif()
+  
+if (UNIX)
+  # rt is used for clock_gettime, which is not available on apple or windows
   target_link_libraries(gazebo_common rt)
 endif()
 

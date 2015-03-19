@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+
+#ifdef _WIN32
+  // Ensure that Winsock2.h is included before Windows.h, which can get
+  // pulled in by anybody (e.g., Boost).
+  #include <Winsock2.h>
+#endif
+
 #include <sstream>
 
 #include "gazebo/transport/Node.hh"
@@ -310,6 +317,9 @@ std::string TimePanel::FormatTime(const msgs::Time &_msg)
 void TimePanel::Update()
 {
   boost::mutex::scoped_lock lock(this->mutex);
+
+  if (!this->simTimes.size() || !this->realTimes.size())
+    return;
 
   std::ostringstream percent;
 

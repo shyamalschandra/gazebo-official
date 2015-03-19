@@ -4,6 +4,7 @@ include_directories(SYSTEM
   ${Boost_INCLUDE_DIRS}
   ${PROTOBUF_INCLUDE_DIR}
   ${SDFormat_INCLUDE_DIRS}
+  ${TBB_INCLUDEDIR}
 )
 
 link_directories(
@@ -11,10 +12,26 @@ link_directories(
   ${Boost_LIBRARY_DIRS}
   ${SDFormat_LIBRARY_DIRS}
   ${PROJECT_BINARY_DIR}/test
+  ${TBB_LIBRARY_DIR}
 )
+
+if (WIN32)
+  include_directories(${libdl_include_dir})
+endif()
+
+include_directories(${tinyxml_INCLUDE_DIRS})
+# TODO: this should work here but it did not for me
+# the workaround was to move this line to ..\CMakeLists.txt
+# review why this is not working here and remove the
+# workaround.
+link_directories(${CURL_LIBDIR})
 
 if (HAVE_BULLET)
   link_directories(${BULLET_LIBRARY_DIRS})
+endif()
+
+if (WIN32)
+ add_definitions(-DBUILDING_DLL)
 endif()
 
 add_subdirectory(msgs)
@@ -45,7 +62,7 @@ endif()
 
 
 gz_add_executable(gzserver server_main.cc Server.cc Master.cc gazebo.cc)
-gz_add_executable(gazebo gazebo_main.cc Server.cc Master.cc gazebo.cc)
+#gz_add_executable(gazebo gazebo_main.cc Server.cc Master.cc gazebo.cc)
 
 target_link_libraries(gzserver
   gazebo_common
@@ -55,29 +72,36 @@ target_link_libraries(gzserver
   gazebo_sensors
   gazebo_rendering
   gazebo_msgs
-  pthread
+  # Extra libs needed when linking statically (e.g., on WIN32)
+  gazebo_physics_ode
+  ${freeimage_LIBRARIES}
+  ${TBB_LIBRARIES}
 )
 
-target_link_libraries(gazebo
-  gazebo_common
-  gazebo_util
-  gazebo_transport
-  gazebo_physics
-  gazebo_sensors
-  gazebo_rendering
-  gazebo_msgs
-  gazebo_gui
-  pthread
-)
+if (UNIX)
+  target_link_libraries(gzserver pthread)
+endif()
+
+#target_link_libraries(gazebo
+#  gazebo_common
+#  gazebo_util
+#  gazebo_transport
+#  gazebo_physics
+#  gazebo_sensors
+#  gazebo_rendering
+#  gazebo_msgs
+#  gazebo_gui
+#  pthread
+#)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "CHECK")
   target_link_libraries(gzserver gcov)
 endif()
 
 gz_install_executable(gzserver)
-gz_install_executable(gazebo)
+#gz_install_executable(gazebo)
 manpage(gzserver 1)
-manpage(gazebo 1)
+#manpage(gazebo 1)
 
 gz_add_library(libgazebo Server.cc Master.cc gazebo.cc)
 set_target_properties(libgazebo PROPERTIES OUTPUT_NAME "gazebo")
@@ -91,8 +115,11 @@ target_link_libraries(libgazebo
   gazebo_rendering
   gazebo_msgs
   gazebo_math
-  pthread
 )
+
+if (UNIX)
+  target_link_libraries(libgazebo pthread)
+endif()
 
 add_dependencies(libgazebo gazebo_msgs)
 gz_install_library(libgazebo)
