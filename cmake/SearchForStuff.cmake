@@ -514,7 +514,6 @@ else ()
   set (HAVE_GDAL ON CACHE BOOL "HAVE GDAL" FORCE)
 endif ()
 
-
 ########################################
 # Include man pages stuff
 include (${gazebo_cmake_dir}/Ronn2Man.cmake)

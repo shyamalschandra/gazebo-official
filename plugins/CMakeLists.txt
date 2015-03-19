@@ -3,6 +3,7 @@ include_directories(
   ${PROTOBUF_INCLUDE_DIR}
   ${SDFormat_INCLUDE_DIRS}
   ${OGRE_INCLUDE_DIRS}
+  ${CURL_INCLUDEDIR}
 )
 
 # Tinyxml are used since the plugins are linking against gazebo_common
@@ -12,6 +13,7 @@ link_directories(
   ${CCD_LIBRARY_DIRS}
   ${SDFormat_LIBRARY_DIRS}
   ${tinyxml_LIBRARY_DIRS}
+  ${CURL_LIBRARY_DIRS}
 )
 
 include (${QT_USE_FILE})

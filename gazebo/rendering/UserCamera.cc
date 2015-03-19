@@ -98,6 +98,7 @@ void UserCamera::Load()
 //////////////////////////////////////////////////
 void UserCamera::Init()
 {
+  std::cerr << " user camera initing "<< std::endl;
   this->dataPtr->orbitViewController = new OrbitViewController(
       boost::dynamic_pointer_cast<UserCamera>(shared_from_this()));
   this->dataPtr->fpsViewController = new FPSViewController(
@@ -195,6 +196,7 @@ void UserCamera::Init()
   this->axisNode->attachObject(y);
   this->axisNode->attachObject(z);
   */
+  std::cerr << "user camera init " << this->GetName() << std::endl;
 }
 
 //////////////////////////////////////////////////

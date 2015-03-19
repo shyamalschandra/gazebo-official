@@ -19,14 +19,21 @@
 # include <QtCore/qglobal.h>
 #endif
 
-#ifndef Q_OS_MAC  // Not Apple
+#if not defined( Q_OS_MAC) && not defined(_WIN32)  // Not Apple or Windows
 # include <X11/Xlib.h>
 # include <X11/Xutil.h>
 # include <GL/glx.h>
 #endif
 
 #include <sys/types.h>
-#include <dirent.h>
+#ifdef _WIN32
+  // Ensure that Winsock2.h is included before Windows.h, which can get
+  // pulled in by anybody (e.g., Boost).
+  #include <Winsock2.h>
+  #include "gazebo/common/win_dirent.h"
+#else
+  #include <dirent.h>
+#endif
 #include <string>
 #include <iostream>
 
@@ -371,7 +378,7 @@ void RenderEngine::Fini()
     this->scenes[i].reset();
   this->scenes.clear();
 
-#ifndef Q_OS_MAC
+#if not defined( Q_OS_MAC) && not defined(_WIN32)  // Not Apple or Windows
   if (this->dummyDisplay)
   {
     glXDestroyContext(static_cast<Display*>(this->dummyDisplay),
@@ -416,13 +423,18 @@ void RenderEngine::LoadPlugins()
     std::string extension = ".so";
 #endif
 
-    plugins.push_back(path+"/"+prefix+"RenderSystem_GL");
+    boost::filesystem::path p(path);
+    plugins.push_back((p / prefix / "RenderSystem_GL").string());
+    plugins.push_back((p / prefix / "Plugin_ParticleFX").string());
+    plugins.push_back((p / prefix / "Plugin_BSPSceneManager").string());
+    plugins.push_back((p / prefix / "Plugin_OctreeSceneManager").string());
+/*    plugins.push_back(path+"/"+prefix+"RenderSystem_GL");
     plugins.push_back(path+"/"+prefix+"Plugin_ParticleFX");
     plugins.push_back(path+"/"+prefix+"Plugin_BSPSceneManager");
-    plugins.push_back(path+"/"+prefix+"Plugin_OctreeSceneManager");
+    plugins.push_back(path+"/"+prefix+"Plugin_OctreeSceneManager");*/
 
 #ifdef HAVE_OCULUS
-    plugins.push_back(path+"/Plugin_CgProgramManager");
+    plugins.push_back((p / prefix / "Plugin_CgProgramManager").string());
 #endif
 
     for (piter = plugins.begin(); piter != plugins.end(); ++piter)
@@ -555,49 +567,52 @@ void RenderEngine::SetupResources()
 
   for (iter = paths.begin(); iter != paths.end(); ++iter)
   {
+    boost::filesystem::path gzPath(*iter);
     DIR *dir;
-    if ((dir = opendir((*iter).c_str())) == NULL)
+    if ((dir = opendir(gzPath.string().c_str())) == NULL)
     {
       continue;
     }
     closedir(dir);
 
     archNames.push_back(
-        std::make_pair((*iter)+"/", "General"));
+        std::make_pair(gzPath.string(), "General"));
 
     for (std::list<std::string>::iterator mediaIter = mediaDirs.begin();
          mediaIter != mediaDirs.end(); ++mediaIter)
     {
-      std::string prefix = (*iter) + "/" + (*mediaIter);
+      boost::filesystem::path p = gzPath / (*mediaIter);
+
+      //boost::filesystem::path p(prefix);
 
       archNames.push_back(
-          std::make_pair(prefix, "General"));
+          std::make_pair(p.string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/skyx", "SkyX"));
+          std::make_pair((p/"skyx").string(), "SkyX"));
       archNames.push_back(
-          std::make_pair(prefix + "/rtshaderlib", "General"));
+          std::make_pair((p/"rtshaderlib").string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/materials/programs", "General"));
+          std::make_pair((p/"materials"/"programs").string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/materials/scripts", "General"));
+          std::make_pair((p/"materials"/"scripts").string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/materials/textures", "General"));
+          std::make_pair((p/"materials"/"textures").string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/media/models", "General"));
+          std::make_pair((p/"media"/"models").string(), "General"));
       archNames.push_back(
-          std::make_pair(prefix + "/fonts", "Fonts"));
+          std::make_pair((p/"fonts").string(), "Fonts"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/looknfeel", "LookNFeel"));
+          std::make_pair((p/"gui"/"looknfeel").string(), "LookNFeel"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/schemes", "Schemes"));
+          std::make_pair((p/"gui"/"schemes").string(), "Schemes"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/imagesets", "Imagesets"));
+          std::make_pair((p/"gui"/"imagesets").string(), "Imagesets"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/fonts", "Fonts"));
+          std::make_pair((p/"gui"/"fonts").string(), "Fonts"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/layouts", "Layouts"));
+          std::make_pair((p/"gui"/"layouts").string(), "Layouts"));
       archNames.push_back(
-          std::make_pair(prefix + "/gui/animations", "Animations"));
+          std::make_pair((p/"gui"/"animations").string(), "Animations"));
     }
 
     for (aiter = archNames.begin(); aiter != archNames.end(); ++aiter)
@@ -671,7 +686,7 @@ bool RenderEngine::CreateContext()
 {
   bool result = true;
 
-#ifdef Q_OS_MAC
+#if defined Q_OS_MAC || _WIN32
   this->dummyDisplay = 0;
 #else
   try
