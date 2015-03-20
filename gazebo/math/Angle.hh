@@ -20,6 +20,12 @@
 
 #include <math.h>
 #include <iostream>
+
+#include <gazebo/gazebo_config.h>
+#ifdef HAVE_IGNITION_MATH
+#include <ignition/math/Angle.hh>
+#endif
+
 #include "gazebo/util/system.hh"
 
 /// \brief Macro that converts radians to degrees
@@ -47,6 +53,9 @@ namespace gazebo
   /// \addtogroup gazebo_math Math
   /// \{
 
+#ifdef HAVE_IGNITION_MATH
+  typedef ignition::math::Angle Angle;
+#else
   /// \class Angle Angle.hh math/gzmath.hh
   /// \brief An angle and related functions.
   class GAZEBO_VISIBLE Angle
@@ -79,11 +88,21 @@ namespace gazebo
 
     /// \brief Set the value from an angle in radians
     /// \param[in] _radian Radian value
-    public: void SetFromRadian(double _radian);
+    public: void Radian(double _radian);
+
+    /// \brief Set the value from an angle in radians
+    /// \param[in] _radian Radian value
+    public: void SetFromRadian(double _radian)
+            __attribute__((deprecated));
 
     /// \brief Set the value from an angle in degrees
     /// \param[in] _degree Degree value
-    public: void SetFromDegree(double _degree);
+    public: void Degree(double _degree);
+
+    /// \brief Set the value from an angle in degrees
+    /// \param[in] _degree Degree value
+    public: void SetFromDegree(double _degree)
+            __attribute__((deprecated));
 
     /// \brief Get the angle in radians
     /// \return double containing the angle's radian value
@@ -196,6 +215,7 @@ namespace gazebo
     /// The angle in radians
     private: double value;
   };
+#endif
 
   /// \}
   }

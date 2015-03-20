@@ -182,6 +182,9 @@ target_link_libraries(gazebo_common
   ${SDFormat_LIBRARIES}
   pthread
 )
+if (HAVE_IGNITION_MATH)
+  target_link_libraries(gazebo_common ${IGNITION-MATH_LIBRARIES})
+endif()
 
 if (NOT APPLE)
   # rt is used for clock_gettime, which is not available on apple
