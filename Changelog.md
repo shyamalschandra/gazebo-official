@@ -50,6 +50,9 @@
 1. Updated ConfigWidget class to parse enum values.
     * [Pull request #1518](https://bitbucket.org/osrf/gazebo/pull-request/1518)
 
+1. Added Apply Force/Torque GUI
+    * [Pull request #1506](https://bitbucket.org/osrf/gazebo/pull-request/1506)
+
 1. Model editor updates
     1. Joint preview using JointVisuals.
         * [Pull request #1369](https://bitbucket.org/osrf/gazebo/pull-request/1369)
