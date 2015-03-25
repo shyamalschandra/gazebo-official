@@ -170,6 +170,16 @@ void JointMaker::RemoveJoint(const std::string &_jointId)
   if (jointIt != this->joints.end())
   {
     JointData *joint = jointIt->second;
+
+    std::string jointParentName = joint->parent->GetName();
+    size_t pIdx = jointParentName.find_last_of("::");
+    if (pIdx != std::string::npos)
+      jointParentName = jointParentName.substr(pIdx+1);
+    std::string jointChildName = joint->child->GetName();
+    size_t cIdx = jointChildName.find_last_of("::");
+    if (cIdx != std::string::npos)
+      jointChildName = jointChildName.substr(cIdx+1);
+
     rendering::ScenePtr scene = joint->hotspot->GetScene();
     scene->GetManager()->destroyBillboardSet(joint->handles);
     scene->RemoveVisual(joint->hotspot);
@@ -198,6 +208,7 @@ void JointMaker::RemoveJoint(const std::string &_jointId)
     delete joint->inspector;
     delete joint;
     this->joints.erase(jointIt);
+
     gui::model::Events::modelChanged();
     gui::model::Events::jointRemoved(_jointId);
   }
@@ -345,6 +356,15 @@ bool JointMaker::OnMouseRelease(const common::MouseEvent &_event)
           this->Stop();
           this->mouseJoint = newJoint;
           this->newJointCreated = true;
+
+          std::string jointParentName = this->mouseJoint->parent->GetName();
+          size_t pIdx = jointParentName.find_last_of("::");
+          if (pIdx != std::string::npos)
+            jointParentName = jointParentName.substr(pIdx+1);
+          std::string jointChildName = this->mouseJoint->child->GetName();
+          size_t cIdx = jointChildName.find_last_of("::");
+          if (cIdx != std::string::npos)
+            jointChildName = jointChildName.substr(cIdx+1);
           gui::model::Events::modelChanged();
         }
       }
@@ -512,7 +532,6 @@ void JointMaker::AddJoint(JointMaker::JointType _type)
   {
     // Remove the event filters.
     MouseEventHandler::Instance()->RemoveMoveFilter("model_joint");
-
     // signal the end of a joint action.
     emit JointAdded();
   }
@@ -719,7 +738,8 @@ void JointMaker::CreateHotSpot(JointData *_joint)
   camera->GetScene()->AddVisual(hotspotVisual);
 
   _joint->hotspot = hotspotVisual;
-  gui::model::Events::jointInserted(jointId, _joint->name);
+  gui::model::Events::jointInserted(jointId, _joint->name,
+      _joint->parent->GetName(), _joint->child->GetName());
 }
 
 /////////////////////////////////////////////////
@@ -1196,4 +1216,14 @@ void JointMaker::CreateJointFromSDF(sdf::ElementPtr _jointElem,
   joint->dirty = true;
 
   this->CreateHotSpot(joint);
+
+  std::string jointParentName = joint->parent->GetName();
+  size_t pIdx = jointParentName.find_last_of("::");
+  if (pIdx != std::string::npos)
+    jointParentName = jointParentName.substr(pIdx+1);
+  std::string jointChildName = joint->child->GetName();
+  size_t cIdx = jointChildName.find_last_of("::");
+  if (cIdx != std::string::npos)
+    jointChildName = jointChildName.substr(cIdx+1);
+
 }
