@@ -1,5 +1,10 @@
 <sdf version="1.5">
   <world name="default">
+    <!-- A ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
     <physics name="preset_1" type="ode" default="true">
       <max_step_size>0.01</max_step_size>
       <ode>
@@ -16,11 +21,28 @@
           <contact_surface_layer>0.002</contact_surface_layer>
         </constraints>
       </ode>
+      <simbody>
+        <min_step_size>0.001</min_step_size>
+        <accuracy>0.01</accuracy>
+        <max_transient_velocity>0.001</max_transient_velocity>
+      </simbody>
+      <bullet>
+        <solver>
+          <min_step_size>0.001</min_step_size>
+          <iters>50</iters>
+          <sor>1.4</sor>
+        </solver>
+        <constraints>
+          <cfm>0.01</cfm>
+          <erp>0.3</erp>
+          <split_impulse>false</split_impulse>
+          <contact_surface_layer>0.002</contact_surface_layer>
+        </constraints>
+      </bullet>
     </physics>
 
     <physics name="preset_2" type="ode">
       <max_step_size>0.02</max_step_size>
-
       <ode>
         <solver>
           <min_step_size>0.002</min_step_size>
@@ -31,22 +53,22 @@
           <cfm>0.02</cfm>
           <erp>0.6</erp>
         </constraints>
-
       </ode>
-      <!--<bullet>
+    </physics>
+
+    <physics name="unused" type="ode" default="true">
+      <max_step_size>0.04</max_step_size>
+      <ode>
         <solver>
-          <min_step_size>0.002</min_step_size>
-          <iters>100</iters>
-          <sor>1.5</sor>
+          <min_step_size>0.004</min_step_size>
+          <iters>200</iters>
+          <sor>1.3</sor>
         </solver>
         <constraints>
-          <cfm>0.02</cfm>
-          <erp>0.6</erp>
-          <contact_surface_layer>0.004</contact_surface_layer>
-          <split_impulse>1</split_impulse>
-          <split_impulse_penetration_threshold>-0.04</split_impulse_penetration_threshold>
+          <cfm>0.05</cfm>
+          <erp>0.7</erp>
         </constraints>
-      </bullet>-->
+      </ode>
     </physics>
 
   </world>

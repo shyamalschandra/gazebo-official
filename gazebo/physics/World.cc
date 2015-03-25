@@ -148,7 +148,7 @@ World::World(const std::string &_name)
 //////////////////////////////////////////////////
 World::~World()
 {
-  delete this->dataPtr->presetManager;
+  this->dataPtr->presetManager.reset();
   delete this->dataPtr->receiveMutex;
   this->dataPtr->receiveMutex = NULL;
   delete this->dataPtr->loadModelMutex;
@@ -241,21 +241,7 @@ void World::Load(sdf::ElementPtr _sdf)
       "~/light");
 
   // This should come before loading of entities
-  // TODO: search multiple physics blocks for default name
   sdf::ElementPtr physicsElem = this->dataPtr->sdf->GetElement("physics");
-  /*if (this->dataPtr->sdf->HasAttribute("default_physics"))
-  {
-    std::string defaultName =
-        this->dataPtr->sdf->GetAttribute("default_physics")->GetAsString();
-    while (physicsElem)
-    {
-      if (physicsElem->GetAttribute("name")->GetAsString() == defaultName)
-      {
-        break;
-      }
-      physicsElem = physicsElem->GetNextElement("physics");
-    }
-  }*/
 
   std::string type = physicsElem->Get<std::string>("type");
   this->dataPtr->physicsEngine = PhysicsFactory::NewPhysicsEngine(type,
@@ -363,8 +349,8 @@ void World::Init()
   // Initialize the physics engine
   this->dataPtr->physicsEngine->Init();
 
-  this->dataPtr->presetManager =
-    new PresetManager(this->dataPtr->physicsEngine, this->dataPtr->sdf);
+  this->dataPtr->presetManager = PresetManagerPtr(
+      new PresetManager(this->dataPtr->physicsEngine, this->dataPtr->sdf));
 
   this->dataPtr->testRay = boost::dynamic_pointer_cast<RayShape>(
       this->GetPhysicsEngine()->CreateShape("ray", CollisionPtr()));
@@ -666,7 +652,7 @@ void World::Step(unsigned int _steps)
   bool wait = true;
   while (wait)
   {
-    common::Time::MSleep(1);
+    common::Time::NSleep(1);
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->worldUpdateMutex);
     if (this->dataPtr->stepInc == 0 || this->dataPtr->stop)
       wait = false;
@@ -832,7 +818,7 @@ PhysicsEnginePtr World::GetPhysicsEngine() const
 }
 
 //////////////////////////////////////////////////
-PresetManager* World::GetPresetManager() const
+PresetManagerPtr World::GetPresetManager() const
 {
   return this->dataPtr->presetManager;
 }
