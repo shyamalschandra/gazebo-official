@@ -937,7 +937,6 @@ void ModelCreator::CreateLinkFromSDF(sdf::ElementPtr _linkElem)
 
   rendering::ScenePtr scene = link->linkVisual->GetScene();
   scene->AddVisual(link->linkVisual);
-
   this->ModelChanged();
 }
 
@@ -987,6 +986,11 @@ void ModelCreator::RemoveLink(const std::string &_linkName)
   }
   gui::model::Events::linkRemoved(linkName);
 
+  std::string leafName = _linkName;
+  size_t idx = _linkName.find_last_of("::");
+  if (idx != std::string::npos)
+    leafName = _linkName.substr(idx+1);
+  gui::model::Events::linkRemoved(leafName);
   this->ModelChanged();
 }
 

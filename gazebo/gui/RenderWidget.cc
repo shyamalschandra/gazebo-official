@@ -138,9 +138,12 @@ RenderWidget::RenderWidget(QWidget *_parent)
       "QLabel { background-color : white; color : gray; }");
   this->msgOverlayLabel->setVisible(false);
 
+
+  this->bottomRow = new QStackedWidget(this);
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
   this->timePanel = new TimePanel(this);
+//  this->AddToBottomRow("default", timePanel);
 
   this->bottomFrame = new QFrame;
   this->bottomFrame->setObjectName("renderBottomFrame");
@@ -151,6 +154,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
   bottomPanelLayout->setSpacing(0);
   bottomPanelLayout->setContentsMargins(0, 0, 0, 0);
   this->bottomFrame->setLayout(bottomPanelLayout);
+
 
   QFrame *render3DFrame = new QFrame;
   render3DFrame->setObjectName("render3DFrame");
@@ -238,17 +242,28 @@ void RenderWidget::InsertWidget(unsigned int _index, QWidget *_widget)
   {
     // set equal size for now. There should always be at least one widget
     // (render3DFrame) in the splitter.
-    QList<int> sizes = this->splitter->sizes();
-    GZ_ASSERT(sizes.size() > 0, "RenderWidget splitter has no child widget");
+    int childCount = this->splitter->count();
+    GZ_ASSERT(childCount > 0,
+        "RenderWidget splitter has no child widget");
 
-    sizes.insert(_index, sizes[0]);
+    QSize widgetSize = this->size();
+    int newSize = widgetSize.height() / (this->splitter->count()+1);
+    QList<int> newSizes;
+    for (int i = 0; i < childCount+1; ++i)
+      newSizes.append(newSize);
 
     this->splitter->insertWidget(_index, _widget);
-    this->splitter->setSizes(sizes);
+    this->splitter->setSizes(newSizes);
     this->splitter->setStretchFactor(_index, 1);
   }
   else
     gzerr << "Unable to add widget, index out of range " << std::endl;
+}
+
+/////////////////////////////////////////////////
+unsigned RenderWidget::GetWidgetCount()
+{
+  return static_cast<unsigned int>(this->splitter->count());
 }
 
 /////////////////////////////////////////////////
@@ -345,6 +360,26 @@ void RenderWidget::OnFollow(const std::string &_modelName)
     g_translateAct->setEnabled(false);
     g_rotateAct->setEnabled(false);
   }
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::AddToBottomRow(const std::string &_name, QWidget *_widget)
+{
+  this->bottomRow->addWidget(_widget);
+  this->bottomRowStack[_name] = this->bottomRow->count()-1;
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::ShowBottomRow(const std::string &_name)
+{
+  std::map<std::string, int>::iterator iter =
+      this->bottomRowStack.find(_name);
+
+  if (iter != this->bottomRowStack.end())
+    this->bottomRow->setCurrentIndex(iter->second);
+  else
+    gzerr << "Widget with name[" << _name << "] has not been added to the"
+      << " bottom row stack.\n";
 }
 
 /////////////////////////////////////////////////
