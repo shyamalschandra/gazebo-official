@@ -78,6 +78,121 @@ namespace gazebo
       return (msgs::Header*)msg;
     }
 
+    /*sdf::ElementPtr PhysicsToSDF(const msgs::Physics &_physics,
+        sdf::ElementPtr _sdf = sdf::ElementPtr())
+    {
+    }
+
+    msgs::Physics PhysicsFromSDF(sdf::ElementPtr)
+    {
+    }*/
+
+    template<> msgs::Param ConvertMessageParam<double>(
+        const std::string &_key, const double &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      param.set_double_value(_value);
+      return param;
+    }
+
+    template<> msgs::Param ConvertMessageParam<int>(
+        const std::string &_key, const int &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      param.set_int_value(_value);
+      return param;
+    }
+
+    template<> msgs::Param ConvertMessageParam<std::string>(
+        const std::string &_key, const std::string &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      param.set_string_value(_value);
+      return param;
+    }
+
+    template<> msgs::Param ConvertMessageParam<math::Vector3>(
+        const std::string &_key, const math::Vector3 &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      msgs::Vector3d *vec = param.mutable_vector3d();
+      *vec = Convert(_value);
+      return param;
+    }
+
+    template<> msgs::Param ConvertMessageParam<bool>(
+        const std::string &_key, const bool &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      param.set_bool_value(_value);
+      return param;
+    }
+
+    template<> msgs::Param ConvertMessageParam<float>(
+        const std::string &_key, const float &_value)
+    {
+      msgs::Param param;
+      param.set_name(_key);
+      param.set_float_value(_value);
+      return param;
+    }
+
+    bool ConvertMessageParam(const msgs::Param &_msg,
+        boost::any &_value)
+    {
+      const google::protobuf::Reflection *reflection =
+          _msg.GetReflection();
+      std::vector<const google::protobuf::FieldDescriptor*> fields;
+      reflection->ListFields(_msg, &fields);
+      if ((_msg.children_size() > 0 && fields.size() > 3) ||
+          (_msg.children_size() == 0 && fields.size() > 2))
+      {
+        return false;
+      }
+
+      for (auto field : fields)
+      {
+        if (field->name() == "name" || field->name() ==  "children")
+        {
+          continue;
+        }
+        // optimization to skip over iterating through all fields
+        switch (field->cpp_type())
+        {
+          case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE:
+            _value = reflection->GetDouble(_msg, field);
+            return true;
+          case google::protobuf::FieldDescriptor::CPPTYPE_INT32:
+            _value = reflection->GetInt32(_msg, field);
+            return true;
+          case google::protobuf::FieldDescriptor::CPPTYPE_STRING:
+            _value = reflection->GetString(_msg, field);
+            return true;
+          case google::protobuf::FieldDescriptor::CPPTYPE_BOOL:
+            _value = reflection->GetBool(_msg, field);
+            return true;
+          case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
+            _value = reflection->GetFloat(_msg, field);
+            return true;
+          case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
+            if (field->name() == "vector3d")
+            {
+              _value = _msg.vector3d();
+              return true;
+            }
+            // Else, go to default case
+          default:
+            break;
+        }
+      }
+      return false;
+    }
+
     void Init(google::protobuf::Message &_message, const std::string &_id)
     {
       msgs::Header *header = GetHeader(_message);
