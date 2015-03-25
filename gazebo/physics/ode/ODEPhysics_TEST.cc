@@ -206,12 +206,14 @@ void ODEPhysics_TEST::PhysicsMsgParam()
   physicsPubMsg.set_max_step_size(0.001);
   physicsPubMsg.set_real_time_update_rate(800);
   physicsPubMsg.set_real_time_factor(1.1);
-  physicsPubMsg.set_iters(60);
-  physicsPubMsg.set_sor(1.5);
-  physicsPubMsg.set_cfm(0.1);
-  physicsPubMsg.set_erp(0.25);
-  physicsPubMsg.set_contact_max_correcting_vel(10);
-  physicsPubMsg.set_contact_surface_layer(0.01);
+
+  msgs::AddToPhysicsMsg("solver_type", std::string("quick"), physicsPubMsg);
+  msgs::AddToPhysicsMsg("iters", 60, physicsPubMsg);
+  msgs::AddToPhysicsMsg("sor", 1.5, physicsPubMsg);
+  msgs::AddToPhysicsMsg("erp", 0.1, physicsPubMsg);
+  msgs::AddToPhysicsMsg("cfm", 0.1, physicsPubMsg);
+  msgs::AddToPhysicsMsg("contact_max_correcting_vel", 10.0, physicsPubMsg);
+  msgs::AddToPhysicsMsg("contact_surface_layer", 0.01, physicsPubMsg);
 
   physicsPubMsg.set_type(msgs::Physics::ODE);
   physicsPubMsg.set_solver_type("quick");
@@ -232,22 +234,67 @@ void ODEPhysics_TEST::PhysicsMsgParam()
       physicsPubMsg.real_time_update_rate());
   EXPECT_DOUBLE_EQ(physicsResponseMsg.real_time_factor(),
       physicsPubMsg.real_time_factor());
-  EXPECT_EQ(physicsResponseMsg.solver_type(),
-      physicsPubMsg.solver_type());
   EXPECT_EQ(physicsResponseMsg.enable_physics(),
       physicsPubMsg.enable_physics());
-  EXPECT_EQ(physicsResponseMsg.iters(),
-      physicsPubMsg.iters());
-  EXPECT_DOUBLE_EQ(physicsResponseMsg.sor(),
-      physicsPubMsg.sor());
-  EXPECT_DOUBLE_EQ(physicsResponseMsg.cfm(),
-      physicsPubMsg.cfm());
-  EXPECT_DOUBLE_EQ(physicsResponseMsg.contact_max_correcting_vel(),
-      physicsPubMsg.contact_max_correcting_vel());
-  EXPECT_DOUBLE_EQ(physicsResponseMsg.contact_surface_layer(),
-      physicsPubMsg.contact_surface_layer());
+
+  int int_value_resp, int_value_pub;
+  double double_value_resp, double_value_pub;
+  std::string str_value_resp, str_value_pub;
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg, "solver_type",
+      str_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "solver_type",
+      str_value_pub));
+  EXPECT_EQ(str_value_resp, str_value_pub);
+
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg, "iters",
+      int_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "iters", int_value_pub));
+  EXPECT_EQ(int_value_resp, int_value_pub);
+
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg, "sor",
+      double_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "sor", double_value_pub));
+  EXPECT_NEAR(double_value_resp, double_value_pub, 1e-6);
+
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg, "cfm",
+      double_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "cfm", double_value_pub));
+  EXPECT_NEAR(double_value_resp, double_value_pub, 1e-6);
+
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg,
+      "contact_max_correcting_vel", double_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "contact_max_correcting_vel",
+      double_value_pub));
+  EXPECT_NEAR(double_value_resp, double_value_pub, 1e-6);
+
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsResponseMsg, "contact_surface_layer",
+      double_value_resp));
+  EXPECT_TRUE(msgs::PhysicsMsgParam(physicsPubMsg, "contact_surface_layer",
+      double_value_pub));
+  EXPECT_NEAR(double_value_resp, double_value_pub, 1e-6);
 
   phyNode->Fini();
+}
+
+/////////////////////////////////////////////////
+TEST_F(ODEPhysics_TEST, PhysicsMsgParamFromSDF)
+{
+  std::string physicsEngineStr = "ode";
+  Load("test/worlds/param.world", true, physicsEngineStr);
+  WorldPtr world = get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  PhysicsEnginePtr physics = world->GetPhysicsEngine();
+  ASSERT_TRUE(physics != NULL);
+  EXPECT_EQ(physics->GetType(), physicsEngineStr);
+
+  boost::any value;
+  EXPECT_TRUE(physics->GetParam("contact_residual_smoothing", value));
+  EXPECT_NEAR(boost::any_cast<double>(value), 0.01, 1e-6);
+  EXPECT_TRUE(physics->GetParam("warm_start_factor", value));
+  EXPECT_NEAR(boost::any_cast<double>(value), 2.0, 1e-6);
+  EXPECT_TRUE(physics->GetParam("extra_friction_iterations", value));
+  EXPECT_EQ(boost::any_cast<int>(value), 11);
 }
 
 /////////////////////////////////////////////////
