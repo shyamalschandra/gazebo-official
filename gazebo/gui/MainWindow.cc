@@ -49,6 +49,7 @@
 #include "gazebo/gui/ToolsWidget.hh"
 #include "gazebo/gui/GLWidget.hh"
 #include "gazebo/gui/AlignWidget.hh"
+#include "gazebo/gui/TimePanel.hh"
 #include "gazebo/gui/MainWindow.hh"
 #include "gazebo/gui/GuiEvents.hh"
 #include "gazebo/gui/SpaceNav.hh"
@@ -244,7 +245,7 @@ void MainWindow::Init()
   this->renderWidget->show();
 
   // Default window size is entire desktop.
-  QSize winSize = QApplication::desktop()->size();
+  QSize winSize = QApplication::desktop()->screenGeometry().size();
 
   // Get the size properties from the INI file.
   int winWidth = getINIProperty<int>("geometry.width", winSize.width());
@@ -270,9 +271,6 @@ void MainWindow::Init()
       &MainWindow::OnModel, this, true);
 
   this->lightSub = this->node->Subscribe("~/light", &MainWindow::OnLight, this);
-
-  this->statsSub =
-    this->node->Subscribe("~/world_stats", &MainWindow::OnStats, this);
 
   this->requestPub = this->node->Advertise<msgs::Request>("~/request");
   this->responseSub = this->node->Subscribe("~/response",
@@ -411,17 +409,22 @@ void MainWindow::SaveINI()
 /////////////////////////////////////////////////
 void MainWindow::SaveAs()
 {
-  std::string filename = QFileDialog::getSaveFileName(this,
-      tr("Save World"), QString(),
-      tr("SDF Files (*.xml *.sdf *.world)")).toStdString();
+  QFileDialog fileDialog(this, tr("Save World"), QDir::homePath(),
+      tr("SDF Files (*.xml *.sdf *.world)"));
+  fileDialog.setAcceptMode(QFileDialog::AcceptSave);
 
-  // Return if the user has canceled.
-  if (filename.empty())
-    return;
+  if (fileDialog.exec() == QDialog::Accepted)
+  {
+    QStringList selected = fileDialog.selectedFiles();
+    if (selected.empty())
+      return;
 
-  g_saveAct->setEnabled(true);
-  this->saveFilename = filename;
-  this->Save();
+    std::string filename = selected[0].toStdString();
+
+    g_saveAct->setEnabled(true);
+    this->saveFilename = filename;
+    this->Save();
+  }
 }
 
 /////////////////////////////////////////////////
@@ -563,8 +566,13 @@ void MainWindow::Play()
   msgs::WorldControl msg;
   msg.set_pause(false);
 
-  g_pauseAct->setVisible(true);
-  g_playAct->setVisible(false);
+  if (this->renderWidget)
+  {
+    TimePanel *timePanel = this->renderWidget->GetTimePanel();
+    if (timePanel)
+      timePanel->SetPaused(false);
+  }
+
   this->worldControlPub->Publish(msg);
 }
 
@@ -574,8 +582,13 @@ void MainWindow::Pause()
   msgs::WorldControl msg;
   msg.set_pause(true);
 
-  g_pauseAct->setVisible(false);
-  g_playAct->setVisible(true);
+  if (this->renderWidget)
+  {
+    TimePanel *timePanel = this->renderWidget->GetTimePanel();
+    if (timePanel)
+      timePanel->SetPaused(true);
+  }
+
   this->worldControlPub->Publish(msg);
 }
 
@@ -1432,15 +1445,6 @@ void MainWindow::CreateMenus()
 }
 
 /////////////////////////////////////////////////
-void MainWindow::CreateToolbars()
-{
-  this->playToolbar = this->addToolBar(tr("Play"));
-  this->playToolbar->addAction(g_playAct);
-  this->playToolbar->addAction(g_pauseAct);
-  this->playToolbar->addAction(g_stepAct);
-}
-
-/////////////////////////////////////////////////
 void MainWindow::OnMoveMode(bool _mode)
 {
   if (_mode)
@@ -1694,32 +1698,24 @@ void MainWindow::OnSetSelectedEntity(const std::string &_name,
 }
 
 /////////////////////////////////////////////////
-void MainWindow::OnStats(ConstWorldStatisticsPtr &_msg)
-{
-  if (_msg->paused() && g_pauseAct->isVisible())
-  {
-    g_pauseAct->setVisible(false);
-    g_playAct->setVisible(true);
-  }
-  else if (!_msg->paused() && !g_playAct->isVisible())
-  {
-    g_pauseAct->setVisible(true);
-    g_playAct->setVisible(false);
-  }
-}
-
-/////////////////////////////////////////////////
 void MainWindow::OnPlayActionChanged()
 {
-  if (g_playAct->isVisible())
+  if (this->renderWidget)
   {
-    g_stepAct->setToolTip("Step the world");
-    g_stepAct->setEnabled(true);
-  }
-  else
-  {
-    g_stepAct->setToolTip("Pause the world before stepping");
-    g_stepAct->setEnabled(false);
+    TimePanel *timePanel = this->renderWidget->GetTimePanel();
+    if (timePanel)
+    {
+      if (timePanel->IsPaused())
+      {
+        g_stepAct->setToolTip("Step the world");
+        g_stepAct->setEnabled(true);
+      }
+      else
+      {
+        g_stepAct->setToolTip("Pause the world before stepping");
+        g_stepAct->setEnabled(false);
+      }
+    }
   }
 }
 
@@ -1752,6 +1748,18 @@ void MainWindow::ShowLeftColumnWidget(const std::string &_name)
 RenderWidget *MainWindow::GetRenderWidget() const
 {
   return this->renderWidget;
+}
+
+/////////////////////////////////////////////////
+bool MainWindow::IsPaused() const
+{
+  if (this->renderWidget)
+  {
+    TimePanel *timePanel = this->renderWidget->GetTimePanel();
+    if (timePanel)
+      return timePanel->IsPaused();
+  }
+  return false;
 }
 
 /////////////////////////////////////////////////
