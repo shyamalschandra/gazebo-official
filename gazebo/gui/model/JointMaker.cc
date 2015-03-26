@@ -669,7 +669,8 @@ void JointMaker::CreateHotSpot(JointData *_joint)
   camera->GetScene()->AddVisual(hotspotVisual);
 
   _joint->hotspot = hotspotVisual;
-  gui::model::Events::jointInserted(jointId, _joint->name);
+  gui::model::Events::jointInserted(jointId, _joint->name,
+      _joint->parent->GetName(), _joint->child->GetName());
 }
 
 /////////////////////////////////////////////////
