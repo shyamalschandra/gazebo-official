@@ -24,7 +24,6 @@
 
 #include <unistd.h>
 #include <string.h>
-#include <vector>
 
 #include "player.h"
 #include "gazebo/util/system.hh"
@@ -77,7 +76,10 @@ class GAZEBO_VISIBLE GazeboDriver : public Driver
   private: GazeboInterface *LookupDevice(player_devaddr_t addr);
 
   /// Array of interfaces associated with this driver
-  protected: std::vector<GazeboInterface *> devices;
+  protected: GazeboInterface **devices;
+
+  /// \brief Number of devices
+  protected: int deviceCount;
 
   /// \brief Max device count
   protected: int deviceMaxCount;

@@ -68,8 +68,6 @@ void PhysicsEngineTest::PhysicsEngineParam(const std::string &_physicsEngine)
     type = msgs::Physics::BULLET;
   else if (_physicsEngine == "dart")
     type = msgs::Physics::DART;
-  else if (_physicsEngine == "simbody")
-    type = msgs::Physics::SIMBODY;
   else
     type = msgs::Physics::ODE;
   physicsPubMsg.set_type(type);
@@ -95,7 +93,7 @@ void PhysicsEngineTest::PhysicsEngineParam(const std::string &_physicsEngine)
   EXPECT_DOUBLE_EQ(physicsResponseMsg.real_time_factor(),
       physicsPubMsg.real_time_factor());
 
-  // Test PhysicsEngine::[GS]etParam()
+  // Test PhysicsEngine::GetParam()
   {
     physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
     boost::any dt = physics->GetParam("max_step_size");
@@ -103,10 +101,6 @@ void PhysicsEngineTest::PhysicsEngineParam(const std::string &_physicsEngine)
       physicsPubMsg.max_step_size());
 
     EXPECT_NO_THROW(physics->GetParam("fake_param_name"));
-    EXPECT_NO_THROW(physics->SetParam("fake_param_name", 0));
-
-    // Try SetParam with wrong type
-    EXPECT_NO_THROW(physics->SetParam("iters", std::string("wrong")));
   }
 
   physicsNode->Fini();

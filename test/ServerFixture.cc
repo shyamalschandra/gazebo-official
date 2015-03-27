@@ -23,7 +23,7 @@
 using namespace gazebo;
 
 /////////////////////////////////////////////////
-std::string gazebo::custom_exec(std::string _cmd)
+std::string custom_exec(std::string _cmd)
 {
   _cmd += " 2>/dev/null";
   FILE* pipe = popen(_cmd.c_str(), "r");
@@ -457,12 +457,13 @@ void ServerFixture::GetFrame(const std::string &_cameraName,
 /////////////////////////////////////////////////
 physics::ModelPtr ServerFixture::SpawnModel(const msgs::Model &_msg)
 {
+  std::ostringstream stream;
+  stream << "<sdf version='" << SDF_VERSION << "'>"
+         << msgs::ToSDF(_msg)
+         << "</sdf>";
+
   physics::WorldPtr world = physics::get_world();
-  ServerFixture::CheckPointer(world);
-  world->InsertModelString(
-    "<sdf version='" + std::string(SDF_VERSION) + "'>"
-    + msgs::ModelToSDF(_msg)->ToString("")
-    + "</sdf>");
+  world->InsertModelString(stream.str());
 
   common::Time wait(10, 0);
   common::Time wallStart = common::Time::GetWallTime();

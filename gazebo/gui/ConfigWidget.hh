@@ -85,15 +85,9 @@ namespace gazebo
       /// \brief A label for the mesh filename widget.
       public: QWidget *geomFilenameLabel;
 
-      /// \brief A button for selecting the mesh filename.
-      public: QWidget *geomFilenameButton;
-
       /// brief Callback when the geometry type is changed.
       /// \param[in] _text New geometry type in string.
       private slots: void GeometryChanged(const QString _text);
-
-      /// brief Callback when the file button is clicked.
-      private slots: void OnSelectFile();
     };
 
     /// \class GroupWidget ConfigWidget.hh
@@ -259,8 +253,8 @@ namespace gazebo
       /// configuring fields of the message, or update the widgets with values
       /// from the message.
       /// \param[in] _msg Message.
-      /// \param[in] _update True to parse only fields that are specified in
-      /// the message rather than all the available fields in the message
+      /// \param[in] _update True to parse available fields in an update
+      /// message rather than the all available fields in the message
       /// \param[in] _name Name used when creating new widgets.
       /// return Updated widget.
       private: QWidget *Parse(google::protobuf::Message *_msg,

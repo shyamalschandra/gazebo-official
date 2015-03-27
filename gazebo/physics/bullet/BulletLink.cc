@@ -108,8 +108,11 @@ void BulletLink::Init()
       collision = boost::static_pointer_cast<BulletCollision>(*iter);
       btCollisionShape *shape = collision->GetCollisionShape();
 
-      hackMu1 = collision->GetBulletSurface()->frictionPyramid.GetMuPrimary();
-      hackMu2 = collision->GetBulletSurface()->frictionPyramid.GetMuSecondary();
+      BulletSurfaceParamsPtr surface = collision->GetBulletSurface();
+      GZ_ASSERT(surface, "Surface pointer for is invalid");
+
+      hackMu1 = surface->frictionPyramid.GetMuPrimary();
+      hackMu2 = surface->frictionPyramid.GetMuSecondary();
       // gzerr << "link[" << this->GetName()
       //       << "] mu[" << hackMu1
       //       << "] mu2[" << hackMu2 << "]\n";
@@ -573,14 +576,6 @@ void BulletLink::AddForceAtRelativePosition(const math::Vector3 &/*_force*/,
                   const math::Vector3 &/*_relpos*/)
 {
   gzlog << "BulletLink::AddForceAtRelativePosition not yet implemented."
-        << std::endl;
-}
-
-//////////////////////////////////////////////////
-void BulletLink::AddLinkForce(const math::Vector3 &/*_force*/,
-    const math::Vector3 &/*_offset*/)
-{
-  gzlog << "BulletLink::AddLinkForce not yet implemented (#1476)."
         << std::endl;
 }
 

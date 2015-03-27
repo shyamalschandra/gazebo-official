@@ -22,7 +22,6 @@
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/Joint.hh"
 
-using namespace gazebo;
 class GripperTest : public ServerFixture
 {
 };
