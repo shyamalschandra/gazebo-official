@@ -19,7 +19,6 @@
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/transport.hh"
 
-using namespace gazebo;
 class WorldClone : public ServerFixture
 {
 };
@@ -197,7 +196,7 @@ TEST_F(WorldClone, Clone)
   // Check that the cloned world contains the camera topics.
   output = custom_exec_str("gz topic -l");
   EXPECT_NE(output.find("/gazebo/default/camera/"), std::string::npos);
-
+FAIL();
   // Kill the cloned server. In the case of no presence of gzserver ps will
   // return the own ps process so it probably will do nothing. No effect.
   // This should work on Linux and Mac

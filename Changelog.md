@@ -1,3 +1,19 @@
+1. Added various Get functions to Visual. Also added a ConvertGeometryType function to msgs.
+    * [Pull request #1402](https://bitbucket.org/osrf/gazebo/pull-request/1402)
+
+1. Allow link selection with the mouse if parent model already selected.
+    * [Pull request #1409](https://bitbucket.org/osrf/gazebo/pull-request/1409)
+
+ 1. Model editor updates
+    1. Joint preview using JointVisuals.
+        * [Pull request #1369](https://bitbucket.org/osrf/gazebo/pull-request/1369)
+
+    1. Added inspector for configuring link, visual, and collision properties.
+        * [Pull request #1408](https://bitbucket.org/osrf/gazebo/pull-request/1408)
+
+    1. Saving, exiting, generalizing SaveDialog.
+        * [Pull request #1401](https://bitbucket.org/osrf/gazebo/pull-request/1401)
+
 ## Gazebo 5.0
 
 ### Gazebo 5.1.0
@@ -7,14 +23,14 @@
 1. Added Visual, Material Msg-to-SDF conversion functions and ShaderType to string conversion functions.
     * [Pull request #1415](https://bitbucket.org/osrf/gazebo/pull-request/1415)
 
-1. Added ERB parsing to the `gz sdf` command line tool.
-    * [Pull request #1182](https://bitbucket.org/osrf/gazebo/pull-request/1182)
-
 ### Gazebo 5.0.0
 1. Support for using [digital elevation maps](http://gazebosim.org/tutorials?tut=dem) has been added to debian packages.
 
 1. C++11 support (C++11 compatible compiler is now required)
     * [Pull request #1340](https://bitbucket.org/osrf/gazebo/pull-request/1340)
+
+1. Implemented private data pointer for the ODEPhysicsPrivate class.
+    * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
 
 1. Implemented private data pointer for the World class.
     * [Pull request #1383](https://bitbucket.org/osrf/gazebo/pull-request/1383)
@@ -195,6 +211,9 @@
 
     1. Pick textures from the palette and assign in 3D view.
         * [Pull request #1368](https://bitbucket.org/osrf/gazebo/pull-request/1368)
+
+    1. Pick custom colors from the palette and assign in 3D view.
+        * [Pull request #1382](https://bitbucket.org/osrf/gazebo/pull-request/1382)
 
 1. Model editor updates
     1. Fix adding/removing event filters .

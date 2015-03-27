@@ -29,14 +29,8 @@ namespace gazebo
     /// \brief Information for use in an update event.
     class GAZEBO_VISIBLE UpdateInfo
     {
-      /// \brief Constructor
-      public: UpdateInfo() {}
-
-      /// \brief Destructor
-      public: virtual ~UpdateInfo() {}
-
       /// \brief Name of the world.
-      public: std::string worldName = "default";
+      public: std::string worldName;
 
       /// \brief Current simulation time.
       public: common::Time simTime;
