@@ -26,7 +26,6 @@ namespace gazebo
   namespace gui
   {
     class BuildingEditorPalette;
-    class BuildingEditorWidget;
 
     /// \class TerrainEditor TerrainEditor.hh gui/gui.hh
     /// \brief Interface to the terrain editor.
@@ -68,9 +67,6 @@ namespace gazebo
       /// \brief Contains all the building editor tools.
       private: BuildingEditorPalette *buildingPalette;
 
-      /// \brief Building editor widget for creating a building model
-      private: BuildingEditorWidget *buildingEditorWidget;
-
       /// \brief Create menus
       private: void CreateMenus();
 
@@ -88,9 +84,6 @@ namespace gazebo
 
       /// \brief Action to exit the editor.
       private: QAction *exitAct;
-
-      /// \brief Save the main window paused state to use when returning.
-      private: bool mainWindowPaused;
     };
   }
 }

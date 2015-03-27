@@ -19,7 +19,6 @@
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/MainWindow.hh"
 #include "gazebo/gui/RenderWidget.hh"
-#include "gazebo/gui/building/BuildingEditorWidget.hh"
 #include "gazebo/gui/building/BuildingEditorEvents.hh"
 #include "gazebo/gui/building/BuildingEditorPalette.hh"
 #include "gazebo/gui/building/BuildingEditor.hh"
@@ -75,15 +74,6 @@ BuildingEditor::BuildingEditor(MainWindow *_mainWindow)
   this->connections.push_back(
       gui::editor::Events::ConnectFinishBuildingModel(
       boost::bind(&BuildingEditor::OnFinish, this)));
-
-  this->buildingEditorWidget = new BuildingEditorWidget(
-      this->mainWindow->GetRenderWidget());
-  this->buildingEditorWidget->setSizePolicy(QSizePolicy::Expanding,
-      QSizePolicy::Expanding);
-  this->buildingEditorWidget->hide();
-
-  this->mainWindow->GetRenderWidget()->InsertWidget(0,
-      this->buildingEditorWidget);
 
   this->menuBar = NULL;
 }
@@ -146,27 +136,18 @@ void BuildingEditor::OnEdit(bool _checked)
   if (_checked)
   {
     this->CreateMenus();
-    this->mainWindowPaused = g_playAct->isVisible();
     this->mainWindow->Pause();
     this->mainWindow->ShowLeftColumnWidget("buildingEditorTab");
     this->mainWindow->ShowMenuBar(this->menuBar);
-    this->buildingEditorWidget->show();
-    this->mainWindow->GetRenderWidget()->DisplayOverlayMsg(
-        "Building is View Only");
-    this->mainWindow->GetRenderWidget()->ShowTimePanel(false);
-    this->mainWindow->GetRenderWidget()->ShowToolbar(false);
+    this->mainWindow->GetRenderWidget()->ShowEditor(true);
   }
   else
   {
     this->buildingPalette->CustomColorDialog()->reject();
     this->mainWindow->ShowLeftColumnWidget();
-    this->buildingEditorWidget->hide();
-    this->mainWindow->GetRenderWidget()->DisplayOverlayMsg("");
-    this->mainWindow->GetRenderWidget()->ShowTimePanel(true);
-    this->mainWindow->GetRenderWidget()->ShowToolbar(true);
+    this->mainWindow->GetRenderWidget()->ShowEditor(false);
     this->mainWindow->ShowMenuBar();
-    if (!this->mainWindowPaused)
-      this->mainWindow->Play();
+    this->mainWindow->Play();
   }
   gui::editor::Events::toggleEditMode(_checked);
 }

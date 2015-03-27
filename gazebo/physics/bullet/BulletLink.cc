@@ -108,13 +108,11 @@ void BulletLink::Init()
       collision = boost::static_pointer_cast<BulletCollision>(*iter);
       btCollisionShape *shape = collision->GetCollisionShape();
 
-      SurfaceParamsPtr surface = collision->GetSurface();
+      BulletSurfaceParamsPtr surface = collision->GetBulletSurface();
       GZ_ASSERT(surface, "Surface pointer for is invalid");
-      FrictionPyramidPtr friction = surface->GetFrictionPyramid();
-      GZ_ASSERT(friction, "Friction pointer is invalid");
 
-      hackMu1 = friction->GetMuPrimary();
-      hackMu2 = friction->GetMuSecondary();
+      hackMu1 = surface->frictionPyramid.GetMuPrimary();
+      hackMu2 = surface->frictionPyramid.GetMuSecondary();
       // gzerr << "link[" << this->GetName()
       //       << "] mu[" << hackMu1
       //       << "] mu2[" << hackMu2 << "]\n";
@@ -152,7 +150,6 @@ void BulletLink::Init()
   this->rigidLink->setUserPointer(this);
   this->rigidLink->setCollisionFlags(this->rigidLink->getCollisionFlags() |
       btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
-  this->rigidLink->setFlags(BT_ENABLE_GYROPSCOPIC_FORCE);
 
   /// \TODO: get friction from collision object
   this->rigidLink->setAnisotropicFriction(btVector3(1, 1, 1),
@@ -579,14 +576,6 @@ void BulletLink::AddForceAtRelativePosition(const math::Vector3 &/*_force*/,
                   const math::Vector3 &/*_relpos*/)
 {
   gzlog << "BulletLink::AddForceAtRelativePosition not yet implemented."
-        << std::endl;
-}
-
-//////////////////////////////////////////////////
-void BulletLink::AddLinkForce(const math::Vector3 &/*_force*/,
-    const math::Vector3 &/*_offset*/)
-{
-  gzlog << "BulletLink::AddLinkForce not yet implemented (#1476)."
         << std::endl;
 }
 
