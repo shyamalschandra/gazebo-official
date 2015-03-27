@@ -1,3 +1,7 @@
+ QGroupBox::title {
+  color: #f0f0f0;
+ }
+
 QToolButton
 {
   border: 0;
@@ -7,7 +11,7 @@ QToolButton
 
 QToolButton::disabled
 {
-  color: #303030;  
+  color: #303030;
 }
 
 QLabel
@@ -18,6 +22,8 @@ QLabel
 QFrame
 {
   background-color: transparent;
+  padding: 0px;
+  margin: 0px;
 }
 
 QDialog
@@ -118,12 +124,24 @@ QToolBar
   border-radius: 0px;
 }
 
+QToolButton#jointToolButton:pressed,
+QToolButton#jointToolButton:hover
+{
+  border: 0px;
+  background-color: #808080;
+}
+
+QToolBar#playToolBar
+{
+  max-height: 25px;
+}
+
 QToolButton
 {
   padding: 2px;
   margin: 2px;
   width: 20px;
-
+  height: 24px;
   border-radius: 8px;
   border: 0px solid #808080;
 }
@@ -257,7 +275,7 @@ QSpinBox
   color: #353535;
   background: #737373;
   border-radius: 4;
-  margin-right: 20px;  
+  margin-right: 20px;
 }
 
 QSpinBox::up-button
@@ -543,7 +561,9 @@ QTabBar::tab:!selected
 
 QTabWidget#mainTab::pane,
 QTabWidget#buildingEditorTab::pane,
-QTabWidget#terrainEditorTab::pane
+QTabWidget#modelEditorTab::pane,
+QTabWidget#terrainEditorTab::pane,
+QTabWidget#linkInspectorTab::pane
 {
   border-left: 1px solid #101010;
   border-bottom: 1px solid #101010;
@@ -570,6 +590,7 @@ QTabWidget::tab
 
 QTabWidget::tab-bar
 {
+  alignment: left;
 }
 
 QWidget#modelList,
@@ -580,10 +601,10 @@ QWidget#toolsWidget
   color: #d0d0d0;
 }
 
-
 QWidget#modelList > QFrame,
 QWidget#insertModel > QFrame,
 QWidget#jointControl > QFrame,
+QWidget#modelEditorPalette > QFrame,
 QWidget#toolsWidget > QFrame
 {
   padding: 4px;
@@ -605,6 +626,7 @@ QWidget#renderWidget > QWidget
 }
 
 QWidget#buildingEditorWidget > QWidget,
+QWidget#modelEditorWidget > QWidget
 QWidget#terrainEditorWidget > QWidget
 {
   padding: 2px;
@@ -633,6 +655,7 @@ QWidget#renderBottomFrame
 
 QWidget#timePanel
 {
+  max-height: 40px;
   background-color: #808080;
   border-bottom-right-radius: 10px;
 }
@@ -733,4 +756,9 @@ QwtScaleWidget
 {
   color: white;
   font-size: 11px;
+}
+
+#configWidget
+{
+  background-color: #808080;
 }
