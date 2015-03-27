@@ -1577,6 +1577,12 @@ void MainWindow::CreateMenuBar()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::AddMenu(QMenu *_menu)
+{
+  this->menuBar->addMenu(_menu);
+}
+
+/////////////////////////////////////////////////
 void MainWindow::CreateMenus()
 {
   this->ShowMenuBar();
