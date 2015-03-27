@@ -162,13 +162,13 @@ void SimbodyPhysics::Load(sdf::ElementPtr _sdf)
     simbodyContactElem->Get<double>("viscous_friction");
 
   // below are not used yet, but should work it into the system
-  this->contactMaterialPlasticCoefRestitution =
+  this->contactMaterialViscousFriction =
     simbodyContactElem->Get<double>("plastic_coef_restitution");
-  this->contactMaterialPlasticImpactVelocity =
+  this->contactMaterialPlasticCoefRestitution =
     simbodyContactElem->Get<double>("plastic_impact_velocity");
-  this->contactImpactCaptureVelocity =
+  this->contactMaterialPlasticImpactVelocity =
     simbodyContactElem->Get<double>("override_impact_capture_velocity");
-  this->contactStictionTransitionVelocity =
+  this->contactImpactCaptureVelocity =
     simbodyContactElem->Get<double>("override_stiction_transition_velocity");
 }
 
