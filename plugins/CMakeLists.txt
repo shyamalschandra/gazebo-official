@@ -26,7 +26,6 @@ if (HAVE_DART)
 endif()
 
 set (plugins
-  ActuatorPlugin
   ArrangePlugin
   BreakableJointPlugin
   CameraPlugin

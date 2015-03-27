@@ -29,15 +29,9 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/rendering/Visual.hh"
-#include "gazebo/gui/model/LinkInspector.hh"
 #include "gazebo/gui/qt.h"
 
 #include "gazebo/util/system.hh"
-
-namespace boost
-{
-  class recursive_mutex;
-}
 
 namespace gazebo
 {
@@ -74,7 +68,7 @@ namespace gazebo
         /// \brief Cylinder
         PART_CYLINDER,
         /// \brief Custom
-        PART_MESH
+        PART_CUSTOM
       };
 
       /// \enum SaveState
@@ -134,16 +128,6 @@ namespace gazebo
 
       /// \brief Finish the model and create the entity on the gzserver.
       public: void FinishModel();
-
-      /// \brief Add a part to the model.
-      /// \param[in] _type Type of part to add: box, cylinder, or sphere.
-      /// \param[in] _size Size of the part.
-      /// \param[in] _pose Pose of the part.
-      /// \return Name of the part that has been added.
-      public: std::string AddShape(PartType _type,
-          const math::Vector3 &_size = math::Vector3::One,
-          const math::Pose &_pose = math::Pose::Zero,
-          const std::string &_uri = "");
 
       /// \brief Add a box to the model.
       /// \param[in] _size Size of the box.
@@ -210,18 +194,9 @@ namespace gazebo
       /// \brief Generate the SDF from model part and joint visuals.
       public: void GenerateSDF();
 
-      /// \brief Helper function to generate link sdf from part data.
-      /// \param[in] _part Part data used to generate the sdf.
-      /// \return SDF element describing the part.
-      private: sdf::ElementPtr GenerateLinkSDF(PartData *_part);
-
       /// \brief QT callback when entering model edit mode
       /// \param[in] _checked True if the menu item is checked
       private slots: void OnEdit(bool _checked);
-
-      /// \brief QT callback when there's a request to edit an existing model.
-      /// \param[in] _modelName Name of model to be edited.
-      private slots: void OnEditModel(const std::string &_modelName);
 
       /// \brief Qt callback when the copy action is triggered.
       private slots: void OnCopy();
@@ -271,16 +246,6 @@ namespace gazebo
       /// \param[in] _visual Visual used to create the part.
       private: void CreatePart(const rendering::VisualPtr &_visual);
 
-      /// \brief Clone an existing part.
-      /// \param[in] _partName Name of part to be cloned.
-      /// \return Cloned part.
-      private: PartData *ClonePart(const std::string &_partName);
-
-      /// \brief Create a part from an SDF.
-      /// \param[in] _link SDF element of the link that will be used to
-      /// recreate its visual representation in the model editor.
-      private: void CreatePartFromSDF(sdf::ElementPtr _linkElem);
-
       /// \brief Open the part inspector.
       /// \param[in] _name Name of part.
       private: void OpenInspector(const std::string &_name);
@@ -295,11 +260,6 @@ namespace gazebo
       /// \return Name of the model created.
       private: std::string CreateModel();
 
-      /// \brief Load a model SDF file and create visuals in the model editor.
-      /// This is used mainly when editing existing models.
-      /// \param[in] _sdf SDF of a model to be loaded
-      private: void LoadSDF(sdf::ElementPtr _sdf);
-
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
       /// \param[in] _config Configuration: min, center, or max.
@@ -310,27 +270,8 @@ namespace gazebo
           const std::string &_config, const std::string &_target,
           bool _preview);
 
-      /// \brief Callback when an entity's scale has changed.
-      /// \param[in] _name Name of entity.
-      /// \param[in] _scale New scale.
-      private: void OnEntityScaleChanged(const std::string &_name,
-          const math::Vector3 &_scale);
-
       /// \brief Deselect all currently selected visuals.
       private: void DeselectAll();
-
-      /// \brief Set visibilty of a visual recursively while storing their
-      /// original values
-      /// \param[in] _name Name of visual.
-      /// \param[in] _visible True to set the visual to be visible.
-      private: void SetModelVisible(const std::string &_name, bool _visible);
-
-      /// \brief Set visibilty of a visual recursively while storing their
-      /// original values
-      /// \param[in] _visual Pointer to the visual.
-      /// \param[in] _visible True to set the visual to be visible.
-      private: void SetModelVisible(rendering::VisualPtr _visual,
-          bool _visible);
 
       /// \brief Qt callback when a delete signal has been emitted.
       /// \param[in] _name Name of the entity to delete.
@@ -433,26 +374,6 @@ namespace gazebo
 
       /// \brief Store the current save state of the model.
       private: enum SaveState currentSaveState;
-
-      /// \brief Mutex to protect updates
-      private: boost::recursive_mutex *updateMutex;
-
-      /// \brief A list of part names whose scale has changed externally.
-      private: std::map<std::string, math::Vector3> partScaleUpdate;
-
-      /// \brief Name of model on the server that is being edited here in the
-      /// model editor.
-      private: std::string serverModelName;
-
-      /// \brief SDF element of the model on the server.
-      private: sdf::ElementPtr serverModelSDF;
-
-      /// \brief A map of all visuals of the model to be edited to their
-      /// visibility.
-      private: std::map<uint32_t, bool> serverModelVisible;
-
-      /// \brief Name of the canonical link in the model
-      private: std::string canonicalLink;
     };
     /// \}
   }

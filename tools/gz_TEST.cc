@@ -201,6 +201,8 @@ TEST_F(gzTest, Joint)
 {
   init();
 
+  std::string expectedStr;
+
   std::string helpOutput = custom_exec_str("gz help joint");
   EXPECT_NE(helpOutput.find("gz joint"), std::string::npos);
 

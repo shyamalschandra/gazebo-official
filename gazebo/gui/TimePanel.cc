@@ -78,19 +78,14 @@ TimePanel::TimePanel(QWidget *_parent)
   QToolBar *playToolbar = new QToolBar;
   playToolbar->setObjectName("playToolBar");
   playToolbar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-  if (g_playAct)
-    playToolbar->addAction(g_playAct);
-  if (g_pauseAct)
-    playToolbar->addAction(g_pauseAct);
+  playToolbar->addAction(g_playAct);
+  playToolbar->addAction(g_pauseAct);
 
   QLabel *emptyLabel = new QLabel(tr("  "));
   playToolbar->addWidget(emptyLabel);
-
-  if (g_stepAct)
-    playToolbar->addAction(g_stepAct);
-  this->stepToolBarLabelAction = playToolbar->addWidget(stepToolBarLabel);
-  this->stepButtonAction = playToolbar->addWidget(this->stepButton);
-  this->stepButtonAction->setObjectName("timePanelStepAction");
+  playToolbar->addAction(g_stepAct);
+  playToolbar->addWidget(stepToolBarLabel);
+  playToolbar->addWidget(this->stepButton);
 
   this->percentRealTimeEdit = new QLineEdit;
   this->percentRealTimeEdit->setObjectName("timePanelPercentRealTime");
@@ -110,7 +105,6 @@ TimePanel::TimePanel(QWidget *_parent)
   this->iterationsEdit = new QLineEdit;
   this->iterationsEdit->setReadOnly(true);
   this->iterationsEdit->setFixedWidth(110);
-  this->iterationsEdit->setObjectName("timePanelIterations");
 
   QPushButton *timeResetButton = new QPushButton("Reset");
   timeResetButton->setFocusPolicy(Qt::NoFocus);
@@ -123,20 +117,16 @@ TimePanel::TimePanel(QWidget *_parent)
                              QSizePolicy::Minimum));
   frameLayout->addWidget(playToolbar);
 
-  this->realTimeFactorLabel = new QLabel(tr("Real Time Factor:"));
-  frameLayout->addWidget(this->realTimeFactorLabel);
+  frameLayout->addWidget(new QLabel(tr("Real Time Factor:")));
   frameLayout->addWidget(this->percentRealTimeEdit);
 
-  this->simTimeLabel = new QLabel(tr("Sim Time:"));
-  frameLayout->addWidget(this->simTimeLabel);
+  frameLayout->addWidget(new QLabel(tr("Sim Time:")));
   frameLayout->addWidget(this->simTimeEdit);
 
-  this->realTimeLabel = new QLabel(tr("Real Time:"));
-  frameLayout->addWidget(this->realTimeLabel);
+  frameLayout->addWidget(new QLabel(tr("Real Time:")));
   frameLayout->addWidget(this->realTimeEdit);
 
-  this->iterationsLabel = new QLabel(tr("Iterations:"));
-  frameLayout->addWidget(this->iterationsLabel);
+  frameLayout->addWidget(new QLabel(tr("Iterations:")));
   frameLayout->addWidget(this->iterationsEdit);
 
   frameLayout->addWidget(timeResetButton);
@@ -201,43 +191,6 @@ void TimePanel::OnFullScreen(bool & /*_value*/)
 TimePanel::~TimePanel()
 {
   this->node.reset();
-}
-
-/////////////////////////////////////////////////
-void TimePanel::ShowRealTimeFactor(bool _show)
-{
-  this->realTimeFactorLabel->setVisible(_show);
-  this->percentRealTimeEdit->setVisible(_show);
-}
-
-/////////////////////////////////////////////////
-void TimePanel::ShowRealTime(bool _show)
-{
-  this->realTimeLabel->setVisible(_show);
-  this->realTimeEdit->setVisible(_show);
-}
-
-/////////////////////////////////////////////////
-void TimePanel::ShowSimTime(bool _show)
-{
-  this->simTimeLabel->setVisible(_show);
-  this->simTimeEdit->setVisible(_show);
-}
-
-/////////////////////////////////////////////////
-void TimePanel::ShowIterations(bool _show)
-{
-  this->iterationsLabel->setVisible(_show);
-  this->iterationsEdit->setVisible(_show);
-}
-
-/////////////////////////////////////////////////
-void TimePanel::ShowStepWidget(bool _show)
-{
-  if (g_stepAct)
-    g_stepAct->setVisible(_show);
-  this->stepToolBarLabelAction->setVisible(_show);
-  this->stepButtonAction->setVisible(_show);
 }
 
 /////////////////////////////////////////////////

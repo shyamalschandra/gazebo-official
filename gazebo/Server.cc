@@ -55,8 +55,6 @@ bool Server::stop = true;
 Server::Server()
 {
   this->initialized = false;
-  this->systemPluginsArgc = 0;
-  this->systemPluginsArgv = NULL;
 }
 
 /////////////////////////////////////////////////

@@ -114,7 +114,7 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find DART
-  find_package(DARTCore 4.3.3 QUIET)
+  find_package(DARTCore 4.3 QUIET)
   if (DARTCore_FOUND)
     message (STATUS "Looking for DARTCore - found")
     set (HAVE_DART TRUE)
@@ -190,16 +190,7 @@ if (PKG_CONFIG_FOUND)
   # Find OGRE
   execute_process(COMMAND pkg-config --modversion OGRE
                   OUTPUT_VARIABLE OGRE_VERSION)
-
-  string (REGEX REPLACE "^([0-9]+).*" "\\1"
-    OGRE_MAJOR_VERSION "${OGRE_VERSION}")
-  string (REGEX REPLACE "^[0-9]+\\.([0-9]+).*" "\\1"
-    OGRE_MINOR_VERSION "${OGRE_VERSION}")
-  string (REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1"
-    OGRE_PATCH_VERSION ${OGRE_VERSION})
-
-  set(OGRE_VERSION
-    ${OGRE_MAJOR_VERSION}.${OGRE_MINOR_VERSION}.${OGRE_PATCH_VERSION})
+  string(REPLACE "\n" "" OGRE_VERSION ${OGRE_VERSION})
 
   pkg_check_modules(OGRE-RTShaderSystem
                     OGRE-RTShaderSystem>=${MIN_OGRE_VERSION})
@@ -362,7 +353,6 @@ if (PKG_CONFIG_FOUND)
   if (NOT BULLET_FOUND)
      pkg_check_modules(BULLET bullet2.82>=2.82)
   endif()
-
   if (BULLET_FOUND)
     set (HAVE_BULLET TRUE)
     add_definitions( -DLIBBULLET_VERSION=${BULLET_VERSION} )
@@ -433,7 +423,8 @@ if (NOT GDAL_FOUND)
 else ()
   message (STATUS "Looking for libgdal - found")
   set (HAVE_GDAL ON CACHE BOOL "HAVE GDAL" FORCE)
-endif ()
+  include_directories(${GDAL_INCLUDE_DIR})
+endif()
 
 ########################################
 # Find libusb
