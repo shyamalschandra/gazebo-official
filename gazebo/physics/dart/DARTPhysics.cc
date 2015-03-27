@@ -381,69 +381,92 @@ void DARTPhysics::DebugPrint() const
 //////////////////////////////////////////////////
 boost::any DARTPhysics::GetParam(const std::string &_key) const
 {
-  boost::any value;
-  this->GetParam(_key, value);
-  return value;
-}
-
-//////////////////////////////////////////////////
-bool DARTPhysics::GetParam(const std::string &_key, boost::any &_value) const
-{
-  if (!this->sdf->HasElement("dart"))
+  if (_key == "max_step_size")
   {
-    return PhysicsEngine::GetParam(_key, _value);
+    return this->GetMaxStepSize();
   }
+
   sdf::ElementPtr dartElem = this->sdf->GetElement("dart");
   // physics dart element not yet added to sdformat
   // GZ_ASSERT(dartElem != NULL, "DART SDF element does not exist");
+  if (dartElem == NULL)
+  {
+    gzerr << "DART SDF element not found"
+          << ", unable to get param ["
+          << _key << "]"
+          << std::endl;
+    return 0;
+  }
 
   if (_key == "max_contacts")
   {
-    _value = dartElem->GetElement("max_contacts")->Get<int>();
+    return dartElem->GetElement("max_contacts")->Get<int>();
   }
   else if (_key == "min_step_size")
   {
-    _value = dartElem->GetElement("solver")->Get<double>("min_step_size");
+    return dartElem->GetElement("solver")->Get<double>("min_step_size");
   }
   else
   {
-    return PhysicsEngine::GetParam(_key, _value);
+    gzwarn << _key << " is not supported in dart" << std::endl;
+    return 0;
   }
 
-  return true;
+  gzerr << "We should not be here, something is wrong." << std::endl;
+  return 0;
 }
 
 //////////////////////////////////////////////////
 bool DARTPhysics::SetParam(const std::string &_key, const boost::any &_value)
 {
   /// \TODO fill this out, see issue #1115
-  try
+  if (_key == "max_contacts")
   {
-    if (_key == "max_contacts")
+    int value;
+    try
     {
-      int value = boost::any_cast<int>(_value);
-      gzerr << "Setting [" << _key << "] in DART to [" << value
-            << "] not yet supported.\n";
+      value = boost::any_cast<int>(_value);
     }
-    else if (_key == "min_step_size")
+    catch(const boost::bad_any_cast &e)
     {
-      double value = boost::any_cast<double>(_value);
-      gzerr << "Setting [" << _key << "] in DART to [" << value
-            << "] not yet supported.\n";
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
     }
-    else
-    {
-      if (_key == "max_step_size")
-      {
-        this->dtWorld->setTimeStep(boost::any_cast<double>(_value));
-      }
-      return PhysicsEngine::SetParam(_key, _value);
-    }
+    gzerr << "Setting [" << _key << "] in DART to [" << value
+          << "] not yet supported.\n";
   }
-  catch(boost::bad_any_cast &e)
+  else if (_key == "min_step_size")
   {
-    gzerr << "DARTPhysics::SetParam(" << _key << ") boost::any_cast error: "
-          << e.what() << std::endl;
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    gzerr << "Setting [" << _key << "] in DART to [" << value
+          << "] not yet supported.\n";
+  }
+  else if (_key == "max_step_size")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    this->dtWorld->setTimeStep(value);
+  }
+  else
+  {
+    gzwarn << _key << " is not supported in DART" << std::endl;
     return false;
   }
   return true;

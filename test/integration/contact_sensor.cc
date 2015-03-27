@@ -81,13 +81,8 @@ void ContactSensor::MultipleSensors(const std::string &_physicsEngine)
   topicsExpected.push_back(prefix+"sensor_box/link/box_contact");
   topicsExpected.push_back(prefix+"sensor_box/link/box_contact2/contacts");
   topicsExpected.push_back(prefix+"sensor_box/link/box_contact2");
-  topicsExpected.sort();
-
-  // Sleep to ensure transport topics are all advertised
-  common::Time::MSleep(100);
   std::list<std::string> topics =
     transport::getAdvertisedTopics("gazebo.msgs.Contacts");
-  topics.sort();
   EXPECT_FALSE(topics.empty());
   EXPECT_EQ(topics.size(), topicsExpected.size());
   EXPECT_EQ(topics, topicsExpected);
@@ -420,12 +415,8 @@ void ContactSensor::TorqueTest(const std::string &_physicsEngine)
 
   msgs::Contacts contacts;
 
-  if (_physicsEngine == "_ode" || _physicsEngine == "bullet")
-  {
-    EXPECT_TRUE(physics->SetParam("iters", 100));
-    if (_physicsEngine == "ode")
-      EXPECT_TRUE(physics->SetParam("contact_max_correcting_vel", 0));
-  }
+  physics->SetContactMaxCorrectingVel(0);
+  physics->SetParam("iters", 100);
 
   world->Step(1);
 

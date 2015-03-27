@@ -40,21 +40,32 @@ using namespace gui;
 ModelManipulator::ModelManipulator()
   : dataPtr(new ModelManipulatorPrivate)
 {
-  this->dataPtr->initialized = false;
-  this->dataPtr->selectionObj.reset();
-  this->dataPtr->mouseMoveVis.reset();
-
   this->dataPtr->manipMode = "";
   this->dataPtr->globalManip = false;
+  this->dataPtr->initialized = false;
 }
 
 /////////////////////////////////////////////////
 ModelManipulator::~ModelManipulator()
 {
-  this->dataPtr->modelPub.reset();
-  this->dataPtr->selectionObj.reset();
+  this->Clear();
   delete this->dataPtr;
   this->dataPtr = NULL;
+}
+
+/////////////////////////////////////////////////
+void ModelManipulator::Clear()
+{
+  this->dataPtr->modelPub.reset();
+  this->dataPtr->lightPub.reset();
+  this->dataPtr->selectionObj.reset();
+  this->dataPtr->userCamera.reset();
+  this->dataPtr->scene.reset();
+  this->dataPtr->node.reset();
+  this->dataPtr->mouseMoveVis.reset();
+  this->dataPtr->manipMode = "";
+  this->dataPtr->globalManip = false;
+  this->dataPtr->initialized = false;
 }
 
 /////////////////////////////////////////////////
@@ -572,15 +583,10 @@ void ModelManipulator::OnMousePressEvent(const common::MouseEvent &_event)
       // select model
       vis = rootVis;
     }
-    else if (vis->GetParent() != rootVis &&
-        vis->GetParent() != this->dataPtr->scene->GetWorldVisual())
+    else if (vis->GetParent() != rootVis)
     {
       // select link
       vis = vis->GetParent();
-    }
-    else
-    {
-      // select light
     }
 
     this->dataPtr->mouseMoveVisStartPose = vis->GetWorldPose();

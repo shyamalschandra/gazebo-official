@@ -92,7 +92,7 @@ bool Video::Load(const std::string &_filename)
   if (this->formatCtx || this->avFrame || this->codecCtx)
     this->Cleanup();
 
-  this->avFrame = common::AVFrameAlloc();
+  this->avFrame = avcodec_alloc_frame();
 
   // Open video file
   if (avformat_open_input(&this->formatCtx, _filename.c_str(), NULL, NULL) < 0)

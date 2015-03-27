@@ -647,7 +647,7 @@ void World::Step(unsigned int _steps)
   bool wait = true;
   while (wait)
   {
-    common::Time::NSleep(1);
+    common::Time::MSleep(1);
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->worldUpdateMutex);
     if (this->dataPtr->stepInc == 0 || this->dataPtr->stop)
       wait = false;
@@ -1415,7 +1415,7 @@ void World::ProcessRequestMsgs()
       else
       {
         response.set_type("error");
-        response.set_response("nonexistent");
+        response.set_response("nonexistant");
       }
     }
     else if (requestMsg.request() == "world_sdf")
@@ -2148,3 +2148,4 @@ void World::EnablePhysicsEngine(bool _enable)
 {
   this->dataPtr->enablePhysicsEngine = _enable;
 }
+
