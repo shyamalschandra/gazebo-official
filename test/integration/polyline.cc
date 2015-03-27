@@ -19,7 +19,6 @@
 #include "gazebo/msgs/msgs.hh"
 #include "helper_physics_generator.hh"
 
-using namespace gazebo;
 class PolylineTest : public ServerFixture,
                      public testing::WithParamInterface<const char*>
 {

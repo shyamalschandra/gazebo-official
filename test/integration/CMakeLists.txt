@@ -36,6 +36,7 @@ set(tests
   concave_mesh.cc
   contact_sensor.cc
   dem.cc
+  factory.cc
   file_handling.cc
   gripper.cc
   gz_joint.cc
@@ -95,7 +96,10 @@ gz_build_tests(${tests})
 
 if (ENABLE_TESTS_COMPILATION)
   # Increase timeout, to account for model download time.
+  set_tests_properties(${TEST_TYPE}_factory PROPERTIES TIMEOUT 500)
   set_tests_properties(${TEST_TYPE}_physics PROPERTIES TIMEOUT 500)
+
+  set_tests_properties(${TEST_TYPE}_world_clone PROPERTIES TIMEOUT 10)
 
   # Add plugin dependency
   add_dependencies(${TEST_TYPE}_joint_test SpringTestPlugin)
@@ -110,7 +114,6 @@ gz_build_display_tests(${display_tests})
 set(dri_tests
   camera.cc
   camera_sensor.cc
-  factory.cc
   gpu_laser.cc
   gz_camera.cc
   heightmap.cc
@@ -133,8 +136,9 @@ gz_build_qt_tests(${qt_tests})
 
 if (ENABLE_TESTS_COMPILATION AND VALID_DRI_DISPLAY)
   # Increase timeout, to account for model download time.
-  set_tests_properties(${TEST_TYPE}_factory PROPERTIES TIMEOUT 500)
   set_tests_properties(${TEST_TYPE}_pr2 PROPERTIES TIMEOUT 500)
+
+  # Increase timeout, to account for model download time.
   set_tests_properties(${TEST_TYPE}_pioneer2dx PROPERTIES TIMEOUT 500)
 endif()
 

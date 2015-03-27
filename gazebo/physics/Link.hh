@@ -256,13 +256,6 @@ namespace gazebo
       /// \return Angular acceleration of the body.
       public: math::Vector3 GetRelativeAngularAccel() const;
 
-      /// \brief Get the angular momentum of the body CoG in the world frame,
-      /// which is computed as (I * w), where
-      /// I: inertia matrix in world frame
-      /// w: angular velocity in world frame
-      /// \return Angular momentum of the body.
-      public: math::Vector3 GetWorldAngularMomentum() const;
-
       /// \brief Get the angular acceleration of the body in the world
       /// frame.
       /// \return Angular acceleration of the body in the world frame.
@@ -626,6 +619,9 @@ namespace gazebo
       /// playback.
       private: transport::SubscriberPtr audioContactsSub;
 #endif
+
+      /// \brief This flag is set to true when the link is initialized.
+      protected: bool initialized;
     };
     /// \}
   }

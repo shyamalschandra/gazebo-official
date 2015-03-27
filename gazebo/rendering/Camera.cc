@@ -480,10 +480,7 @@ void Camera::PostRender()
 {
   this->ReadPixelBuffer();
 
-  // Only record last render time if data was actually generated
-  // (If a frame was rendered).
-  if (this->newData)
-    this->lastRenderWallTime = common::Time::GetWallTime();
+  this->lastRenderWallTime = common::Time::GetWallTime();
 
   if (this->newData && (this->captureData || this->captureDataOnce))
   {
