@@ -34,10 +34,6 @@ VehiclePlugin::VehiclePlugin()
   this->frontPower = 50;
   this->rearPower = 50;
   this->wheelRadius = 0.3;
-  this->maxBrake = 0.0;
-  this->maxGas = 0.0;
-  this->steeringRatio = 1.0;
-  this->tireAngleRange = 1.0;
 }
 
 /////////////////////////////////////////////////

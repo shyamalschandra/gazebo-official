@@ -15,8 +15,8 @@
  *
 */
 
-#ifndef _SURFACEPARAMS_HH_
-#define _SURFACEPARAMS_HH_
+#ifndef _GAZEBO_SURFACEPARAMS_HH_
+#define _GAZEBO_SURFACEPARAMS_HH_
 
 #include <sdf/sdf.hh>
 
@@ -116,10 +116,6 @@ namespace gazebo
       /// \brief Custom collision filtering used when collideWithoutContact is
       /// true.
       public: unsigned int collideWithoutContactBitmask;
-
-      /// \brief Custom collision filtering. Will override
-      /// collideWithoutContact.
-      public: unsigned int collideBitmask;
     };
     /// \}
   }

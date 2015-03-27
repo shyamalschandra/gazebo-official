@@ -43,11 +43,12 @@ void PolylineShape::Init()
       this->GetVertices());
 
   std::string meshName =
-      boost::lexical_cast<std::string>(physics::getUniqueId()) +
-      "_extruded_polyline";
+    boost::lexical_cast<std::string>(physics::getUniqueId()) +
+    "_extruded_polyline";
 
   common::MeshManager::Instance()->CreateExtrudedPolyline(
-      meshName, this->GetVertices(), this->GetHeight());
+      meshName, this->GetVertices(),
+      this->GetHeight(), math::Vector2d(1, 1));
 
   this->mesh = common::MeshManager::Instance()->GetMesh(meshName);
 
@@ -56,36 +57,23 @@ void PolylineShape::Init()
 }
 
 //////////////////////////////////////////////////
-std::vector<std::vector<math::Vector2d> > PolylineShape::GetVertices() const
+std::vector<math::Vector2d> PolylineShape::GetVertices() const
 {
-  std::vector<std::vector<math::Vector2d> > paths;
-
-  sdf::ElementPtr polylineElem = this->sdf;
-  while (polylineElem)
+  std::vector<math::Vector2d> vertices;
+  sdf::ElementPtr pointElem = this->sdf->GetElement("point");
+  while (pointElem)
   {
-    sdf::ElementPtr pointElem = polylineElem->GetElement("point");
-    std::vector<math::Vector2d> vertices;
-    while (pointElem)
-    {
-      math::Vector2d point = pointElem->Get<math::Vector2d>();
-      pointElem = pointElem->GetNextElement("point");
-      vertices.push_back(point);
-    }
-    polylineElem = polylineElem->GetNextElement("polyline");
-    paths.push_back(vertices);
+    math::Vector2d point = pointElem->Get<math::Vector2d>();
+    pointElem = pointElem->GetNextElement("point");
+    vertices.push_back(point);
   }
-  return paths;
+  return vertices;
 }
 
 //////////////////////////////////////////////////
 void PolylineShape::SetHeight(const double &_height)
 {
-  sdf::ElementPtr polylineElem = this->sdf;
-  while (polylineElem)
-  {
-    polylineElem->GetElement("height")->Set(_height);
-    polylineElem = polylineElem->GetNextElement("polyline");
-  }
+  this->sdf->GetElement("height")->Set(_height);
 }
 
 //////////////////////////////////////////////////
@@ -109,32 +97,37 @@ void PolylineShape::SetScale(const math::Vector3 &_scale)
 ////////////////////////////////////////////////////
 void PolylineShape::SetVertices(const msgs::Geometry &_msg)
 {
-  sdf::ElementPtr geomSDF = msgs::GeometryToSDF(_msg);
-  this->sdf = geomSDF->GetElement("polyline");
+  if (!_msg.has_polyline())
+  {
+    gzerr << "Unable to set vertices from message, no polyline shape.\n";
+    return;
+  }
+
+  sdf::ElementPtr pointElem = this->sdf->GetElement("point");
+  for (int i = 0; i < _msg.polyline().point_size(); ++i)
+  {
+    math::Vector2d point(_msg.polyline().point(i).x(),
+        _msg.polyline().point(i).y());
+    pointElem->Set(point);
+    pointElem = pointElem->GetNextElement("point");
+  }
 }
 
 ////////////////////////////////////////////////////
-void PolylineShape::SetVertices(
-    const std::vector<std::vector<math::Vector2d> > &_vertices)
+void PolylineShape::SetVertices(const std::vector<math::Vector2d> &_vertices)
 {
-  sdf::ElementPtr polylineElem = this->sdf;
-  for (unsigned int i = 0; i < _vertices.size(); ++i)
+  unsigned int i;
+  sdf::ElementPtr pointElem = this->sdf->GetElement("point");
+  for (i = 0; i < _vertices.size(); ++i)
   {
-    std::vector<math::Vector2d> v = _vertices[i];
-
-    sdf::ElementPtr pointElem = polylineElem->GetElement("point");
-    for (unsigned int j = 0; j < v.size(); ++j)
-    {
-      pointElem->Set(v[j]);
-      pointElem = pointElem->GetNextElement("point");
-    }
-    polylineElem = polylineElem->GetNextElement("polyline");
+    pointElem->Set(_vertices[i]);
+    pointElem = pointElem->GetNextElement("point");
   }
 }
 
 //////////////////////////////////////////////////
 void PolylineShape::SetPolylineShape(const double &_height,
-    const std::vector<std::vector<math::Vector2d> > &_vertices)
+    const std::vector<math::Vector2d> &_vertices)
 {
   this->SetHeight(_height);
   this->SetVertices(_vertices);
@@ -143,15 +136,24 @@ void PolylineShape::SetPolylineShape(const double &_height,
 //////////////////////////////////////////////////
 void PolylineShape::FillMsg(msgs::Geometry &_msg)
 {
-  _msg = msgs::GeometryFromSDF(this->sdf->GetParent());
+  _msg.set_type(msgs::Geometry::POLYLINE);
+  _msg.mutable_polyline()->set_height(this->GetHeight());
+  sdf::ElementPtr pointElem = this->sdf->GetElement("point");
+  while (pointElem)
+  {
+    math::Vector2d point = pointElem->Get<math::Vector2d>();
+    pointElem = pointElem->GetNextElement("point");
+    msgs::Vector2d *ptMsg = _msg.mutable_polyline()->add_point();
+    msgs::Set(ptMsg, point);
+  }
 }
 
 //////////////////////////////////////////////////
 void PolylineShape::ProcessMsg(const msgs::Geometry &_msg)
 {
-  if (_msg.polyline_size() > 0)
+  if (_msg.has_polyline())
   {
-    this->SetHeight(_msg.polyline(0).height());
+    this->SetHeight(_msg.polyline().height());
     this->SetVertices(_msg);
   }
   else

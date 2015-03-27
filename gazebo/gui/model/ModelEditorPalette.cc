@@ -107,11 +107,11 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
   customLayout->addWidget(customButton, 0, 0);
 
   // Button group
-  this->linkButtonGroup = new QButtonGroup;
-  this->linkButtonGroup->addButton(cylinderButton);
-  this->linkButtonGroup->addButton(sphereButton);
-  this->linkButtonGroup->addButton(boxButton);
-  this->linkButtonGroup->addButton(customButton);
+  this->partButtonGroup = new QButtonGroup;
+  this->partButtonGroup->addButton(cylinderButton);
+  this->partButtonGroup->addButton(sphereButton);
+  this->partButtonGroup->addButton(boxButton);
+  this->partButtonGroup->addButton(customButton);
 
   // Model Settings
   QLabel *settingsLabel = new QLabel(tr(
@@ -147,7 +147,7 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
   settingsLayout->addWidget(this->autoDisableCheck, 2, 1);
 
   this->modelCreator = new ModelCreator();
-  connect(modelCreator, SIGNAL(LinkAdded()), this, SLOT(OnLinkAdded()));
+  connect(modelCreator, SIGNAL(PartAdded()), this, SLOT(OnPartAdded()));
 
   // Horizontal separator
   QFrame *separator = new QFrame(this);
@@ -181,11 +181,6 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
   this->connections.push_back(
       gui::model::Events::ConnectNewModel(
       boost::bind(&ModelEditorPalette::OnNewModel, this)));
-
-  this->connections.push_back(
-      gui::model::Events::ConnectModelPropertiesChanged(
-      boost::bind(&ModelEditorPalette::OnModelPropertiesChanged, this, _1, _2,
-      _3)));
 }
 
 /////////////////////////////////////////////////
@@ -207,7 +202,7 @@ void ModelEditorPalette::OnCylinder()
   event::Events::setSelectedEntity("", "normal");
   g_arrowAct->trigger();
 
-  this->modelCreator->AddLink(ModelCreator::LINK_CYLINDER);
+  this->modelCreator->AddPart(ModelCreator::PART_CYLINDER);
 }
 
 /////////////////////////////////////////////////
@@ -216,7 +211,7 @@ void ModelEditorPalette::OnSphere()
   event::Events::setSelectedEntity("", "normal");
   g_arrowAct->trigger();
 
-  this->modelCreator->AddLink(ModelCreator::LINK_SPHERE);
+  this->modelCreator->AddPart(ModelCreator::PART_SPHERE);
 }
 
 /////////////////////////////////////////////////
@@ -225,7 +220,7 @@ void ModelEditorPalette::OnBox()
   event::Events::setSelectedEntity("", "normal");
   g_arrowAct->trigger();
 
-  this->modelCreator->AddLink(ModelCreator::LINK_BOX);
+  this->modelCreator->AddPart(ModelCreator::PART_BOX);
 }
 
 /////////////////////////////////////////////////
@@ -237,13 +232,12 @@ void ModelEditorPalette::OnCustom()
   {
     event::Events::setSelectedEntity("", "normal");
     g_arrowAct->trigger();
-    this->modelCreator->AddShape(ModelCreator::LINK_MESH,
-        math::Vector3::One, math::Pose::Zero, importDialog.GetImportPath());
+    this->modelCreator->AddCustom(importDialog.GetImportPath());
   }
   else
   {
     // this unchecks the custom button
-    this->OnLinkAdded();
+    this->OnPartAdded();
   }
 }
 
@@ -255,12 +249,12 @@ void ModelEditorPalette::AddJoint(const std::string &_type)
 }
 
 /////////////////////////////////////////////////
-void ModelEditorPalette::OnLinkAdded()
+void ModelEditorPalette::OnPartAdded()
 {
-  this->linkButtonGroup->setExclusive(false);
-  if (this->linkButtonGroup->checkedButton())
-    this->linkButtonGroup->checkedButton()->setChecked(false);
-  this->linkButtonGroup->setExclusive(true);
+  this->partButtonGroup->setExclusive(false);
+  if (this->partButtonGroup->checkedButton())
+    this->partButtonGroup->checkedButton()->setChecked(false);
+  this->partButtonGroup->setExclusive(true);
 }
 
 /////////////////////////////////////////////////
@@ -276,20 +270,12 @@ void ModelEditorPalette::OnStatic()
 }
 
 /////////////////////////////////////////////////
-void ModelEditorPalette::OnModelPropertiesChanged(
-  bool _static, bool _autoDisable, const math::Pose &/*_pose*/)
-{
-  this->staticCheck->setChecked(_static);
-  this->autoDisableCheck->setChecked(_autoDisable);
-}
-
-/////////////////////////////////////////////////
 bool ModelEditorPalette::OnKeyPress(const common::KeyEvent &_event)
 {
   if (_event.key == Qt::Key_Escape)
   {
     // call the slots to uncheck the buttons
-    this->OnLinkAdded();
+    this->OnPartAdded();
   }
   if (_event.key == Qt::Key_Delete)
   {

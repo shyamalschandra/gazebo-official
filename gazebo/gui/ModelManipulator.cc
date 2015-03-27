@@ -40,21 +40,32 @@ using namespace gui;
 ModelManipulator::ModelManipulator()
   : dataPtr(new ModelManipulatorPrivate)
 {
-  this->dataPtr->initialized = false;
-  this->dataPtr->selectionObj.reset();
-  this->dataPtr->mouseMoveVis.reset();
-
   this->dataPtr->manipMode = "";
   this->dataPtr->globalManip = false;
+  this->dataPtr->initialized = false;
 }
 
 /////////////////////////////////////////////////
 ModelManipulator::~ModelManipulator()
 {
-  this->dataPtr->modelPub.reset();
-  this->dataPtr->selectionObj.reset();
+  this->Clear();
   delete this->dataPtr;
   this->dataPtr = NULL;
+}
+
+/////////////////////////////////////////////////
+void ModelManipulator::Clear()
+{
+  this->dataPtr->modelPub.reset();
+  this->dataPtr->lightPub.reset();
+  this->dataPtr->selectionObj.reset();
+  this->dataPtr->userCamera.reset();
+  this->dataPtr->scene.reset();
+  this->dataPtr->node.reset();
+  this->dataPtr->mouseMoveVis.reset();
+  this->dataPtr->manipMode = "";
+  this->dataPtr->globalManip = false;
+  this->dataPtr->initialized = false;
 }
 
 /////////////////////////////////////////////////
@@ -137,7 +148,9 @@ void ModelManipulator::RotateEntity(rendering::VisualPtr &_vis,
   if (signTest < 0 )
     angle *= -1;
 
-  if (this->dataPtr->mouseEvent.control)
+  // Using Qt control modifier instead of Gazebo's for now.
+  // See GLWidget::keyPressEvent
+  if (QApplication::keyboardModifiers() & Qt::ControlModifier)
     angle = rint(angle / (M_PI * 0.25)) * (M_PI * 0.25);
 
   math::Quaternion rot(_axis, angle);
@@ -387,7 +400,7 @@ void ModelManipulator::ScaleEntity(rendering::VisualPtr &_vis,
 
     math::Vector3 newScale = this->dataPtr->mouseVisualScale * scale.GetAbs();
 
-    if (this->dataPtr->mouseEvent.control)
+    if (QApplication::keyboardModifiers() & Qt::ControlModifier)
     {
       newScale = SnapPoint(newScale);
       // prevent setting zero scale
@@ -420,7 +433,7 @@ void ModelManipulator::ScaleEntity(rendering::VisualPtr &_vis,
         math::Vector3 newScale = this->dataPtr->mouseChildVisualScale[i]
             * geomScale.GetAbs();
 
-        if (this->dataPtr->mouseEvent.control)
+        if (QApplication::keyboardModifiers() & Qt::ControlModifier)
         {
           newScale = SnapPoint(newScale);
           // prevent setting zero scale
@@ -482,7 +495,7 @@ void ModelManipulator::TranslateEntity(rendering::VisualPtr &_vis,
 
   pose.pos = this->dataPtr->mouseMoveVisStartPose.pos + distance;
 
-  if (this->dataPtr->mouseEvent.control)
+  if (QApplication::keyboardModifiers() & Qt::ControlModifier)
   {
     pose.pos = SnapPoint(pose.pos);
   }

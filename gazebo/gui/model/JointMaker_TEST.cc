@@ -124,7 +124,7 @@ void JointMaker_TEST::CreateRemoveJoint()
   QCOMPARE(jointMaker->GetJointCount(), 3u);
 
   // Remove the two joints connected to the sphere
-  jointMaker->RemoveJointsByLink(sphereLink->GetName());
+  jointMaker->RemoveJointsByPart(sphereLink->GetName());
   QCOMPARE(jointMaker->GetJointCount(), 1u);
 
   // Remove the last joint

@@ -72,14 +72,7 @@ void JointSpawningTest::SpawnJointTypes(const std::string &_physicsEngine,
                                         const std::string &_jointType)
 {
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   // disable gravity
   physics->SetGravity(math::Vector3::Zero);
@@ -166,14 +159,7 @@ void JointSpawningTest::SpawnJointRotational(const std::string &_physicsEngine,
                                              const std::string &_jointType)
 {
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   gzdbg << "SpawnJoint " << _jointType << std::endl;
   physics::JointPtr joint = SpawnJoint(_jointType);
@@ -212,14 +198,7 @@ void JointSpawningTest::SpawnJointRotationalWorld(
   const std::string &_jointType)
 {
   // Load an empty world
-  Load("worlds/empty.world", true, _physicsEngine);
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/empty.world", true, _physicsEngine);
 
   physics::JointPtr joint;
   for (unsigned int i = 0; i < 2; ++i)
@@ -274,7 +253,6 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
   physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
   ASSERT_TRUE(physics != NULL);
   bool isBullet = physics->GetType().compare("bullet") == 0;
-  bool isDart = physics->GetType().compare("dart") == 0;
   bool isSimbody = physics->GetType().compare("simbody") == 0;
   double dt = physics->GetMaxStepSize();
 
@@ -347,7 +325,7 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
   }
 
   // Test Coloumb friction
-  if (isBullet && _joint->HasType(physics::Base::UNIVERSAL_JOINT))
+  if (isBullet && !_joint->HasType(physics::Base::HINGE_JOINT))
   {
     gzerr << "Skipping friction test for "
           << physics->GetType()
@@ -396,15 +374,9 @@ void JointSpawningTest::CheckJointProperties(unsigned int _index,
     EXPECT_GT(_joint->GetVelocity(_index), 0.2 * friction);
     EXPECT_GT(_joint->GetAngle(_index).Radian(), 0.05 * friction);
 
-    // DART has problem with joint friction and joint limits
-    // https://github.com/dartsim/dart/issues/317
     // Set friction back to zero to not interfere with other tests
-    // until this issue is resolved.
-    if (isDart)
-    {
-      EXPECT_TRUE(_joint->SetParam("friction", _index, 0.0));
-      EXPECT_NEAR(_joint->GetParam("friction", _index), 0.0, g_tolerance);
-    }
+    EXPECT_TRUE(_joint->SetParam("friction", _index, 0.0));
+    EXPECT_NEAR(_joint->GetParam("friction", _index), 0.0, g_tolerance);
   }
 
   // SetHighStop
