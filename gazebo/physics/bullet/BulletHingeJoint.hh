@@ -58,12 +58,6 @@ namespace gazebo
                   const math::Vector3 &_axis);
 
       // Documentation inherited.
-      public: virtual void SetVelocity(unsigned int _index, double _vel);
-
-      // Documentation inherited.
-      public: virtual double GetVelocity(unsigned int _index) const;
-
-      // Documentation inherited.
       public: virtual void SetMaxForce(unsigned int _index, double _t);
 
       // Documentation inherited.
@@ -111,6 +105,15 @@ namespace gazebo
       /// \brief Initial value of joint axis, expressed as unit vector
       ///        in world frame.
       private: math::Vector3 initialWorldAxis;
+
+      // Documentation inherited.
+      public: virtual bool SetParam(const std::string &_key,
+                                        unsigned int _index,
+                                        const boost::any &_value);
+
+      // Documentation inherited.
+      public: virtual double GetParam(const std::string &_key,
+                                          unsigned int _index);
     };
     /// \}
   }

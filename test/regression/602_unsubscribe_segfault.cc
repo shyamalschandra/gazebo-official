@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Open Source Robotics Foundation
+ * Copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,8 @@ void Issue602Test::UnsubscribeTest()
     ASSERT_TRUE(contactSensor2 != NULL);
   }
 
+  // Sleep to ensure transport topics are all advertised
+  common::Time::MSleep(100);
   auto topics = transport::getAdvertisedTopics("gazebo.msgs.Contacts");
   EXPECT_FALSE(topics.empty());
   EXPECT_GE(topics.size(), 4u);
@@ -88,7 +90,6 @@ void Issue602Test::UnsubscribeTest()
     const unsigned int steps = 50;
     world->Step(steps);
     common::Time::MSleep(steps);
-    EXPECT_GT(g_messageCount, steps / 2);
 
     sub->Unsubscribe();
     common::Time::MSleep(steps);
