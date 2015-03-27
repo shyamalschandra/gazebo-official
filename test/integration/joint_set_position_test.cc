@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@
 #include <gtest/gtest.h>
 #include "gazebo/physics/physics.hh"
 // #include "gazebo/physics/Joint.hh"
-#include "ServerFixture.hh"
+#include "test/PhysicsFixture.hh"
 #include "helper_physics_generator.hh"
 
 #define TOL 0.001
 using namespace gazebo;
 
-class JointKinematicTest : public ServerFixture,
+class JointKinematicTest : public PhysicsFixture,
                            public testing::WithParamInterface<const char*>
 {
   /// \brief Test setting joint position.  Joint::SetPosition is called
@@ -77,16 +77,7 @@ void JointKinematicTest::SetJointPositionTest(const std::string &_physicsEngine)
   }
 
   // Load our screw joint test world
-  Load("worlds/set_joint_position.world", true, _physicsEngine);
-
-  // Get a pointer to the world, make sure world loads
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/set_joint_position.world", true, _physicsEngine);
 
   physics->SetGravity(math::Vector3(0, 0, 0));
 
@@ -254,16 +245,7 @@ void JointKinematicTest::SetJointPositionThreadedTest(
   }
 
   // Load our screw joint test world
-  Load("worlds/set_joint_position.world", true, _physicsEngine);
-
-  // Get a pointer to the world, make sure world loads
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/set_joint_position.world", true, _physicsEngine);
 
   physics->SetGravity(math::Vector3(0, 0, 0));
 
@@ -428,16 +410,7 @@ void JointKinematicTest::SetJointPositionLoopJointTest(
   }
 
   // Load our screw joint test world
-  Load("worlds/set_joint_position.world", true, _physicsEngine);
-
-  // Get a pointer to the world, make sure world loads
-  physics::WorldPtr world = physics::get_world("default");
-  ASSERT_TRUE(world != NULL);
-
-  // Verify physics engine type
-  physics::PhysicsEnginePtr physics = world->GetPhysicsEngine();
-  ASSERT_TRUE(physics != NULL);
-  EXPECT_EQ(physics->GetType(), _physicsEngine);
+  LoadWorld("worlds/set_joint_position.world", true, _physicsEngine);
 
   physics->SetGravity(math::Vector3(0, 0, 0));
 

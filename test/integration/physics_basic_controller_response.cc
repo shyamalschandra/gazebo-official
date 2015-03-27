@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Open Source Robotics Foundation
+ * Copyright (C) 2012-2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "ServerFixture.hh"
+#include "test/ServerFixture.hh"
+#include "test/integration/helper_physics_generator.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/common/PID.hh"
 #include "SimplePendulumIntegrator.hh"
@@ -40,6 +41,7 @@ class PhysicsTest : public ServerFixture,
                                    const std::string &_worldFileName);
 };
 
+//////////////////////////////////////////////////
 void PhysicsTest::TrikeyWheelResponse(const std::string &_physicsEngine,
                                       const std::string &_worldFileName)
 {
@@ -134,15 +136,18 @@ void PhysicsTest::TrikeyWheelResponse(const std::string &_physicsEngine,
   }
 }
 
-TEST_F(PhysicsTest, TrikeyWheelResponse)
+TEST_P(PhysicsTest, TrikeyWheelResponse)
 {
-  TrikeyWheelResponse("ode", "worlds/inertia_ratio_reduction_test.world");
+  TrikeyWheelResponse(GetParam(), "worlds/inertia_ratio_reduction_test.world");
 }
 
-TEST_F(PhysicsTest, TrikeyWheelResponse2)
+TEST_P(PhysicsTest, TrikeyWheelResponse2)
 {
-  TrikeyWheelResponse("ode", "worlds/inertia_ratio_reduction_test2.world");
+  TrikeyWheelResponse(GetParam(), "worlds/inertia_ratio_reduction_test2.world");
 }
+
+INSTANTIATE_TEST_CASE_P(PhysicsEngines, PhysicsTest,
+                        PHYSICS_ENGINE_VALUES);
 
 int main(int argc, char **argv)
 {
