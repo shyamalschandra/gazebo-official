@@ -19,7 +19,6 @@
 #include <OgreGpuProgramManager.h>
 #include <OgreStringConverter.h>
 #include <OgreHighLevelGpuProgramManager.h>
-#include <OgreHighLevelGpuProgram.h>
 #include <OgreTechnique.h>
 #include <OgreTextureUnitState.h>
 

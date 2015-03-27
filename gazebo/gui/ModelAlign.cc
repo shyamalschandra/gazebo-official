@@ -46,19 +46,9 @@ ModelAlign::ModelAlign()
 /////////////////////////////////////////////////
 ModelAlign::~ModelAlign()
 {
-  this->Clear();
+  this->dataPtr->modelPub.reset();
   delete this->dataPtr;
   this->dataPtr = NULL;
-}
-
-/////////////////////////////////////////////////
-void ModelAlign::Clear()
-{
-  this->dataPtr->userCamera.reset();
-  this->dataPtr->scene.reset();
-  this->dataPtr->node.reset();
-  this->dataPtr->modelPub.reset();
-  this->dataPtr->initialized = false;
 }
 
 /////////////////////////////////////////////////
