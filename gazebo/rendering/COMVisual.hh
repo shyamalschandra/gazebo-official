@@ -20,8 +20,13 @@
 
 #include <string>
 
+#include <sdf/sdf.hh>
+
 #include "gazebo/math/Pose.hh"
+#include "gazebo/math/Vector3.hh"
+#include "gazebo/msgs/MessageTypes.hh"
 #include "gazebo/rendering/Visual.hh"
+#include "gazebo/util/system.hh"
 
 namespace gazebo
 {
@@ -52,11 +57,10 @@ namespace gazebo
       public: virtual void Load(ConstLinkPtr &_msg);
 
       /// \brief Load based on a math::Pose
-      /// \param[in] _pose Pose of the COM visual.
-      /// \param[in] _radius Radius for the sphere visual.
-      /// \param[in] _box Link's bounding box.
+      /// \param[in] _pose Pose of the COM visual
+      /// \param[in] _scale Scale factor for the COM visual.
       private: void Load(const math::Pose &_pose,
-          double _radius = 0.01, math::Box _box = math::Box());
+               const math::Vector3 &_scale = math::Vector3(0.02, 0.02, 0.02));
     };
     /// \}
   }

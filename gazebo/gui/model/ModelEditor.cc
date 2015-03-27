@@ -250,19 +250,15 @@ void ModelEditor::OnEdit(bool /*_checked*/)
   if (!this->active)
   {
     this->CreateMenus();
-    this->mainWindowPaused = g_playAct->isVisible();
     this->mainWindow->Pause();
     this->mainWindow->ShowLeftColumnWidget("modelEditorTab");
     this->mainWindow->ShowMenuBar(this->menuBar);
-    this->mainWindow->GetRenderWidget()->ShowTimePanel(false);
   }
   else
   {
     this->mainWindow->ShowLeftColumnWidget();
     this->mainWindow->ShowMenuBar();
-    this->mainWindow->GetRenderWidget()->ShowTimePanel(true);
-    if (!this->mainWindowPaused)
-      this->mainWindow->Play();
+    this->mainWindow->Play();
   }
   this->active = !this->active;
   this->ToggleToolbar();

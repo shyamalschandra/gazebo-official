@@ -42,6 +42,7 @@ namespace gazebo
     private: physics::JointPtr leftJoint, rightJoint;
     private: event::ConnectionPtr updateConnection;
     private: double wheelSpeed[2];
+    private: double torque;
     private: double wheelSeparation;
     private: double wheelRadius;
     private: common::Time prevUpdateTime;

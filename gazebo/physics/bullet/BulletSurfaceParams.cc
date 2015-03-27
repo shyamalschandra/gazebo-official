@@ -15,6 +15,8 @@
  *
 */
 
+#include <float.h>
+#include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/physics/bullet/BulletSurfaceParams.hh"
 
@@ -24,7 +26,6 @@ using namespace physics;
 //////////////////////////////////////////////////
 BulletSurfaceParams::BulletSurfaceParams()
   : SurfaceParams()
-  , frictionPyramid(new FrictionPyramid())
 {
 }
 
@@ -39,30 +40,19 @@ void BulletSurfaceParams::Load(sdf::ElementPtr _sdf)
   // Load parent class
   SurfaceParams::Load(_sdf);
 
-  if (!_sdf)
-    gzerr << "Surface _sdf is NULL" << std::endl;
-  else
-  {
-    sdf::ElementPtr frictionElem = _sdf->GetElement("friction");
-    if (!frictionElem)
-      gzerr << "Surface friction sdf member is NULL" << std::endl;
-    {
-      // Note this should not be looking in the "ode" block
-      // Update this when sdformat has bullet friction parameters
-      // See sdformat issue #31
-      // https://bitbucket.org/osrf/sdformat/issue/31
-      sdf::ElementPtr frictionOdeElem = frictionElem->GetElement("ode");
-      if (!frictionOdeElem)
-        gzerr << "Surface friction ode sdf member is NULL" << std::endl;
-      else
-      {
-        this->frictionPyramid->SetMuPrimary(
-          frictionOdeElem->Get<double>("mu"));
-        this->frictionPyramid->SetMuSecondary(
-          frictionOdeElem->Get<double>("mu2"));
-      }
-    }
-  }
+  GZ_ASSERT(_sdf, "Surface _sdf is NULL");
+  sdf::ElementPtr frictionElem = _sdf->GetElement("friction");
+  GZ_ASSERT(frictionElem, "Surface friction sdf member is NULL");
+
+  // Note this should not be looking in the "ode" block
+  // Update this when sdformat has bullet friction parameters
+  // See sdformat issue #31
+  // https://bitbucket.org/osrf/sdformat/issue/31
+  sdf::ElementPtr frictionOdeElem = frictionElem->GetElement("ode");
+  GZ_ASSERT(frictionOdeElem , "Surface friction ode sdf member is NULL");
+
+  this->frictionPyramid.SetMuPrimary(frictionOdeElem->Get<double>("mu"));
+  this->frictionPyramid.SetMuSecondary(frictionOdeElem->Get<double>("mu2"));
 }
 
 /////////////////////////////////////////////////
@@ -70,8 +60,8 @@ void BulletSurfaceParams::FillMsg(msgs::Surface &_msg)
 {
   SurfaceParams::FillMsg(_msg);
 
-  _msg.mutable_friction()->set_mu(this->frictionPyramid->GetMuPrimary());
-  _msg.mutable_friction()->set_mu2(this->frictionPyramid->GetMuSecondary());
+  _msg.mutable_friction()->set_mu(this->frictionPyramid.GetMuPrimary());
+  _msg.mutable_friction()->set_mu2(this->frictionPyramid.GetMuSecondary());
 }
 
 /////////////////////////////////////////////////
@@ -82,14 +72,8 @@ void BulletSurfaceParams::ProcessMsg(const msgs::Surface &_msg)
   if (_msg.has_friction())
   {
     if (_msg.friction().has_mu())
-      this->frictionPyramid->SetMuPrimary(_msg.friction().mu());
+      this->frictionPyramid.SetMuPrimary(_msg.friction().mu());
     if (_msg.friction().has_mu2())
-      this->frictionPyramid->SetMuSecondary(_msg.friction().mu2());
+      this->frictionPyramid.SetMuSecondary(_msg.friction().mu2());
   }
-}
-
-/////////////////////////////////////////////////
-FrictionPyramidPtr BulletSurfaceParams::GetFrictionPyramid() const
-{
-  return this->frictionPyramid;
 }

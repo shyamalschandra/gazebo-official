@@ -334,11 +334,11 @@ namespace gazebo
 
       /// \brief Get the average FPS
       /// \return The average frames per second
-      public: virtual float GetAvgFPS() const;
+      public: virtual float GetAvgFPS() const {return 0;}
 
       /// \brief Get the triangle count
       /// \return The current triangle count
-      public: virtual unsigned int GetTriangleCount() const;
+      public: virtual unsigned int GetTriangleCount() const {return 0;}
 
       /// \brief Set the aspect ratio
       /// \param[in] _ratio The aspect ratio (width / height) in pixels
@@ -591,9 +591,6 @@ namespace gazebo
       /// \brief Internal function used to indicate that an animation has
       /// completed.
       protected: virtual void AnimationComplete();
-
-      /// \brief Update the camera's field of view.
-      protected: virtual void UpdateFOV();
 
       /// \brief if user requests bayer image, post process rgb from ogre
       ///        to generate bayer formats
