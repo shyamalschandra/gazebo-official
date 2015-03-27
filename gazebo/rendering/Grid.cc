@@ -52,6 +52,7 @@ Grid::~Grid()
 {
   this->scene->GetManager()->destroySceneNode(this->sceneNode->getName());
   this->scene->GetManager()->destroyManualObject(this->manualObject);
+
   this->material->unload();
 }
 

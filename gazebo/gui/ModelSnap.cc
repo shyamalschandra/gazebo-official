@@ -46,44 +46,29 @@ ModelSnap::ModelSnap()
   this->dataPtr->selectedTriangleDirty = false;
   this->dataPtr->hoverTriangleDirty = false;
   this->dataPtr->snapLines = NULL;
-  this->dataPtr->updateMutex = NULL;
+
+  this->dataPtr->updateMutex = new boost::recursive_mutex();
 }
 
 /////////////////////////////////////////////////
 ModelSnap::~ModelSnap()
 {
-  this->Clear();
-  delete this->dataPtr;
-  this->dataPtr = NULL;
-}
-
-/////////////////////////////////////////////////
-void ModelSnap::Clear()
-{
-  this->dataPtr->selectedTriangleDirty = false;
-  this->dataPtr->hoverTriangleDirty = false;
-
   this->dataPtr->modelPub.reset();
 
-  if (this->dataPtr->updateMutex)
   {
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->updateMutex);
-    delete this->dataPtr->snapLines;
-    this->dataPtr->snapLines = NULL;
+    if (this->dataPtr->snapLines)
+      delete this->dataPtr->snapLines;
     this->dataPtr->snapVisual.reset();
   }
 
-  if (this->dataPtr->renderConnection)
-    event::Events::DisconnectRender(this->dataPtr->renderConnection);
+  event::Events::DisconnectRender(this->dataPtr->renderConnection);
   this->dataPtr->renderConnection.reset();
 
   delete this->dataPtr->updateMutex;
-  this->dataPtr->updateMutex = NULL;
 
-  this->dataPtr->scene.reset();
-  this->dataPtr->userCamera.reset();
-
-  this->dataPtr->initialized = false;
+  delete this->dataPtr;
+  this->dataPtr = NULL;
 }
 
 /////////////////////////////////////////////////
@@ -101,8 +86,6 @@ void ModelSnap::Init()
 
   this->dataPtr->userCamera = cam;
   this->dataPtr->scene =  cam->GetScene();
-
-  this->dataPtr->updateMutex = new boost::recursive_mutex();
 
   this->dataPtr->node = transport::NodePtr(new transport::Node());
   this->dataPtr->node->Init();

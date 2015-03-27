@@ -44,18 +44,18 @@ namespace gazebo
 
       /// \brief Get name of file.
       /// \return The name of file.
-      public: std::string GetLinkName() const;
+      public: std::string GetPartName() const;
 
-      /// \brief Get the import path of the custom link.
+      /// \brief Get the import path of the custom part.
       /// \return Path of the custom location.
       public: std::string GetImportPath() const;
 
-      /// \brief Set the name of the custom link.
+      /// \brief Set the name of the custom part.
       /// \param[in] _name Name of file.
-      public: void SetLinkName(const std::string &_name);
+      public: void SetPartName(const std::string &_name);
 
-      /// \brief Set the import path of the custom link.
-      /// \param[in] _path Path to import the custom link.
+      /// \brief Set the import path of the custom part.
+      /// \param[in] _path Path to import the custom part.
       public: void SetImportPath(const std::string &_path);
 
       /// \brief Set the message to be displayed.

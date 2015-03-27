@@ -67,9 +67,7 @@ void WindowManager::Fini()
 //////////////////////////////////////////////////
 void WindowManager::SetCamera(int _windowId, CameraPtr _camera)
 {
-  if (static_cast<unsigned int>(_windowId) < this->windows.size() &&
-      this->windows[_windowId])
-    this->windows[_windowId]->removeAllViewports();
+  this->windows[_windowId]->removeAllViewports();
   _camera->SetRenderTarget(this->windows[_windowId]);
 }
 
@@ -88,8 +86,12 @@ int WindowManager::CreateWindow(const std::string &_ogreHandle,
   params["parentWindowHandle"] = _ogreHandle;
 #endif
   params["externalGLControl"] = true;
-  params["FSAA"] = "4";
-  params["stereoMode"] = "Frame Sequential";
+
+  if (_width > 1 && _height > 1)
+  {
+    params["FSAA"] = "4";
+    params["stereoMode"] = "Frame Sequential";
+  }
 
   // Set the macAPI for Ogre based on the Qt implementation
 #ifdef QT_MAC_USE_COCOA

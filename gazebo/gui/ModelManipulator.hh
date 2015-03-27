@@ -47,10 +47,6 @@ namespace gazebo
       /// \brief Initialize the model manipulator.
       public: void Init();
 
-      /// \brief Clear the model manipulator. This explicity cleans up the
-      /// internal state of the singleton and prepares it for exit.
-      public: void Clear();
-
       /// \brief Detach the manipulator from an entity
       public: void Detach();
 
@@ -127,8 +123,6 @@ namespace gazebo
 
       /// \brief Helper function to get the distance moved by the mouse.
       /// \param[in] _camera Pointer to user camera.
-      /// \param[in] _start Start point.
-      /// \param[in] _end End point.
       /// \param[in] _pose Pose of origin.
       /// \param[in] _axis Movement axis.
       /// \param[in] _local True to get distance in local frame.

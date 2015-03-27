@@ -106,6 +106,40 @@ void DARTJoint::Init()
   // We assume that the joint angles are all zero.
   this->dtJoint->setTransformFromParentBodyNode(dtTransformParentLinkToJoint);
   this->dtJoint->setTransformFromChildBodyNode(dtTransformChildLinkToJoint);
+
+  //----------------------------------------------------------------------------
+  // TODO: Currently, dampingCoefficient seems not to be initialized when
+  //       this joint is loaded. Therefore, we need below code...
+  //----------------------------------------------------------------------------
+  if (this->sdf->HasElement("axis"))
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
+    if (axisElem->HasElement("dynamics"))
+    {
+      sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
+
+      if (dynamicsElem->HasElement("friction"))
+      {
+        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
+        gzlog << "joint friction not implemented in DART.\n";
+      }
+    }
+  }
+
+  if (this->sdf->HasElement("axis2"))
+  {
+    sdf::ElementPtr axisElem = this->sdf->GetElement("axis");
+    if (axisElem->HasElement("dynamics"))
+    {
+      sdf::ElementPtr dynamicsElem = axisElem->GetElement("dynamics");
+
+      if (dynamicsElem->HasElement("friction"))
+      {
+        sdf::ElementPtr frictionElem = dynamicsElem->GetElement("friction");
+        gzlog << "joint friction not implemented in DART.\n";
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////
@@ -418,9 +452,14 @@ math::Vector3 DARTJoint::GetLinkTorque(unsigned int _index) const
 
 //////////////////////////////////////////////////
 bool DARTJoint::SetParam(const std::string &_key, unsigned int _index,
-                         const boost::any &_value)
+                             const boost::any &_value)
 {
-  // try because boost::any_cast can throw
+  if (_index >= this->GetAngleCount())
+  {
+    gzerr << "Invalid index [" << _index << "]" << std::endl;
+    return false;
+  }
+
   try
   {
     if (_key == "hi_stop")
@@ -434,11 +473,14 @@ bool DARTJoint::SetParam(const std::string &_key, unsigned int _index,
     else if (_key == "friction")
     {
       this->dtJoint->setCoulombFriction(_index,
-                                        boost::any_cast<double>(_value));
+        boost::any_cast<double>(_value));
     }
     else
     {
-      gzerr << "Unable to handle joint attribute[" << _key << "]\n";
+      gzerr << "SetParam: unrecognized parameter ["
+            << _key
+            << "]"
+            << std::endl;
       return false;
     }
   }
@@ -449,26 +491,21 @@ bool DARTJoint::SetParam(const std::string &_key, unsigned int _index,
           << std::endl;
     return false;
   }
-
   return true;
 }
 
 //////////////////////////////////////////////////
-double DARTJoint::GetParam(const std::string &_key, unsigned int _index)
+double DARTJoint::GetParam(const std::string& _key, unsigned int _index)
 {
-  try
+  if (_index >= this->GetAngleCount())
   {
-    if (_key == "friction")
-    {
-      return this->dtJoint->getCoulombFriction(_index);
-    }
-  }
-  catch(const common::Exception &e)
-  {
-    gzerr << "GetParam(" << _key << ") error:"
-          << e.GetErrorStr()
-          << std::endl;
+    gzerr << "Invalid index [" << _index << "]" << std::endl;
     return 0;
+  }
+
+  if (_key == "friction")
+  {
+    return this->dtJoint->getCoulombFriction(_index);
   }
   return Joint::GetParam(_key, _index);
 }

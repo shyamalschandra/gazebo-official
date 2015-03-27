@@ -152,22 +152,6 @@ void RTShaderSystem::RemoveScene(ScenePtr _scene)
 }
 
 //////////////////////////////////////////////////
-void RTShaderSystem::RemoveScene(const std::string &_scene)
-{
-  if (!this->initialized)
-    return;
-
-  for (auto iter : this->scenes)
-  {
-    if (iter->GetName() == _scene)
-    {
-      this->RemoveScene(iter);
-      return;
-    }
-  }
-}
-
-//////////////////////////////////////////////////
 void RTShaderSystem::AttachEntity(Visual *vis)
 {
   if (!this->initialized)
