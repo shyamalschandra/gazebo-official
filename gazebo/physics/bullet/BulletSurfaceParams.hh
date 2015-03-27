@@ -51,14 +51,11 @@ namespace gazebo
       // Documentation inherited.
       public: virtual void ProcessMsg(const msgs::Surface &_msg);
 
-      // Documentation inherited.
-      public: virtual FrictionPyramidPtr GetFrictionPyramid() const;
-
       /// \brief Friction pyramid parameters (mu1, mu2).
       // For further documentation, see:
       // github.com/erwincoumans/bullet3/blob/master/src/BulletDynamics
       // /ConstraintSolver/btSequentialImpulseConstraintSolver.cpp#L910
-      private: FrictionPyramidPtr frictionPyramid;
+      FrictionPyramid frictionPyramid;
     };
     /// \}
   }

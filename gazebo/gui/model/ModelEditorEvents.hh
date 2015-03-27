@@ -18,7 +18,6 @@
 #define _MODEL_EDITOR_EVENTS_HH_
 
 #include <string>
-#include "gazebo/math/Pose.hh"
 #include "gazebo/common/Event.hh"
 #include "gazebo/util/system.hh"
 
@@ -121,22 +120,6 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { modelNameChanged.Disconnect(_subscriber); }
 
-        /// \brief Connect a Gazebo event to the model properties changed
-        /// signal.
-        /// \param[in] _subscriber the subscriber to this event
-        /// \return a connection
-        public: template<typename T>
-            static event::ConnectionPtr
-            ConnectModelPropertiesChanged(T _subscriber)
-          { return modelPropertiesChanged.Connect(_subscriber); }
-
-        /// \brief Disconnect a Gazebo event from the model properties changed
-        /// signal.
-        /// \param[in] _subscriber the subscriber to this event
-        public: static void DisconnectModelPropertiesChanged(
-            event::ConnectionPtr _subscriber)
-          { modelPropertiesChanged.Disconnect(_subscriber); }
-
         /// \brief Connect a Gazebo event to the save model signal.
         /// \param[in] _subscriber the subscriber to this event
         /// \return a connection
@@ -183,11 +166,6 @@ namespace gazebo
 
         /// \brief Name was changed in the editor palette.
         public: static event::EventT<void (std::string)> modelNameChanged;
-
-        /// \brief Notify that model properties have been changed.
-        // The properties are: is_static, auto_disable, pose, name
-        public: static event::EventT<void (bool, bool, const math::Pose &,
-            const std::string &)> modelPropertiesChanged;
 
         /// \brief Notify that model has been saved.
         public: static event::EventT<void (std::string)> saveModel;

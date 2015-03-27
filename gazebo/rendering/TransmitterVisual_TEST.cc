@@ -22,7 +22,6 @@
 #include "gazebo/rendering/TransmitterVisual.hh"
 #include "test/ServerFixture.hh"
 
-using namespace gazebo;
 class TransmitterVisual_TEST : public ServerFixture
 {
 };
