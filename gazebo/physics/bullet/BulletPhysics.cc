@@ -513,91 +513,196 @@ bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 
   btContactSolverInfo& info = this->dynamicsWorld->getSolverInfo();
 
-  try
+  if (_key == "solver_type")
   {
-    if (_key == "solver_type")
+    std::string value;
+    try
     {
-      std::string value = boost::any_cast<std::string>(_value);
-      if (value == "sequential_impulse")
-      {
-        bulletElem->GetElement("solver")->GetElement("type")->Set(value);
-        this->solverType = value;
-      }
-      else
-      {
-        gzwarn << "Currently only 'sequential_impulse' solver is supported"
-               << std::endl;
-        return false;
-      }
+      value = boost::any_cast<std::string>(_value);
     }
-    else if (_key == "cfm")
+    catch(const boost::bad_any_cast &e)
     {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("constraints")->GetElement("cfm")->Set(value);
-      info.m_globalCfm = value;
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
     }
-    else if (_key == "erp")
+    if (value == "sequential_impulse")
     {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("constraints")->GetElement("erp")->Set(value);
-      info.m_erp = value;
-    }
-    else if (_key == "iters")
-    {
-      int value = boost::any_cast<int>(_value);
-      bulletElem->GetElement("solver")->GetElement("iters")->Set(value);
-      info.m_numIterations = value;
-    }
-    else if (_key == "sor")
-    {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("solver")->GetElement("sor")->Set(value);
-      info.m_sor = value;
-    }
-    else if (_key == "contact_surface_layer")
-    {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("constraints")->GetElement(
-          "contact_surface_layer")->Set(value);
-    }
-    else if (_key == "split_impulse")
-    {
-      bool value = boost::any_cast<bool>(_value);
-      bulletElem->GetElement("constraints")->GetElement(
-          "split_impulse")->Set(value);
-    }
-    else if (_key == "split_impulse_penetration_threshold")
-    {
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("constraints")->GetElement(
-          "split_impulse_penetration_threshold")->Set(value);
-    }
-    else if (_key == "max_contacts")
-    {
-      /// TODO: Implement max contacts param
-      int value = boost::any_cast<int>(_value);
-      this->sdf->GetElement("max_contacts")->GetValue()->Set(value);
-    }
-    else if (_key == "min_step_size")
-    {
-      /// TODO: Implement min step size param
-      double value = boost::any_cast<double>(_value);
-      bulletElem->GetElement("solver")->GetElement("min_step_size")->Set(value);
-    }
-    else if (_key == "max_step_size")
-    {
-      this->SetMaxStepSize(boost::any_cast<double>(_value));
+      bulletElem->GetElement("solver")->GetElement("type")->Set(value);
+      this->solverType = value;
     }
     else
     {
-      gzwarn << _key << " is not supported in Bullet" << std::endl;
+      gzwarn << "Currently only 'sequential_impulse' solver is supported"
+             << std::endl;
       return false;
     }
   }
-  catch(boost::bad_any_cast &e)
+  else if (_key == "cfm")
   {
-    gzerr << "BulletPhysics::SetParam(" << _key << ") boost::any_cast error: "
-          << e.what() << std::endl;
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("constraints")->GetElement("cfm")->Set(value);
+    info.m_globalCfm = value;
+  }
+  else if (_key == "erp")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("constraints")->GetElement("erp")->Set(value);
+    info.m_erp = value;
+  }
+  else if (_key == "iters")
+  {
+    int value;
+    try
+    {
+      try
+      {
+        value = boost::any_cast<int>(_value);
+      }
+      catch(const boost::bad_any_cast &e)
+      {
+        value = boost::any_cast<unsigned int>(_value);
+      }
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("solver")->GetElement("iters")->Set(value);
+    info.m_numIterations = value;
+  }
+  else if (_key == "sor")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("solver")->GetElement("sor")->Set(value);
+    info.m_sor = value;
+  }
+  else if (_key == "contact_surface_layer")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("constraints")->GetElement(
+        "contact_surface_layer")->Set(value);
+  }
+  else if (_key == "split_impulse")
+  {
+    bool value;
+    try
+    {
+      value = boost::any_cast<bool>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("constraints")->GetElement(
+        "split_impulse")->Set(value);
+  }
+  else if (_key == "split_impulse_penetration_threshold")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("constraints")->GetElement(
+        "split_impulse_penetration_threshold")->Set(value);
+  }
+  else if (_key == "max_contacts")
+  {
+    /// TODO: Implement max contacts param
+    int value;
+    try
+    {
+      try
+      {
+        value = boost::any_cast<int>(_value);
+      }
+      catch(const boost::bad_any_cast &e)
+      {
+        value = boost::any_cast<unsigned int>(_value);
+      }
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    this->sdf->GetElement("max_contacts")->GetValue()->Set(value);
+  }
+  else if (_key == "min_step_size")
+  {
+    /// TODO: Implement min step size param
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    bulletElem->GetElement("solver")->GetElement("min_step_size")->Set(value);
+  }
+  else if (_key == "max_step_size")
+  {
+    double value;
+    try
+    {
+      value = boost::any_cast<double>(_value);
+    }
+    catch(const boost::bad_any_cast &e)
+    {
+      gzerr << "boost any_cast error:" << e.what() << "\n";
+      return false;
+    }
+    this->SetMaxStepSize(value);
+  }
+  else
+  {
+    gzwarn << _key << " is not supported in bullet" << std::endl;
     return false;
   }
 
@@ -607,49 +712,43 @@ bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
 //////////////////////////////////////////////////
 boost::any BulletPhysics::GetParam(const std::string &_key) const
 {
-  boost::any value;
-  this->GetParam(_key, value);
-  return value;
-}
-
-//////////////////////////////////////////////////
-bool BulletPhysics::GetParam(const std::string &_key, boost::any &_value) const
-{
   sdf::ElementPtr bulletElem = this->sdf->GetElement("bullet");
   GZ_ASSERT(bulletElem != NULL, "Bullet SDF element does not exist");
 
   if (_key == "solver_type")
-    _value = bulletElem->GetElement("solver")->Get<std::string>("type");
+    return bulletElem->GetElement("solver")->Get<std::string>("type");
   else if (_key == "cfm")
-    _value = bulletElem->GetElement("constraints")->Get<double>("cfm");
+    return bulletElem->GetElement("constraints")->Get<double>("cfm");
   else if (_key == "erp")
-    _value = bulletElem->GetElement("constraints")->Get<double>("erp");
+    return bulletElem->GetElement("constraints")->Get<double>("erp");
   else if (_key == "iters")
-    _value = bulletElem->GetElement("solver")->Get<int>("iters");
+    return bulletElem->GetElement("solver")->Get<int>("iters");
   else if (_key == "sor")
-    _value = bulletElem->GetElement("solver")->Get<double>("sor");
+    return bulletElem->GetElement("solver")->Get<double>("sor");
   else if (_key == "contact_surface_layer")
-    _value = bulletElem->GetElement("constraints")->Get<double>(
+    return bulletElem->GetElement("constraints")->Get<double>(
         "contact_surface_layer");
   else if (_key == "split_impulse")
   {
-    _value = bulletElem->GetElement("constraints")->Get<bool>(
+    return bulletElem->GetElement("constraints")->Get<bool>(
       "split_impulse");
   }
   else if (_key == "split_impulse_penetration_threshold")
   {
-    _value = bulletElem->GetElement("constraints")->Get<double>(
+    return bulletElem->GetElement("constraints")->Get<double>(
       "split_impulse_penetration_threshold");
   }
   else if (_key == "max_contacts")
-    _value = this->sdf->GetElement("max_contacts")->Get<int>();
+    return this->sdf->GetElement("max_contacts")->Get<int>();
   else if (_key == "min_step_size")
-    _value = bulletElem->GetElement("solver")->Get<double>("min_step_size");
+    return bulletElem->GetElement("solver")->Get<double>("min_step_size");
+  else if (_key == "max_step_size")
+    return this->GetMaxStepSize();
   else
   {
-    return PhysicsEngine::GetParam(_key, _value);
+    gzwarn << _key << " is not supported in bullet" << std::endl;
+    return 0;
   }
-  return true;
 }
 
 //////////////////////////////////////////////////

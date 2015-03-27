@@ -26,7 +26,7 @@ using namespace gazebo;
 class SVGLoader : public gazebo::testing::AutoLogFixture { };
 
 
-unsigned int samples = 10;
+unsigned int samples=10;
 std::string foutput = "";
 
 /////////////////////////////////////////////////
@@ -34,62 +34,64 @@ TEST_F(SVGLoader, LoadPaths)
 {
   common::SVGLoader loader(samples);
   std::vector<common::SVGPath> paths;
-
-  // bad path
-  bool success = false;
-  std::string bad = "/not/a/file.svg";
-  success = loader.Parse(bad, paths);
-  EXPECT_EQ(true, success);
-
   std::string filePath = std::string(PROJECT_SOURCE_PATH);
-  filePath += "/test/data/loader.svg";
+  filePath += "/test/data/paths.svg";
   loader.Parse(filePath, paths);
-
-  // useful to see the points on screen
-  // loader.DumpPaths(paths, std::cout);
-
-  // or in a file
-  if (!foutput.empty())
+  
+  loader.DumpPaths(paths);
+  if(!foutput.empty())
   {
     std::ofstream out(foutput.c_str() );
     loader.DumpPaths(paths, out);
     out.close();
   }
 
-  // the test file has 3 paths inside
-  EXPECT_EQ(3u, paths.size());
-  common::SVGPath &a = paths[0];
-  EXPECT_EQ("letterA", a.id);
+/*
+  EXPECT_STREQ("unknown", mesh->GetName().c_str());
+  EXPECT_EQ(math::Vector3(1, 1, 1), mesh->GetMax());
+  EXPECT_EQ(math::Vector3(-1, -1, -1), mesh->GetMin());
+  // 36 vertices, 24 unique, 12 shared.
+  EXPECT_EQ(24u, mesh->GetVertexCount());
+  EXPECT_EQ(24u, mesh->GetNormalCount());
+  EXPECT_EQ(36u, mesh->GetIndexCount());
+  EXPECT_EQ(0u, mesh->GetTexCoordCount());
+  EXPECT_EQ(1u, mesh->GetSubMeshCount());
+  EXPECT_EQ(1u, mesh->GetMaterialCount());
 
-  // the letter A has 2 subpaths:
-  EXPECT_EQ(2u, a.subpaths.size());
+  // Make sure we can read a submesh name
+  EXPECT_STREQ("Cube", mesh->GetSubMesh(0)->GetName().c_str());
+*/
 
-  // The hole of A
-  // 4 commands
-  EXPECT_EQ(4u, a.subpaths[0].size());
-  // 4 points
-  EXPECT_EQ(4u, a.polylines[0].size());
-  // THe A contour has 9
-  EXPECT_EQ(9u, a.polylines[1].size());
-
-  // see what's going on
-  loader.DumpPaths(paths, std::cout);
-
-  // the second path
-  common::SVGPath &p2 = paths[1];
-  EXPECT_EQ(1u, p2.subpaths.size());
-  EXPECT_EQ("path2984", p2.id);
-
-  // 8 commands
-  EXPECT_EQ(8u, p2.subpaths[0].size());
-  // since it has splines, there are more
-  // points than commands
-  EXPECT_EQ(61u, p2.polylines[0].size());
 }
 
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
+
+  for(size_t i=0; i < (size_t)argc; ++i)
+  {
+    std::cout << i << " " << argv[i] << std::endl;
+  }
+
+  if(argc >= 2)
+  {
+    std::string s = argv[1];
+    try {
+      samples = atoi(s.c_str());
+    }
+    catch(...)
+    {
+        std::cout << "Can't set sample to " << s << ". Sample is " << samples << std::endl;
+    }
+  }
+
+  if(argc >= 3)
+  {
+    // output to save results
+    foutput = argv[2];
+  }
+
+
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
