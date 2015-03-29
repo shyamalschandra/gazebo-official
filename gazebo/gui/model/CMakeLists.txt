@@ -85,6 +85,7 @@ if (HAVE_GRAPHVIZ)
   )
 endif()
 
+
 # Generate executables for each of the QT unit tests
 gz_build_qt_tests(${qt_tests})
 
@@ -97,7 +98,9 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 gz_add_library(gazebo_gui_model ${sources} ${headers_MOC} ${headers} ${resources_RCC})
 
 target_link_libraries(gazebo_gui_model
-  ${libraries_to_link}
+  gazebo_gui_model_qgv
 )
 
 gz_install_library(gazebo_gui_model)
+gz_install_includes("gui/model" ${headers})
+

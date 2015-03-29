@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Open Source Robotics Foundation
+ * copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,22 @@
  *
 */
 
-#ifndef _JOINT_MAKER_TEST_HH_
-#define _JOINT_MAKER_TEST_HH_
 
-#include "gazebo/gui/QTestFixture.hh"
+#ifndef _REST_EXCEPTION_HH_
+#define _REST_EXCEPTION_HH_
 
-/// \brief A test class for the JointMaker class.
-class JointMaker_TEST : public QTestFixture
+#include <stdexcept>
+
+
+namespace gazebo
 {
-  Q_OBJECT
-
-  /// \brief Test joint states
-  private slots: void JointState();
-
-  /// \brief Test creating and removing joints
-  private slots: void CreateRemoveJoint();
-
-  /// \brief Test values of joint default properties.
-  private slots: void JointDefaultProperties();
-
-};
+  // basic exception class that inherints from the
+  // standard runtime error
+  class RestException : public std::runtime_error
+  {
+    public: RestException(const char *_m):std::runtime_error(_m) {}
+  };
+}
 
 #endif
+
