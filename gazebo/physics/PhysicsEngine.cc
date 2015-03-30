@@ -31,6 +31,7 @@
 #include "gazebo/physics/Model.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
+#include "gazebo/physics/PresetManager.hh"
 
 using namespace gazebo;
 using namespace physics;
@@ -192,8 +193,9 @@ void PhysicsEngine::OnRequest(ConstRequestPtr &/*_msg*/)
 }
 
 //////////////////////////////////////////////////
-void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &/*_msg*/)
+void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
+  this->world->GetPresetManager()->CurrentProfile(_msg->profile_name());
 }
 
 //////////////////////////////////////////////////
@@ -204,7 +206,7 @@ bool PhysicsEngine::SetParam(const std::string &_key,
   {
     if (_key == "type")
     {
-      gzwarn << "Cannot set physics engine type from GetParam." << std::endl;
+      // Cannot set physics engine type from SetParam
       return false;
     }
     if (_key == "max_step_size")
@@ -272,4 +274,10 @@ bool PhysicsEngine::GetParam(const std::string &_key,
 ContactManager *PhysicsEngine::GetContactManager() const
 {
   return this->contactManager;
+}
+
+//////////////////////////////////////////////////
+sdf::ElementPtr PhysicsEngine::GetSDF() const
+{
+  return this->sdf;
 }
