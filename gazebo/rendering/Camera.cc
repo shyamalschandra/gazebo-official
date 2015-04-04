@@ -113,22 +113,11 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
 Camera::~Camera()
 {
   delete [] this->saveFrameBuffer;
+  this->saveFrameBuffer = NULL;
   delete [] this->bayerFrameBuffer;
+  this->bayerFrameBuffer = NULL;
 
-  this->sceneNode = NULL;
-
-  if (this->renderTexture && this->scene->GetInitialized())
-    Ogre::TextureManager::getSingleton().remove(this->renderTexture->getName());
-  this->renderTexture = NULL;
-  this->renderTarget = NULL;
-
-  if (this->camera && this->scene && this->scene->GetManager())
-  {
-    this->scene->GetManager()->destroyCamera(this->scopedUniqueName);
-    this->camera = NULL;
-  }
-
-  this->connections.clear();
+  this->Fini();
 
   this->sdf->Reset();
   this->sdf.reset();
@@ -219,17 +208,29 @@ void Camera::Init()
 void Camera::Fini()
 {
   this->initialized = false;
-  this->connections.clear();
   this->dataPtr->node.reset();
 
-  RTShaderSystem::DetachViewport(this->viewport, this->scene);
+  if (this->viewport && this->scene)
+    RTShaderSystem::DetachViewport(this->viewport, this->scene);
 
-  if (this->renderTarget && this->scene->GetInitialized())
+  if (this->renderTarget)
     this->renderTarget->removeAllViewports();
-
-  this->viewport = NULL;
   this->renderTarget = NULL;
 
+  if (this->renderTexture)
+    Ogre::TextureManager::getSingleton().remove(this->renderTexture->getName());
+  this->renderTexture = NULL;
+
+  if (this->camera)
+  {
+    this->scene->GetManager()->destroyCamera(this->scopedUniqueName);
+    this->camera = NULL;
+  }
+
+  this->sceneNode = NULL;
+  this->viewport = NULL;
+
+  this->scene.reset();
   this->connections.clear();
 }
 
@@ -650,6 +651,7 @@ void Camera::SetClipDist(float _near, float _far)
 void Camera::SetHFOV(math::Angle _angle)
 {
   this->sdf->GetElement("horizontal_fov")->Set(_angle.Radian());
+  this->UpdateFOV();
 }
 
 //////////////////////////////////////////////////
@@ -1314,6 +1316,7 @@ void Camera::SetRenderTarget(Ogre::RenderTarget *_target)
 
     double hfov = this->GetHFOV().Radian();
     double vfov = 2.0 * atan(tan(hfov / 2.0) / ratio);
+
     this->camera->setAspectRatio(ratio);
     this->camera->setFOVy(Ogre::Radian(vfov));
 
@@ -1711,4 +1714,37 @@ void Camera::OnCmdMsg(ConstCameraCmdPtr &_msg)
 DistortionPtr Camera::GetDistortion() const
 {
   return this->dataPtr->distortion;
+}
+
+//////////////////////////////////////////////////
+void Camera::UpdateFOV()
+{
+  if (this->viewport)
+  {
+    this->viewport->setDimensions(0, 0, 1, 1);
+    double ratio = static_cast<double>(this->viewport->getActualWidth()) /
+      static_cast<double>(this->viewport->getActualHeight());
+
+    double hfov =
+      this->sdf->Get<double>("horizontal_fov");
+    double vfov = 2.0 * atan(tan(hfov / 2.0) / ratio);
+
+    this->camera->setAspectRatio(ratio);
+    this->camera->setFOVy(Ogre::Radian(vfov));
+
+    delete [] this->saveFrameBuffer;
+    this->saveFrameBuffer = NULL;
+  }
+}
+
+//////////////////////////////////////////////////
+float Camera::GetAvgFPS() const
+{
+  return this->renderTarget->getAverageFPS();
+}
+
+//////////////////////////////////////////////////
+unsigned int Camera::GetTriangleCount() const
+{
+  return this->renderTarget->getTriangleCount();
 }
