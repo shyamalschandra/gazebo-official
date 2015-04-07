@@ -294,8 +294,8 @@ namespace gazebo
         /// \brief Notify that a joint has been inserted. The first
         /// string is the joint's unique id and the second string is the
         /// joint name.
-        public: static event::EventT<void (std::string, std::string)>
-            jointInserted;
+        public: static event::EventT<void (std::string, std::string,
+            std::string, std::string)> jointInserted;
 
         /// \brief Notify that a link has been removed.
         public: static event::EventT<void (std::string)> linkRemoved;
