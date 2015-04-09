@@ -1,5 +1,8 @@
 ## Gazebo 6.0
 
+1. Added start/stop simulation times to the header of the log files.
+    * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
+
 1. Fix deprecation warnings when using SDFormat 3.0.2, 3.0.3 prereleases
     * [Pull request #1568](https://bitbucket.org/osrf/gazebo/pull-request/1568)
 
@@ -8,6 +11,9 @@
 
 1. Show/hide GUI overlays using the menu bar.
     * [Pull request #1555](https://bitbucket.org/osrf/gazebo/pull-request/1555)
+
+1. Separate TimePanel's display into TimeWidget and LogPlayWidget.
+    * [Pull request #1564](https://bitbucket.org/osrf/gazebo/pull-request/1564)
 
 1. Added optional start/stop/reset buttons to timer GUI plugin.
     * [Pull request #1576](https://bitbucket.org/osrf/gazebo/pull-request/1576)

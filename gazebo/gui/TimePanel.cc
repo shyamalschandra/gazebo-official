@@ -231,9 +231,10 @@ void TimePanel::OnStats(ConstWorldStatisticsPtr &_msg)
   }
   else if (this->dataPtr->logPlayWidget->isVisible())
   {
-    // Set simulation time
+    // Set current time (simulation time) in text and in ms
     this->dataPtr->logPlayWidget->EmitSetCurrentTime(
-        QString::fromStdString(FormatTime(_msg->sim_time())));
+        QString::fromStdString(FormatTime(_msg->sim_time())),
+        _msg->sim_time().sec() * 1e3 + _msg->sim_time().nsec() * 1e-6);
   }
 }
 
