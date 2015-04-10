@@ -56,7 +56,6 @@ Link::Link(EntityPtr _parent)
   this->publishDataMutex = new boost::recursive_mutex();
 }
 
-
 //////////////////////////////////////////////////
 Link::~Link()
 {
@@ -119,9 +118,16 @@ void Link::Load(sdf::ElementPtr _sdf)
 
   Entity::Load(_sdf);
 
-  // before loading child collsion, we have to figure out of selfCollide is true
-  // and modify parent class Entity so this body has its own spaceId
-  this->SetSelfCollide(this->sdf->Get<bool>("self_collide"));
+  // before loading child collision, we have to figure out if selfCollide is
+  // true and modify parent class Entity so this body has its own spaceId
+  if (this->sdf->HasElement("self_collide"))
+  {
+    this->SetSelfCollide(this->sdf->Get<bool>("self_collide"));
+  }
+  else
+  {
+    this->SetSelfCollide(this->GetModel()->GetSelfCollide());
+  }
   this->sdf->GetElement("self_collide")->GetValue()->SetUpdateFunc(
       boost::bind(&Link::GetSelfCollide, this));
 
@@ -324,7 +330,7 @@ void Link::UpdateParameters(sdf::ElementPtr _sdf)
   if (this->sdf->Get<bool>("gravity") != this->GetGravityMode())
     this->SetGravityMode(this->sdf->Get<bool>("gravity"));
 
-  // before loading child collsiion, we have to figure out if
+  // before loading child collision, we have to figure out if
   // selfCollide is true and modify parent class Entity so this
   // body has its own spaceId
   this->SetSelfCollide(this->sdf->Get<bool>("self_collide"));
@@ -609,13 +615,20 @@ math::Vector3 Link::GetWorldLinearAccel() const
 //////////////////////////////////////////////////
 math::Vector3 Link::GetRelativeAngularAccel() const
 {
-  return this->GetRelativeTorque() / this->inertial->GetMass();
+  return this->GetWorldPose().rot.RotateVectorReverse(
+    this->GetWorldAngularAccel());
 }
 
 //////////////////////////////////////////////////
 math::Vector3 Link::GetWorldAngularAccel() const
 {
-  return this->GetWorldTorque() / this->inertial->GetMass();
+  // I: inertia matrix in world frame
+  // T: sum of external torques in world frame
+  // L: angular momentum of CoG in world frame
+  // w: angular velocity in world frame
+  // return I^-1 * (T - w x L)
+  return this->GetWorldInertiaMatrix().Inverse() * (this->GetWorldTorque()
+    - this->GetWorldAngularVel().Cross(this->GetWorldAngularMomentum()));
 }
 
 //////////////////////////////////////////////////
@@ -781,9 +794,10 @@ void Link::FillMsg(msgs::Link &_msg)
       sensor->FillMsg(*_msg.add_sensor());
   }
 
-  // Parse visuals from SDF
   if (this->visuals.empty())
     this->ParseVisuals();
+  else
+    this->UpdateVisualMsg();
 
   for (Visuals_M::iterator iter = this->visuals.begin();
       iter != this->visuals.end(); ++iter)
@@ -1033,32 +1047,10 @@ void Link::OnCollision(ConstContactsPtr &_msg)
 /////////////////////////////////////////////////
 void Link::ParseVisuals()
 {
-  // TODO: this shouldn't be in the physics sim
-  if (this->sdf->HasElement("visual"))
-  {
-    sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
-    while (visualElem)
-    {
-      msgs::Visual msg = msgs::VisualFromSDF(visualElem);
+  this->UpdateVisualMsg();
 
-      std::string visName = this->GetScopedName() + "::" + msg.name();
-      msg.set_name(visName);
-      msg.set_id(physics::getUniqueId());
-      msg.set_parent_name(this->GetScopedName());
-      msg.set_parent_id(this->GetId());
-      msg.set_is_static(this->IsStatic());
-
-      this->visPub->Publish(msg);
-
-      Visuals_M::iterator iter = this->visuals.find(msg.id());
-      if (iter != this->visuals.end())
-        gzthrow(std::string("Duplicate visual name[")+msg.name()+"]\n");
-
-      this->visuals[msg.id()] = msg;
-
-      visualElem = visualElem->GetNextElement("visual");
-    }
-  }
+  for (auto const it : this->visuals)
+    this->visPub->Publish(it.second);
 }
 
 /////////////////////////////////////////////////
@@ -1135,6 +1127,54 @@ void Link::UpdateVisualSDF()
       }
       else if (geomElem->HasElement("mesh"))
         geomElem->GetElement("mesh")->GetElement("scale")->Set(this->scale);
+
+      visualElem = visualElem->GetNextElement("visual");
+    }
+  }
+}
+
+//////////////////////////////////////////////////
+void Link::UpdateVisualMsg()
+{
+  // TODO: this shouldn't be in the physics sim
+  if (this->sdf->HasElement("visual"))
+  {
+    sdf::ElementPtr visualElem = this->sdf->GetElement("visual");
+    while (visualElem)
+    {
+      msgs::Visual msg = msgs::VisualFromSDF(visualElem);
+
+      bool newVis = true;
+      std::string linkName = this->GetScopedName();
+
+      // update visual msg if it exists
+      for (auto &iter : this->visuals)
+      {
+        std::string visName = linkName + "::" +
+            visualElem->Get<std::string>("name");
+        if (iter.second.name() == visName)
+        {
+          iter.second.mutable_geometry()->CopyFrom(msg.geometry());
+          newVis = false;
+          break;
+        }
+      }
+
+      // add to visual msgs if not found.
+      if (newVis)
+      {
+        std::string visName = this->GetScopedName() + "::" + msg.name();
+        msg.set_name(visName);
+        msg.set_id(physics::getUniqueId());
+        msg.set_parent_name(this->GetScopedName());
+        msg.set_parent_id(this->GetId());
+        msg.set_is_static(this->IsStatic());
+
+        auto iter = this->visuals.find(msg.id());
+        if (iter != this->visuals.end())
+          gzthrow(std::string("Duplicate visual name[")+msg.name()+"]\n");
+        this->visuals[msg.id()] = msg;
+      }
 
       visualElem = visualElem->GetNextElement("visual");
     }
