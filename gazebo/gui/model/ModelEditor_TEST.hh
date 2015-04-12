@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Open Source Robotics Foundation
+ * Copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,18 @@
  *
 */
 
-#ifndef _TIMEPANEL_TEST_HH_
-#define _TIMEPANEL_TEST_HH_
+#ifndef _GAZEBO_MODEL_EDITOR_TEST_HH_
+#define _GAZEBO_MODEL_EDITOR_TEST_HH_
 
 #include "gazebo/gui/QTestFixture.hh"
 
-/// \brief A test class for the TimePanel widget.
-class TimePanel_TEST : public QTestFixture
+/// \brief A test class for the ModelEditor class.
+class ModelEditor_TEST : public QTestFixture
 {
   Q_OBJECT
 
-  /// \brief Test setting the play/pause state.
-  private slots: void SetPaused();
+  /// \brief Tests adding an item to the model editor palette.
+  private slots: void AddItemToPalette();
 };
 
 #endif
