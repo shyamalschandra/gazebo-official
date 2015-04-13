@@ -9,8 +9,8 @@ project (Gazebo)
 string (TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 string (TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 
-set (GAZEBO_MAJOR_VERSION 5)
-set (GAZEBO_MINOR_VERSION 1)
+set (GAZEBO_MAJOR_VERSION 6)
+set (GAZEBO_MINOR_VERSION 0)
 # The patch version may have been bumped for prerelease purposes; be sure to
 # check gazebo-release/ubuntu/debian/changelog@default to determine what the
 # next patch version should be for a regular release.
@@ -213,6 +213,11 @@ filter_valid_compiler_flags(-Wall -Wextra -Wno-long-long -Wno-unused-value -Wno-
 # Windows and MacosX does not handled properly the hidden compilation
 if (UNIX AND NOT APPLE)
   filter_valid_compiler_flags(-fvisibility=hidden -fvisibility-inlines-hidden)
+endif()
+
+# Visual Studio enables c++11 support by default
+if (NOT MSVC)
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPERCASE}} -std=c++11")
 endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VALID_CXX_FLAGS}")
