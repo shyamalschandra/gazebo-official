@@ -543,6 +543,16 @@ if (NOT EXISTS ${XSLTPROC})
 endif()
 
 ########################################
+# Find ignition math
+find_package(ignition-math QUIET)
+if (NOT ignition-math_FOUND)
+  message(STATUS "Looking for ignition-math-config.cmake - not found")
+  BUILD_ERROR ("Missing: Ignition math library.")
+else()
+  message(STATUS "Looking for ignition-math-config.cmake - found")
+endif()
+
+########################################
 # Find QWT (QT graphing library)
 #find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
 #  /usr/include
