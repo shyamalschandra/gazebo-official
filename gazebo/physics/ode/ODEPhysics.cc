@@ -1266,6 +1266,11 @@ bool ODEPhysics::SetParam(const std::string &_key, const boost::any &_value)
       dWorldSetQuickStepExtraFrictionIterations(this->dataPtr->worldId,
         boost::any_cast<int>(_value));
     }
+    else if (_key == "friction_model")
+    {
+      dWorldSetQuickStepFrictionModel(this->dataPtr->worldId,
+        boost::any_cast<int>(_value));
+    }
     else
     {
       return PhysicsEngine::SetParam(_key, _value);
@@ -1347,6 +1352,8 @@ bool ODEPhysics::GetParam(const std::string &_key, boost::any &_value) const
     _value = dWorldGetQuickStepWarmStartFactor(this->dataPtr->worldId);
   else if (_key == "extra_friction_iterations")
     _value = dWorldGetQuickStepExtraFrictionIterations(this->dataPtr->worldId);
+  else if (_key == "friction_model")
+    _value = dWorldGetQuickStepFrictionModel(this->dataPtr->worldId);
   else
   {
     return PhysicsEngine::GetParam(_key, _value);
