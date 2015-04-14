@@ -36,6 +36,8 @@
 #include "gazebo/common/SingletonT.hh"
 #include "gazebo/common/Timer.hh"
 
+#include "gazebo/math/SignalStats.hh"
+
 #include "gazebo/util/UtilTypes.hh"
 #include "gazebo/util/system.hh"
 
@@ -192,6 +194,10 @@ namespace gazebo
       public: inline const std::string GetName() const
               { return this->name; }
 
+      /// \brief Insert data for statistics computation.
+      public: void InsertData(const std::string &_name,
+                              const common::Time &_time);
+
       /// \brief Name of the timer.
       private: std::string name;
 
@@ -200,6 +206,16 @@ namespace gazebo
 
       /// \brief Time of the previous lap.
       private: common::Time prevLap;
+
+      /// \brief Cumulative time throughout simulation.
+      private: common::Time cumulativeTime;
+
+      /// \brief Timing statistics map.
+      private: typedef boost::unordered_map<std::string, math::SignalStats>
+               SignalStatsMap;
+
+      /// \brief Timing statistics.
+      private: SignalStatsMap stats;
     };
     /// \}
   }
