@@ -24,9 +24,8 @@ class HydraCrashTest : public ServerFixture
 {
 };
 
-
 /////////////////////////////////////////////////
-// \brief Test for issue #1208
+// \brief Test for issue #1569
 TEST_F(HydraCrashTest, Reset)
 {
   Load("worlds/hydra_test.world", true);
