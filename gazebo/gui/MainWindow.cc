@@ -448,9 +448,9 @@ void MainWindow::Save()
     sdf::SDF sdf_parsed;
     sdf_parsed.SetFromString(msg.data());
     // Check that sdf contains world
-    if (sdf_parsed.root->HasElement("world"))
+    if (sdf_parsed.Root()->HasElement("world"))
     {
-      sdf::ElementPtr world = sdf_parsed.root->GetElement("world");
+      sdf::ElementPtr world = sdf_parsed.Root()->GetElement("world");
       sdf::ElementPtr guiElem = world->GetElement("gui");
 
       if (guiElem->HasAttribute("fullscreen"))
@@ -463,7 +463,7 @@ void MainWindow::Save()
       cameraElem->GetElement("view_controller")->Set(
           cam->GetViewControllerTypeString());
       // TODO: export track_visual properties as well.
-      msgData = sdf_parsed.root->ToString("");
+      msgData = sdf_parsed.Root()->ToString("");
     }
     else
     {
@@ -882,6 +882,21 @@ void MainWindow::FullScreen()
 }
 
 /////////////////////////////////////////////////
+void MainWindow::ShowToolbars()
+{
+  if (g_showToolbarsAct->isChecked())
+  {
+    this->GetRenderWidget()->GetTimePanel()->show();
+    this->GetRenderWidget()->GetToolbar()->show();
+  }
+  else
+  {
+    this->GetRenderWidget()->GetTimePanel()->hide();
+    this->GetRenderWidget()->GetToolbar()->hide();
+  }
+}
+
+/////////////////////////////////////////////////
 void MainWindow::FPS()
 {
   gui::Events::fps();
@@ -993,12 +1008,14 @@ void MainWindow::CreateActions()
 
   g_resetModelsAct = new QAction(tr("&Reset Model Poses"), this);
   g_resetModelsAct->setShortcut(tr("Ctrl+Shift+R"));
+  this->addAction(g_resetModelsAct);
   g_resetModelsAct->setStatusTip(tr("Reset model poses"));
   connect(g_resetModelsAct, SIGNAL(triggered()), this,
     SLOT(OnResetModelOnly()));
 
   g_resetWorldAct = new QAction(tr("&Reset World"), this);
   g_resetWorldAct->setShortcut(tr("Ctrl+R"));
+  this->addAction(g_resetWorldAct);
   g_resetWorldAct->setStatusTip(tr("Reset the world"));
   connect(g_resetWorldAct, SIGNAL(triggered()), this, SLOT(OnResetWorld()));
 
@@ -1193,8 +1210,19 @@ void MainWindow::CreateActions()
   connect(g_showJointsAct, SIGNAL(triggered()), this,
           SLOT(ShowJoints()));
 
+  g_showToolbarsAct = new QAction(tr("Show Toolbars"), this);
+  g_showToolbarsAct->setStatusTip(
+      tr("Show or hide the top and bottom toolbars"));
+  g_showToolbarsAct->setShortcut(tr("Ctrl+H"));
+  this->addAction(g_showToolbarsAct);
+  g_showToolbarsAct->setCheckable(true);
+  g_showToolbarsAct->setChecked(true);
+  connect(g_showToolbarsAct, SIGNAL(triggered()), this,
+      SLOT(ShowToolbars()));
+
   g_fullScreenAct = new QAction(tr("Full Screen"), this);
-  g_fullScreenAct->setStatusTip(tr("Full Screen(F-11 to exit)"));
+  g_fullScreenAct->setStatusTip(tr("Full Screen (F-11 to exit)"));
+  g_fullScreenAct->setShortcut(tr("F11"));
   connect(g_fullScreenAct, SIGNAL(triggered()), this,
       SLOT(FullScreen()));
 
@@ -1210,7 +1238,7 @@ void MainWindow::CreateActions()
   g_orbitAct->setChecked(true);
   connect(g_orbitAct, SIGNAL(triggered()), this, SLOT(Orbit()));
 
-  g_overlayAct = new QAction(tr("GUI Overlays"), this);
+  g_overlayAct = new QAction(tr("Show GUI Overlays"), this);
   g_overlayAct->setStatusTip(tr("Show GUI Overlays"));
   g_overlayAct->setEnabled(false);
   g_overlayAct->setCheckable(true);
@@ -1491,6 +1519,9 @@ void MainWindow::DeleteActions()
   delete g_showJointsAct;
   g_showJointsAct = 0;
 
+  delete g_showToolbarsAct;
+  g_showToolbarsAct = 0;
+
   delete g_fullScreenAct;
   g_fullScreenAct = 0;
 
@@ -1547,12 +1578,12 @@ void MainWindow::CreateMenuBar()
   this->editMenu = bar->addMenu(tr("&Edit"));
   editMenu->addAction(g_resetModelsAct);
   editMenu->addAction(g_resetWorldAct);
+  editMenu->addSeparator();
   editMenu->addAction(g_editBuildingAct);
+  editMenu->addAction(g_editModelAct);
 
   // \TODO: Add this back in when implementing the full Terrain Editor spec.
   // editMenu->addAction(g_editTerrainAct);
-
-  editMenu->addAction(g_editModelAct);
 
   QMenu *viewMenu = bar->addMenu(tr("&View"));
   viewMenu->addAction(g_showGridAct);
@@ -1569,21 +1600,20 @@ void MainWindow::CreateMenuBar()
   viewMenu->addSeparator();
 
   viewMenu->addAction(g_resetAct);
-  viewMenu->addAction(g_fullScreenAct);
   viewMenu->addSeparator();
 
   viewMenu->addAction(g_fpsAct);
   viewMenu->addAction(g_orbitAct);
-  viewMenu->addSeparator();
-
-  viewMenu->addAction(g_overlayAct);
 
   QMenu *windowMenu = bar->addMenu(tr("&Window"));
   windowMenu->addAction(g_topicVisAct);
   windowMenu->addSeparator();
   windowMenu->addAction(g_dataLoggerAct);
-
   windowMenu->addAction(g_viewOculusAct);
+  windowMenu->addSeparator();
+  windowMenu->addAction(g_overlayAct);
+  windowMenu->addAction(g_showToolbarsAct);
+  windowMenu->addAction(g_fullScreenAct);
 
 #ifdef HAVE_QWT
   // windowMenu->addAction(g_diagnosticsAct);
@@ -1932,13 +1962,13 @@ bool MainWindow::IsPaused() const
 void MainWindow::CreateEditors()
 {
   // Create a Terrain Editor
-  this->editors.push_back(new TerrainEditor(this));
+  this->editors["terrain"] = new TerrainEditor(this);
 
   // Create a Building Editor
-  this->editors.push_back(new BuildingEditor(this));
+  this->editors["building"] = new BuildingEditor(this);
 
   // Create a Model Editor
-  this->editors.push_back(new ModelEditor(this));
+  this->editors["model"] = new ModelEditor(this);
 }
 
 /////////////////////////////////////////////////
@@ -1981,4 +2011,14 @@ void MainWindow::OnEditorGroup(QAction *_action)
       editorGroup->actions()[i]->setChecked(false);
     }
   }
+}
+
+/////////////////////////////////////////////////
+Editor *MainWindow::GetEditor(const std::string &_name) const
+{
+  auto iter = this->editors.find(_name);
+  if (iter != this->editors.end())
+    return iter->second;
+
+  return NULL;
 }
