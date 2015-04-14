@@ -86,6 +86,11 @@ namespace gazebo
       /// \param[in] _on True to show the left pane, false to hide.
       public: void SetLeftPaneVisibility(bool _on);
 
+      /// \brief Get an editor by name
+      /// \param[in] _name Name of the editor.
+      /// \return Pointer to the editor.
+      public: Editor *GetEditor(const std::string &_name) const;
+
       /// \brief A signal to trigger loading of GUI plugins.
       signals: void AddPlugins();
 
@@ -161,7 +166,13 @@ namespace gazebo
       private slots: void ShowInertia();
 
       private slots: void Reset();
+
+      /// \brief Qt callback when the full screen action is triggered.
       private slots: void FullScreen();
+
+      /// \brief Qt callback when the show toolbars action is triggered.
+      private slots: void ShowToolbars();
+
       private slots: void FPS();
       private slots: void Orbit();
       private slots: void ViewOculus();
@@ -169,6 +180,7 @@ namespace gazebo
       private slots: void OnResetWorld();
       private slots: void SetTransparent();
       private slots: void SetWireframe();
+
       /// \brief Qt callback when the show GUI overlays action is triggered.
       private slots: void ShowGUIOverlays();
 
@@ -298,8 +310,8 @@ namespace gazebo
       /// \brief User specified step size for manually stepping the world
       private: int inputStepSize;
 
-      /// \brief List of all the editors.
-      private: std::list<Editor*> editors;
+      /// \brief Map of all the editors to their names.
+      private: std::map<std::string, Editor *> editors;
 
       /// \brief List of all the align action groups.
       private: std::vector<QActionGroup *> alignActionGroups;
