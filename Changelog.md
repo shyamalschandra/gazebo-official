@@ -84,6 +84,9 @@
     1. Saving, exiting, generalizing SaveDialog.
         * [Pull request #1401](https://bitbucket.org/osrf/gazebo/pull-request/1401)
 
+    1. Inspectors redesign
+        * [Pull request #1586](https://bitbucket.org/osrf/gazebo/pull-request/1586)
+
     1. Edit existing model.
         * [Pull request #1425](https://bitbucket.org/osrf/gazebo/pull-request/1425)
 
@@ -124,13 +127,18 @@
     1. Expose API to support adding items to the palette.
         * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
+    1. Add schematic view to model editor
+        * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
     1. Added menu for toggling joint visualization
         * [Pull request #1551](https://bitbucket.org/osrf/gazebo/pull-request/1551)
         * [Issue #1483](https://bitbucket.org/osrf/gazebo/issue/1483)
 
-    1. Added list of links and joints.
-        * [Pull request #1515](https://bitbucket.org/osrf/gazebo/pull-request/1515)
-        * [Issue #1418](https://bitbucket.org/osrf/gazebo/issue/1418)
+    1. Add schematic view to model editor
+        * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+        
+    1. Expose API to support adding items to the palette.
+        * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.
