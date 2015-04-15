@@ -115,7 +115,6 @@ MainWindow::MainWindow()
   this->AddToLeftColumn("default", this->tabWidget);
 
   this->toolsWidget = new ToolsWidget();
-
   this->renderWidget = new RenderWidget(mainWidget);
 
   this->CreateEditors();
@@ -1593,6 +1592,12 @@ void MainWindow::CreateMenuBar()
 
   QMenu *helpMenu = bar->addMenu(tr("&Help"));
   helpMenu->addAction(g_aboutAct);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::AddMenu(QMenu *_menu)
+{
+  this->menuBar->addMenu(_menu);
 }
 
 /////////////////////////////////////////////////
