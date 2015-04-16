@@ -79,6 +79,32 @@ namespace gazebo
       /// \return True if the event was handled
       private: bool OnKeyPress(const common::KeyEvent &_event);
 
+      /// \brief Callback when an entity is selected.
+      /// \param[in] _name Name of entity.
+      /// \param[in] _mode Select mode
+      private: void OnSetSelectedEntity(const std::string &_name,
+          const std::string &_mode);
+
+      /// \brief Callback when a nestedModel is selected.
+      /// \param[in] _name Name of nestedModel.
+      /// \param[in] _selected True if the nestedModel is selected, false if
+      /// deselected.
+      private: void OnSetSelectedNestedModel(const std::string &_name,
+          bool _selected);
+
+      /// \brief Callback when a link is selected.
+      /// \param[in] _name Name of link.
+      /// \param[in] _selected True if the link is selected, false if
+      /// deselected.
+      private: void OnSetSelectedLink(const std::string &_name, bool _selected);
+
+      /// \brief Callback when a joint is selected.
+      /// \param[in] _name Name of joint.
+      /// \param[in] _selected True if the joint is selected, false if
+      /// deselected.
+      private: void OnSetSelectedJoint(const std::string &_name,
+          bool _selected);
+
       /// \brief Qt callback when cylinder button is clicked.
       private slots: void OnCylinder();
 
@@ -107,7 +133,20 @@ namespace gazebo
       /// \brief Qt callback when a tree item has been double clicked.
       /// \param[in] _item Item clicked.
       /// \param[in] _column Column index.
-      private slots: void OnItemDoubleClick(QTreeWidgetItem *item, int column);
+      private slots: void OnItemDoubleClicked(QTreeWidgetItem *_item,
+          int _column);
+
+      /// \brief Qt callback when selected items have changed.
+      private slots: void OnItemSelectionChanged();
+
+      /// \brief Qt callback when the context menu signal is triggered.
+      /// \param[in] _pt Position of the context menu event that the widget
+      ///  receives.
+      private slots: void OnCustomContextMenu(const QPoint &_pt);
+
+      /// \brief Add a nestedModel to the tree.
+      /// \param[in] _nestedModelName Scoped nestedModel name.
+      private: void OnNestedModelInserted(const std::string &_nestedModelName);
 
       /// \brief Add a link to the tree.
       /// \param[in] _linkName Scoped link name.
@@ -116,8 +155,15 @@ namespace gazebo
       /// \brief Add a joint to the tree.
       /// \param[in] _jointId Unique joint identifying name.
       /// \param[in] _jointName Scoped name which can be changed by the user.
+      /// \param[in] _jointName Scoped name of the parent link.
+      /// \param[in] _jointName Scoped name of the child link.
       private: void OnJointInserted(const std::string &_jointId,
-          const std::string &_jointName);
+          const std::string &_jointName, const std::string &_parentName,
+          const std::string &_childName);
+
+      /// \brief Remove a nested model from the tree.
+      /// \param[in] _linkId Unique nested model identifying name.
+      private: void OnNestedModelRemoved(const std::string &_nestedModelId);
 
       /// \brief Remove a link from the tree.
       /// \param[in] _linkId Unique link identifying name.
@@ -178,6 +224,9 @@ namespace gazebo
       private: QTreeWidget *modelTreeWidget;
 
       /// \brief Parent item for all links.
+      private: QTreeWidgetItem *nestedModelsItem;
+
+      /// \brief Parent item for all links.
       private: QTreeWidgetItem *linksItem;
 
       /// \brief Parent item for all joints.
@@ -185,6 +234,9 @@ namespace gazebo
 
       /// \brief Mutex to protect updates.
       private: boost::recursive_mutex *updateMutex;
+
+      /// \brief Keeps tracks of selected items.
+      private: QList<QTreeWidgetItem *> selected;
 
       /// \brief Layout for other items in the palette.
       private: QVBoxLayout *otherItemsLayout;
