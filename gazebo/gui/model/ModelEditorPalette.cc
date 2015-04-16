@@ -179,15 +179,25 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
   this->modelTreeWidget->setVerticalScrollMode(
       QAbstractItemView::ScrollPerPixel);
 
+  // Nested models
+  this->nestedModelsItem = new QTreeWidgetItem(
+      static_cast<QTreeWidgetItem *>(0),
+      QStringList(QString("%1").arg(tr("Nested Models"))));
+  this->nestedModelsItem->setData(0, Qt::UserRole,
+      QVariant(tr("Nested Models")));
+  QFont nestedModelsFont = this->nestedModelsItem->font(0);
+  nestedModelsFont.setBold(true);
+  nestedModelsFont.setPointSize(1.1 * nestedModelsFont.pointSize());
+  this->nestedModelsItem->setFont(0, nestedModelsFont);
+  this->modelTreeWidget->addTopLevelItem(this->nestedModelsItem);
+
   // Links
   this->linksItem = new QTreeWidgetItem(
       static_cast<QTreeWidgetItem *>(0),
       QStringList(QString("%1").arg(tr("Links"))));
   this->linksItem->setData(0, Qt::UserRole, QVariant(tr("Links")));
   QFont linksFont = this->linksItem->font(0);
-  linksFont.setBold(true);
-  linksFont.setPointSize(1.1 * linksFont.pointSize());
-  this->linksItem->setFont(0, linksFont);
+  this->linksItem->setFont(0, nestedModelsFont);
   this->modelTreeWidget->addTopLevelItem(this->linksItem);
 
   // Joints
@@ -195,12 +205,19 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
       static_cast<QTreeWidgetItem*>(0),
       QStringList(QString("%1").arg(tr("Joints"))));
   this->jointsItem->setData(0, Qt::UserRole, QVariant(tr("Joints")));
-  this->jointsItem->setFont(0, linksFont);
+  this->jointsItem->setFont(0, nestedModelsFont);
   this->modelTreeWidget->addTopLevelItem(this->jointsItem);
 
   connect(this->modelTreeWidget,
       SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)),
-      this, SLOT(OnItemDoubleClick(QTreeWidgetItem *, int)));
+      this, SLOT(OnItemDoubleClicked(QTreeWidgetItem *, int)));
+
+  connect(this->modelTreeWidget, SIGNAL(itemSelectionChanged()),
+      this, SLOT(OnItemSelectionChanged()));
+
+  connect(this->modelTreeWidget,
+      SIGNAL(customContextMenuRequested(const QPoint &)),
+      this, SLOT(OnCustomContextMenu(const QPoint &)));
 
   // Model layout
   QVBoxLayout *modelLayout = new QVBoxLayout();
@@ -250,12 +267,20 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
       _3, _4)));
 
   this->connections.push_back(
+      gui::model::Events::ConnectNestedModelInserted(
+      boost::bind(&ModelEditorPalette::OnNestedModelInserted, this, _1)));
+
+  this->connections.push_back(
       gui::model::Events::ConnectLinkInserted(
       boost::bind(&ModelEditorPalette::OnLinkInserted, this, _1)));
 
   this->connections.push_back(
       gui::model::Events::ConnectJointInserted(
-      boost::bind(&ModelEditorPalette::OnJointInserted, this, _1, _2)));
+      boost::bind(&ModelEditorPalette::OnJointInserted, this, _1, _2, _3, _4)));
+
+  this->connections.push_back(
+      gui::model::Events::ConnectNestedModelRemoved(
+      boost::bind(&ModelEditorPalette::OnNestedModelRemoved, this, _1)));
 
   this->connections.push_back(
       gui::model::Events::ConnectLinkRemoved(
@@ -268,6 +293,23 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
   this->connections.push_back(
       gui::model::Events::ConnectJointNameChanged(
       boost::bind(&ModelEditorPalette::OnJointNameChanged, this, _1, _2)));
+
+  this->connections.push_back(
+     event::Events::ConnectSetSelectedEntity(
+     boost::bind(&ModelEditorPalette::OnSetSelectedEntity, this, _1, _2)));
+
+  this->connections.push_back(
+     gui::model::Events::ConnectSetSelectedNestedModel(
+     boost::bind(&ModelEditorPalette::OnSetSelectedNestedModel, this, _1,
+     _2)));
+
+  this->connections.push_back(
+     gui::model::Events::ConnectSetSelectedLink(
+     boost::bind(&ModelEditorPalette::OnSetSelectedLink, this, _1, _2)));
+
+  this->connections.push_back(
+     gui::model::Events::ConnectSetSelectedJoint(
+     boost::bind(&ModelEditorPalette::OnSetSelectedJoint, this, _1, _2)));
 
   this->updateMutex = new boost::recursive_mutex();
 }
@@ -436,6 +478,72 @@ bool ModelEditorPalette::OnKeyPress(const common::KeyEvent &_event)
 }
 
 /////////////////////////////////////////////////
+void ModelEditorPalette::OnItemSelectionChanged()
+{
+  QList<QTreeWidgetItem *> items = this->modelTreeWidget->selectedItems();
+
+  // update and signal new selection
+  for (int i = 0; i < items.size(); ++i)
+  {
+    QTreeWidgetItem *item = items[i];
+    int idx = this->selected.indexOf(item);
+    if (idx >= 0)
+    {
+      this->selected.removeAt(idx);
+      continue;
+    }
+    std::string name = item->data(0, Qt::UserRole).toString().toStdString();
+    std::string type = item->data(1, Qt::UserRole).toString().toStdString();
+
+    if (type == "Link")
+    {
+      gui::model::Events::setSelectedLink(name, true);
+    }
+    else if (type == "Joint")
+    {
+      gui::model::Events::setSelectedJoint(name, true);
+    }
+    else if (type == "Nested Model")
+    {
+      gui::model::Events::setSelectedNestedModel(name, true);
+    }
+  }
+
+  // deselect
+  for (int i = 0; i < this->selected.size(); ++i)
+  {
+    QTreeWidgetItem *item = this->selected[i];
+    if (item)
+    {
+      std::string name = item->data(0, Qt::UserRole).toString().toStdString();
+      std::string type = item->data(1, Qt::UserRole).toString().toStdString();
+
+      if (type == "Link")
+        gui::model::Events::setSelectedLink(name, false);
+      else if (type == "Joint")
+        gui::model::Events::setSelectedJoint(name, false);
+      else if (type == "Nested Model")
+        gui::model::Events::setSelectedNestedModel(name, false);
+    }
+  }
+
+  this->selected = items;
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnSetSelectedEntity(const std::string &/*_name*/,
+    const std::string &/*_mode*/)
+{
+  // deselect all
+  for (int i = 0; i < this->selected.size(); ++i)
+  {
+    QTreeWidgetItem *item = this->selected[i];
+    if (item)
+      item->setSelected(false);
+  }
+}
+
+/////////////////////////////////////////////////
 ModelCreator *ModelEditorPalette::GetModelCreator()
 {
   return this->modelCreator;
@@ -461,9 +569,8 @@ void ModelEditorPalette::OnSaveModel(const std::string &_saveName)
   this->modelNameEdit->setText(tr(_saveName.c_str()));
 }
 
-
 /////////////////////////////////////////////////
-void ModelEditorPalette::OnItemDoubleClick(QTreeWidgetItem *_item,
+void ModelEditorPalette::OnItemDoubleClicked(QTreeWidgetItem *_item,
     int /*_column*/)
 {
   if (_item)
@@ -475,7 +582,48 @@ void ModelEditorPalette::OnItemDoubleClick(QTreeWidgetItem *_item,
       gui::model::Events::openLinkInspector(name);
     else if (type == "Joint")
       gui::model::Events::openJointInspector(name);
+    else if (type == "Nested Model")
+      gui::model::Events::openNestedModelInspector(name);
   }
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnCustomContextMenu(const QPoint &_pt)
+{
+  QTreeWidgetItem *item = this->modelTreeWidget->itemAt(_pt);
+
+  if (item)
+  {
+    std::string name = item->data(0, Qt::UserRole).toString().toStdString();
+    std::string type = item->data(1, Qt::UserRole).toString().toStdString();
+
+    if (type == "Link")
+      gui::model::Events::showLinkContextMenu(name);
+    else if (type == "Joint")
+      gui::model::Events::showJointContextMenu(name);
+    else if (type == "Nested Model")
+      gui::model::Events::showNestedModelContextMenu(name);
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnNestedModelInserted(
+    const std::string &_nestedModelName)
+{
+  std::string leafName = _nestedModelName;
+  size_t idx = _nestedModelName.find_last_of("::");
+  if (idx != std::string::npos)
+    leafName = _nestedModelName.substr(idx+1);
+
+  QTreeWidgetItem *newNestedModelItem =
+      new QTreeWidgetItem(this->nestedModelsItem,
+      QStringList(QString("%1").arg(QString::fromStdString(leafName))));
+
+  newNestedModelItem->setData(0, Qt::UserRole, _nestedModelName.c_str());
+  newNestedModelItem->setData(1, Qt::UserRole, "Nested Model");
+  this->modelTreeWidget->addTopLevelItem(newNestedModelItem);
+
+  this->nestedModelsItem->setExpanded(true);
 }
 
 /////////////////////////////////////////////////
@@ -498,7 +646,8 @@ void ModelEditorPalette::OnLinkInserted(const std::string &_linkName)
 
 /////////////////////////////////////////////////
 void ModelEditorPalette::OnJointInserted(const std::string &_jointId,
-    const std::string &_jointName)
+    const std::string &_jointName, const std::string &/*_parentName*/,
+    const std::string &/*_childName*/)
 {
   std::string leafName = _jointName;
   size_t idx = _jointName.find_last_of("::");
@@ -510,9 +659,30 @@ void ModelEditorPalette::OnJointInserted(const std::string &_jointId,
 
   newJointItem->setData(0, Qt::UserRole, _jointId.c_str());
   newJointItem->setData(1, Qt::UserRole, "Joint");
+  newJointItem->setData(2, Qt::UserRole, _jointName.c_str());
   this->modelTreeWidget->addTopLevelItem(newJointItem);
 
   this->jointsItem->setExpanded(true);
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnNestedModelRemoved(const std::string &_nestedModelId)
+{
+  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+  for (int i = 0; i < this->nestedModelsItem->childCount(); ++i)
+  {
+    QTreeWidgetItem *item = this->nestedModelsItem->child(i);
+    if (!item)
+      continue;
+    std::string listData = item->data(0, Qt::UserRole).toString().toStdString();
+
+    if (listData == _nestedModelId)
+    {
+      this->nestedModelsItem->takeChild(
+          this->nestedModelsItem->indexOfChild(item));
+      break;
+    }
+  }
 }
 
 /////////////////////////////////////////////////
@@ -578,6 +748,66 @@ void ModelEditorPalette::OnJointNameChanged(const std::string &_jointId,
     if (listData == _jointId)
     {
       item->setText(0, QString::fromStdString(_newJointName));
+      break;
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnSetSelectedNestedModel(const std::string &_name,
+    bool _selected)
+{
+  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+  for (int i = 0; i < this->nestedModelsItem->childCount(); ++i)
+  {
+    QTreeWidgetItem *item = this->nestedModelsItem->child(i);
+    if (!item)
+      continue;
+    std::string listData = item->data(0, Qt::UserRole).toString().toStdString();
+
+    if (listData == _name)
+    {
+      item->setSelected(_selected);
+      break;
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnSetSelectedLink(const std::string &_name,
+    bool _selected)
+{
+  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+  for (int i = 0; i < this->linksItem->childCount(); ++i)
+  {
+    QTreeWidgetItem *item = this->linksItem->child(i);
+    if (!item)
+      continue;
+    std::string listData = item->data(0, Qt::UserRole).toString().toStdString();
+
+    if (listData == _name)
+    {
+      item->setSelected(_selected);
+      break;
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelEditorPalette::OnSetSelectedJoint(const std::string &_name,
+    bool _selected)
+{
+  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+  for (int i = 0; i < this->jointsItem->childCount(); ++i)
+  {
+    QTreeWidgetItem *item = this->jointsItem->child(i);
+    if (!item)
+      continue;
+    std::string listData = item->data(0, Qt::UserRole).toString().toStdString();
+
+    if (listData == _name)
+    {
+      item->setSelected(_selected);
       break;
     }
   }
