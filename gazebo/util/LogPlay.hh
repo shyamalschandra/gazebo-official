@@ -25,6 +25,7 @@
 #include <fstream>
 
 #include "gazebo/common/SingletonT.hh"
+#include "gazebo/common/Time.hh"
 #include "gazebo/util/system.hh"
 
 namespace gazebo
@@ -78,6 +79,22 @@ namespace gazebo
       /// random number seed, as defined in math::Rand::GetSeed.
       public: uint32_t GetRandSeed() const;
 
+      /// \brief Get the log start time of the open log file.
+      /// \return Start time of the log.
+      public: common::Time GetLogStartTime() const;
+
+      /// \brief Get the log end time of the open log file.
+      /// \return End time of the log.
+      public: common::Time GetLogEndTime() const;
+
+      /// \brief Get the name of the log file.
+      /// \return The filename.
+      public: std::string GetFilename() const;
+
+      /// \brief Get the size of the log file.
+      /// \return The size of the file in bytes.
+      public: uintmax_t GetFileSize() const;
+
       /// \brief Step through the open log file.
       /// \param[out] _data Data from next entry in the log file.
       public: bool Step(std::string &_data);
@@ -112,6 +129,10 @@ namespace gazebo
       /// \brief Read the header from the log file.
       private: void ReadHeader();
 
+      /// \brief Update the internal variables that keep track of the times
+      /// where the log started and finished (simulation time).
+      private: void ReadLogTimes();
+
       /// \brief The XML document of the log file.
       private: TiXmlDocument xmlDoc;
 
@@ -133,6 +154,12 @@ namespace gazebo
 
       /// \brief The random number seed recorded in the open log file.
       private: uint32_t randSeed;
+
+      /// \brief Log start time (simulation time).
+      private: common::Time logStartTime;
+
+      /// \brief Log end time (simulation time).
+      private: common::Time logEndTime;
 
       /// \brief The encoding for the current chunk in the log file.
       private: std::string encoding;
