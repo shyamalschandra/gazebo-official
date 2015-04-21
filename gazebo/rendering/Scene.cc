@@ -50,6 +50,7 @@
 #include "gazebo/rendering/RFIDTagVisual.hh"
 #include "gazebo/rendering/VideoVisual.hh"
 #include "gazebo/rendering/TransmitterVisual.hh"
+#include "gazebo/rendering/Forest.hh"
 
 #if OGRE_VERSION_MAJOR >= 1 && OGRE_VERSION_MINOR >= 8
 #include "gazebo/rendering/deferred_shading/SSAOLogic.hh"
@@ -112,6 +113,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->dataPtr->manager = NULL;
   this->dataPtr->raySceneQuery = NULL;
   this->dataPtr->skyx = NULL;
+  this->dataPtr->forest = NULL;
 
   this->dataPtr->receiveMutex = new boost::mutex();
 
@@ -618,6 +620,13 @@ UserCameraPtr Scene::CreateUserCamera(const std::string &_name,
   camera->Load();
   camera->Init();
   this->dataPtr->userCameras.push_back(camera);
+
+  /*if (!this->dataPtr->forest)
+  {
+    // create Forest
+    this->dataPtr->forest = new Forest(shared_from_this());
+    this->dataPtr->forest->Load();
+  }*/
 
   return camera;
 }
@@ -1911,6 +1920,14 @@ void Scene::PreRender()
       this->dataPtr->selectionMsg.reset();
     }
   }
+
+  // TODO create forest here for now
+  if (!this->dataPtr->forest)
+  {
+    this->dataPtr->forest = new Forest(shared_from_this());
+    this->dataPtr->forest->Load();
+  }
+
 }
 
 /////////////////////////////////////////////////
@@ -2425,6 +2442,14 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
         {
           return false;
         }
+
+        // TODO create forest here for now
+        if (!this->dataPtr->forest)
+        {
+          this->dataPtr->forest = new Forest(shared_from_this());
+          this->dataPtr->forest->Load();
+        }
+
       }
       return true;
     }
