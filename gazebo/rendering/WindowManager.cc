@@ -66,10 +66,12 @@ void WindowManager::Fini()
 }
 
 //////////////////////////////////////////////////
-void WindowManager::SetCamera(int _windowId, CameraPtr _camera)
+bool WindowManager::SetCamera(int _windowId, CameraPtr _camera)
 {
   this->windows[_windowId]->removeAllViewports();
   _camera->SetRenderTarget(this->windows[_windowId]);
+
+  return true;
 }
 
 //////////////////////////////////////////////////
@@ -83,12 +85,10 @@ int WindowManager::CreateWindow(const std::string &_ogreHandle,
 
 #ifdef Q_OS_MAC
   params["externalWindowHandle"] = _ogreHandle;
-#elif defined(_WIN32)
-  // Something different here?
 #else
   params["parentWindowHandle"] = _ogreHandle;
 #endif
-  params["externalGLControl"] = true;
+  params["externalGLControl"] = "true";
   params["FSAA"] = "4";
   params["stereoMode"] = "Frame Sequential";
 
@@ -100,6 +100,10 @@ int WindowManager::CreateWindow(const std::string &_ogreHandle,
   params["macAPI"] = "carbon";
 #endif
 
+  // Hide window if dimensions are less than or equal to one.
+  if (_width <= 1 && _height <=1)
+    params["border"] = "none";
+ 
   std::ostringstream stream;
   stream << "OgreWindow(" << windowCounter++ << ")";
 
@@ -123,14 +127,13 @@ int WindowManager::CreateWindow(const std::string &_ogreHandle,
     gzthrow("Unable to create the rendering window\n");
   }
 
-  if (this->windows.empty())
-    rendering::init();
 
   if (window)
   {
     window->setActive(true);
-    // window->setVisible(true);
     window->setAutoUpdated(false);
+    window->reposition(0, 0);
+    window->setVisible(true);
 
     this->windows.push_back(window);
   }

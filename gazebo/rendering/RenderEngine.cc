@@ -148,18 +148,23 @@ void RenderEngine::Load(bool _server)
     this->SetupResources();
   }
 
-  if (_server)
+  /*if (_server)
   {
+  */
     std::stringstream stream;
     stream << (int32_t)this->dummyWindowId;
 
     this->windowManager->CreateWindow(stream.str(), 1, 1);
-    //this->CheckSystemCapabilities();
-  }
-  else
-  {
+    
+    // this->CheckSystemCapabilities();
+    //this->Init();
+  //}
+  //else
+  //{
     //this->renderPathType = FORWARD;
-  }
+  //}
+    // Setup the available resources
+
 }
 
 //////////////////////////////////////////////////
@@ -304,7 +309,12 @@ void RenderEngine::Init()
   this->CheckSystemCapabilities();
 
   if (this->renderPathType == NONE)
+  {
+    gzwarn << "Cannot initialize render engine since "
+           << "render path type is NONE. Ignore this warning if"
+	   << "rendering has been turned off on purpose.\n";
     return;
+  }
 
   this->initialized = false;
 
