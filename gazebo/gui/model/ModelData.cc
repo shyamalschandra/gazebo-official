@@ -70,6 +70,18 @@ double ModelData::GetEditTransparency()
 }
 
 /////////////////////////////////////////////////
+void NestedModelData::SetPose(const math::Pose &_pose)
+{
+  this->pose = _pose;
+}
+
+/////////////////////////////////////////////////
+math::Pose NestedModelData::GetPose() const
+{
+  return this->pose;
+}
+
+/////////////////////////////////////////////////
 LinkData::LinkData()
 {
   this->linkSDF.reset(new sdf::Element);

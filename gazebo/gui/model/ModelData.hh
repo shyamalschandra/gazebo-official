@@ -51,6 +51,26 @@ namespace gazebo
       public: static double GetEditTransparency();
     };
 
+    class NestedModelData
+    {
+      /// \brief Set the pose of the model.
+      /// \param[in] _pose Pose of model.
+      public: void SetPose(const math::Pose &_pose);
+
+      /// \brief Get the pose of the nested model.
+      /// \return Pose of nested model.
+      public: math::Pose GetPose() const;
+
+      /// \brief SDF representing the model data.
+      public: sdf::ElementPtr modelSDF;
+
+      /// \brief Model pose.
+      public: math::Pose pose;
+
+      /// \brief Visual representing this model.
+      public: rendering::VisualPtr modelVisual;
+    };
+
     /// \class LinkData LinkData.hh
     /// \brief Helper class to store link data
     class LinkData : public QObject
