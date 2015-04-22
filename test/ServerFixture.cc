@@ -1103,34 +1103,7 @@ void ServerFixture::SpawnSphere(const std::string &_name,
     const math::Vector3 &_pos, const math::Vector3 &_rpy,
     bool _wait, bool _static)
 {
-  msgs::Factory msg;
-  std::ostringstream newModelStr;
-
-  newModelStr << "<sdf version='" << SDF_VERSION << "'>"
-    << "<model name ='" << _name << "'>"
-    << "<static>" << _static << "</static>"
-    << "<pose>" << _pos << " " << _rpy << "</pose>"
-    << "<link name ='body'>"
-    << "  <collision name ='geom'>"
-    << "    <geometry>"
-    << "      <sphere><radius>.5</radius></sphere>"
-    << "    </geometry>"
-    << "  </collision>"
-    << "  <visual name ='visual'>"
-    << "    <geometry>"
-    << "      <sphere><radius>.5</radius></sphere>"
-    << "    </geometry>"
-    << "  </visual>"
-    << "</link>"
-    << "</model>"
-    << "</sdf>";
-
-  msg.set_sdf(newModelStr.str());
-  this->factoryPub->Publish(msg);
-
-  // Wait for the entity to spawn
-  while (_wait && !this->HasEntity(_name))
-    common::Time::MSleep(100);
+  SpawnSphere(_name, _pos, _rpy, math::Vector3(), 0.5, _wait, _static);
 }
 
 /////////////////////////////////////////////////
