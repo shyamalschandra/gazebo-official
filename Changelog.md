@@ -1,5 +1,9 @@
 ## Gazebo 6.0
 
+1. ignition-math is now a dependency. 
+    + [http://ignitionrobotics.org/libraries/math](http://ignitionrobotics.org/libraries/math)
+    + [Gazebo migration](https://bitbucket.org/osrf/gazebo/src/583edbeb90759d43d994cc57c0797119dd6d2794/ign-math-migration.md)
+
 1. Added a plugin to send messages to an existing website.
    Added gui::MainWindow::AddMenu and msgs/rest_error, msgs/rest_login, msgs rest/post
     * [Pull request #1524](https://bitbucket.org/osrf/gazebo/pull-request/1524)
