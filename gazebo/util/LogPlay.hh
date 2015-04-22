@@ -21,10 +21,13 @@
 #include <tinyxml.h>
 
 #include <list>
+#include <mutex>
 #include <string>
 #include <fstream>
 
 #include "gazebo/common/SingletonT.hh"
+#include "gazebo/common/Time.hh"
+#include "gazebo/transport/transport.hh"
 #include "gazebo/util/system.hh"
 
 namespace gazebo
@@ -56,7 +59,8 @@ namespace gazebo
       ///
       /// Open a log file that was previously recorded.
       /// \param[in] _logFile The file to load
-      /// \throws Exception
+      /// \throws Exception When the log file does not exist, is a directory
+      /// instead of a regular file, or Gazebo was unable to parse it.
       public: void Open(const std::string &_logFile);
 
       /// \brief Return true if a file is open.
@@ -77,6 +81,26 @@ namespace gazebo
       /// \return The random number seed the open log file. The current
       /// random number seed, as defined in math::Rand::GetSeed.
       public: uint32_t GetRandSeed() const;
+
+      /// \brief Get the log start time of the open log file.
+      /// \return Start time of the log.
+      public: common::Time GetLogStartTime() const;
+
+      /// \brief Get the log end time of the open log file.
+      /// \return End time of the log.
+      public: common::Time GetLogEndTime() const;
+
+      /// \brief Get the name of the log file.
+      /// \return The filename.
+      public: std::string GetFilename() const;
+
+      /// \brief Get the full path of the log file.
+      /// \return The full path of the log file.
+      public: std::string GetFullPathFilename() const;
+
+      /// \brief Get the size of the log file.
+      /// \return The size of the file in bytes.
+      public: uintmax_t GetFileSize() const;
 
       /// \brief Step through the open log file.
       /// \param[out] _data Data from next entry in the log file.
@@ -112,6 +136,14 @@ namespace gazebo
       /// \brief Read the header from the log file.
       private: void ReadHeader();
 
+      /// \brief Update the internal variables that keep track of the times
+      /// where the log started and finished (simulation time).
+      private: void ReadLogTimes();
+
+      /// \brief Called when a log control message is received.
+      /// \param[in] _data The log control message.
+      private: void OnLogControl(ConstLogPlayControlPtr &_data);
+
       /// \brief The XML document of the log file.
       private: TiXmlDocument xmlDoc;
 
@@ -134,6 +166,12 @@ namespace gazebo
       /// \brief The random number seed recorded in the open log file.
       private: uint32_t randSeed;
 
+      /// \brief Log start time (simulation time).
+      private: common::Time logStartTime;
+
+      /// \brief Log end time (simulation time).
+      private: common::Time logEndTime;
+
       /// \brief The encoding for the current chunk in the log file.
       private: std::string encoding;
 
@@ -141,6 +179,17 @@ namespace gazebo
 
       /// \brief This is a singleton
       private: friend class SingletonT<LogPlay>;
+
+      // -- caguero --
+      private: std::deque<int> stepMsgs;
+      /// \brief Transportation node.
+      private: transport::NodePtr node;
+      /// \brief Subscriber to log control messages.
+      private: transport::SubscriberPtr logControlSub;
+      private: std::string mode = "play";
+      private: std::mutex mutex;
+      private: int current = -1;
+      private: int target = -1;
     };
     /// \}
   }
