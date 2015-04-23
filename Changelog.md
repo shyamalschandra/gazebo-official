@@ -1,5 +1,8 @@
 ## Gazebo 6.0
 
+1. New accessors in LogPlay class.
+    * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
+
 1. Added a plugin to send messages to an existing website.
    Added gui::MainWindow::AddMenu and msgs/rest_error, msgs/rest_login, msgs rest/post
     * [Pull request #1524](https://bitbucket.org/osrf/gazebo/pull-request/1524)
@@ -15,6 +18,9 @@
 
 1. Show/hide GUI overlays using the menu bar.
     * [Pull request #1555](https://bitbucket.org/osrf/gazebo/pull-request/1555)
+
+1. Separate TimePanel's display into TimeWidget and LogPlayWidget.
+    * [Pull request #1564](https://bitbucket.org/osrf/gazebo/pull-request/1564)
 
 1. Added optional start/stop/reset buttons to timer GUI plugin.
     * [Pull request #1576](https://bitbucket.org/osrf/gazebo/pull-request/1576)

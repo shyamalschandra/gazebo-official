@@ -5,7 +5,7 @@ if (HAVE_OPENAL)
 endif()
 
 include_directories(${tinyxml_INCLUDE_DIRS})
-set (sources 
+set (sources
   Diagnostics.cc
   LogPlay.cc
   LogRecord.cc
@@ -22,7 +22,7 @@ if (NOT USE_EXTERNAL_TINYXML)
        ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinyxmlparser.cpp)
 endif()
 
-set (headers 
+set (headers
   Diagnostics.hh
   LogPlay.hh
   LogRecord.hh
