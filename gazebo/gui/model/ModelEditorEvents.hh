@@ -163,6 +163,21 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { newModel.Disconnect(_subscriber); }
 
+        /// \brief Connect a Gazebo event to the nested model inserted signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T>
+            static event::ConnectionPtr ConnectNestedModelInserted(
+            T _subscriber)
+          { return nestedModelInserted.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the nested model inserted
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectNestedModelInserted(
+            event::ConnectionPtr _subscriber)
+          { nestedModelInserted.Disconnect(_subscriber); }
+
         /// \brief Connect a Gazebo event to the link inserted signal.
         /// \param[in] _subscriber the subscriber to this event
         /// \return a connection
@@ -189,6 +204,19 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { jointInserted.Disconnect(_subscriber); }
 
+        /// \brief Connect a Gazebo event to the nestedModel removed signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T>
+            static event::ConnectionPtr ConnectNestedModelRemoved(T _subscriber)
+          { return nestedModelRemoved.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the nestedModel removed signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectNestedModelRemoved(
+            event::ConnectionPtr _subscriber)
+          { nestedModelRemoved.Disconnect(_subscriber); }
+
         /// \brief Connect a Gazebo event to the link removed signal.
         /// \param[in] _subscriber the subscriber to this event
         /// \return a connection
@@ -214,6 +242,22 @@ namespace gazebo
         public: static void DisconnectJointRemoved(
             event::ConnectionPtr _subscriber)
           { jointRemoved.Disconnect(_subscriber); }
+
+        /// \brief Connect a Gazebo event to the open nestedModel inspector
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T>
+            static event::ConnectionPtr
+            ConnectOpenNestedModelInspector(T _subscriber)
+          { return openNestedModelInspector.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the open nestedModel inspector
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectOpenNestedModelInspector(
+            event::ConnectionPtr _subscriber)
+          { openNestedModelInspector.Disconnect(_subscriber); }
 
         /// \brief Connect a Gazebo event to the open link inspector signal.
         /// \param[in] _subscriber the subscriber to this event
@@ -256,6 +300,76 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { jointNameChanged.Disconnect(_subscriber); }
 
+        /// \brief Connect a Gazebo event to the show nestedModel context menu
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T> static event::ConnectionPtr
+            ConnectShowNestedModelContextMenu(T _subscriber)
+          { return showNestedModelContextMenu.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the show nestedModel context
+        /// menu
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectShowNestedModelContextMenu(
+            event::ConnectionPtr _subscriber)
+          { showNestedModelContextMenu.Disconnect(_subscriber); }
+
+        /// \brief Connect a Gazebo event to the show link context menu signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T> static event::ConnectionPtr
+            ConnectShowLinkContextMenu(T _subscriber)
+          { return showLinkContextMenu.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the show link context menu
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectShowLinkContextMenu(
+            event::ConnectionPtr _subscriber)
+          { showLinkContextMenu.Disconnect(_subscriber); }
+
+        /// \brief Connect a Gazebo event to the show joint context menu signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T> static event::ConnectionPtr
+            ConnectShowJointContextMenu(T _subscriber)
+          { return showJointContextMenu.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the show joint context menu
+        /// signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectShowJointContextMenu(
+            event::ConnectionPtr _subscriber)
+          { showJointContextMenu.Disconnect(_subscriber); }
+
+        /// \brief Connect a Gazebo event to the set selected signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T> static event::ConnectionPtr
+            ConnectSetSelected(T _subscriber)
+          { return setSelected.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the set selected signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectSetSelected(
+            event::ConnectionPtr _subscriber)
+          { setSelected.Disconnect(_subscriber); }
+
+        /// \brief Connect a Gazebo event to the set selected joint signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T> static event::ConnectionPtr
+            ConnectSetSelectedJoint(T _subscriber)
+          { return setSelectedJoint.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the set selected joint signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectSetSelectedJoint(
+            event::ConnectionPtr _subscriber)
+          { setSelectedJoint.Disconnect(_subscriber); }
+
         /// \brief A model has been completed and uploaded onto the server.
         public: static event::EventT<void ()> finishModel;
 
@@ -288,20 +402,31 @@ namespace gazebo
         /// \brief Notify that model has been newed.
         public: static event::EventT<void ()> newModel;
 
+        /// \brief Notify that a nested model has been inserted.
+        public: static event::EventT<void (std::string)> nestedModelInserted;
+
         /// \brief Notify that a link has been inserted.
         public: static event::EventT<void (std::string)> linkInserted;
 
-        /// \brief Notify that a joint has been inserted. The first
-        /// string is the joint's unique id and the second string is the
-        /// joint name.
-        public: static event::EventT<void (std::string, std::string)>
-            jointInserted;
+        /// \brief Notify that a joint has been inserted. The first string is
+        /// the joint's unique id, the second string is the joint name, the
+        /// third is the parent link's name, the fourth is the child link's
+        /// name. All names scoped.
+        public: static event::EventT<void (std::string, std::string,
+            std::string, std::string)> jointInserted;
+
+        /// \brief Notify that a nested model has been removed.
+        public: static event::EventT<void (std::string)> nestedModelRemoved;
 
         /// \brief Notify that a link has been removed.
         public: static event::EventT<void (std::string)> linkRemoved;
 
         /// \brief Notify that a joint has been removed.
         public: static event::EventT<void (std::string)> jointRemoved;
+
+        /// \brief Request to open the nestedModel inspector.
+        public: static event::EventT<void (std::string)>
+            openNestedModelInspector;
 
         /// \brief Request to open the link inspector.
         public: static event::EventT<void (std::string)> openLinkInspector;
@@ -314,6 +439,22 @@ namespace gazebo
         /// new joint name.
         public: static event::EventT<void (std::string, std::string)>
             jointNameChanged;
+
+        /// \brief Request to show the nestedModel context menu.
+        public: static event::EventT<void (std::string)>
+            showNestedModelContextMenu;
+
+        /// \brief Request to show the link context menu.
+        public: static event::EventT<void (std::string)> showLinkContextMenu;
+
+        /// \brief Request to show the joint context menu.
+        public: static event::EventT<void (std::string)> showJointContextMenu;
+
+        /// \brief Request to select or deselect an entity.
+        public: static event::EventT<void (std::string, bool)> setSelected;
+
+        /// \brief Request to select or deselect a joint.
+        public: static event::EventT<void (std::string, bool)> setSelectedJoint;
       };
     }
   }

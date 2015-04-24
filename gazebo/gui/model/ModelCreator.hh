@@ -49,6 +49,8 @@ namespace gazebo
   namespace gui
   {
     class LinkData;
+    class NestedModelData;
+    class ModelData;
     class SaveDialog;
     class JointMaker;
 
@@ -76,7 +78,9 @@ namespace gazebo
         /// \brief Imported 3D mesh
         LINK_MESH,
         /// \brief Extruded polyline
-        LINK_POLYLINE
+        LINK_POLYLINE,
+        /// \brief Nest model.
+        NESTED_MODEL
       };
 
       /// \enum SaveState
@@ -186,7 +190,7 @@ namespace gazebo
 
       /// \brief Remove a link from the model.
       /// \param[in] _linkName Name of the link to remove
-      public: void RemoveLink(const std::string &_linkName);
+      public: void RemoveEntity(const std::string &_entityName);
 
       /// \brief Set the model to be static
       /// \param[in] _static True to make the model static.
@@ -206,9 +210,24 @@ namespace gazebo
       /// \return Joint maker
       public: JointMaker *GetJointMaker() const;
 
+      /// \brief Set the select state of a link.
+      /// \param[in] _name Name of the link.
+      /// \param[in] _selected True to select the link.
+      public: void SetSelected(const std::string &_name, const bool selected);
+
+      /// \brief Set the select state of a link visual.
+      /// \param[in] _linkVis Pointer to the link visual.
+      /// \param[in] _selected True to select the link.
+      public: void SetSelected(rendering::VisualPtr _linkVis,
+          const bool selected);
+
       /// \brief Get current save state.
       /// \return Current save state.
       public: enum SaveState GetCurrentSaveState() const;
+
+      /// \brief Add an entity to the model
+      /// \param[in] _sdf SDF describing the entity.
+      public: void AddEntity(sdf::ElementPtr _sdf);
 
       /// \brief Add a link to the model
       /// \param[in] _type Type of link to be added
@@ -221,6 +240,17 @@ namespace gazebo
       /// \param[in] _link Link data used to generate the sdf.
       /// \return SDF element describing the link.
       private: sdf::ElementPtr GenerateLinkSDF(LinkData *_link);
+
+      /// \brief Internal helper function to remove a nestedModel without
+      /// removing
+      /// the joints.
+      /// \param[in] _nestedModelName Name of the nestedModel to remove
+      private: void RemoveNestedModelImpl(const std::string &_nestedModelName);
+
+      /// \brief Internal helper function to remove a link without removing
+      /// the joints.
+      /// \param[in] _linkName Name of the link to remove
+      private: void RemoveLinkImpl(const std::string &_linkName);
 
       /// \brief QT callback when entering model edit mode
       /// \param[in] _checked True if the menu item is checked
@@ -267,9 +297,15 @@ namespace gazebo
 
       /// \brief Callback when an entity is selected.
       /// \param[in] _name Name of entity.
-      /// \param[in] _mode Select model
+      /// \param[in] _mode Select mode
       private: void OnSetSelectedEntity(const std::string &_name,
           const std::string &_mode);
+
+      /// \brief Callback when a model editor entity is selected.
+      /// \param[in] _name Name of entity.
+      /// \param[in] _selected True if the entity is selected, false if
+      /// deselected.
+      private: void OnSetSelected(const std::string &_name, const bool _selected);
 
       /// \brief Create link with default properties from a visual. This
       /// function creates a link that will become the parent of the
@@ -277,6 +313,11 @@ namespace gazebo
       /// visual will also be added to the link.
       /// \param[in] _visual Visual used to create the link.
       private: void CreateLink(const rendering::VisualPtr &_visual);
+
+      /// \brief Clone an existing nested model.
+      /// \param[in] _linkName Name of link to be cloned.
+      /// \return Cloned link.
+      private: NestedModelData *CloneNestedModel(const std::string &_modelName);
 
       /// \brief Clone an existing link.
       /// \param[in] _linkName Name of link to be cloned.
@@ -287,6 +328,13 @@ namespace gazebo
       /// \param[in] _link SDF element of the link that will be used to
       /// recreate its visual representation in the model editor.
       private: void CreateLinkFromSDF(sdf::ElementPtr _linkElem);
+
+      /// \brief Create a link from an SDF with the specified parent visual.
+      /// \param[in] _linkElem SDF element of the link that will be used to
+      /// recreate its visual representation in the model editor.
+      /// \param[in] _parentVis Parent visual that the link will be attached to.
+      private: void CreateLinkFromSDF(sdf::ElementPtr _linkElem,
+          rendering::VisualPtr _parentVis);
 
       /// \brief Open the link inspector.
       /// \param[in] _name Name of link.
@@ -305,7 +353,9 @@ namespace gazebo
       /// \brief Load a model SDF file and create visuals in the model editor.
       /// This is used mainly when editing existing models.
       /// \param[in] _sdf SDF of a model to be loaded
-      private: void LoadSDF(sdf::ElementPtr _sdf);
+      private: rendering::VisualPtr CreateModelFromSDF(sdf::ElementPtr _sdf,
+          rendering::VisualPtr _parentVis = NULL,
+          bool _attachedToMouse = false);
 
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
@@ -323,7 +373,7 @@ namespace gazebo
       private: void OnEntityScaleChanged(const std::string &_name,
           const math::Vector3 &_scale);
 
-      /// \brief Deselect all currently selected visuals.
+      /// \brief Deselect all currently selected link visuals.
       private: void DeselectAll();
 
       /// \brief Set visibilty of a visual recursively while storing their
@@ -339,9 +389,17 @@ namespace gazebo
       private: void SetModelVisible(rendering::VisualPtr _visual,
           bool _visible);
 
+      /// \brief Show a link's context menu
+      /// \param[in] _link Name of link the context menu is associated with.
+      private: void ShowContextMenu(const std::string &_link);
+
+      /// \brief Qt callback when a delete signal has been emitted. This is
+      /// currently triggered by the context menu via right click.
+      private slots: void OnDelete();
+
       /// \brief Qt callback when a delete signal has been emitted.
       /// \param[in] _name Name of the entity to delete.
-      private slots: void OnDelete(const std::string &_name="");
+      private slots: void OnDelete(const std::string &_name);
 
       /// \brief Qt Callback to open link inspector
       private slots: void OnOpenInspector();
@@ -394,6 +452,9 @@ namespace gazebo
       /// \brief A map of model link names to and their visuals.
       private: std::map<std::string, LinkData *> allLinks;
 
+      /// \brief A map of nested model names to and their visuals.
+      private: std::map<std::string, NestedModelData *> allNestedModels;
+
       /// \brief Transport node
       private: transport::NodePtr node;
 
@@ -411,11 +472,14 @@ namespace gazebo
       /// \brief origin of the model.
       private: math::Pose origin;
 
-      /// \brief A list of selected visuals.
-      private: std::vector<rendering::VisualPtr> selectedVisuals;
+      /// \brief A list of selected nestedModel visuals.
+      private: std::vector<rendering::VisualPtr> selectedNestedModels;
+
+      /// \brief A list of selected link visuals.
+      private: std::vector<rendering::VisualPtr> selectedLinks;
 
       /// \brief Names of links copied through g_copyAct
-      private: std::vector<std::string> copiedLinkNames;
+      private: std::vector<std::string> copiedNames;
 
       /// \brief The last mouse event
       private: common::MouseEvent lastMouseEvent;
@@ -423,8 +487,8 @@ namespace gazebo
       /// \brief Qt action for opening the link inspector.
       private: QAction *inspectAct;
 
-      /// \brief Link visual that is currently being inspected.
-      private: rendering::VisualPtr inspectVis;
+      /// \brief Name of link that is currently being inspected.
+      private: std::string inspectName;
 
       /// \brief True if the model editor mode is active.
       private: bool active;
