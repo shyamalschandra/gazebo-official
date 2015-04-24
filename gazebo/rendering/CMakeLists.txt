@@ -6,9 +6,10 @@ include_directories(SYSTEM
   skyx/include
 )
 
-if (${OGRE_VERSION} GREATER 1.7.4)
+if (${OGRE_VERSION} VERSION_GREATER 1.7.4)
   add_subdirectory(deferred_shading)
 endif()
+
 add_subdirectory(skyx)
 add_subdirectory(selection_buffer)
 
@@ -28,6 +29,7 @@ set (sources
   GpuLaser.cc
   Grid.cc
   Heightmap.cc
+  InertiaVisual.cc
   JointVisual.cc
   LaserVisual.cc
   SonarVisual.cc
@@ -72,6 +74,7 @@ set (headers
   GpuLaser.hh
   Grid.hh
   Heightmap.hh
+  InertiaVisual.hh
   JointVisual.hh
   LaserVisual.hh
   SonarVisual.hh
@@ -117,9 +120,11 @@ set (gtest_sources
 gz_build_tests(${gtest_sources})
 
 set (gtest_sources_dri
+  COMVisual_TEST.cc
   GpuLaser_TEST.cc
   Heightmap_TEST.cc
   JointVisual_TEST.cc
+  SelectionObj_TEST.cc
   SonarVisual_TEST.cc
   TransmitterVisual_TEST.cc
   Visual_TEST.cc
@@ -152,16 +157,14 @@ target_link_libraries(gazebo_rendering
 )
 
 if (HAVE_OCULUS)
-  target_link_libraries(gazebo_rendering
-    OculusVR
-  )
+  target_link_libraries(gazebo_rendering ${OculusVR_LIBRARIES})
 endif()
 
 if (NOT APPLE)
   target_link_libraries(gazebo_rendering X11)
 endif()
 
-if (${OGRE_VERSION} GREATER 1.7.4)
+if (${OGRE_VERSION} VERSION_GREATER 1.7.4)
   target_link_libraries(gazebo_rendering gazebo_rendering_deferred)
 endif()
 
