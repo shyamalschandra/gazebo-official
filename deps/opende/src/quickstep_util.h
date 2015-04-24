@@ -32,7 +32,7 @@
 
 
 #undef REPORT_THREAD_TIMING
-#define USE_TPROW
+#undef USE_TPROW
 #undef TIMING
 #undef DEBUG_CONVERGENCE_TOLERANCE
 #undef SHOW_CONVERGENCE
@@ -113,14 +113,24 @@ struct IndexError {
 
 // structure for passing variable pointers in PGS_LCP
 struct dxPGSLCPParameters {
+    int thread_id;
+    IndexError* order;
+    dxBody* const* body;
+    boost::recursive_mutex* mutex;
+    bool inline_position_correction;
+    bool position_correction_thread;
     dxQuickStepParameters *qs;
     int nStart;   // 0
     int nChunkSize;
     int m; // m
     int nb;
+#ifdef PENETRATION_JVERROR_CORRECTION
     dReal stepsize;
+    dRealMutablePtr vnew;
+#endif
     int* jb;
     const int* findex;
+    bool skip_friction;
     dRealPtr hi;
     dRealPtr lo;
     dRealPtr invMOI;
@@ -128,22 +138,26 @@ struct dxPGSLCPParameters {
     dRealPtr Ad;
     dRealPtr Adcfm;
     dRealPtr Adcfm_precon;
-    dRealMutablePtr rhs;
-    dRealMutablePtr rhs_erp;
-    dRealMutablePtr J;
-    dRealMutablePtr caccel;
-    dRealMutablePtr caccel_erp;
-    dRealMutablePtr lambda;
-    dRealMutablePtr lambda_erp;
-    dRealMutablePtr iMJ;
-    dRealMutablePtr rhs_precon ;
-    dRealMutablePtr J_precon ;
-    dRealMutablePtr J_orig ;
+    dRealPtr J;
+    dRealPtr iMJ;
+    dRealPtr rhs_precon ;
+    dRealPtr J_precon ;
+    dRealPtr J_orig ;
     dRealMutablePtr cforce ;
-    dRealMutablePtr vnew ;
+
+    dRealPtr rhs;
+    dRealMutablePtr caccel;
+    dRealMutablePtr lambda;
+
+    /// Only used if THREAD_POSITION_CORRECTION is not active,
+    /// in that case, compute both updates in the same
+    /// ComputeRows update.
+    dRealPtr rhs_erp;
+    dRealMutablePtr caccel_erp;
+    dRealMutablePtr lambda_erp;
+
 #ifdef REORDER_CONSTRAINTS
     dRealMutablePtr last_lambda ;
-    dRealMutablePtr last_lambda_erp ;
 #endif
 };
 // ****************************************************************
