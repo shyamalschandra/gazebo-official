@@ -18,7 +18,9 @@
 #include <gtest/gtest.h>
 
 #include "test_config.h"
+
 #include "gazebo/common/SVGLoader.hh"
+
 #include "test/util.hh"
 
 using namespace gazebo;
@@ -42,7 +44,7 @@ TEST_F(SVGLoader, LoadPaths)
   EXPECT_EQ(true, success);
 
   std::string filePath = std::string(PROJECT_SOURCE_PATH);
-  filePath += "/test/data/loader.svg";
+  filePath += "/test/data/svg/loader.svg";
   loader.Parse(filePath, paths);
 
   // useful to see the points on screen
@@ -69,7 +71,7 @@ TEST_F(SVGLoader, LoadPaths)
   EXPECT_EQ(4u, a.subpaths[0].size());
   // 4 points
   EXPECT_EQ(4u, a.polylines[0].size());
-  // THe A contour has 9
+  // The A contour has 9
   EXPECT_EQ(9u, a.polylines[1].size());
 
   // see what's going on
@@ -84,8 +86,96 @@ TEST_F(SVGLoader, LoadPaths)
   EXPECT_EQ(8u, p2.subpaths[0].size());
   // since it has splines, there are more
   // points than commands
-  EXPECT_EQ(67u, p2.polylines[0].size());
+  EXPECT_EQ(68u, p2.polylines[0].size());
 }
+
+/////////////////////////////////////////////////
+TEST_F(SVGLoader, LoadArcs)
+{
+  // check for arc command support
+  // this test loads a file with 2 superimposed 180 degree arc:
+  //   * drawn from right to left
+  //   * with a round top (looks like an igloo, not a bowl)
+  // therefore, y DECREASES (y is down in svg)
+  //
+  // This test ensures that both path coincide (and not form a circle)
+
+  common::SVGLoader loader(3);
+  std::vector<common::SVGPath> paths;
+
+  bool success = loader.Parse("test/data/svg/arc_test.svg", paths);
+  EXPECT_EQ(true, success);
+
+  // the test file has 2 paths inside
+  EXPECT_EQ(2u, paths.size());
+  // each path has the same number of points
+  EXPECT_EQ(1u, paths[0].polylines.size());
+  EXPECT_EQ(1u, paths[1].polylines.size());
+  auto &polyline1 = paths[0].polylines[0];
+  auto &polyline2 = paths[1].polylines[0];
+
+  for (auto i = 0u; i != polyline1.size(); ++i)
+  {
+    // extract points
+    auto p1 = polyline1[i];
+    auto p2 = polyline2[i];
+
+    EXPECT_NEAR(p1.x, p2.x, 0.25);
+    EXPECT_NEAR(p1.y, p2.y, 0.25);
+  }
+
+  std::ofstream out("arc_test.html");
+  loader.DumpPaths(paths, out);
+  out.close();
+}
+
+TEST_F(SVGLoader, Capsule)
+{
+  // check for arc command support
+  // this test loads a file with 2 superimposed 180 degree arc:
+  //   * drawn from right to left
+  //   * with a round top (looks like an igloo, not a bowl)
+  // therefore, y DECREASES (y is down in svg)
+  //
+  // This test ensures that both path coincide (and not form a circle)
+
+  common::SVGLoader loader(3);
+  std::vector<common::SVGPath> paths;
+
+  bool success = loader.Parse("test/data/svg/capsule.svg", paths);
+  EXPECT_EQ(true, success);
+
+  // the test file has 2 paths inside
+  std::ofstream out("capsule.html");
+  loader.DumpPaths(paths, out);
+  out.close();
+}
+
+TEST_F(SVGLoader, ghost_edges)
+{
+  // check for invalid edges in svg
+  // this test loads a file with a circle made of 2 arcs:
+  //
+  // The resulting polyline should not have duplicate points
+
+  common::SVGLoader loader(3);
+  std::vector<common::SVGPath> paths;
+
+  bool success = loader.Parse("test/data/svg/arc_circle.svg", paths);
+
+  // save for inspection
+  std::ofstream out("ghost_edges.html");
+  loader.DumpPaths(paths, out);
+  out.close();
+
+  EXPECT_EQ(true, success);
+  // the test file has 2 paths inside
+  EXPECT_EQ(1u, paths.size());
+  // each path has the same number of points
+  EXPECT_EQ(1u, paths[0].polylines.size());
+  auto &polyline1 = paths[0].polylines[0];
+}
+
 
 /////////////////////////////////////////////////
 int main(int argc, char **argv)
