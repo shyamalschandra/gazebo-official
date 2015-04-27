@@ -18,12 +18,14 @@
 #define _MESHMANAGER_HH_
 
 #include <map>
+#include <utility>
 #include <string>
 #include <vector>
 #include <boost/thread/mutex.hpp>
 
 #include "gazebo/math/Vector3.hh"
 #include "gazebo/math/Vector2d.hh"
+#include "gazebo/math/Vector2i.hh"
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Plane.hh"
 #include "gazebo/common/SingletonT.hh"
@@ -86,7 +88,6 @@ namespace gazebo
       /// \brief generate spherical texture coordinates
       public: void GenSphericalTexCoord(const Mesh *_mesh,
                                         math::Vector3 _center);
-
 
       /// \brief Add a mesh to the manager.
       ///
@@ -231,6 +232,19 @@ namespace gazebo
           const Mesh *_m2, const int _operation,
           const math::Pose &_offset = math::Pose::Zero);
 #endif
+
+      /// \brief Converts a vector of polylines into a table of vertices and
+      /// a list of edges (each made of 2 points from the table of vertices.
+      /// \param[in] _polys the polylines
+      /// \param[in] _tol tolerence for 2 vertices to be considered the same
+      /// \param[out] _vertices a table of unique vertices
+      /// \param[out] _edges a list of edges (made of start/end point indices
+      /// from the vertex table)
+      private: static void ConvertPolylinesToVerticesAndEdges(
+                      const std::vector<std::vector<math::Vector2d> > &_polys,
+                      double _tol,
+                      std::vector<math::Vector2d> &_vertices,
+                      std::vector<math::Vector2i> &edges);
 
       /// \brief 3D mesh loader for COLLADA files
       private: ColladaLoader *colladaLoader;
