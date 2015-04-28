@@ -1278,6 +1278,21 @@ bool ODEPhysics::SetParam(const std::string &_key, const boost::any &_value)
       dWorldSetQuickStepExtraFrictionIterations(this->dataPtr->worldId,
         boost::any_cast<int>(_value));
     }
+    else if (_key == "island_threads")
+    {
+      int value;
+      try
+      {
+        value = boost::any_cast<int>(_value);
+      }
+      catch(const boost::bad_any_cast &e)
+      {
+        gzerr << "boost any_cast error:" << e.what() << "\n";
+        return false;
+      }
+      gzdbg << "dWorldSetIslandThreads: " << value << std::endl;
+      dWorldSetIslandThreads(this->dataPtr->worldId, value);
+    }
     else
     {
       return PhysicsEngine::SetParam(_key, _value);
