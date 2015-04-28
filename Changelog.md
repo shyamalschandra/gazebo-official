@@ -1,5 +1,8 @@
 ## Gazebo 6.0
 
+1. Install `libgazebo_server_fixture`. This will facilitate tests external to the main gazebo repository. See `examples/stand_alone/test_fixture`.
+    * [Pull request #1606](https://bitbucket.org/osrf/gazebo/pull-request/1606)
+
 1. New accessors in LogPlay class.
     * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
 
@@ -90,6 +93,9 @@
 
 1. Sync name and location on SaveDialog.
     * [Pull request #1563](https://bitbucket.org/osrf/gazebo/pull-request/1563)
+
+1. Added Apply Force/Torque dialog
+    * [Pull request #1600](https://bitbucket.org/osrf/gazebo/pull-request/1600)
 
 1. Added inertia pose getter for COMVisual and COMVisual_TEST
     * [Pull request #1581](https://bitbucket.org/osrf/gazebo/pull-request/1581)
