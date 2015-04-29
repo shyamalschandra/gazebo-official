@@ -14,13 +14,9 @@
  * limitations under the License.
  *
 */
-/* Desc: External interfaces for Gazebo
- * Author: Nate Koenig
- * Date: 03 Apr 2007
- */
 
-#ifndef _TIME_HH_
-#define _TIME_HH_
+#ifndef _GAZEBO_COMMON_TIME_HH_
+#define _GAZEBO_COMMON_TIME_HH_
 
 #include <string>
 #include <stdlib.h>
@@ -40,7 +36,7 @@ namespace gazebo
     /// \class Time Time.hh common/common.hh
     /// \brief A Time class, can be used to hold wall- or sim-time.
     ///        stored as sec and nano-sec.
-    class GAZEBO_VISIBLE Time
+    class GZ_COMMON_VISIBLE Time
     {
       /// \brief A static zero time variable set to common::Time(0, 0).
       public: static const Time Zero;
@@ -444,10 +440,9 @@ namespace gazebo
                  }
 
                  // Make any corrections
-                 this->sec += this->nsec / nsInSec;
-                 this->nsec = this->nsec % nsInSec;
+                 this->sec += this->nsec / static_cast<int32_t>(nsInSec);
+                 this->nsec = this->nsec % static_cast<int32_t>(nsInSec);
                }
-
       private: static struct timespec clockResolution;
     };
     /// \}
