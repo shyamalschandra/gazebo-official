@@ -151,6 +151,14 @@ ModelRightMenu::~ModelRightMenu()
 void ModelRightMenu::Run(const std::string &_entityName, const QPoint &_pt,
     EntityTypes _type)
 {
+  std::vector<QAction *> empty;
+  this->Run(_entityName, _pt, empty, _type);
+}
+
+/////////////////////////////////////////////////
+void ModelRightMenu::Run(const std::string &_entityName, const QPoint &_pt,
+    const std::vector<QAction *> &_customActions, EntityTypes _type)
+{
   if (_type == EntityTypes::MODEL || _type == EntityTypes::LIGHT)
   {
     this->entityName = _entityName.substr(0, _entityName.find("::"));
@@ -159,6 +167,7 @@ void ModelRightMenu::Run(const std::string &_entityName, const QPoint &_pt,
   {
     this->entityName = _entityName;
   }
+
 
   QMenu menu;
 
@@ -215,6 +224,13 @@ void ModelRightMenu::Run(const std::string &_entityName, const QPoint &_pt,
 
   // \todo Reimplement these features.
   // menu.addAction(this->skeletonAction);
+
+  if (_customActions.size() > 0)
+  {
+    menu.addSeparator();
+    for (unsigned int i = 0; i < _customActions.size(); ++i)
+      menu.addAction(_customActions[i]);
+  }
 
   menu.exec(_pt);
 }
