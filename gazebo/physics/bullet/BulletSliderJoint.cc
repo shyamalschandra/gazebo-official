@@ -358,13 +358,12 @@ math::Angle BulletSliderJoint::GetAngleImpl(unsigned int _index) const
   }
 
   // The getLinearPos function seems to be off by one time-step
-  // https://github.com/bulletphysics/bullet3/issues/239
+  // Compute slider angle from gazebo's cached poses instead
   // if (this->bulletSlider)
   //   result = this->bulletSlider->getLinearPos();
   // else
   //   gzlog << "bulletSlider does not exist, returning default position\n";
 
-  // Compute slider angle from gazebo's cached poses instead
   math::Vector3 offset = this->GetWorldPose().pos
                  - this->GetParentWorldPose().pos;
   math::Vector3 axis = this->GetGlobalAxis(_index);
