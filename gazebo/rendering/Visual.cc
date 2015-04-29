@@ -240,11 +240,9 @@ VisualPtr Visual::Clone(const std::string &_name, VisualPtr _newParent)
 {
   VisualPtr result(new Visual(_name, _newParent));
   result->Load(this->dataPtr->sdf);
-  std::vector<VisualPtr>::iterator iter;
-  for (iter = this->dataPtr->children.begin();
-      iter != this->dataPtr->children.end(); ++iter)
+  for (auto iter: this->dataPtr->children)
   {
-    (*iter)->Clone((*iter)->GetName(), result);
+    iter->Clone(iter->GetName(), result);
   }
 
   if (_newParent == this->dataPtr->scene->GetWorldVisual())
@@ -2919,4 +2917,21 @@ void Visual::SetId(uint32_t _id)
 sdf::ElementPtr Visual::GetSDF() const
 {
   return this->dataPtr->sdf;
+}
+
+/////////////////////////////////////////////////
+bool Visual::IsAncestorOf(rendering::VisualPtr _visual)
+{
+  if (!_visual)
+    return false;
+
+  rendering::VisualPtr vis = _visual->GetParent();
+  while (vis)
+  {
+    if (vis->GetName() == this->GetName())
+      return true;
+    vis = vis->GetParent();
+  }
+
+  return false;
 }
