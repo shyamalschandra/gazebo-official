@@ -22,7 +22,7 @@ if (NOT USE_EXTERNAL_TINYXML)
        ${CMAKE_SOURCE_DIR}/deps/win/tinyxml/tinyxmlparser.cpp)
 endif()
 
-set (headers 
+set (headers
   Diagnostics.hh
   LogPlay.hh
   LogRecord.hh
