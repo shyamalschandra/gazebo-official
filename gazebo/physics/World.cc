@@ -26,6 +26,7 @@
 
 #include <sdf/sdf.hh>
 
+#include <climits>
 #include <deque>
 #include <list>
 #include <set>
@@ -118,6 +119,7 @@ World::World(const std::string &_name)
   this->dataPtr->thread = NULL;
   this->dataPtr->logThread = NULL;
   this->dataPtr->stop = false;
+  this->dataPtr->goToPending = false;
 
   this->dataPtr->currentStateBuffer = 0;
   this->dataPtr->stateToggle = 0;
@@ -489,6 +491,8 @@ void World::RunLoop()
 //////////////////////////////////////////////////
 void World::LogStep()
 {
+  bool stay;
+
   if (this->dataPtr->stepInc < 0)
   {
     // Step back: This is implemented by going to the beginning of the log file,
@@ -501,11 +505,18 @@ void World::LogStep()
     this->dataPtr->iterations = 0;
   }
 
-  while (!this->IsPaused() || this->dataPtr->stepInc > 0)
+  {
+    boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+    stay = !this->IsPaused() || this->dataPtr->stepInc > 0 ||
+           this->dataPtr->goToPending;
+  }
+  while (stay)
   {
     std::string data;
     if (!util::LogPlay::Instance()->Step(data))
     {
+      boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+
       // There are no more chunks, time to exit.
       this->SetPaused(true);
       this->dataPtr->stepInc = 0;
@@ -558,8 +569,20 @@ void World::LogStep()
       this->dataPtr->iterations++;
     }
 
-    if (this->dataPtr->stepInc > 0)
-      this->dataPtr->stepInc--;
+    {
+      boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+      if (this->dataPtr->stepInc > 0)
+        this->dataPtr->stepInc--;
+
+      if (this->dataPtr->goToPending)
+      {
+        this->dataPtr->goToPending =
+          this->GetSimTime() < this->dataPtr->targetSimTime;
+      }
+
+      stay = !this->IsPaused() || this->dataPtr->stepInc > 0 ||
+             this->dataPtr->goToPending;
+    }
 
     // We only run one step if we are in play mode.
     if (!this->IsPaused())
@@ -1212,6 +1235,28 @@ void World::OnPlaybackControl(ConstLogPlaybackControlPtr &_data)
     this->SetPaused(true);
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->worldUpdateMutex);
     this->dataPtr->stepInc = _data->multi_step();
+  }
+
+  if (_data->has_seek())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    this->dataPtr->targetSimTime = msgs::Convert(_data->seek());
+    if (this->GetSimTime() > this->dataPtr->targetSimTime)
+      util::LogPlay::Instance()->Rewind();
+    this->dataPtr->goToPending = true;
+  }
+
+  if (_data->has_rewind())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    util::LogPlay::Instance()->Rewind();
+    this->dataPtr->stepInc = 1;
+  }
+
+  if (_data->has_forward())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    this->dataPtr->stepInc = INT_MAX;
   }
 }
 
