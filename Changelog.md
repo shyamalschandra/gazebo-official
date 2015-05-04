@@ -17,6 +17,7 @@ compilation on Windows.
     * [Pull request #1632](https://bitbucket.org/osrf/gazebo/pull-request/1632)
     * [Pull request #1633](https://bitbucket.org/osrf/gazebo/pull-request/1633)
     * [Pull request #1635](https://bitbucket.org/osrf/gazebo/pull-request/1635)
+    * [Pull request #1636](https://bitbucket.org/osrf/gazebo/pull-request/1636)
     * [Pull request #1637](https://bitbucket.org/osrf/gazebo/pull-request/1637)
     * [Pull request #1639](https://bitbucket.org/osrf/gazebo/pull-request/1639)
 
