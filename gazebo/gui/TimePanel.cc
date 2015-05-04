@@ -280,6 +280,10 @@ void TimePanel::Update()
 {
   boost::mutex::scoped_lock lock(this->dataPtr->mutex);
 
+  // Avoid apparent race condition on start, seen on Windows.
+  if (!this->simTimes.size() || !this->realTimes.size())
+    return;
+
   std::ostringstream percent;
 
   common::Time simAvg, realAvg;
