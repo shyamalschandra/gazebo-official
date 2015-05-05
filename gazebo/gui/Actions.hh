@@ -88,6 +88,13 @@ namespace gazebo
 
     extern GZ_GUI_VISIBLE QAction *g_copyAct;
     extern GZ_GUI_VISIBLE QAction *g_pasteAct;
+    
+    /// \brief Enable orthographic projection action
+    extern GZ_GUI_VISIBLE QAction *g_cameraOrthoAct;
+
+    /// \brief Enable perspective projection action
+    extern GZ_GUI_VISIBLE QAction *g_cameraPerspectiveAct;
+
 
     extern GZ_GUI_VISIBLE QWidgetAction *g_alignAct;
     extern GZ_GUI_VISIBLE QAction *g_alignButtonAct;
