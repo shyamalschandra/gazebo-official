@@ -287,6 +287,8 @@ namespace gazebo
       /// \return Pointer to the physics SDF element.
       public: sdf::ElementPtr GetSDF() const;
 
+      private: void ParamsFromSDFElement(sdf::ElementPtr _elem);
+
       /// \brief virtual callback for gztopic "~/request".
       /// \param[in] _msg Request message.
       protected: virtual void OnRequest(ConstRequestPtr &_msg);
@@ -328,6 +330,9 @@ namespace gazebo
 
       /// \brief Real time update rate.
       protected: double maxStepSize;
+
+      /// \brief Gravity.
+      protected: math::Vector3 gravity;
     };
     /// \}
   }

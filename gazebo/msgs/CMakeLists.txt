@@ -1,6 +1,7 @@
 include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 
 set (msgs
+  any.proto
   axis.proto
   boxgeom.proto
   camerasensor.proto
@@ -52,6 +53,7 @@ set (msgs
   model_configuration.proto
   model_v.proto
   packet.proto
+  param.proto
   physics.proto
   planegeom.proto
   pid.proto

@@ -1,0 +1,19 @@
+package gazebo.msgs;
+
+/// \ingroup gazebo_msgs Messages
+/// \interface Param
+/// \brief A key/value pair message for physics engine parameters
+
+import "any.proto";
+
+message Param
+{
+
+  required string  name    = 1;
+
+  // Contains the field that is filled in
+  //optional Type  type   = 2;
+  required Any value = 2;
+  /// For nested parameters (e.g. solver)
+  repeated Param children   = 3;
+}

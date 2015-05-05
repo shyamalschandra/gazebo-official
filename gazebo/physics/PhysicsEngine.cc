@@ -65,6 +65,51 @@ PhysicsEngine::PhysicsEngine(WorldPtr _world)
   this->contactManager->Init(this->world);
 }
 
+void PhysicsEngine::ParamsFromSDFElement(sdf::ElementPtr _elem)
+{
+  if (_elem == NULL)
+    return;
+
+  // Call this function on child elements (not just params)
+  for (sdf::ElementPtr temp = _elem->GetFirstElement(); temp != NULL;
+       temp = temp->GetNextElement())
+  {
+    if (temp->GetName() == "param")
+    {
+      std::string name = temp->Get<std::string>("name");
+      std::string type = temp->Get<std::string>("type");
+      std::string value = temp->Get<std::string>();
+      if (type == "double")
+      {
+        double v = std::stod(value);
+        this->SetParam(name, v);
+      }
+      else if (type == "int")
+      {
+        int v = std::stoi(value);
+        this->SetParam(name, v);
+      }
+      else if (type == "string" || type == "")
+      {
+        this->SetParam(name, value);
+      }
+      else if (type == "vector3")
+      {
+        math::Vector3 v = temp->Get<math::Vector3>();
+        this->SetParam(name, v);
+        // TODO
+      }
+      else if (type == "bool")
+      {
+        // TODO: true/false case
+        bool v = stoi(value);
+        this->SetParam(name, v);
+      }
+    }
+    this->ParamsFromSDFElement(temp);
+  }
+}
+
 //////////////////////////////////////////////////
 void PhysicsEngine::Load(sdf::ElementPtr _sdf)
 {
@@ -76,6 +121,9 @@ void PhysicsEngine::Load(sdf::ElementPtr _sdf)
       this->sdf->GetElement("real_time_factor")->Get<double>();
   this->maxStepSize =
       this->sdf->GetElement("max_step_size")->Get<double>();
+
+  // Generalized parameter reading
+  this->ParamsFromSDFElement(this->sdf);
 }
 
 //////////////////////////////////////////////////
@@ -195,6 +243,36 @@ void PhysicsEngine::OnRequest(ConstRequestPtr &/*_msg*/)
 //////////////////////////////////////////////////
 void PhysicsEngine::OnPhysicsMsg(ConstPhysicsPtr &_msg)
 {
+  if (_msg->has_gravity())
+    this->SetGravity(msgs::Convert(_msg->gravity()));
+
+  if (_msg->has_real_time_factor())
+    this->SetTargetRealTimeFactor(_msg->real_time_factor());
+
+  if (_msg->has_real_time_update_rate())
+  {
+    this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
+  }
+
+  if (_msg->has_max_step_size())
+  {
+    this->SetMaxStepSize(_msg->max_step_size());
+  }
+
+  boost::any value;
+  // TODO: Nested parameters
+  for (int i = 0; i < _msg->parameters_size(); i++)
+  {
+    if (ConvertMessageParam(_msg->parameters(i), value))
+    {
+      this->SetParam(_msg->parameters(i).name(), value);
+    }
+    else
+    {
+      gzerr << "Couldn't set parameter from msg: "
+            << _msg->parameters(i).name() << std::endl;
+    }
+  }
   this->world->GetPresetManager()->CurrentProfile(_msg->profile_name());
 }
 
