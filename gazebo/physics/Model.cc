@@ -83,6 +83,8 @@ void Model::Load(sdf::ElementPtr _sdf)
 
   this->LoadLinks();
 
+  this->LoadModels();
+
   // Load the joints if the world is already loaded. Otherwise, the World
   // has some special logic to load models that takes into account state
   // information.
@@ -100,7 +102,7 @@ void Model::LoadLinks()
   if (this->sdf->HasElement("link"))
   {
     sdf::ElementPtr linkElem = this->sdf->GetElement("link");
-    bool canonicalLinkInitialized = false;
+//    bool canonicalLinkInitialized = false;
     while (linkElem)
     {
       // Create a new link
@@ -110,12 +112,51 @@ void Model::LoadLinks()
       /// \TODO: canonical link is hardcoded to the first link.
       ///        warn users for now, need  to add parsing of
       ///        the canonical tag in sdf
-      if (!canonicalLinkInitialized)
+      if (!this->canonicalLink)
+      {
+        // Get the canonical link from parent, if not found then set the
+        // current link as the canonoical link.
+        LinkPtr cLink;
+        BasePtr entity = this->GetParent();
+        while (entity && entity->HasType(MODEL))
+        {
+          ModelPtr model = boost::static_pointer_cast<Model>(entity);
+          LinkPtr tmpLink = model->GetLink();
+          if (tmpLink)
+          {
+            cLink = tmpLink;
+            break;
+          }
+          entity = entity->GetParent();
+        }
+
+        if (cLink)
+        {
+          this->canonicalLink = cLink;
+        }
+        else
+        {
+          // first link found, set as canonical link
+          link->SetCanonicalLink(true);
+          this->canonicalLink = link;
+
+          // notify parent models of this canonical link
+          entity = this->GetParent();
+          while (entity && entity->HasType(MODEL))
+          {
+            ModelPtr model = boost::static_pointer_cast<Model>(entity);
+            model->canonicalLink = this->canonicalLink;
+            entity = entity->GetParent();
+          }
+        }
+      }
+
+/*      if (!canonicalLinkInitialized)
       {
         link->SetCanonicalLink(true);
         this->canonicalLink = link;
         canonicalLinkInitialized = true;
-      }
+      }*/
 
       // Load the link using the config node. This also loads all of the
       // bodies collisionetries
@@ -123,6 +164,29 @@ void Model::LoadLinks()
       linkElem = linkElem->GetNextElement("link");
       this->links.push_back(link);
     }
+  }
+}
+
+//////////////////////////////////////////////////
+void Model::LoadModels()
+{
+  // Load the bodies
+  if (this->sdf->HasElement("model"))
+  {
+    sdf::ElementPtr modelElem = this->sdf->GetElement("model");
+    while (modelElem)
+    {
+      // Create a new model
+      ModelPtr model = this->GetWorld()->GetPhysicsEngine()->CreateModel(
+          boost::static_pointer_cast<Model>(shared_from_this()));
+      model->SetWorld(this->GetWorld());
+      model->Load(modelElem);
+      this->models.push_back(model);
+      modelElem = modelElem->GetNextElement("model");
+    }
+
+    for (auto &model : this->models)
+      model->SetEnabled(true);
   }
 }
 
@@ -156,15 +220,22 @@ void Model::LoadJoints()
       gripperElem = gripperElem->GetNextElement("gripper");
     }
   }
+
+  // Load the nested model joints if the world is not already loaded. Otherwise,
+  // LoadJoints will called from in Model::Load.
+  if (!this->world->IsLoaded())
+  {
+    for (auto model : this->models)
+      model->LoadJoints();
+  }
 }
 
 //////////////////////////////////////////////////
 void Model::Init()
 {
   // Record the model's initial pose (for reseting)
-  this->SetInitialRelativePose(this->GetWorldPose());
-
-  this->SetRelativePose(this->GetWorldPose());
+  this->SetInitialRelativePose(this->sdf->Get<math::Pose>("pose"));
+  this->SetRelativePose(this->sdf->Get<math::Pose>("pose"));
 
   // Initialize the bodies before the joints
   for (Base_V::iterator iter = this->children.begin();
@@ -261,6 +332,9 @@ void Model::Update()
     }
     this->prevAnimationTime = this->world->GetSimTime();
   }
+
+  for (auto model : this->models)
+    model->Update();
 }
 
 //////////////////////////////////////////////////
@@ -333,6 +407,7 @@ void Model::Fini()
   this->joints.clear();
   this->links.clear();
   this->canonicalLink.reset();
+  this->models.clear();
 }
 
 //////////////////////////////////////////////////
@@ -587,6 +662,30 @@ JointPtr Model::GetJoint(const std::string &_name)
 }
 
 //////////////////////////////////////////////////
+const Model_V &Model::GetModels() const
+{
+  return this->models;
+}
+
+//////////////////////////////////////////////////
+ModelPtr Model::GetModel(const std::string &_name) const
+{
+  Model_V::const_iterator iter;
+  ModelPtr result;
+
+  for (iter = this->models.begin(); iter != this->models.end(); ++iter)
+  {
+    if (((*iter)->GetScopedName() == _name) || ((*iter)->GetName() == _name))
+    {
+      result = *iter;
+      break;
+    }
+  }
+
+  return result;
+}
+
+//////////////////////////////////////////////////
 LinkPtr Model::GetLinkById(unsigned int _id) const
 {
   return boost::dynamic_pointer_cast<Link>(this->GetById(_id));
@@ -705,6 +804,9 @@ void Model::LoadPlugins()
         << "Plugins for the model will not be loaded.\n";
     }
   }
+
+  for (auto model : this->models)
+    model->LoadPlugins();
 }
 
 //////////////////////////////////////////////////
@@ -862,14 +964,18 @@ void Model::SetLaserRetro(const float _retro)
 //////////////////////////////////////////////////
 void Model::FillMsg(msgs::Model &_msg)
 {
+  math::Pose relPose = this->GetRelativePose();
+
   _msg.set_name(this->GetScopedName());
   _msg.set_is_static(this->IsStatic());
   _msg.set_self_collide(this->GetSelfCollide());
-  msgs::Set(_msg.mutable_pose(), this->GetWorldPose());
+//  msgs::Set(_msg.mutable_pose(), this->GetWorldPose());
+  msgs::Set(_msg.mutable_pose(), relPose);
   _msg.set_id(this->GetId());
   msgs::Set(_msg.mutable_scale(), this->scale);
 
-  msgs::Set(this->visualMsg->mutable_pose(), this->GetWorldPose());
+//  msgs::Set(this->visualMsg->mutable_pose(), this->GetWorldPose());
+  msgs::Set(this->visualMsg->mutable_pose(), relPose);
   _msg.add_visual()->CopyFrom(*this->visualMsg);
 
   for (Link_V::iterator iter = this->links.begin(); iter != this->links.end();
@@ -882,6 +988,11 @@ void Model::FillMsg(msgs::Model &_msg)
        iter != this->joints.end(); ++iter)
   {
     (*iter)->FillMsg(*_msg.add_joint());
+  }
+
+  for (auto &model : this->models)
+  {
+    model->FillMsg(*_msg.add_model());
   }
 }
 
@@ -995,6 +1106,17 @@ void Model::SetState(const ModelState &_state)
       link->SetState(iter->second);
     else
       gzerr << "Unable to find link[" << iter->first << "]\n";
+  }
+
+  ModelState_M modelStates = _state.GetModelStates();
+  for (ModelState_M::iterator iter = modelStates.begin();
+       iter != modelStates.end(); ++iter)
+  {
+    ModelPtr model = this->GetModel(iter->first);
+    if (model)
+      model->SetState(iter->second);
+    else
+      gzerr << "Unable to find model[" << iter->first << "]\n";
   }
 
   // For now we don't use the joint state values to set the state of

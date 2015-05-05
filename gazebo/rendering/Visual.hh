@@ -408,6 +408,19 @@ namespace gazebo
       /// visual.
       public: VisualPtr GetRootVisual();
 
+      /// \brief Get the nth ancestor counting from the world visual.
+      /// GetNthAncestor(0) returns the world visual. GetNthAncestor(1) returns
+      /// the RootVisual. GetNthAncestor(2) returns the ancestor which is a
+      /// child of the root visual and so on.
+      /// \param[in] _n Depth of the ancestor.
+      /// \return The nth ancestor counting from the world.
+      public: VisualPtr GetNthAncestor(unsigned int _n);
+
+      /// \brief Get the depth of this visual, where 0 is the depth of the
+      /// world visual.
+      /// \return This visual's depth.
+      public: unsigned int GetDepth();
+
       /// \brief Get the shader type.
       /// \return String of the shader type: "vertex", "pixel",
       /// "normal_map_object_space", "normal_map_tangent_space".
@@ -514,6 +527,11 @@ namespace gazebo
 
       /// \brief Clear parents.
       public: void ClearParent();
+
+      /// \brief Check if this visual is an ancestor of another visual.
+      /// \param[in] _visual Visual.
+      /// \return True if this visual is an ancestor.
+      bool IsAncestorOf(rendering::VisualPtr _visual);
 
       /// \internal
       /// \brief Constructor used by inherited classes
