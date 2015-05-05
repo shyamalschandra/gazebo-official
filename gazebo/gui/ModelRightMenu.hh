@@ -23,6 +23,7 @@
 
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/qt.h"
+#include "gazebo/gui/ApplyWrenchDialog.hh"
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
@@ -65,6 +66,16 @@ namespace gazebo
       public: void Run(const std::string &_entityName, const QPoint &_pt,
           EntityTypes _type = MODEL);
 
+      /// \brief Show the right menu with extra menu options.
+      /// \param[in] _entityName Name of the model that is active.
+      /// \param[in] _pt Point on the GUI that has received the right-click
+      /// request.
+      /// \param[in] _customActions Additional menu items to be shown.
+      /// \param[in] _type Type of the entity clicked.
+      public: void Run(const std::string &_entityName, const QPoint &_pt,
+          const std::vector<QAction *> &_customActions,
+          EntityTypes _type = MODEL);
+
       /// \brief QT callback when move to has been selected.
       private slots: void OnMoveTo();
 
@@ -73,6 +84,9 @@ namespace gazebo
 
       /// \brief QT callback when edit has been selected.
       private slots: void OnEdit();
+
+      /// \brief QT callback when apply force/torque has been selected.
+      private slots: void OnApplyWrench();
 
       /// \brief QT callback when delete has been selected.
       /// \param[in] _name Name of the entity to delete.
@@ -109,6 +123,9 @@ namespace gazebo
 
       /// \brief Action for opening entity on Model Editor.
       private: QAction *editAct;
+
+      /// \brief Action for applying force and torque to a model.
+      private: QAction *applyWrenchAct;
 
       /// \brief Action for snapping an object to another object below the
       /// first.
