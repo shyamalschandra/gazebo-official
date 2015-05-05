@@ -82,6 +82,16 @@ namespace gazebo
       /// state.
       private slots: void OnToggleSettings(bool _checked);
 
+      /// \brief QT callback for toggling the settings visibility.
+      /// \param[in] _checked True if the record button is in the checked
+      /// state.
+      private slots: void OnBlinkStatus();
+
+      /// \brief QT callback for toggling the settings visibility.
+      /// \param[in] _checked True if the record button is in the checked
+      /// state.
+      private slots: void OnConfirmationTimeout();
+
       /// \brief Callback for log status messages.
       /// \param[in] _msg Log status message.
       private: void OnStatus(ConstLogStatusPtr &_msg);
@@ -119,6 +129,12 @@ namespace gazebo
       /// \brief Label to display status information.
       private: QLabel *statusLabel;
 
+      /// \brief Label to display status information.
+      private: QTimer *statusTimer;
+
+      /// \brief Label to display status information.
+      private: double statusTime;
+
       /// \brief Name of the log file path
       private: QLineEdit *filenameEdit;
 
@@ -130,6 +146,12 @@ namespace gazebo
 
       // private: QListWidget *logList;
       private: QTextBrowser *logList;
+
+      /// \brief Label to display status information.
+      private: QDialog *confirmationDialog;
+
+      /// \brief Label to display status information.
+      private: QTimer *confirmationTimer;
     };
     /// \}
   }
