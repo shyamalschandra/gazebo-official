@@ -6,6 +6,7 @@ package gazebo.msgs;
 
 
 import "vector3d.proto";
+import "param.proto";
 
 message Physics
 {
@@ -34,4 +35,6 @@ message Physics
   optional double max_step_size              = 15;
   // The name of this physics profile (not to be confused with type)
   optional string profile_name               = 16;
+
+  repeated Param parameters             = 17;
 }

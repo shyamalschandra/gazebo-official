@@ -28,6 +28,7 @@
 #include "gazebo/math/Pose.hh"
 #include "gazebo/math/Plane.hh"
 #include "gazebo/math/Box.hh"
+#include "gazebo/common/Console.hh"
 
 #include "gazebo/common/SphericalCoordinates.hh"
 #include "gazebo/common/Color.hh"
@@ -500,6 +501,51 @@ namespace gazebo
     /// \return A pointer to the message's header
     GAZEBO_VISIBLE
     msgs::Header *GetHeader(google::protobuf::Message &_message);
+
+    // TODO: Implement more conversion functions
+    /*GAZEBO_VISIBLE sdf::ElementPtr PhysicsToSDF(const msgs::Physics &_physics,
+        sdf::ElementPtr _sdf = sdf::ElementPtr());
+
+    GAZEBO_VISIBLE msgs::Physics PhysicsFromSDF(sdf::ElementPtr);*/
+
+    template<typename T> GAZEBO_VISIBLE msgs::Param ConvertMessageParam(
+        const std::string &_key, const T &_value);
+
+    GAZEBO_VISIBLE bool ConvertMessageParam(
+        const msgs::Param &_msg, boost::any &_value);
+
+    template<typename T> GAZEBO_VISIBLE void AddToPhysicsMsg(
+        const std::string &_key, const T &_value, msgs::Physics &_physics)
+    {
+      msgs::Param *param = _physics.add_parameters();
+      param->CopyFrom(ConvertMessageParam(_key, _value));
+    }
+
+    template<typename T> GAZEBO_VISIBLE bool PhysicsMsgParam(
+         const msgs::Physics &_physics, const std::string &_key, T &_value)
+    {
+      for (auto param : _physics.parameters())
+      {
+        if (param.name() == _key)
+        {
+          boost::any value;
+          if (!ConvertMessageParam(param, value))
+            return false;
+          try
+          {
+            _value = boost::any_cast<T>(value);
+            return true;
+          }
+          catch (boost::bad_any_cast &_e)
+          {
+            gzerr << "Bad boost::any_cast in msgs::PhysicsMsgParam"
+                  << std::endl;
+            return false;
+          }
+        }
+      }
+      return false;
+    }
 
     /// \}
   }

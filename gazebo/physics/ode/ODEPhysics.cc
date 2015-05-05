@@ -260,33 +260,38 @@ void ODEPhysics::OnRequest(ConstRequestPtr &_msg)
   if (_msg->request() == "physics_info")
   {
     msgs::Physics physicsMsg;
-    physicsMsg.set_type(msgs::Physics::ODE);
-    physicsMsg.set_solver_type(this->dataPtr->stepType);
-    // min_step_size is defined but not yet used
+
+    msgs::AddToPhysicsMsg("solver_type", this->GetStepType(), physicsMsg);
     boost::any min_step_size;
     try
     {
       if (this->GetParam("min_step_size", min_step_size))
-        physicsMsg.set_min_step_size(boost::any_cast<double>(min_step_size));
+      {
+        msgs::AddToPhysicsMsg("min_step_size",
+            boost::any_cast<double>(min_step_size), physicsMsg);
+      }
     }
     catch(boost::bad_any_cast &_e)
     {
       gzerr << "Failed boost::any_cast in ODEPhysics.cc: " << _e.what();
     }
-    physicsMsg.set_precon_iters(this->GetSORPGSPreconIters());
-    physicsMsg.set_iters(this->GetSORPGSIters());
-    physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
-    physicsMsg.set_sor(this->GetSORPGSW());
-    physicsMsg.set_cfm(this->GetWorldCFM());
-    physicsMsg.set_erp(this->GetWorldERP());
-    physicsMsg.set_contact_max_correcting_vel(
-      this->GetContactMaxCorrectingVel());
-    physicsMsg.set_contact_surface_layer(
-      this->GetContactSurfaceLayer());
+    msgs::AddToPhysicsMsg("precon_iters", this->GetSORPGSPreconIters(), physicsMsg);
+    msgs::AddToPhysicsMsg("iters", this->GetSORPGSIters(), physicsMsg);
+    msgs::AddToPhysicsMsg("sor", this->GetSORPGSW(), physicsMsg);
+    msgs::AddToPhysicsMsg("erp", this->GetWorldERP(), physicsMsg);
+    msgs::AddToPhysicsMsg("cfm", this->GetWorldCFM(), physicsMsg);
+    msgs::AddToPhysicsMsg("contact_max_correcting_vel",
+        this->GetContactMaxCorrectingVel(), physicsMsg);
+    msgs::AddToPhysicsMsg("contact_surface_layer",
+        this->GetContactSurfaceLayer(), physicsMsg);
+
+    // General parameters--TODO: helper function in PhysicsEngine to fill these
+    physicsMsg.set_type(msgs::Physics::ODE);
     physicsMsg.mutable_gravity()->CopyFrom(msgs::Convert(this->GetGravity()));
     physicsMsg.set_real_time_update_rate(this->realTimeUpdateRate);
     physicsMsg.set_real_time_factor(this->targetRealTimeFactor);
     physicsMsg.set_max_step_size(this->maxStepSize);
+    physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
 
     response.set_type(physicsMsg.GetTypeName());
     physicsMsg.SerializeToString(serializedData);
@@ -351,7 +356,6 @@ void ODEPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
   /// Make sure all models get at least on update cycle.
   this->world->EnableAllModels();
 }
-
 
 
 //////////////////////////////////////////////////
@@ -1296,7 +1300,7 @@ bool ODEPhysics::GetParam(const std::string &_key, boost::any &_value) const
 
   if (_key == "solver_type")
   {
-    _value = odeElem->GetElement("solver")->Get<std::string>("type");
+    _value = this->GetStepType();
   }
   else if (_key == "cfm")
   {
