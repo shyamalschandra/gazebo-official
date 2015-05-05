@@ -325,6 +325,8 @@ namespace gazebo
 
       /// \brief Splitter for the main window.
       private: QSplitter *splitter;
+      private: void Fixme();
+      private: QWidget *mainWidget;
     };
   }
 }
