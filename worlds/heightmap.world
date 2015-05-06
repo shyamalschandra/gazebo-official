@@ -1,0 +1,156 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <scene>
+      <sky>
+        <clouds>
+          <speed>10</speed>
+          <humidity>0.5</humidity>
+          <mean_size>10</mean_size>
+        </clouds>
+      </sky>
+    </scene>
+
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://flight_heightmap</uri>
+    </include>
+
+    <model name="launchpad">
+      <pose>-128 -334 -0.996 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>6 6 2</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>6 6 2</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Grey</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+
+    <model name="barrier1">
+      <pose>-239.705399 -399 5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>319.576 0.2 80.0</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>319.576 0.2 80.0</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="barrier2">
+      <pose>-129 -244 5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>132 0.2 80.0</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>132 0.2 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="barrier3">
+      <pose>-80 -328.922394 5 0 0 1.5707</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>150 0.2 80.0</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>140 0.2 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="box">
+      <pose>-128 -334 0.78 0 0 3.1415</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>.4 .4 .4</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>.1 .1 .1</size>
+            </box>
+          </geometry>
+        </visual>
+
+        <visual name="visual2">
+          <pose>1.0 0 0.0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>.02 .01 .01</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/OrangeTransparent</name>
+            </script>
+          </material>
+        </visual>
+
+      </link>
+      <plugin name="drone" filename="libDronePlugin.so"/>
+    </model>
+
+  </world>
+</sdf>
