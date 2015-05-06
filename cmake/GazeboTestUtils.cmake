@@ -18,31 +18,17 @@ macro (gz_build_tests)
     add_dependencies(${BINARY_NAME}
       gtest
       gtest_main
-      gazebo_common
-      gazebo_math
-      gazebo_physics
-      gazebo_sensors
-      gazebo_rendering
-      gazebo_msgs
-      gazebo_transport
-      gazebo_test_fixture
-      )
+    )
 
 
     target_link_libraries(${BINARY_NAME}
       gtest
       gtest_main
-      gazebo_test_fixture
-      gazebo_common
-      gazebo_math
-      gazebo_physics
-      gazebo_sensors
-      gazebo_rendering
-      gazebo_msgs
-      gazebo_transport
-      libgazebo
-      pthread
-      )
+    )
+    foreach (TEST_DEP ${TEST_DEPENDENCIES})
+      add_dependencies(${BINARY_NAME} ${TEST_DEP})
+      target_link_libraries(${BINARY_NAME} ${TEST_DEP})
+    endforeach()
 
     add_test(${BINARY_NAME} ${CMAKE_CURRENT_BINARY_DIR}/${BINARY_NAME}
 	--gtest_output=xml:${CMAKE_BINARY_DIR}/test_results/${BINARY_NAME}.xml)

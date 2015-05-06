@@ -108,6 +108,9 @@ set (msgs
   wrench_stamped.proto
 )
 
+set (TEST_DEPENDENCIES
+  gazebo_msgs
+)
 set (msgs_tests_sources
   msgs_TEST.cc
   MsgFactory_TEST.cc

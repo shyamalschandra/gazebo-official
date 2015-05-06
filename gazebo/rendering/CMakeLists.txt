@@ -133,6 +133,9 @@ endif ()
 
 set (gtest_sources)
 
+set (TEST_DEPENDENCIES
+  gazebo_rendering
+)
 gz_build_tests(${gtest_sources})
 
 set (gtest_sources_dri
@@ -146,6 +149,10 @@ set (gtest_sources_dri
   Visual_TEST.cc
 )
 
+set (TEST_DEPENDENCIES
+  gazebo_rendering
+  server_fixture
+)
 gz_build_dri_tests(${gtest_sources_dri})
 
 set (rendering_headers "" CACHE INTERNAL "rendering headers" FORCE)

@@ -17,11 +17,11 @@
 #ifndef _GAZEBO_TEST_UTIL_HH_
 #define _GAZEBO_TEST_UTIL_HH_
 
+#include <fstream>
 #include <gtest/gtest.h>
 #include <string>
 
 #include <boost/filesystem.hpp>
-#include "gazebo/common/Console.hh"
 
 using namespace gazebo;
 
@@ -46,11 +46,13 @@ namespace gazebo
         this->logFilename = testCaseName + "_" + testName + ".log";
 
         // Initialize Console
+#ifdef gzLogInit
         gzLogInit("test_logs-", this->logFilename);
         gazebo::common::Console::SetQuiet(false);
 
         // Read the full path to the log directory.
         this->logDirectory = gzLogDirectory();
+#endif
       }
 
       /// \brief Get a string with the full log file path.
