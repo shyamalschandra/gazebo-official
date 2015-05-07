@@ -63,7 +63,11 @@ DataLogger::DataLogger(QWidget *_parent)
   // Textual status information
   this->statusLabel = new QLabel("Ready");
   this->statusLabel->setObjectName("dataLoggerStatusLabel");
-  this->statusLabel->setFixedWidth(70);
+  this->statusLabel->setFixedWidth(80);
+
+  // Timer used to blink the status label
+  this->statusTimer = new QTimer();
+  connect(this->statusTimer, SIGNAL(timeout()), this, SLOT(OnBlinkStatus()));
 
   // Duration of logging
   this->timeLabel = new QLabel("00:00:00.000");
@@ -71,7 +75,7 @@ DataLogger::DataLogger(QWidget *_parent)
   this->timeLabel->setFixedWidth(90);
 
   // Size of log file
-  this->sizeLabel = new QLabel("0.00 B");
+  this->sizeLabel = new QLabel("(0.00 B)");
   this->sizeLabel->setObjectName("dataLoggerSizeLabel");
 
   QHBoxLayout *timeLayout = new QHBoxLayout;
@@ -261,7 +265,8 @@ void DataLogger::OnRecord(bool _toggle)
     // Switch the icon
     this->recordButton->setIcon(QPixmap(":/images/record_stop.png"));
 
-    this->statusLabel->setText("Recording");
+    this->statusLabel->setText("Recording...");
+    this->statusTimer->start(100);
 
     // Tell the server to start data logging
     msgs::LogControl msg;
@@ -294,6 +299,8 @@ void DataLogger::OnRecord(bool _toggle)
 
     // Change the status
     this->statusLabel->setText("Ready");
+    this->statusLabel->setStyleSheet("QLabel{color: #aeaeae}");
+    this->statusTimer->stop();
 
     // Tell the server to stop data logging
     msgs::LogControl msg;
@@ -357,30 +364,30 @@ void DataLogger::OnStatus(ConstLogStatusPtr &_msg)
     if (_msg->log_file().has_size() && _msg->log_file().has_size_units())
     {
       // Get the size of the log file.
-      stream << std::fixed << std::setprecision(2) << _msg->log_file().size();
-
+      stream << std::fixed << std::setprecision(2) << "(" <<
+          _msg->log_file().size();
 
       // Get the size units.
       switch (_msg->log_file().size_units())
       {
         case msgs::LogStatus::LogFile::BYTES:
-          stream << "B";
+          stream << "B)";
           break;
         case msgs::LogStatus::LogFile::K_BYTES:
-          stream << "KB";
+          stream << "KB)";
           break;
         case msgs::LogStatus::LogFile::M_BYTES:
-          stream << "MB";
+          stream << "MB)";
           break;
         default:
-          stream << "GB";
+          stream << "GB)";
           break;
       }
 
       this->SetSize(QString::fromStdString(stream.str()));
     }
     else
-      this->SetSize("0.00 B");
+      this->SetSize("(0.00 B)");
   }
 }
 
@@ -466,6 +473,22 @@ void DataLogger::OnBrowse()
   this->pub->Publish(msg);
 
   this->SetFilename(QString::fromStdString(path.string()));
+}
+
+/////////////////////////////////////////////////
+void DataLogger::OnBlinkStatus()
+{
+  this->statusTime += 1.0/10;
+
+  if (this->statusTime >= 1)
+    this->statusTime = 0;
+
+  this->statusLabel->setStyleSheet(QString::fromStdString(
+      "QLabel{color: rgb("+
+          std::to_string(255+(128*(this->statusTime-1)))+", "+
+          std::to_string(255+(128*(this->statusTime-1)))+", "+
+          std::to_string(255+(128*(this->statusTime-1)))+
+      ")}"));
 }
 
 /////////////////////////////////////////////////
