@@ -71,6 +71,7 @@ target_link_libraries(gazebo_physics_ode
   gazebo_opcode
   gazebo_math
   gazebo_common
+  gazebo_physics
   ${TBB_LIBRARIES}
 )
 
