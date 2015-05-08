@@ -190,8 +190,10 @@ namespace gazebo
       /// \brief Signal the event for all subscribers.
       public: void Signal()
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -332,8 +334,9 @@ namespace gazebo
       public: template< typename P >
               void Signal(const P &_p)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -348,8 +351,10 @@ namespace gazebo
       public: template< typename P1, typename P2 >
               void Signal(const P1 &_p1, const P2 &_p2)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -365,8 +370,10 @@ namespace gazebo
       public: template< typename P1, typename P2, typename P3 >
               void Signal(const P1 &_p1, const P2 &_p2, const P3 &_p3)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                       iter != this->myDataPtr->connections.end(); ++iter)
@@ -384,8 +391,10 @@ namespace gazebo
               void Signal(const P1 &_p1, const P2 &_p2, const P3 &_p3,
                           const P4 &_p4)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                         iter != this->myDataPtr->connections.end(); ++iter)
@@ -405,8 +414,10 @@ namespace gazebo
               void Signal(const P1 &_p1, const P2 &_p2, const P3 &_p3,
                           const P4 &_p4, const P5 &_p5)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                           iter != this->myDataPtr->connections.end(); ++iter)
@@ -428,8 +439,10 @@ namespace gazebo
               void Signal(const P1 &_p1, const P2 &_p2, const P3 &_p3,
                   const P4 &_p4, const P5 &_p5, const P6 &_p6)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -451,8 +464,10 @@ namespace gazebo
               void Signal(const P1 &_p1, const P2 &_p2, const P3 &_p3,
                   const P4 &_p4, const P5 &_p5, const P6 &_p6, const P7 &_p7)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -476,8 +491,10 @@ namespace gazebo
                   const P4 &_p4, const P5 &_p5, const P6 &_p6, const P7 &_p7,
                   const P8 &_p8)
               {
+                boost::mutex::scoped_lock lock(
+                    this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
@@ -503,8 +520,10 @@ namespace gazebo
                   const P4 &_p4, const P5 &_p5, const P6 &_p6, const P7 &_p7,
                   const P8 &_p8, const P9 &_p9)
           {
+            boost::mutex::scoped_lock lock(
+                this->myDataPtr->connectionsEraseMutex);
+
             this->myDataPtr->signaled = true;
-            this->Cleanup();
             for (typename EvtConnectionMap::iterator iter =
                 this->myDataPtr->connections.begin();
                 iter != this->myDataPtr->connections.end(); ++iter)
@@ -531,19 +550,18 @@ namespace gazebo
                   const P4 &_p4, const P5 &_p5, const P6 &_p6, const P7 &_p7,
                   const P8 &_p8, const P9 &_p9, const P10 &_p10)
               {
+                boost::mutex::scoped_lock lock(
+                  this->myDataPtr->connectionsEraseMutex);
+
                 this->myDataPtr->signaled = true;
-                this->Cleanup();
                 for (typename EvtConnectionMap::iterator iter =
                     this->myDataPtr->connections.begin();
                     iter != this->myDataPtr->connections.end(); ++iter)
                 {
                   (*iter->second)(_p1, _p2, _p3, _p4, _p5,
-                      _p6, _p7, _p8, _p9, _p10);
+                    _p6, _p7, _p8, _p9, _p10);
                 }
               }
-
-      /// \brief Cleanup disconnected connections.
-      private: void Cleanup();
 
       /// \brief Private data pointer.
       private: EventTPrivate<T> *myDataPtr;
@@ -561,6 +579,7 @@ namespace gazebo
     template<typename T>
     EventT<T>::~EventT()
     {
+      boost::mutex::scoped_lock lock(this->myDataPtr->connectionsEraseMutex);
       for (typename EvtConnectionMap::iterator iter =
           this->myDataPtr->connections.begin();
           iter != this->myDataPtr->connections.end(); ++iter)
@@ -576,6 +595,7 @@ namespace gazebo
     template<typename T>
     ConnectionPtr EventT<T>::Connect(const boost::function<T> &_subscriber)
     {
+      boost::mutex::scoped_lock lock(this->myDataPtr->connectionsEraseMutex);
       int index = 0;
       if (!this->myDataPtr->connections.empty())
       {
@@ -605,6 +625,7 @@ namespace gazebo
     template<typename T>
     unsigned int EventT<T>::ConnectionCount() const
     {
+      boost::mutex::scoped_lock lock(this->myDataPtr->connectionsEraseMutex);
       return this->myDataPtr->connections.size();
     }
 
@@ -614,30 +635,13 @@ namespace gazebo
     void EventT<T>::Disconnect(int _id)
     {
       boost::mutex::scoped_lock lock(this->myDataPtr->connectionsEraseMutex);
-      this->myDataPtr->connectionsToErase.push_back(_id);
-    }
-
-    /// \brief Cleanup disconnected connections.
-    template<typename T>
-    void EventT<T>::Cleanup()
-    {
-      if (this->myDataPtr->connectionsToErase.empty())
-        return;
-      boost::mutex::scoped_lock lock(this->myDataPtr->connectionsEraseMutex);
-
-      for (std::vector<int>::iterator iter =
-          this->myDataPtr->connectionsToErase.begin();
-          iter != this->myDataPtr->connectionsToErase.end(); ++iter)
+      auto it = this->myDataPtr->connections.find(_id);
+      if (it != this->myDataPtr->connections.end())
       {
-        typename EvtConnectionMap::iterator iter2 =
-          this->myDataPtr->connections.find(*iter);
-        if (iter2 != this->myDataPtr->connections.end())
-        {
-          delete iter2->second;
-          this->myDataPtr->connections.erase(iter2);
-        }
+        delete it->second;
+        it->second = NULL;
+        this->myDataPtr->connections.erase(it);
       }
-      this->myDataPtr->connectionsToErase.clear();
     }
     /// \}
   }
