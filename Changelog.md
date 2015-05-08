@@ -37,6 +37,9 @@ compilation on Windows.
     * [Pull request #1607](https://bitbucket.org/osrf/gazebo/pull-request/1607)
     * [Issue #1576](https://bitbucket.org/osrf/gazebo/issue/1576)
 
+1. Add VisualType enum to Visual and clean up visuals when entity is deleted.
+    * [Pull request #1614](https://bitbucket.org/osrf/gazebo/pull-request/1614)
+
 1. New accessors in LogPlay class.
     * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
 
