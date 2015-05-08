@@ -40,18 +40,18 @@ gz_build_tests(${test_sources})
 add_executable(gz gz.cc gz_topic.cc gz_log.cc)
 target_link_libraries(gz
  libgazebo_client
- gazebo_msgs gazebo_common gazebo_transport gazebo_gui gazebo_physics
- gazebo_physics_ode gazebo_sensors ${QT_LIBRARIES} ${Boost_LIBRARIES})
+ gazebo_physics_sensors
+ ${Boost_LIBRARIES})
 
-if(HAVE_BULLET)
-  target_link_libraries(gz gazebo_physics_bullet)
-endif()
-if (HAVE_SIMBODY)
-  target_link_libraries(gz gazebo_physics_simbody)
-endif()
-if(HAVE_DART)
-  target_link_libraries(gz gazebo_physics_dart)
-endif()
+#if(HAVE_BULLET)
+#  target_link_libraries(gz gazebo_physics_bullet)
+#endif()
+#if (HAVE_SIMBODY)
+#  target_link_libraries(gz gazebo_physics_simbody)
+#endif()
+#if(HAVE_DART)
+#  target_link_libraries(gz gazebo_physics_dart)
+#endif()
 
 if (UNIX)
   target_link_libraries(gz pthread)
