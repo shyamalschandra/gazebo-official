@@ -14,6 +14,13 @@
  * limitations under the License.
  *
  */
+
+#ifdef _WIN32
+  // Ensure that Winsock2.h is included before Windows.h, which can get
+  // pulled in by anybody (e.g., Boost).
+  #include <Winsock2.h>
+#endif
+
 #include <sdf/sdf.hh>
 #include <boost/scoped_ptr.hpp>
 
@@ -40,6 +47,9 @@
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/RenderEvents.hh"
 #include "gazebo/rendering/Scene.hh"
+#include "gazebo/rendering/RenderingIface.hh"
+#include "gazebo/rendering/RenderEngine.hh"
+#include "gazebo/rendering/WindowManager.hh"
 
 #include "gazebo/gui/Actions.hh"
 #include "gazebo/gui/GuiIface.hh"
@@ -93,10 +103,10 @@ MainWindow::MainWindow()
   this->node->Init();
   gui::set_world(this->node->GetTopicNamespace());
 
-  QWidget *mainWidget = new QWidget;
+  this->mainWidget = new QWidget;
   QVBoxLayout *mainLayout = new QVBoxLayout;
-  mainWidget->show();
-  this->setCentralWidget(mainWidget);
+  this->mainWidget->show();
+  this->setCentralWidget(this->mainWidget);
 
   this->setDockOptions(QMainWindow::AnimatedDocks);
 
@@ -115,10 +125,7 @@ MainWindow::MainWindow()
   this->AddToLeftColumn("default", this->tabWidget);
 
   this->toolsWidget = new ToolsWidget();
-
-  this->renderWidget = new RenderWidget(mainWidget);
-
-  this->CreateEditors();
+  this->renderWidget = new RenderWidget(this->mainWidget);
 
   QHBoxLayout *centerLayout = new QHBoxLayout;
 
@@ -132,7 +139,7 @@ MainWindow::MainWindow()
   sizes.push_back(MINIMUM_TAB_WIDTH);
   sizes.push_back(this->width() - MINIMUM_TAB_WIDTH);
   sizes.push_back(0);
-  splitter->setSizes(sizes);
+  this->splitter->setSizes(sizes);
 
   this->splitter->setStretchFactor(0, 0);
   this->splitter->setStretchFactor(1, 2);
@@ -145,9 +152,9 @@ MainWindow::MainWindow()
 
   mainLayout->setSpacing(0);
   mainLayout->addLayout(centerLayout, 1);
-  mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
+  mainLayout->addWidget(new QSizeGrip(this->mainWidget), 0,
                         Qt::AlignBottom | Qt::AlignRight);
-  mainWidget->setLayout(mainLayout);
+  this->mainWidget->setLayout(mainLayout);
 
   this->setWindowIcon(QIcon(":/images/gazebo.svg"));
 
@@ -201,6 +208,8 @@ MainWindow::MainWindow()
   // Use a signal/slot to load plugins. This makes the process thread safe.
   connect(this, SIGNAL(AddPlugins()),
           this, SLOT(OnAddPlugins()), Qt::QueuedConnection);
+
+  this->show();
 }
 
 /////////////////////////////////////////////////
@@ -212,6 +221,10 @@ MainWindow::~MainWindow()
 /////////////////////////////////////////////////
 void MainWindow::Load()
 {
+  this->renderWidget->Init();
+
+  this->CreateEditors();
+
   this->guiSub = this->node->Subscribe("~/gui", &MainWindow::OnGUI, this, true);
 #ifdef HAVE_OCULUS
   int oculusAutoLaunch = getINIProperty<int>("oculus.autolaunch", 0);
@@ -243,8 +256,6 @@ void MainWindow::Load()
 /////////////////////////////////////////////////
 void MainWindow::Init()
 {
-  this->renderWidget->show();
-
   // Default window size is entire desktop.
   QSize winSize = QApplication::desktop()->screenGeometry().size();
 
