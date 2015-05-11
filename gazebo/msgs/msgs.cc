@@ -332,7 +332,7 @@ namespace gazebo
       return result;
     }
 
-    std::string ConvertJointType(const msgs::Joint::Type _type)
+    std::string ConvertJointType(const msgs::Joint::Type &_type)
     {
       std::string result;
       switch (_type)
@@ -565,6 +565,12 @@ namespace gazebo
         {
           guiCam->set_view_controller(
               camSDF->Get<std::string>("view_controller"));
+        }
+
+        if (camSDF->HasElement("projection_type"))
+        {
+          guiCam->set_projection_type(
+              camSDF->Get<std::string>("projection_type"));
         }
 
         if (camSDF->HasElement("track_visual"))
@@ -1182,7 +1188,7 @@ namespace gazebo
     }
 
     /////////////////////////////////////////////////
-    std::string ConvertShaderType(const msgs::Material::ShaderType _type)
+    std::string ConvertShaderType(const msgs::Material::ShaderType &_type)
     {
       std::string result;
       switch (_type)
@@ -1403,8 +1409,7 @@ namespace gazebo
 
       if (_msg.has_horizontal_fov())
       {
-        cameraSDF->GetElement("horizontal_fov")->Set(
-            _msg.horizontal_fov());
+        cameraSDF->GetElement("horizontal_fov")->Set(_msg.horizontal_fov());
       }
       if (_msg.has_image_size())
       {
