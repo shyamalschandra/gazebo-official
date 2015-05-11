@@ -14,6 +14,13 @@
  * limitations under the License.
  *
 */
+
+#ifdef _WIN32
+  // Ensure that Winsock2.h is included before Windows.h, which can get
+  // pulled in by anybody (e.g., Boost).
+  #include <Winsock2.h>
+#endif
+
 #include <math.h>
 
 #include "gazebo/common/Assert.hh"
@@ -55,6 +62,8 @@ extern ModelRightMenu *g_modelRightMenu;
 GLWidget::GLWidget(QWidget *_parent)
   : QWidget(_parent)
 {
+  rendering::load();
+
   this->setObjectName("GLWidget");
   this->state = "select";
   this->sceneCreated = false;
@@ -72,16 +81,17 @@ GLWidget::GLWidget(QWidget *_parent)
   this->renderFrame->setFrameShape(QFrame::NoFrame);
   this->renderFrame->setSizePolicy(QSizePolicy::Expanding,
                                    QSizePolicy::Expanding);
-  this->renderFrame->setContentsMargins(0, 0, 0, 0);
   this->renderFrame->show();
+
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->addWidget(this->renderFrame);
   mainLayout->setContentsMargins(0, 0, 0, 0);
   this->setLayout(mainLayout);
 
-  this->connections.push_back(
+  /*this->connections.push_back(
       rendering::Events::ConnectCreateScene(
         boost::bind(&GLWidget::OnCreateScene, this, _1)));
+  */
 
   this->connections.push_back(
       rendering::Events::ConnectRemoveScene(
@@ -160,6 +170,39 @@ GLWidget::GLWidget(QWidget *_parent)
 
   connect(this, SIGNAL(selectionMsgReceived(const QString &)), this,
       SLOT(OnSelectionMsgEvent(const QString &)), Qt::QueuedConnection);
+
+  this->setAttribute(Qt::WA_OpaquePaintEvent, true);
+  this->setAttribute(Qt::WA_PaintOnScreen, true);
+}
+
+/////////////////////////////////////////////////
+void GLWidget::Init()
+{
+  std::string winHandle = this->GetOgreHandle();
+
+  //QApplication::flush();
+  //QApplication::syncX();
+
+  this->windowId = rendering::RenderEngine::Instance()->GetWindowManager()->
+    CreateWindow(winHandle, this->width(), this->height());
+
+  std::cout << "My Window Id=" << this->windowId << "\n";
+
+  rendering::init();
+  this->scene = rendering::create_scene(gui::get_world(), true);
+  if (!this->scene)
+    std::cerr << "!!!!!!!!!!!!!!!!!!!Unable to create scene\n";
+
+  this->OnCreateScene(this->scene->GetName());
+
+  if (!this->sceneCreated)
+  {
+    rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
+      this->windowId, this->userCamera);
+    this->sceneCreated = true;
+  }
+
+  this->renderFrame->lower();
 }
 
 /////////////////////////////////////////////////
@@ -197,27 +240,6 @@ bool GLWidget::eventFilter(QObject * /*_obj*/, QEvent *_event)
   }
 
   return false;
-}
-
-/////////////////////////////////////////////////
-void GLWidget::showEvent(QShowEvent *_event)
-{
-  QApplication::flush();
-
-  if (this->windowId < 0)
-  {
-    this->windowId = rendering::RenderEngine::Instance()->GetWindowManager()->
-        CreateWindow(this->GetOgreHandle(), this->width(), this->height());
-    if (this->userCamera)
-    {
-      rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-        this->windowId, this->userCamera);
-    }
-  }
-
-  QWidget::showEvent(_event);
-
-  this->setFocus();
 }
 
 /////////////////////////////////////////////////
@@ -267,14 +289,13 @@ void GLWidget::paintEvent(QPaintEvent *_e)
 /////////////////////////////////////////////////
 void GLWidget::resizeEvent(QResizeEvent *_e)
 {
-  if (!this->scene)
-    return;
-
   if (this->windowId >= 0)
   {
     rendering::RenderEngine::Instance()->GetWindowManager()->Resize(
         this->windowId, _e->size().width(), _e->size().height());
-    this->userCamera->Resize(_e->size().width(), _e->size().height());
+
+    if (this->userCamera)
+      this->userCamera->Resize(_e->size().width(), _e->size().height());
   }
 }
 
@@ -832,10 +853,14 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
     gzerr << "Unable to connect to a running Gazebo master.\n";
 
   if (_scene->GetUserCameraCount() == 0)
+  {
     this->userCamera = _scene->CreateUserCamera(cameraName,
         gazebo::gui::getINIProperty<int>("rendering.stereo", 0));
+  }
   else
+  {
     this->userCamera = _scene->GetUserCamera(0);
+  }
 
   gui::set_active_camera(this->userCamera);
   this->scene = _scene;
@@ -849,12 +874,6 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
   double pitch = atan2(-delta.z, sqrt(delta.x*delta.x + delta.y*delta.y));
   this->userCamera->SetWorldPose(math::Pose(camPos,
         math::Vector3(0, pitch, yaw)));
-
-  if (this->windowId >= 0)
-  {
-    rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-        this->windowId, this->userCamera);
-  }
 }
 
 /////////////////////////////////////////////////
@@ -874,7 +893,6 @@ void GLWidget::Clear()
   this->keyModifiers = 0;
 }
 
-
 //////////////////////////////////////////////////
 rendering::UserCameraPtr GLWidget::GetCamera() const
 {
@@ -884,25 +902,25 @@ rendering::UserCameraPtr GLWidget::GetCamera() const
 //////////////////////////////////////////////////
 std::string GLWidget::GetOgreHandle() const
 {
-  std::string ogreHandle;
+  std::ostringstream ogreHandle;
 
-#if defined(WIN32) || defined(__APPLE__)
-  ogreHandle = boost::lexical_cast<std::string>(this->winId());
+#if defined(__APPLE__)
+  ogreHandle << (unsigned long)(this->winId());
+#elif defined(_MSC_VER)
+  ogreHandle << (unsigned long)(this->winId());
 #else
   QX11Info info = x11Info();
   QWidget *q_parent = dynamic_cast<QWidget*>(this->renderFrame);
-  ogreHandle = boost::lexical_cast<std::string>(
-      reinterpret_cast<uint64_t>(info.display()));
-  ogreHandle += ":";
-  ogreHandle += boost::lexical_cast<std::string>(
-      static_cast<uint32_t>(info.screen()));
-  ogreHandle += ":";
   GZ_ASSERT(q_parent, "q_parent is null");
-  ogreHandle += boost::lexical_cast<std::string>(
-      static_cast<uint64_t>(q_parent->winId()));
+
+  ogreHandle << reinterpret_cast<uint64_t>(info.display())
+             << ":"
+             << static_cast<uint32_t>(info.screen())
+             << ":"
+             << static_cast<uint64_t>(q_parent->winId());
 #endif
 
-  return ogreHandle;
+  return ogreHandle.str();
 }
 
 /////////////////////////////////////////////////
