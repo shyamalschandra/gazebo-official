@@ -25,6 +25,7 @@ set (files
   mud.world
   multilink_shape.world
   openal.world
+  ortho.world
   pioneer2dx.world
   pioneer2dx_camera.world
   pioneer2dx_laser.world
@@ -56,6 +57,7 @@ set (files
   stacks.world
   trigger.world
   twin_rotor_demo.world
+  underwater.world
   willowgarage.world
   wireless_sensors.world
 )
