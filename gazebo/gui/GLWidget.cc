@@ -80,11 +80,6 @@ GLWidget::GLWidget(QWidget *_parent)
   mainLayout->setContentsMargins(0, 0, 0, 0);
   this->setLayout(mainLayout);
 
-  /*this->connections.push_back(
-      rendering::Events::ConnectCreateScene(
-        boost::bind(&GLWidget::OnCreateScene, this, _1)));
-  */
-
   this->connections.push_back(
       rendering::Events::ConnectRemoveScene(
         boost::bind(&GLWidget::OnRemoveScene, this, _1)));
@@ -187,9 +182,7 @@ void GLWidget::Init()
 
   this->windowId = rendering::RenderEngine::Instance()->GetWindowManager()->
     CreateWindow(winHandle, this->width(), this->height());
-
-  std::cout << "My Window Id=" << this->windowId << "\n";
-
+ 
   rendering::init();
   this->scene = rendering::create_scene(gui::get_world(), true);
   if (!this->scene)
@@ -201,6 +194,7 @@ void GLWidget::Init()
   {
     rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
       this->windowId, this->userCamera);
+		  this->windowId, this->userCamera);
     this->sceneCreated = true;
   }
 
@@ -264,27 +258,6 @@ void GLWidget::moveEvent(QMoveEvent *_e)
 /////////////////////////////////////////////////
 void GLWidget::paintEvent(QPaintEvent *_e)
 {
-  /*if (!this->sceneCreated)
-  {
-    this->sceneCreated =
-    rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-      this->windowId, this->userCamera);
-  }*/
-
-  // Timing may cause GLWidget to miss the OnCreateScene event. So, we check
-  // here to make sure it's handled.
-  /*if (!this->sceneCreated)// && rendering::get_scene())
-  {
-    std::cerr << "Paint event, create[" << this->width() << "x" << this->height() << "]\n";
-
-    if (!rendering::get_scene())
-    {
-      this->scene = rendering::create_scene(gui::get_world(), true);
-    }
-
-std::cerr << "4\n";
-  }*/
-
   rendering::UserCameraPtr cam = gui::get_active_camera();
   if (cam && cam->GetInitialized())
   {
@@ -888,9 +861,6 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
     this->userCamera = _scene->GetUserCamera(0);
   }
 
-   std::cerr << "Resize camera WxH[" << this->width() << " " << this->height() << "]\n";
-  //this->userCamera->Resize(this->width(), this->height());
-
   gui::set_active_camera(this->userCamera);
   this->scene = _scene;
 
@@ -941,6 +911,7 @@ std::string GLWidget::GetOgreHandle() const
 
 #if defined(__APPLE__) || defined(WIN32)
   ogreHandle << (unsigned long)(this->winId());
+  ogreHandle << reinterpret_cast<uint64_t>(this->renderFrame->winId());
 #else
   QX11Info info = x11Info();
   QWidget *q_parent = dynamic_cast<QWidget*>(this->renderFrame);
