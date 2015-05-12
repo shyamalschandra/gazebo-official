@@ -61,7 +61,9 @@ extern ModelRightMenu *g_modelRightMenu;
 GLWidget::GLWidget(QWidget *_parent)
   : QWidget(_parent)
 {
+  // Load the rendering engine.
   rendering::load();
+
   this->setObjectName("GLWidget");
   this->state = "select";
   this->sceneCreated = false;
@@ -177,28 +179,28 @@ void GLWidget::Init()
 {
   std::string winHandle = this->GetOgreHandle();
 
-  //QApplication::flush();
-  //QApplication::syncX();
+  QApplication::flush();
+  QApplication::syncX();
 
   this->windowId = rendering::RenderEngine::Instance()->GetWindowManager()->
     CreateWindow(winHandle, this->width(), this->height());
- 
+
   rendering::init();
+
   this->scene = rendering::create_scene(gui::get_world(), true);
+
   if (!this->scene)
-    std::cerr << "!!!!!!!!!!!!!!!!!!!Unable to create scene\n";
-
-  this->OnCreateScene(this->scene->GetName());
-
-  if (!this->sceneCreated)
+  {
+    gzerr << "GLWidget could not create a scene. This will likely result "
+      << "in a blank screen.\n";
+    return;
+  }
+  else
   {
     rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-      this->windowId, this->userCamera);
 		  this->windowId, this->userCamera);
     this->sceneCreated = true;
   }
-
-  this->renderFrame->lower();
 }
 
 /////////////////////////////////////////////////
@@ -274,6 +276,7 @@ void GLWidget::paintEvent(QPaintEvent *_e)
   }
 
   this->update();
+
   _e->accept();
 }
 
@@ -848,16 +851,13 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
   else
     gzerr << "Unable to connect to a running Gazebo master.\n";
 
-  std::cerr << "Create User Camera\n";
   if (_scene->GetUserCameraCount() == 0)
   {
-    std::cerr << "NO user cameras\n";
     this->userCamera = _scene->CreateUserCamera(cameraName,
         gazebo::gui::getINIProperty<int>("rendering.stereo", 0));
   }
   else
   {
-    std::cerr << "Has user camera\n";
     this->userCamera = _scene->GetUserCamera(0);
   }
 
@@ -873,12 +873,6 @@ void GLWidget::ViewScene(rendering::ScenePtr _scene)
   double pitch = atan2(-delta.z, sqrt(delta.x*delta.x + delta.y*delta.y));
   this->userCamera->SetWorldPose(math::Pose(camPos,
         math::Vector3(0, pitch, yaw)));
-
-  /*if (this->windowId >= 0)
-  {
-    rendering::RenderEngine::Instance()->GetWindowManager()->SetCamera(
-        this->windowId, this->userCamera);
-  }*/
 }
 
 /////////////////////////////////////////////////
@@ -909,8 +903,9 @@ std::string GLWidget::GetOgreHandle() const
 {
   std::ostringstream ogreHandle;
 
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__)
   ogreHandle << (unsigned long)(this->winId());
+#elif defined(WIN32)
   ogreHandle << reinterpret_cast<uint64_t>(this->renderFrame->winId());
 #else
   QX11Info info = x11Info();
