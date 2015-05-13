@@ -82,12 +82,11 @@ int WindowManager::CreateWindow(const std::string &_ogreHandle,
   Ogre::NameValuePairList params;
   Ogre::RenderWindow *window = NULL;
 
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || defined(_MSC_VER)
   params["externalWindowHandle"] = _ogreHandle;
 #else
   params["parentWindowHandle"] = _ogreHandle;
 #endif
-  params["externalGLControl"] = "false";
   params["FSAA"] = "4";
   params["stereoMode"] = "Frame Sequential";
 
@@ -196,4 +195,10 @@ Ogre::RenderWindow *WindowManager::GetWindow(uint32_t _id)
     return this->windows[_id];
   else
     return NULL;
+}
+
+//////////////////////////////////////////////////
+size_t WindowManager::WindowCount() const
+{
+  return this->windows.size();
 }
