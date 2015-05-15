@@ -88,7 +88,7 @@ endif ()
 ########################################
 # Find packages
 
-# In Visual Studio we use configure.bat to trick all path cmake 
+# In Visual Studio we use configure.bat to trick all path cmake
 # variables so let's consider that as a replacement for pkgconfig
 if (MSVC)
   set (PKG_CONFIG_FOUND TRUE)
@@ -557,6 +557,17 @@ find_program(XSLTPROC xsltproc)
 if (NOT EXISTS ${XSLTPROC})
   BUILD_WARNING("xsltproc not found. The check_test_ran.py script will cause tests to fail.")
 endif()
+
+########################################
+# Find uuid-dev Library
+pkg_check_modules(uuid uuid)
+if (uuid_FOUND)
+  message (STATUS "Looking for uuid - found")
+  set (HAVE_UUID TRUE)
+else ()
+  set (HAVE_UUID FALSE)
+  BUILD_WARNING ("uuid-dev library not found - Gazebo will not have uuid support.")
+endif ()
 
 ########################################
 # Find graphviz

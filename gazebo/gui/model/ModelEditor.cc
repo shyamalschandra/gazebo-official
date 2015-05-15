@@ -236,6 +236,26 @@ void ModelEditor::AddItemToPalette(QWidget *_item,
 }
 
 ////////////////////////////////////////////////
+void ModelEditor::SpawnEntity(sdf::ElementPtr _sdf)
+{
+  event::Events::setSelectedEntity("", "normal");
+  g_arrowAct->trigger();
+  this->dataPtr->modelPalette->GetModelCreator()->AddEntity(_sdf);
+}
+
+////////////////////////////////////////////////
+void ModelEditor::RemoveEntity(const std::string &_name)
+{
+  this->dataPtr->modelPalette->GetModelCreator()->RemoveEntity(_name);
+}
+
+////////////////////////////////////////////////
+sdf::ElementPtr ModelEditor::GetEntitySDF(const std::string &_name)
+{
+  return this->dataPtr->modelPalette->GetModelCreator()->GetEntitySDF(_name);
+}
+
+////////////////////////////////////////////////
 void ModelEditor::Save()
 {
   gui::model::Events::saveModelEditor();
@@ -417,4 +437,12 @@ void ModelEditor::ToggleToolbar()
   this->dataPtr->jointAct->setVisible(this->dataPtr->active);
   this->dataPtr->jointTypeAct->setVisible(this->dataPtr->active);
   this->dataPtr->jointSeparatorAct->setVisible(this->dataPtr->active);
+}
+
+/////////////////////////////////////////////////
+void ModelEditor::AppendPluginElement(const std::string &_name,
+    const std::string &_filename, sdf::ElementPtr _element)
+{
+  this->dataPtr->modelPalette->GetModelCreator()->
+      AppendPluginElement(_name, _filename, _element);
 }

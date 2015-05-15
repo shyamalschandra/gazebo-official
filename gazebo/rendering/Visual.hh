@@ -530,6 +530,11 @@ namespace gazebo
       /// \param[in] _layer Index of the layer to toggle.
       public: void ToggleLayer(const int32_t _layer);
 
+      /// \brief Check if this visual is an ancestor of another visual.
+      /// \param[in] _visual Visual.
+      /// \return True if this visual is an ancestor.
+      bool IsAncestorOf(rendering::VisualPtr _visual);
+
       /// \internal
       /// \brief Constructor used by inherited classes
       /// \param[in] _dataPtr Pointer to private data.
