@@ -49,6 +49,24 @@ compilation on Windows.
     * [Pull request #1607](https://bitbucket.org/osrf/gazebo/pull-request/1607)
     * [Issue #1576](https://bitbucket.org/osrf/gazebo/issue/1576)
 
+1. Alert user of connection problems when using the REST service plugin
+    * [Pull request #1655](https://bitbucket.org/osrf/gazebo/pull-request/)
+    * [Issue #1574](https://bitbucket.org/osrf/gazebo/issue/1572)
+
+1. Detect uuid library during compilation.
+    * [Pull request #1655](https://bitbucket.org/osrf/gazebo/pull-request/)
+    * [Issue #1572](https://bitbucket.org/osrf/gazebo/issue/1572)
+
+1. New accessors in LogPlay class.
+    * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
+
+1. Added a plugin to send messages to an existing website.
+   Added gui::MainWindow::AddMenu and msgs/rest_error, msgs/rest_login, msgs rest/post
+    * [Pull request #1524](https://bitbucket.org/osrf/gazebo/pull-request/1524)
+
+1. Install `libgazebo_server_fixture`. This will facilitate tests external to the main gazebo repository. See `examples/stand_alone/test_fixture`.
+    * [Pull request #1606](https://bitbucket.org/osrf/gazebo/pull-request/1606)
+
 1. New accessors in LogPlay class.
     * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
 
@@ -210,12 +228,18 @@ compilation on Windows.
     1. Expose API to support adding items to the palette.
         * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
+    1. Add schematic view to model editor
+        * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
     1. Added menu for toggling joint visualization
         * [Pull request #1551](https://bitbucket.org/osrf/gazebo/pull-request/1551)
         * [Issue #1483](https://bitbucket.org/osrf/gazebo/issue/1483)
 
     1. Add schematic view to model editor
         * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+        
+    1. Expose API to support adding items to the palette.
+        * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.
