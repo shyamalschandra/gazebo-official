@@ -6,6 +6,7 @@ include_directories(SYSTEM
   skyx
   skyx/include
 )
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/paged_geometry)
 
 if (${OGRE_VERSION} VERSION_GREATER 1.7.4)
   add_subdirectory(deferred_shading)
@@ -13,6 +14,7 @@ endif()
 
 add_subdirectory(skyx)
 add_subdirectory(selection_buffer)
+add_subdirectory(paged_geometry)
 
 if (WIN32)
   include_directories(${libdl_include_dir})
@@ -34,6 +36,7 @@ set (sources
   Distortion.cc
   DynamicLines.cc
   DynamicRenderable.cc
+  Forest.cc
   FPSViewController.cc
   GpuLaser.cc
   Grid.cc
@@ -90,6 +93,7 @@ set (headers
   Distortion.hh
   DynamicLines.hh
   DynamicRenderable.hh
+  Forest.hh
   FPSViewController.hh
   GpuLaser.hh
   Grid.hh
@@ -176,6 +180,7 @@ target_link_libraries(gazebo_rendering
   gazebo_msgs
   gazebo_skyx
   gazebo_selection_buffer
+  gazebo_paged_geometry
   gazebo_transport
   ${ogre_libraries}
   ${OPENGL_LIBRARIES}
