@@ -116,6 +116,30 @@ namespace gazebo
     };
     /// \}
 
+    /// \class SignalVarianceValue SignalStats.hh math/gzmath.hh
+    /// \brief Computing the maximum of the absolute value
+    /// of a discretely sampled signal.
+    /// Also known as the maximum norm, infinity norm, or supremum norm.
+    class GAZEBO_VISIBLE SignalVarianceValue : public SignalStatistic
+    {
+      // Documentation inherited.
+      public: virtual double Value() const;
+
+      /// \brief Get a short version of the name of this statistical measure.
+      /// \return "variance"
+      public: virtual std::string ShortName() const;
+
+      // Documentation inherited.
+      public: virtual void InsertData(double _data);
+
+      // Documentation inherited.
+      public: virtual void Reset();
+
+      /// \brief need to store sum internally for computing variance
+      private: double sum;
+    };
+    /// \}
+
     /// \brief Forward declare private data class.
     class SignalStatsPrivate;
 
