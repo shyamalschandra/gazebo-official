@@ -28,6 +28,7 @@ endif()
 set (plugins
   ActuatorPlugin
   ArrangePlugin
+  BoxThrusterPlugin
   BreakableJointPlugin
   BuoyancyPlugin
   CameraPlugin

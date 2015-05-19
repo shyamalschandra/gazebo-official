@@ -21,10 +21,12 @@
   #include <Winsock2.h>
 #endif
 
+#include <iomanip>
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/SystemPaths.hh"
+#include "gazebo/math/SignalStats.hh"
 #include "gazebo/transport/transport.hh"
 #include "gazebo/util/Diagnostics.hh"
 
@@ -39,7 +41,6 @@ DiagnosticManager::DiagnosticManager()
 #else
   const char *homePath = common::getEnv("HOMEPATH");
 #endif
-  this->logPath = homePath;
 
   // Get the base of the time logging path
   if (!homePath)
@@ -51,6 +52,7 @@ DiagnosticManager::DiagnosticManager()
   }
   else
   {
+  this->logPath = homePath;
     this->logPath /= ".gazebo";
   }
 
@@ -60,7 +62,7 @@ DiagnosticManager::DiagnosticManager()
   std::replace(timeStr.begin(), timeStr.end(), ':', '_');
 #endif
 
-  this->logPath = this->logPath / "diagnostics" / timeStr;
+  this->logPath /= "diagnostics" / timeStr;
 
   // Make sure the path exists.
   if (!boost::filesystem::exists(this->logPath))
@@ -70,7 +72,6 @@ DiagnosticManager::DiagnosticManager()
 //////////////////////////////////////////////////
 DiagnosticManager::~DiagnosticManager()
 {
-  event::Events::DisconnectWorldUpdateBegin(this->updateConnection);
 }
 
 //////////////////////////////////////////////////
@@ -84,6 +85,14 @@ void DiagnosticManager::Init(const std::string &_worldName)
 
   this->updateConnection = event::Events::ConnectWorldUpdateBegin(
       boost::bind(&DiagnosticManager::Update, this, _1));
+}
+
+//////////////////////////////////////////////////
+void DiagnosticManager::Fini()
+{
+  event::Events::DisconnectWorldUpdateBegin(this->updateConnection);
+
+  this->timers.clear();
 }
 
 //////////////////////////////////////////////////
@@ -251,6 +260,22 @@ DiagnosticTimer::DiagnosticTimer(const std::string &_name) : Timer()
 DiagnosticTimer::~DiagnosticTimer()
 {
   this->Stop();
+  for (auto const &measurement: this->stats)
+  {
+    std::ostringstream scopedName;
+    if (measurement.first != this->name)
+      scopedName << this->name << "::";
+    scopedName << measurement.first;
+
+    this->log << std::setw(50) << std::left << scopedName.str();
+    for (auto const &stat: measurement.second.Map())
+    {
+      this->log << std::setw(7) << stat.first
+                << std::setw(15) << std::scientific << stat.second;
+    }
+    this->log << std::endl;
+  }
+  this->log.flush();
   this->log.close();
 }
 
@@ -260,18 +285,18 @@ void DiagnosticTimer::Start()
   // Only start if not running.
   if (!this->GetRunning())
   {
+    // Make sure the previous lap is reset
+    this->prevLap = this->GetElapsed();
+
     // Start the timer
     Timer::Start();
-
-    // Make sure the prev lap is reset
-    this->prevLap.Set(0, 0);
   }
 }
 
 //////////////////////////////////////////////////
 void DiagnosticTimer::Stop()
 {
-  // Only stop is currently running
+  // Only stop if currently running
   if (this->GetRunning())
   {
     // Stop the timer
@@ -279,16 +304,16 @@ void DiagnosticTimer::Stop()
 
     common::Time elapsed = this->GetElapsed();
     common::Time currTime = common::Time::GetWallTime();
+    this->cumulativeTime += elapsed;
 
-    // Write out the total elapsed time.
-    this->log << this->name << " " << currTime << " "
-      << elapsed.Double() << std::endl;
-    this->log.flush();
+    // Record the total elapsed time.
+    this->InsertData(this->name, elapsed.Double());
 
     DiagnosticManager::Instance()->AddTime(this->name, currTime, elapsed);
 
-    // Reset the lap time
+    // Reset the lap time and timer
     this->prevLap.Set(0, 0);
+    this->Reset();
   }
 }
 
@@ -300,13 +325,27 @@ void DiagnosticTimer::Lap(const std::string &_prefix)
   common::Time delta = elapsed - this->prevLap;
   common::Time currTime = common::Time::GetWallTime();
 
-  // Write out the delta time.
-  this->log << this->name << ":" << _prefix << " " <<
-    currTime << " " << delta.Double() << std::endl;
+  // Record the delta time.
+  this->InsertData(_prefix, elapsed.Double());
 
   DiagnosticManager::Instance()->AddTime(this->name + ":" + _prefix,
       currTime, delta);
 
-  // Store the prev lap time.
+  // Store the previous lap time.
   this->prevLap = elapsed;
 }
+
+//////////////////////////////////////////////////
+void DiagnosticTimer::InsertData(const std::string &_name,
+                                 const common::Time &_time)
+{
+  auto iter = this->stats.find(_name);
+  if (iter == this->stats.end())
+  {
+    this->stats[_name] = math::SignalStats();
+    iter = this->stats.find(_name);
+    iter->second.InsertStatistics("mean,maxAbs,var");
+  }
+  iter->second.InsertData(_time.Double());
+}
+
