@@ -4,17 +4,11 @@
     <physics type="ode" name="default" default="true" />
     <physics type="ode" name="unthrottled">
       <real_time_update_rate>0.0</real_time_update_rate>
-      <ode>
-        <solver>
-          <thread_position_correction>0</thread_position_correction>
-        </solver>
-      </ode>
     </physics>
     <physics type="ode" name="unthrottled0">
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>0</thread_position_correction>
           <island_threads>0</island_threads>
         </solver>
       </ode>
@@ -23,7 +17,6 @@
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>0</thread_position_correction>
           <island_threads>1</island_threads>
         </solver>
       </ode>
@@ -32,7 +25,6 @@
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>0</thread_position_correction>
           <island_threads>2</island_threads>
         </solver>
       </ode>
@@ -41,7 +33,6 @@
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>0</thread_position_correction>
           <island_threads>3</island_threads>
         </solver>
       </ode>
@@ -50,7 +41,6 @@
       <real_time_update_rate>0.0</real_time_update_rate>
       <ode>
         <solver>
-          <thread_position_correction>0</thread_position_correction>
           <island_threads>4</island_threads>
         </solver>
       </ode>
@@ -107,6 +97,11 @@
       <uri>model://sun</uri>
     </include>
     <include>
+      <uri>model://pr2</uri>
+    </include>
+    <include>
+      <pose>2 0 0  0 0 0</pose>
+      <name>pr2_copy</name>
       <uri>model://pr2</uri>
     </include>
   </world>
