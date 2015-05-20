@@ -40,7 +40,7 @@ namespace gazebo
   {
     /// \def Rod_t
     /// \brief A rod is composed by two joints (prismatic and revolute).
-    using Rod_t = std::array<physics::JointPtr, 2>;
+    typedef std::array<physics::JointPtr, 2> Rod_t;
 
     /// \def Rod_V
     /// \brief A vector of rods.
@@ -81,6 +81,10 @@ namespace gazebo
     /// \param[in] _side "left_controller" or "right_controller".
     private: void SwitchRod(const double _leftDir, const double _rightDir);
 
+    /// \brief Set the material color of a visual element
+    /// \param[in] _name The visual element's name
+    /// \param[in] _parentName The visual's parent element
+    /// \param[in] _color The material's color
     private: void PublishVisualMsg(std::string &_name, std::string &_parentName,
         std::string &_color);
 
