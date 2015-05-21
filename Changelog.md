@@ -1,4 +1,7 @@
 ## Gazebo 6.0
+1. Implement forward/backwards multi-step for log playback.
+    * [Pull request #1623](https://bitbucket.org/osrf/gazebo/pull-request/1623)
+
 1. Added world with OSRF building and an elevator
     * [Pull request #1697](https://bitbucket.org/osrf/gazebo/pull-request/1697)
 
