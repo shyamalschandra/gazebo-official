@@ -12,6 +12,7 @@ set (files
   empty.world
   everything.world
   force_torque_demo.world
+  forest.world
   friction_demo.world
   gripper.world
   heightmap_dem.world
