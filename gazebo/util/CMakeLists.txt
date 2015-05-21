@@ -11,6 +11,7 @@ include_directories(${TBB_INCLUDEDIR})
 include_directories(${tinyxml_INCLUDE_DIRS})
 set (sources
   Diagnostics.cc
+  Joystick.cc
   LogPlay.cc
   LogRecord.cc
   OpenAL.cc
@@ -27,6 +28,7 @@ endif()
 
 set (headers 
   Diagnostics.hh
+  Joystick.hh
   LogPlay.hh
   LogRecord.hh
   OpenAL.hh
@@ -65,6 +67,10 @@ target_link_libraries(gazebo_util
   gazebo_math
   gazebo_msgs
 )
+
+if (HAVE_SDL)
+  target_link_libraries(gazebo_util ${SDL2_LIBRARIES})
+endif()
 
 gz_install_library(gazebo_util)
 gz_install_includes("util" ${headers} ${CMAKE_CURRENT_BINARY_DIR}/util.hh)

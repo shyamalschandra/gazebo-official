@@ -161,6 +161,8 @@ namespace gazebo
       /// \brief Get the number of cameras in this scene
       /// \return Number of cameras.
       public: uint32_t GetOculusCameraCount() const;
+
+      public: OculusCameraPtr GetOculusCamera(const unsigned int _index) const;
 #endif
 
       /// \brief Create depth camera

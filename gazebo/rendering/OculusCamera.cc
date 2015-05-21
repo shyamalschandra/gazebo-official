@@ -729,7 +729,7 @@ void OculusCamera::Oculus()
   this->dataPtr->externalCamera =
     this->dataPtr->externalSceneManager->createCamera(
         "_OculusRiftExternalCamera_INTERNAL_");
-  this->dataPtr->externalCamera->setFarClipDistance(50);
+  this->dataPtr->externalCamera->setFarClipDistance(5);
   this->dataPtr->externalCamera->setNearClipDistance(0.001);
   this->dataPtr->externalCamera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);
   this->dataPtr->externalCamera->setOrthoWindow(2, 2);

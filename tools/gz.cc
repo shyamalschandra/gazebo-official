@@ -30,6 +30,7 @@
 #include <gazebo/transport/transport.hh>
 #include <sdf/sdf.hh>
 #include "gz_topic.hh"
+#include "gz_joy.hh"
 #include "gz_log.hh"
 #include "gz.hh"
 
@@ -37,6 +38,7 @@ using namespace gazebo;
 
 boost::mutex Command::sigMutex;
 boost::condition_variable Command::sigCondition;
+bool Command::running = true;
 
 std::map<std::string, Command *> g_commandMap;
 
@@ -60,6 +62,7 @@ void Command::Signal()
 {
   boost::mutex::scoped_lock lock(sigMutex);
   sigCondition.notify_all();
+  running = false;
 }
 
 /////////////////////////////////////////////////
@@ -1234,6 +1237,7 @@ int main(int argc, char **argv)
   g_commandMap["log"] = new LogCommand();
   g_commandMap["sdf"] = new SDFCommand();
   g_commandMap["debug"] = new DebugCommand();
+  g_commandMap["joy"] = new JoyCommand();
 
   // Get the command name
   std::string command =
