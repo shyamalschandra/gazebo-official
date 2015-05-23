@@ -8,6 +8,9 @@
 1. Added a plugin to control an elevator (ElevatorPlugin), and an OccupiedEvent plugin that sends a message when a model is within a specified region.
     * [Pull request #1694](https://bitbucket.org/osrf/gazebo/pull-request/1694)
 
+1. Added "countdown" behavior for common::Timer and exposed the feature in TimerGUIPlugin.
+    * [Pull request #1690](https://bitbucket.org/osrf/gazebo/pull-request/1690)
+
 1. Added BuoyancyPlugin for simulating the buoyancy of an object in a column of fluid.
     * [Pull request #1622](https://bitbucket.org/osrf/gazebo/pull-request/1622)
 
@@ -165,6 +168,9 @@ compilation on Windows.
 
 1. Added Apply Force/Torque visuals
     * [Pull request #1619](https://bitbucket.org/osrf/gazebo/pull-request/1619)
+
+1. Added Apply Force/Torque OnMouseRelease and ActivateWindow
+    * [Pull request #1699](https://bitbucket.org/osrf/gazebo/pull-request/1699)
 
 1. Added inertia pose getter for COMVisual and COMVisual_TEST
     * [Pull request #1581](https://bitbucket.org/osrf/gazebo/pull-request/1581)
