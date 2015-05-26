@@ -1,4 +1,7 @@
 ## Gazebo 6.0
+1. Implement forward/backwards multi-step for log playback.
+    * [Pull request #1623](https://bitbucket.org/osrf/gazebo/pull-request/1623)
+
 1. Added world with OSRF building and an elevator
     * [Pull request #1697](https://bitbucket.org/osrf/gazebo/pull-request/1697)
 
@@ -76,6 +79,9 @@ compilation on Windows.
 
 1. Show/hide GUI overlays using the menu bar.
     * [Pull request #1555](https://bitbucket.org/osrf/gazebo/pull-request/1555)
+
+1. Separate TimePanel's display into TimeWidget and LogPlayWidget.
+    * [Pull request #1564](https://bitbucket.org/osrf/gazebo/pull-request/1564)
 
 1. Show/hide toolbars using the menu bars and shortcut.
    Added MainWindow::CloneAction.
@@ -231,6 +237,10 @@ compilation on Windows.
 
     1. Add schematic view to model editor
         * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
+    1. Added list of links and joints.
+        * [Pull request #1515](https://bitbucket.org/osrf/gazebo/pull-request/1515)
+        * [Issue #1418](https://bitbucket.org/osrf/gazebo/issue/1418)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.
