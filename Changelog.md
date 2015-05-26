@@ -80,10 +80,16 @@ compilation on Windows.
 1. Show/hide GUI overlays using the menu bar.
     * [Pull request #1555](https://bitbucket.org/osrf/gazebo/pull-request/1555)
 
+1. Separate TimePanel's display into TimeWidget and LogPlayWidget.
+    * [Pull request #1564](https://bitbucket.org/osrf/gazebo/pull-request/1564)
+
 1. Show/hide toolbars using the menu bars and shortcut.
    Added MainWindow::CloneAction.
    Added Window menu to Model Editor.
     * [Pull request #1584](https://bitbucket.org/osrf/gazebo/pull-request/1584)
+
+1. Added event to show/hide toolbars.
+    * [Pull request #1707](https://bitbucket.org/osrf/gazebo/pull-request/1707)
 
 1. Added optional start/stop/reset buttons to timer GUI plugin.
     * [Pull request #1576](https://bitbucket.org/osrf/gazebo/pull-request/1576)
@@ -166,6 +172,9 @@ compilation on Windows.
 1. Added Apply Force/Torque visuals
     * [Pull request #1619](https://bitbucket.org/osrf/gazebo/pull-request/1619)
 
+1. Added Apply Force/Torque OnMouseRelease and ActivateWindow
+    * [Pull request #1699](https://bitbucket.org/osrf/gazebo/pull-request/1699)
+
 1. Added inertia pose getter for COMVisual and COMVisual_TEST
     * [Pull request #1581](https://bitbucket.org/osrf/gazebo/pull-request/1581)
 
@@ -228,6 +237,10 @@ compilation on Windows.
 
     1. Add schematic view to model editor
         * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
+    1. Added list of links and joints.
+        * [Pull request #1515](https://bitbucket.org/osrf/gazebo/pull-request/1515)
+        * [Issue #1418](https://bitbucket.org/osrf/gazebo/issue/1418)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.
