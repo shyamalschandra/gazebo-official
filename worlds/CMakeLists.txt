@@ -34,6 +34,7 @@ set (files
   pioneer2dx_laser.world
   pioneer2dx_laser_camera.world
   plane_demo.world
+  plane_propeller_demo.world
   plugin.world
   polyline.world
   population.world
