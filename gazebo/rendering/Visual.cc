@@ -208,7 +208,10 @@ void Visual::Fini()
 
   // Detach from the parent
   if (this->dataPtr->parent)
+  {
     this->dataPtr->parent->DetachVisual(this->GetName());
+    this->dataPtr->parent.reset();
+  }
 
   // Detach all children
   std::vector<VisualPtr>::iterator iter;
@@ -293,6 +296,7 @@ void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode *_sceneNode)
 //////////////////////////////////////////////////
 void Visual::Init()
 {
+  this->dataPtr->type = VT_ENTITY;
   this->dataPtr->transparency = 0.0;
   this->dataPtr->isStatic = false;
   this->dataPtr->visible = true;
@@ -2667,8 +2671,7 @@ void Visual::MoveToPositions(const std::vector<math::Pose> &_pts,
   if (!this->dataPtr->preRenderConnection)
   {
     this->dataPtr->preRenderConnection =
-      event::Events::ConnectPreRender(boost::bind(&Visual::Update,
-      shared_from_this()));
+      event::Events::ConnectPreRender(boost::bind(&Visual::Update, this));
   }
 }
 
@@ -2707,8 +2710,7 @@ void Visual::MoveToPosition(const math::Pose &_pose, double _time)
   this->dataPtr->prevAnimTime = common::Time::GetWallTime();
 
   this->dataPtr->preRenderConnection =
-    event::Events::ConnectPreRender(boost::bind(&Visual::Update,
-    shared_from_this()));
+    event::Events::ConnectPreRender(boost::bind(&Visual::Update, this));
 }
 
 //////////////////////////////////////////////////
@@ -2947,6 +2949,18 @@ void Visual::SetId(uint32_t _id)
 sdf::ElementPtr Visual::GetSDF() const
 {
   return this->dataPtr->sdf;
+}
+
+//////////////////////////////////////////////////
+Visual::VisualType Visual::GetType() const
+{
+  return this->dataPtr->type;
+}
+
+//////////////////////////////////////////////////
+void Visual::SetType(const Visual::VisualType _type)
+{
+  this->dataPtr->type = _type;
 }
 
 //////////////////////////////////////////////////

@@ -38,6 +38,9 @@ using namespace rendering;
 CameraVisual::CameraVisual(const std::string &_name, VisualPtr _vis)
 : Visual(*new CameraVisualPrivate, _name, _vis)
 {
+  CameraVisualPrivate *dPtr =
+      reinterpret_cast<CameraVisualPrivate *>(this->dataPtr);
+  dPtr->type = VT_SENSOR;
 }
 
 /////////////////////////////////////////////////
