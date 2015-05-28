@@ -37,6 +37,7 @@ set (plugins
   DepthCameraPlugin
   DiffDrivePlugin
   ElevatorPlugin
+  FoosballDemoPlugin
   ForceTorquePlugin
   GpuRayPlugin
   ImuSensorPlugin
@@ -56,6 +57,7 @@ set (plugins
 
 if (HAVE_USB AND UNIX AND NOT APPLE)
   set (plugins ${plugins}
+    FoosballTablePlugin
     HydraPlugin
     HydraDemoPlugin
   )
@@ -64,6 +66,7 @@ endif()
 set (GUIplugins
   CessnaGUIPlugin
   TimerGUIPlugin
+  FoosballGUIPlugin
 )
 
 set(GAZEBO_PLUGIN_INSTALL_DIR
