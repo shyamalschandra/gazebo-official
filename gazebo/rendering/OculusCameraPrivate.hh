@@ -88,6 +88,9 @@ namespace gazebo
       /// \brief Flag used to prevent multiple messages from being
       /// displayed.
       public: bool oculusTrackingWarned;
+
+      /// \brief Pointer to the visual attached to the camera.
+      public: VisualPtr cameraVisual;
     };
   }
 }

@@ -258,6 +258,20 @@ void OculusCamera::Update()
         -ovrpose.Orientation.z,
         -ovrpose.Orientation.x,
         ovrpose.Orientation.y));
+
+    // caguero: For the foosball demo we prefer to move the camera.
+    this->sceneNode->setPosition(
+      -ovrpose.Position.z, -ovrpose.Position.x, ovrpose.Position.y);
+
+    // Move camera visual - note that it might break the model's kinematics
+    this->dataPtr->cameraVisual->SetPose(math::Pose(math::Vector3(
+        -ovrpose.Position.z,
+        -ovrpose.Position.x,
+         ovrpose.Position.y), math::Quaternion(
+         ovrpose.Orientation.w,
+        -ovrpose.Orientation.z,
+        -ovrpose.Orientation.x,
+         ovrpose.Orientation.y)));
   }
   else if (!this->dataPtr->oculusTrackingWarned)
   {
@@ -302,6 +316,8 @@ bool OculusCamera::AttachToVisualImpl(VisualPtr _visual,
   Camera::AttachToVisualImpl(_visual, _inheritOrientation);
   if (_visual)
   {
+    this->dataPtr->cameraVisual = _visual;
+
     math::Pose origPose = this->GetWorldPose();
     double yaw = _visual->GetWorldPose().rot.GetAsEuler().z;
 
@@ -744,7 +760,7 @@ void OculusCamera::Oculus()
   this->dataPtr->externalViewport->setOverlaysEnabled(true);
 
   // Set up IPD in meters:
-  float ipd = ovrHmd_GetFloat(this->dataPtr->hmd, OVR_KEY_IPD,  0.064f);
+  float ipd = ovrHmd_GetFloat(this->dataPtr->hmd, OVR_KEY_IPD,  0.0635f);
   this->camera->setPosition(-ipd * 0.5, 0, 0);
   this->dataPtr->rightCamera->setPosition(ipd * 0.5, 0, 0);
 }
