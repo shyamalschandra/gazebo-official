@@ -45,7 +45,7 @@
 #include "gazebo/rendering/DepthCamera.hh"
 #include "gazebo/rendering/GpuLaser.hh"
 #include "gazebo/rendering/Grid.hh"
-#include "gazebo/rendering/DynamicLines.hh"
+#include "gazebo/rendering/OriginVisual.hh"
 #include "gazebo/rendering/RFIDVisual.hh"
 #include "gazebo/rendering/RFIDTagVisual.hh"
 #include "gazebo/rendering/VideoVisual.hh"
@@ -165,7 +165,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   // \TODO: This causes the Scene to occasionally miss the response to
   // scene_info
   // this->responsePub =
-      this->dataPtr->node->Advertise<msgs::Response>("~/response");
+  //    this->dataPtr->node->Advertise<msgs::Response>("~/response");
   this->dataPtr->responseSub = this->dataPtr->node->Subscribe("~/response",
       &Scene::OnResponse, this, true);
   this->dataPtr->sceneSub =
@@ -357,6 +357,11 @@ void Scene::Init()
 
   // Force shadows on.
   this->SetShadowsEnabled(true);
+
+  // Create origin visual
+  this->dataPtr->originVisual.reset(new OriginVisual("__WORLD_ORIGIN__",
+      this->dataPtr->worldVisual));
+  this->dataPtr->originVisual->Load();
 
   this->dataPtr->requestPub->WaitForConnection();
   this->dataPtr->requestMsg = msgs::CreateRequest("scene_info");
@@ -1471,6 +1476,9 @@ bool Scene::ProcessSceneMsg(ConstScenePtr &_msg)
 
   if (_msg->has_grid())
     this->SetGrid(_msg->grid());
+
+  if (_msg->has_origin_visual())
+    this->ShowOrigin(_msg->origin_visual());
 
   // Process the sky message.
   if (_msg->has_sky())
@@ -2906,6 +2914,12 @@ void Scene::SetGrid(bool _enabled)
       this->dataPtr->grids[i]->Enable(_enabled);
     }
   }
+}
+
+/////////////////////////////////////////////////
+void Scene::ShowOrigin(bool _show)
+{
+  this->dataPtr->originVisual->SetVisible(_show);
 }
 
 //////////////////////////////////////////////////
