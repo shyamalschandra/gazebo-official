@@ -264,7 +264,6 @@ void JointMaker_TEST::JointDefaultProperties()
   delete mainWindow;
 }
 
-
 /////////////////////////////////////////////////
 void JointMaker_TEST::ShowJoints()
 {
@@ -353,6 +352,7 @@ void JointMaker_TEST::ShowJoints()
   delete mainWindow;
 }
 
+
 /////////////////////////////////////////////////
 void JointMaker_TEST::Selection()
 {
@@ -362,7 +362,6 @@ void JointMaker_TEST::Selection()
   this->Load("worlds/shapes.world", false, false, false);
 
   gui::JointMaker *jointMaker = new gui::JointMaker();
-
   QCOMPARE(jointMaker->GetState(), gui::JointMaker::JOINT_NONE);
   QCOMPARE(jointMaker->GetJointCount(), 0u);
 

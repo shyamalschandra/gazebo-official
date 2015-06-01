@@ -46,7 +46,7 @@ SelectionObj::SelectionObj(const std::string &_name, VisualPtr _vis)
   dPtr->mode = SELECTION_NONE;
 
   dPtr->maxScale = 2.5;
-  dPtr->minScale = 0.5;
+  dPtr->minScale = 0.3;
 
   dPtr->xAxisMatOverlay = "Gazebo/RedTransparentOverlay";
   dPtr->yAxisMatOverlay = "Gazebo/GreenTransparentOverlay";
