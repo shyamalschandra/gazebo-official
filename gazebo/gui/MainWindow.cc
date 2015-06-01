@@ -124,7 +124,6 @@ MainWindow::MainWindow()
   this->AddToLeftColumn("default", this->tabWidget);
 
   this->toolsWidget = new ToolsWidget();
-
   this->renderWidget = new RenderWidget(mainWidget);
 
   this->CreateEditors();
