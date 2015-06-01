@@ -64,6 +64,8 @@ RestWebPlugin::RestWebPlugin()
   char s[37];
   uuid_unparse(uuid, s);
   this->session = s;
+#else
+  this->session = common::Time::GetWallTimeAsISOString();
 #endif
 
 #endif
@@ -228,7 +230,7 @@ void RestWebPlugin::OnEventRestPost(ConstRestPostPtr &_msg)
   try
   {
     std::string event = "{";
-    event += "\"event\": " + _msg->json() + ", ";
+    event +=  _msg->json() + ", ";
     physics::WorldPtr world = physics::get_world();
     if (!world)
     {
@@ -299,6 +301,7 @@ void RestWebPlugin::OnEventRestPost(ConstRestPostPtr &_msg)
 //////////////////////////////////////////////////
 void RestWebPlugin::OnRestLoginRequest(ConstRestLoginPtr &_msg)
 {
+  gzerr << "RestWebPlugin::OnRestLoginRequest" << std::endl;
   boost::mutex::scoped_lock lock(this->requestQMutex);
   this->msgLoginQ.push_back(_msg);
 }
@@ -306,6 +309,7 @@ void RestWebPlugin::OnRestLoginRequest(ConstRestLoginPtr &_msg)
 //////////////////////////////////////////////////
 void RestWebPlugin::OnRestLogoutRequest(ConstRestLogoutPtr &/*_msg*/)
 {
+  gzerr << "RestWebPlugin::OnRestLogoutRequest" << std::endl;
   boost::mutex::scoped_lock lock(this->requestQMutex);
   this->restApi.Logout();
 }

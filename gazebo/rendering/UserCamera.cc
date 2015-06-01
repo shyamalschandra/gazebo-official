@@ -374,6 +374,8 @@ void UserCamera::SetViewController(const std::string &_type)
     gzthrow("Invalid view controller type: " + _type);
 
   this->dataPtr->prevViewControllerName = vc;
+
+  this->dataPtr->prevViewControllerName = vc;
 }
 
 //////////////////////////////////////////////////
@@ -483,7 +485,12 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
     this->scene->GetManager()->destroyAnimation("cameratrack");
   }
 
-  math::Box box = _visual->GetBoundingBox();
+  // TODO zoom into model instead of visual as nested model currently has
+  // incorrect bounding box
+  rendering::VisualPtr topLevelVis = _visual->GetNthAncestor(2);
+  math::Box box = topLevelVis->GetBoundingBox();
+//  math::Box box = _visual->GetBoundingBox();
+
   math::Vector3 size = box.GetSize();
   double maxSize = std::max(std::max(size.x, size.y), size.z);
 

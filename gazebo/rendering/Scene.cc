@@ -149,8 +149,6 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->dataPtr->skeletonPoseSub =
       this->dataPtr->node->Subscribe("~/skeleton_pose/info",
       &Scene::OnSkeletonPoseMsg, this);
-  this->dataPtr->selectionSub = this->dataPtr->node->Subscribe("~/selection",
-      &Scene::OnSelectionMsg, this);
   this->dataPtr->skySub =
       this->dataPtr->node->Subscribe("~/sky", &Scene::OnSkyMsg, this);
   this->dataPtr->modelInfoSub = this->dataPtr->node->Subscribe("~/model/info",
@@ -199,7 +197,6 @@ void Scene::Clear()
   this->dataPtr->sensorSub.reset();
   this->dataPtr->sceneSub.reset();
   this->dataPtr->skeletonPoseSub.reset();
-  this->dataPtr->selectionSub.reset();
   this->dataPtr->visSub.reset();
   this->dataPtr->skySub.reset();
   this->dataPtr->lightSub.reset();
@@ -209,7 +206,6 @@ void Scene::Clear()
   this->dataPtr->lightPub.reset();
   this->dataPtr->responsePub.reset();
   this->dataPtr->requestPub.reset();
-  this->dataPtr->selectionMsg.reset();
 
   this->dataPtr->joints.clear();
 
@@ -1616,6 +1612,14 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
     }
   }
 
+  {
+    for (int i = 0; i < _msg.model_size(); ++i)
+    {
+      boost::shared_ptr<msgs::Model> mm(new msgs::Model(_msg.model(i)));
+      this->dataPtr->modelMsgs.push_back(mm);
+    }
+  }
+
   return true;
 }
 
@@ -1851,7 +1855,8 @@ void Scene::PreRender()
         // If an object is selected, don't let the physics engine move it.
         if (!this->dataPtr->selectedVis
             || this->dataPtr->selectionMode != "move" ||
-            iter->first != this->dataPtr->selectedVis->GetId())
+            (iter->first != this->dataPtr->selectedVis->GetId() &&
+            !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
         {
           math::Pose pose = msgs::Convert(pIter->second);
           GZ_ASSERT(iter->second, "Visual pointer is NULL");
@@ -1883,7 +1888,8 @@ void Scene::PreRender()
             // If an object is selected, don't let the physics engine move it.
             if (!this->dataPtr->selectedVis ||
                 this->dataPtr->selectionMode != "move" ||
-                iter->first != this->dataPtr->selectedVis->GetId())
+                (iter->first != this->dataPtr->selectedVis->GetId() &&
+                !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
             {
               math::Pose pose = msgs::Convert(pose_msg);
               iter2->second->SetPose(pose);
@@ -1905,15 +1911,6 @@ void Scene::PreRender()
     // official time stamp of approval
     this->dataPtr->sceneSimTimePosesApplied =
         this->dataPtr->sceneSimTimePosesReceived;
-
-    if (this->dataPtr->selectionMsg)
-    {
-      if (!this->dataPtr->selectedVis ||
-          this->dataPtr->selectionMsg->name() !=
-          this->dataPtr->selectedVis->GetName())
-        this->SelectVisual(this->dataPtr->selectionMsg->name(), "normal");
-      this->dataPtr->selectionMsg.reset();
-    }
   }
 }
 
@@ -2406,6 +2403,8 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg)
   }
   else
   {
+//    std::cerr << "process visual _msg " << _msg->name() << " " << _msg->id() << std::endl;
+
     VisualPtr visual;
 
     // TODO: A bit of a hack.
@@ -2568,16 +2567,12 @@ bool Scene::ProcessLightMsg(ConstLightPtr &_msg)
 }
 
 /////////////////////////////////////////////////
-void Scene::OnSelectionMsg(ConstSelectionPtr &_msg)
-{
-  this->dataPtr->selectionMsg = _msg;
-}
-
-/////////////////////////////////////////////////
 void Scene::OnModelMsg(ConstModelPtr &_msg)
 {
   boost::mutex::scoped_lock lock(*this->dataPtr->receiveMutex);
   this->dataPtr->modelMsgs.push_back(_msg);
+
+//  std::cerr << "model msg " << _msg->DebugString() << std::endl;
 }
 
 /////////////////////////////////////////////////
