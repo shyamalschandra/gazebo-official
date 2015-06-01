@@ -88,7 +88,7 @@ endif ()
 ########################################
 # Find packages
 
-# In Visual Studio we use configure.bat to trick all path cmake 
+# In Visual Studio we use configure.bat to trick all path cmake
 # variables so let's consider that as a replacement for pkgconfig
 if (MSVC)
   set (PKG_CONFIG_FOUND TRUE)
