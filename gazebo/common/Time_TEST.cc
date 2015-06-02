@@ -26,6 +26,7 @@ using namespace gazebo;
 
 class TimeTest : public gazebo::testing::AutoLogFixture { };
 
+/////////////////////////////////////////////////
 TEST_F(TimeTest, Time)
 {
   common::Timer timer;
@@ -136,6 +137,65 @@ TEST_F(TimeTest, Time)
   EXPECT_DOUBLE_EQ(nsec, common::Time::MicToNano(usec));
 }
 
+/////////////////////////////////////////////////
+TEST_F(TimeTest, String)
+{
+  common::Time time(0);
+
+  // Several combinations
+  EXPECT_EQ(time.FormattedString(), "00 00:00:00.000");
+  EXPECT_EQ(time.FormattedString(1), "00:00:00.000");
+  EXPECT_EQ(time.FormattedString(2), "00:00.000");
+  EXPECT_EQ(time.FormattedString(3), "00.000");
+  EXPECT_EQ(time.FormattedString(4), "000");
+  EXPECT_EQ(time.FormattedString(0, 4), "00 00:00:00.000");
+  EXPECT_EQ(time.FormattedString(0, 3), "00 00:00:00");
+  EXPECT_EQ(time.FormattedString(0, 2), "00 00:00");
+  EXPECT_EQ(time.FormattedString(0, 1), "00 00");
+  EXPECT_EQ(time.FormattedString(0, 0), "00");
+
+  // Inexistent indices default to maximum index (4)
+  EXPECT_EQ(time.FormattedString(10, 10), "000");
+
+  // start > end: start puxes end
+  EXPECT_EQ(time.FormattedString(4, 2), "000");
+
+  // 1 second
+  time = common::Time(0, 1000000000);
+  EXPECT_EQ(time.FormattedString(), "00 00:00:01.000");
+  EXPECT_EQ(time.FormattedString(4, 4), "1000");
+
+  // 30.5 seconds
+  time = common::Time(30, 500000000);
+  EXPECT_EQ(time.FormattedString(), "00 00:00:30.500");
+  EXPECT_EQ(time.FormattedString(3, 3), "30");
+  EXPECT_EQ(time.FormattedString(4, 4), "30500");
+
+  // 1 min
+  time = common::Time(60);
+  EXPECT_EQ(time.FormattedString(), "00 00:01:00.000");
+  EXPECT_EQ(time.FormattedString(3, 3), "60");
+
+  // 2.5 hours
+  time = common::Time(9000);
+  EXPECT_EQ(time.FormattedString(), "00 02:30:00.000");
+  EXPECT_EQ(time.FormattedString(1, 2), "02:30");
+  EXPECT_EQ(time.FormattedString(3, 3), "9000");
+  EXPECT_EQ(time.FormattedString(2, 2), "150");
+  EXPECT_EQ(time.FormattedString(1, 1), "02");
+
+  // 3 days
+  time = common::Time(259200);
+  EXPECT_EQ(time.FormattedString(), "03 00:00:00.000");
+  EXPECT_EQ(time.FormattedString(0, 0), "03");
+  EXPECT_EQ(time.FormattedString(1), "72:00:00.000");
+  EXPECT_EQ(time.FormattedString(1, 1), "72");
+  EXPECT_EQ(time.FormattedString(2, 2), "4320");
+
+  // Large time
+  time = common::Time(1234567890, 123456789);
+  EXPECT_EQ(time.FormattedString(), "14288 23:31:30.123");
+}
 
 /////////////////////////////////////////////////
 int main(int argc, char **argv)

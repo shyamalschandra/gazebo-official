@@ -96,6 +96,15 @@ namespace gazebo
       /// \return Time as a float in seconds
       public: float Float() const;
 
+      /// \brief Get the time as a string formatted as "DD hh:mm:ss.mmm", with
+      /// the option to choose the start/end. Options for start/end are:
+      /// 0: days, 1: hours, 2: minutes, 3: seconds, 4: milliseconds
+      /// \param[in] _start Start point (0 to 4).
+      /// \param[in] _end End point (0 to 4).
+      /// \return String representing time.
+      public: std::string FormattedString(unsigned int _start = 0,
+          unsigned int _end = 4) const;
+
       /// \brief Sleep for the specified time
       /// \param[in] _time Sleep time
       /// \return Time actually slept
