@@ -58,8 +58,10 @@ namespace gazebo
     class ArrowVisual;
     class ContactVisual;
     class COMVisual;
+    class InertiaVisual;
     class RFIDVisual;
     class RFIDTagVisual;
+    class ApplyWrenchVisual;
     class WindowManager;
     class SelectionObj;
     class RayQuery;
@@ -137,6 +139,10 @@ namespace gazebo
     /// \brief Shared pointer to COMVisual
     typedef boost::shared_ptr<COMVisual> COMVisualPtr;
 
+    /// \def InertiaVisualPtr
+    /// \brief Shared pointer to InertiaVisual
+    typedef boost::shared_ptr<InertiaVisual> InertiaVisualPtr;
+
     /// \def RFIDVisual
     /// \brief Shared pointer to RFIDVisual
     typedef boost::shared_ptr<RFIDVisual> RFIDVisualPtr;
@@ -144,6 +150,10 @@ namespace gazebo
     /// \def RFIDTagVisual
     /// \brief Shared pointer to RFIDTagVisual
     typedef boost::shared_ptr<RFIDTagVisual> RFIDTagVisualPtr;
+
+    /// \def ApplyWrenchVisualPtr
+    /// \brief Shared pointer to ApplyWrenchVisual
+    typedef boost::shared_ptr<ApplyWrenchVisual> ApplyWrenchVisualPtr;
 
     /// \def WindowManager
     /// \brief Shared pointer to WindowManager
