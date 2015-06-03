@@ -641,7 +641,7 @@ void ODEJoint::Reset()
 }
 
 //////////////////////////////////////////////////
-JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
+void ODEJoint::CacheForceTorque()
 {
   // Note that:
   // f2, t2 are the force torque measured on parent body's cg
@@ -805,7 +805,7 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
       if (!this->childLink)
       {
         gzerr << "Both parent and child links are invalid, abort.\n";
-        return JointWrench();
+        this->wrench = JointWrench();
       }
       else
       {
@@ -831,12 +831,17 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
   }
   else
   {
-    // forgot to set provide_feedback?
+    // provide_feedback not set
     gzwarn << "GetForceTorque: forgot to set <provide_feedback>?\n";
   }
+}
 
+//////////////////////////////////////////////////
+JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
+{
   return this->wrench;
 }
+
 
 //////////////////////////////////////////////////
 bool ODEJoint::UsesImplicitSpringDamper()
