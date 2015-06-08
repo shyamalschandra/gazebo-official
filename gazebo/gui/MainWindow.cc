@@ -137,11 +137,18 @@ MainWindow::MainWindow()
   this->splitter->addWidget(this->toolsWidget);
   this->splitter->setContentsMargins(0, 0, 0, 0);
 
+#ifdef _WIN32
+  // The splitter appears solid white in Windows, so we make it transparent.
+  this->splitter->setStyleSheet(
+  "QSplitter { color: #ffffff; background-color: transparent; }"
+  "QSplitter::handle { color: #ffffff; background-color: transparent; }");
+#endif
+
   QList<int> sizes;
   sizes.push_back(MINIMUM_TAB_WIDTH);
   sizes.push_back(this->width() - MINIMUM_TAB_WIDTH);
   sizes.push_back(0);
-  splitter->setSizes(sizes);
+  this->splitter->setSizes(sizes);
 
   this->splitter->setStretchFactor(0, 0);
   this->splitter->setStretchFactor(1, 2);
@@ -177,6 +184,10 @@ MainWindow::MainWindow()
         boost::bind(&MainWindow::OnFullScreen, this, _1)));
 
   this->connections.push_back(
+      gui::Events::ConnectShowToolbars(
+        boost::bind(&MainWindow::OnShowToolbars, this, _1)));
+
+  this->connections.push_back(
       gui::Events::ConnectMoveMode(
         boost::bind(&MainWindow::OnMoveMode, this, _1)));
 
@@ -210,6 +221,8 @@ MainWindow::MainWindow()
   // Use a signal/slot to load plugins. This makes the process thread safe.
   connect(this, SIGNAL(AddPlugins()),
           this, SLOT(OnAddPlugins()), Qt::QueuedConnection);
+
+  this->show();
 }
 
 /////////////////////////////////////////////////
@@ -252,8 +265,6 @@ void MainWindow::Load()
 /////////////////////////////////////////////////
 void MainWindow::Init()
 {
-  this->renderWidget->show();
-
   // Default window size is entire desktop.
   QSize winSize = QApplication::desktop()->screenGeometry().size();
 
@@ -764,6 +775,24 @@ void MainWindow::OnFullScreen(bool _value)
     this->toolsWidget->show();
     this->menuBar->show();
   }
+  g_fullScreenAct->setChecked(_value);
+  g_fullscreen = _value;
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnShowToolbars(bool _value)
+{
+  if (_value)
+  {
+    this->GetRenderWidget()->GetTimePanel()->show();
+    this->GetRenderWidget()->GetToolbar()->show();
+  }
+  else
+  {
+    this->GetRenderWidget()->GetTimePanel()->hide();
+    this->GetRenderWidget()->GetToolbar()->hide();
+  }
+  g_showToolbarsAct->setChecked(_value);
 }
 
 /////////////////////////////////////////////////
@@ -797,6 +826,15 @@ void MainWindow::ShowGrid()
   msgs::Scene msg;
   msg.set_name(gui::get_world());
   msg.set_grid(g_showGridAct->isChecked());
+  this->scenePub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::ShowOrigin()
+{
+  msgs::Scene msg;
+  msg.set_name(gui::get_world());
+  msg.set_origin_visual(g_showOriginAct->isChecked());
   this->scenePub->Publish(msg);
 }
 
@@ -882,16 +920,7 @@ void MainWindow::FullScreen()
 /////////////////////////////////////////////////
 void MainWindow::ShowToolbars()
 {
-  if (g_showToolbarsAct->isChecked())
-  {
-    this->GetRenderWidget()->GetTimePanel()->show();
-    this->GetRenderWidget()->GetToolbar()->show();
-  }
-  else
-  {
-    this->GetRenderWidget()->GetTimePanel()->hide();
-    this->GetRenderWidget()->GetToolbar()->hide();
-  }
+  gui::Events::showToolbars(g_showToolbarsAct->isChecked());
 }
 
 /////////////////////////////////////////////////
@@ -1045,6 +1074,7 @@ void MainWindow::CreateActions()
   g_stepAct->setStatusTip(tr("Step the world"));
   connect(g_stepAct, SIGNAL(triggered()), this, SLOT(Step()));
   this->CreateDisabledIcon(":/images/end.png", g_stepAct);
+  g_stepAct->setEnabled(false);
 
   g_playAct = new QAction(QIcon(":/images/play.png"), tr("Play"), this);
   g_playAct->setStatusTip(tr("Run the world"));
@@ -1162,6 +1192,13 @@ void MainWindow::CreateActions()
   g_showGridAct->setChecked(true);
   connect(g_showGridAct, SIGNAL(triggered()), this,
           SLOT(ShowGrid()));
+
+  g_showOriginAct = new QAction(tr("Origin"), this);
+  g_showOriginAct->setStatusTip(tr("Show World Origin"));
+  g_showOriginAct->setCheckable(true);
+  g_showOriginAct->setChecked(true);
+  connect(g_showOriginAct, SIGNAL(triggered()), this,
+          SLOT(ShowOrigin()));
 
   g_transparentAct = new QAction(tr("Transparent"), this);
   g_transparentAct->setStatusTip(tr("Transparent"));
@@ -1511,6 +1548,9 @@ void MainWindow::DeleteActions()
   delete g_showGridAct;
   g_showGridAct = 0;
 
+  delete g_showOriginAct;
+  g_showOriginAct = 0;
+
   delete g_transparentAct;
   g_transparentAct = 0;
 
@@ -1612,6 +1652,7 @@ void MainWindow::CreateMenuBar()
 
   QMenu *viewMenu = bar->addMenu(tr("&View"));
   viewMenu->addAction(g_showGridAct);
+  viewMenu->addAction(g_showOriginAct);
   viewMenu->addSeparator();
 
   viewMenu->addAction(g_transparentAct);
