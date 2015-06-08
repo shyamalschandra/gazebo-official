@@ -170,6 +170,9 @@ namespace gazebo
       /// \brief Qt callback when the show grid action is triggered.
       private slots: void ShowGrid();
 
+      /// \brief Qt callback when the show origin action is triggered.
+      private slots: void ShowOrigin();
+
       /// \brief Qt callback when the show collisions action is triggered.
       private slots: void ShowCollisions();
 
@@ -223,6 +226,10 @@ namespace gazebo
       /// \brief Toggle full screen display.
       /// \param[in] _value True to display in full screen mode.
       private: void OnFullScreen(bool _value);
+
+      /// \brief Toggle toolbars display.
+      /// \param[in] _value True to display toolbars.
+      private: void OnShowToolbars(bool _value);
 
       private: void OnMoveMode(bool _mode);
 
