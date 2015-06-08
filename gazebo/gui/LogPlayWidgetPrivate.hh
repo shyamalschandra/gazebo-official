@@ -32,7 +32,45 @@ namespace gazebo
 
       /// \brief Paused state of the simulation.
       public: TimePanel *timePanel;
+
+      /// \brief Log start time.
+      public: common::Time startTime;
+
+      /// \brief Log end time.
+      public: common::Time endTime;
+
+      /// \brief If log is less than 1 hour long.
+      public: bool lessThan1h;
+
+      /// \brief View which containes the timeline.
+      public: LogPlayView *view;
     };
+
+    /// \class LogPlayViewPrivate LogPlayViewPrivate.hh
+    /// \brief Private data for the LogPlayView class
+    class LogPlayViewPrivate
+    {
+      /// \brief Item which indicates the current time.
+      public: CurrentTimeItem *currentTimeItem;
+
+      /// \brief Start time in milliseconds.
+      public: int startTime;
+
+      /// \brief End time in milliseconds.
+      public: int endTime;
+
+      /// \brief Width of this view's scene.
+      public: int sceneWidth;
+
+      /// \brief Height of this view's scene.
+      public: int sceneHeight;
+
+      /// \brief Margin from the ends.
+      public: int margin;
+
+      /// \brief Whether the timeline has already been drawn.
+      public: bool timelineDrawn = false;
+     };
   }
 }
 #endif
