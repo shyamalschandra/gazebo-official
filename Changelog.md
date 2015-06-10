@@ -2,6 +2,9 @@
 1. Added browse button to log record dialog.
     * [Pull request #1719](https://bitbucket.org/osrf/gazebo/pull-request/1719)
 
+1. Implement forward/backwards multi-step for log playback.
+    * [Pull request #1623](https://bitbucket.org/osrf/gazebo/pull-request/1623)
+
 1. Added simulation iterations to the world state.
     * [Pull request #1722](https://bitbucket.org/osrf/gazebo/pull-request/1722)
 
@@ -133,6 +136,9 @@ compilation on Windows.
 
 1. Display confirmation message after log is saved
     * [Pull request #1646](https://bitbucket.org/osrf/gazebo/pull-request/1646)
+
+1. Added LogPlayView to display timeline and LogPlaybackStatistics message type.
+    * [Pull request #1724](https://bitbucket.org/osrf/gazebo/pull-request/1724)
 
 1. Added Time::FormattedString and removed all other FormatTime functions.
     * [Pull request #1710](https://bitbucket.org/osrf/gazebo/pull-request/1710)
