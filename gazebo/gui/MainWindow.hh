@@ -210,6 +210,9 @@ namespace gazebo
       /// \brief QT slot to open the data logger utility
       private slots: void DataLogger();
 
+      /// \brief QT callback when the data logger is shut down.
+      private slots: void OnDataLoggerClosed();
+
       /// \brief Callback when topic selection action.
       private slots: void SelectTopic();
 

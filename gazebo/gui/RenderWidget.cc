@@ -58,6 +58,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
   QHBoxLayout *toolLayout = new QHBoxLayout;
   toolLayout->setContentsMargins(0, 0, 0, 0);
 
+  // Manipulation modes
   QActionGroup *actionGroup = new QActionGroup(this->toolFrame);
   if (g_arrowAct)
   {
@@ -82,6 +83,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
 
   this->toolbar->addSeparator();
 
+  // Insert simple shapes
   if (g_boxCreateAct)
     this->toolbar->addAction(g_boxCreateAct);
   if (g_sphereCreateAct)
@@ -89,6 +91,8 @@ RenderWidget::RenderWidget(QWidget *_parent)
   if (g_cylinderCreateAct)
     this->toolbar->addAction(g_cylinderCreateAct);
   this->toolbar->addSeparator();
+
+  // Insert lights
   if (g_pointLghtCreateAct)
     this->toolbar->addAction(g_pointLghtCreateAct);
   if (g_spotLghtCreateAct)
@@ -96,9 +100,8 @@ RenderWidget::RenderWidget(QWidget *_parent)
   if (g_dirLghtCreateAct)
     this->toolbar->addAction(g_dirLghtCreateAct);
   this->toolbar->addSeparator();
-  if (g_screenshotAct)
-    this->toolbar->addAction(g_screenshotAct);
 
+  // Copy & Paste
   this->toolbar->addSeparator();
   if (g_copyAct)
     this->toolbar->addAction(g_copyAct);
@@ -107,6 +110,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
 
   this->toolbar->addSeparator();
 
+  // Align
   if (g_alignAct)
   {
     QToolButton *alignButton = new QToolButton;
@@ -125,14 +129,27 @@ RenderWidget::RenderWidget(QWidget *_parent)
 
   this->toolbar->addSeparator();
 
+  // Snap
   if (g_snapAct)
   {
     actionGroup->addAction(g_snapAct);
     this->toolbar->addAction(g_snapAct);
   }
 
+  // Empty space to push whatever comes next to the right
+  QWidget *spacer = new QWidget();
+  spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  this->toolbar->addWidget(spacer);
+
+  // Screenshot / logging
+  if (g_screenshotAct)
+    this->toolbar->addAction(g_screenshotAct);
+  if (g_dataLoggerAct)
+    this->toolbar->addAction(g_dataLoggerAct);
+
   toolLayout->addSpacing(10);
   toolLayout->addWidget(this->toolbar);
+  toolLayout->addSpacing(10);
   this->toolFrame->setLayout(toolLayout);
 
   this->glWidget = new GLWidget(this->mainFrame);
