@@ -73,6 +73,15 @@ namespace gazebo
       /// \brief Step simulation forward.
       public slots: void OnStepForward();
 
+      /// \brief Play simulation.
+      public slots: void OnStepBack();
+
+      /// \brief Play simulation.
+      public slots: void OnJumpStart();
+
+      /// \brief Play simulation.
+      public slots: void OnJumpEnd();
+
       /// \brief Qt signal to show the play button.
       signals: void ShowPlay();
 
@@ -105,6 +114,10 @@ namespace gazebo
       /// \param[in] _time Eime in ms.
       signals: void SetEndTime(int _time);
 
+      /// \brief Publish a multistep message.
+      /// \param[in] _step Number of steps.
+      private: void PublishMultistep(int _step);
+
       /// \internal
       /// \brief Pointer to private data.
       private: LogPlayWidgetPrivate *dataPtr;
@@ -135,6 +148,18 @@ namespace gazebo
       /// \brief Draw the timeline.
       public slots: void DrawTimeline();
 
+      /// \brief Qt mouse release event.
+      /// \param[in] _event Qt mouse event.
+      protected: void mousePressEvent(QMouseEvent *_event);
+
+      /// \brief Qt mouse release event.
+      /// \param[in] _event Qt mouse event.
+      protected: void mouseReleaseEvent(QMouseEvent *_event);
+
+      /// \brief Qt mouse release event.
+      /// \param[in] _event Qt mouse event.
+      protected: void mouseMoveEvent(QMouseEvent *_event);
+
       /// \internal
       /// \brief Pointer to private data.
       private: LogPlayViewPrivate *dataPtr;
@@ -153,6 +178,9 @@ namespace gazebo
       // Documentation inherited
       private: virtual void paint(QPainter *_painter,
           const QStyleOptionGraphicsItem *_option, QWidget *_widget);
+
+      // Documentation inherited
+      protected: virtual QRectF boundingRect() const;
     };
   }
 }

@@ -27,6 +27,15 @@ namespace gazebo
     /// \brief Private data for the LogPlayWidget class
     class LogPlayWidgetPrivate
     {
+      /// \brief Event based connections.
+      public: std::vector<event::ConnectionPtr> connections;
+
+      /// \brief List of simulation times used to compute averages.
+      public: std::list<common::Time> simTimes;
+
+      /// \brief Mutex to protect the memeber variables.
+      public: boost::mutex mutex;
+
       /// \brief Paused state of the simulation.
       public: bool paused;
 
@@ -44,6 +53,19 @@ namespace gazebo
 
       /// \brief View which containes the timeline.
       public: LogPlayView *view;
+
+      /// \brief Node used for communication.
+      public: transport::NodePtr node;
+
+      /// \brief Used to start, stop, and step simulation.
+      public: transport::PublisherPtr logPlaybackControlPub;
+
+      /// \brief Used to start, stop, and step simulation.
+      public: QSpinBox *stepSpin;
+
+      /// \brief Number of steps pending to be published once the simulation
+      /// is paused.
+      public: int pendingStep = 0;
     };
 
     /// \class LogPlayViewPrivate LogPlayViewPrivate.hh
