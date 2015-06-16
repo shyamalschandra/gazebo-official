@@ -22,6 +22,8 @@
 #include <utility>
 #include <list>
 
+#include <boost/thread/mutex.hpp>
+
 #include "gazebo/gui/qt.h"
 #include "gazebo/rendering/RenderTypes.hh"
 
@@ -51,6 +53,15 @@ namespace gazebo
     {
       Q_OBJECT
 
+      /// \enum SelectionLevels
+      /// \brief Unique identifiers for all selection levels supported.
+      public: enum SelectionLevels {
+                  /// \brief Model level
+                  MODEL,
+                  /// \brief Link level
+                  LINK
+                };
+
       public: GLWidget(QWidget *_parent = 0);
       public: virtual ~GLWidget();
 
@@ -67,11 +78,20 @@ namespace gazebo
 
       signals: void clicked();
 
+      /// \brief QT signal to notify when we received a selection msg.
+      /// \param[in] _name Name of the selected entity.
+      signals: void selectionMsgReceived(const QString &_name);
 
       protected: virtual void moveEvent(QMoveEvent *_e);
       protected: virtual void paintEvent(QPaintEvent *_e);
       protected: virtual void resizeEvent(QResizeEvent *_e);
+
+      /// \brief Custom processing for the QT showEvent. Based on empirical
+      /// evidence, we believe Mac needs to create the render window in this
+      /// function.
+      /// \param[in] _e The QT show event information.
       protected: virtual void showEvent(QShowEvent *_e);
+
       protected: virtual void enterEvent(QEvent * event);
 
 
@@ -82,6 +102,11 @@ namespace gazebo
       protected: void mouseDoubleClickEvent(QMouseEvent *_event);
       protected: void mouseMoveEvent(QMouseEvent *_event);
       protected: void mouseReleaseEvent(QMouseEvent *_event);
+
+      /// \brief Override paintEngine to stop Qt From trying to draw on top of
+      /// OGRE.
+      /// \return NULL.
+      protected: virtual QPaintEngine *paintEngine() const;
 
       private: std::string GetOgreHandle() const;
 
@@ -137,8 +162,6 @@ namespace gazebo
       private: void OnSetSelectedEntity(const std::string &_name,
                                         const std::string &_mode);
 
-      private: void OnSelectionMsg(ConstSelectionPtr &_msg);
-
       private: bool eventFilter(QObject *_obj, QEvent *_event);
 
       private: void ClearSelection();
@@ -150,6 +173,9 @@ namespace gazebo
       /// \brief Set the selected visual, which will highlight the
       /// visual
       private: void SetSelectedVisual(rendering::VisualPtr _vis);
+
+      /// \brief Deselect all visuals, removing highlight and publishing message
+      private: void DeselectAllVisuals();
 
       /// \brief Callback when a specific alignment configuration is set.
       /// \param[in] _axis Axis of alignment: x, y, or z.
@@ -179,6 +205,12 @@ namespace gazebo
       /// \param[in] _checked True if the model editor was checked.
       private slots: void OnModelEditor(bool _checked);
 
+      /// \brief QT Callback that turns on orthographic projection
+      private slots: void OnOrtho();
+
+      /// \brief QT Callback that turns on perspective projection
+      private slots: void OnPerspective();
+
       private: int windowId;
 
       private: rendering::UserCameraPtr userCamera;
@@ -204,10 +236,11 @@ namespace gazebo
       /// \brief Light maker
       private: LightMaker lightMaker;
 
-      private: rendering::VisualPtr hoverVis;
-
       /// \brief A list of selected visuals.
       private: std::vector<rendering::VisualPtr> selectedVisuals;
+
+      /// \brief Indicates how deep into the model to select.
+      private: SelectionLevels selectionLevel;
 
       private: transport::NodePtr node;
       private: transport::PublisherPtr modelPub, factoryPub;
@@ -215,7 +248,7 @@ namespace gazebo
       /// \brief Publishes information about user selections.
       private: transport::PublisherPtr selectionPub;
 
-      private: transport::SubscriberPtr selectionSub, requestSub;
+      private: transport::SubscriberPtr requestSub;
 
       private: std::string keyText;
       private: Qt::KeyboardModifiers keyModifiers;
@@ -229,10 +262,6 @@ namespace gazebo
 
       /// \brief Name of entity that is being copied.
       private: std::string copyEntityName;
-
-      /// \brief Flag that is set to true when GLWidget has responded to
-      ///  OnCreateScene
-      private: bool sceneCreated;
 
       /// \brief True if the model editor is up, false otherwise
       private: bool modelEditorEnabled;
