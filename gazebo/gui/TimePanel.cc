@@ -207,7 +207,7 @@ void TimePanel::OnStats(ConstWorldStatisticsPtr &_msg)
   if (this->dataPtr->realTimes.size() > 20)
     this->dataPtr->realTimes.pop_front();
 
-  if (_msg->has_log_playback() && _msg->log_playback())
+  if (_msg->has_log_playback_stats())
   {
     this->SetTimeWidgetVisible(false);
     this->SetLogPlayWidgetVisible(true);
@@ -231,16 +231,23 @@ void TimePanel::OnStats(ConstWorldStatisticsPtr &_msg)
     this->dataPtr->timeWidget->EmitSetRealTime(QString::fromStdString(
         msgs::Convert(_msg->real_time()).FormattedString()));
 
-
     // Set the iterations
     this->dataPtr->timeWidget->EmitSetIterations(QString::fromStdString(
         boost::lexical_cast<std::string>(_msg->iterations())));
   }
   else if (this->dataPtr->logPlayWidget->isVisible())
   {
-    // Set simulation time
-    this->dataPtr->logPlayWidget->EmitSetCurrentTime(QString::fromStdString(
-        msgs::Convert(_msg->sim_time()).FormattedString()));
+    // Set current time
+    this->dataPtr->logPlayWidget->EmitSetCurrentTime(
+        msgs::Convert(_msg->sim_time()));
+
+    // Set start time in text and in ms
+    this->dataPtr->logPlayWidget->EmitSetStartTime(
+        msgs::Convert(_msg->log_playback_stats().start_time()));
+
+    // Set end time in text and in ms
+    this->dataPtr->logPlayWidget->EmitSetEndTime(
+        msgs::Convert(_msg->log_playback_stats().end_time()));
   }
 }
 
