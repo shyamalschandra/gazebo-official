@@ -142,6 +142,7 @@ set (gtest_sources)
 gz_build_tests(${gtest_sources})
 
 set (gtest_sources_dri
+  AxisVisual_TEST.cc
   COMVisual_TEST.cc
   GpuLaser_TEST.cc
   Heightmap_TEST.cc
