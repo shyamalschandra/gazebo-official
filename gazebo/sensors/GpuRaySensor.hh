@@ -42,6 +42,7 @@ namespace gazebo
     /// \class GpuRaySensor GpuRaySensor.hh sensors/sensors.hh
     /// \addtogroup gazebo_sensors
     /// \{
+
     /// \brief GPU based laser sensor
     ///
     /// This sensor cast rays into the world, tests for intersections, and
@@ -162,7 +163,7 @@ namespace gazebo
       ///         problem by using SetActive(false) <your accessor loop>
       ///         SetActive(true).
       /// \param[in] _index Index of specific ray
-      /// \return Returns DBL_MAX for no detection.
+      /// \return Returns RangeMax for no detection.
       public: double GetRange(int _index);
 
       /// \brief Get all the ranges

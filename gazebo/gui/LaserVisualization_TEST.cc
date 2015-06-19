@@ -68,10 +68,10 @@ void LaserVisualization_TEST::Lines()
     int g = data[y*(width*depth) + x+1];
     int b = data[y*(width*depth) + x+2];
 
-    if (r < 153 && g < 153 && b == 255)
+    if (r < 189 && g < 189 && b == 255)
       ++darkBlueCount;
 
-    if (r >= 153 && g >= 153 && b == 255)
+    if (r >= 204 && g >= 204 && b == 255)
       ++lightBlueCount;
   }
 
