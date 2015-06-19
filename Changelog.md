@@ -13,6 +13,9 @@ you are interested.
 1. Added browse button to log record dialog.
     * [Pull request #1719](https://bitbucket.org/osrf/gazebo/pull-request/1719)
 
+1. Implement forward/backwards multi-step for log playback.
+    * [Pull request #1623](https://bitbucket.org/osrf/gazebo/pull-request/1623)
+
 1. Improved SVG support: arcs in paths, and contours made of multiple paths.
     * [Pull request #1608](https://bitbucket.org/osrf/gazebo/pull-request/1608)
 
