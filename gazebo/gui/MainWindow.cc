@@ -184,6 +184,10 @@ MainWindow::MainWindow()
         boost::bind(&MainWindow::OnFullScreen, this, _1)));
 
   this->connections.push_back(
+      gui::Events::ConnectShowToolbars(
+        boost::bind(&MainWindow::OnShowToolbars, this, _1)));
+
+  this->connections.push_back(
       gui::Events::ConnectMoveMode(
         boost::bind(&MainWindow::OnMoveMode, this, _1)));
 
@@ -217,6 +221,10 @@ MainWindow::MainWindow()
   // Use a signal/slot to load plugins. This makes the process thread safe.
   connect(this, SIGNAL(AddPlugins()),
           this, SLOT(OnAddPlugins()), Qt::QueuedConnection);
+
+  // Create data logger dialog
+  this->dataLogger = new gui::DataLogger(this);
+  connect(dataLogger, SIGNAL(rejected()), this, SLOT(OnDataLoggerClosed()));
 
   this->show();
 }
@@ -771,6 +779,24 @@ void MainWindow::OnFullScreen(bool _value)
     this->toolsWidget->show();
     this->menuBar->show();
   }
+  g_fullScreenAct->setChecked(_value);
+  g_fullscreen = _value;
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnShowToolbars(bool _value)
+{
+  if (_value)
+  {
+    this->GetRenderWidget()->GetTimePanel()->show();
+    this->GetRenderWidget()->GetToolbar()->show();
+  }
+  else
+  {
+    this->GetRenderWidget()->GetTimePanel()->hide();
+    this->GetRenderWidget()->GetToolbar()->hide();
+  }
+  g_showToolbarsAct->setChecked(_value);
 }
 
 /////////////////////////////////////////////////
@@ -804,6 +830,15 @@ void MainWindow::ShowGrid()
   msgs::Scene msg;
   msg.set_name(gui::get_world());
   msg.set_grid(g_showGridAct->isChecked());
+  this->scenePub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+void MainWindow::ShowOrigin()
+{
+  msgs::Scene msg;
+  msg.set_name(gui::get_world());
+  msg.set_origin_visual(g_showOriginAct->isChecked());
   this->scenePub->Publish(msg);
 }
 
@@ -889,16 +924,7 @@ void MainWindow::FullScreen()
 /////////////////////////////////////////////////
 void MainWindow::ShowToolbars()
 {
-  if (g_showToolbarsAct->isChecked())
-  {
-    this->GetRenderWidget()->GetTimePanel()->show();
-    this->GetRenderWidget()->GetToolbar()->show();
-  }
-  else
-  {
-    this->GetRenderWidget()->GetTimePanel()->hide();
-    this->GetRenderWidget()->GetToolbar()->hide();
-  }
+  gui::Events::showToolbars(g_showToolbarsAct->isChecked());
 }
 
 /////////////////////////////////////////////////
@@ -947,8 +973,21 @@ void MainWindow::ViewOculus()
 /////////////////////////////////////////////////
 void MainWindow::DataLogger()
 {
-  gui::DataLogger *dataLogger = new gui::DataLogger(this);
-  dataLogger->show();
+  if (g_dataLoggerAct->isChecked())
+  {
+    this->dataLogger->show();
+  }
+  else
+  {
+    this->dataLogger->close();
+  }
+}
+
+/////////////////////////////////////////////////
+void MainWindow::OnDataLoggerClosed()
+{
+  // Uncheck action on toolbar when user closes dialog
+  g_dataLoggerAct->setChecked(false);
 }
 
 /////////////////////////////////////////////////
@@ -1171,6 +1210,13 @@ void MainWindow::CreateActions()
   connect(g_showGridAct, SIGNAL(triggered()), this,
           SLOT(ShowGrid()));
 
+  g_showOriginAct = new QAction(tr("Origin"), this);
+  g_showOriginAct->setStatusTip(tr("Show World Origin"));
+  g_showOriginAct->setCheckable(true);
+  g_showOriginAct->setChecked(true);
+  connect(g_showOriginAct, SIGNAL(triggered()), this,
+          SLOT(ShowOrigin()));
+
   g_transparentAct = new QAction(tr("Transparent"), this);
   g_transparentAct->setStatusTip(tr("Transparent"));
   g_transparentAct->setCheckable(true);
@@ -1275,9 +1321,13 @@ void MainWindow::CreateActions()
   projectionActionGroup->addAction(g_cameraPerspectiveAct);
   projectionActionGroup->setExclusive(true);
 
-  g_dataLoggerAct = new QAction(tr("&Log Data"), this);
+  g_dataLoggerAct = new QAction(QIcon(":images/log_record.png"),
+      tr("&Log Data"), this);
   g_dataLoggerAct->setShortcut(tr("Ctrl+D"));
   g_dataLoggerAct->setStatusTip(tr("Data Logging Utility"));
+  g_dataLoggerAct->setToolTip(tr("Log Data (Ctrl+D)"));
+  g_dataLoggerAct->setCheckable(true);
+  g_dataLoggerAct->setChecked(false);
   connect(g_dataLoggerAct, SIGNAL(triggered()), this, SLOT(DataLogger()));
 
   g_screenshotAct = new QAction(QIcon(":/images/screenshot.png"),
@@ -1519,6 +1569,9 @@ void MainWindow::DeleteActions()
   delete g_showGridAct;
   g_showGridAct = 0;
 
+  delete g_showOriginAct;
+  g_showOriginAct = 0;
+
   delete g_transparentAct;
   g_transparentAct = 0;
 
@@ -1620,6 +1673,7 @@ void MainWindow::CreateMenuBar()
 
   QMenu *viewMenu = bar->addMenu(tr("&View"));
   viewMenu->addAction(g_showGridAct);
+  viewMenu->addAction(g_showOriginAct);
   viewMenu->addSeparator();
 
   viewMenu->addAction(g_transparentAct);
@@ -1634,7 +1688,6 @@ void MainWindow::CreateMenuBar()
   QMenu *windowMenu = bar->addMenu(tr("&Window"));
   windowMenu->addAction(g_topicVisAct);
   windowMenu->addSeparator();
-  windowMenu->addAction(g_dataLoggerAct);
   windowMenu->addAction(g_viewOculusAct);
   windowMenu->addSeparator();
   windowMenu->addAction(g_overlayAct);
