@@ -32,7 +32,9 @@ namespace gazebo
   {
     class Sensor;
     class RaySensor;
+    class AltimeterSensor;
     class CameraSensor;
+    class MagnetometerSensor;
     class MultiCameraSensor;
     class DepthCameraSensor;
     class ContactSensor;
@@ -134,6 +136,10 @@ namespace gazebo
     /// \brief Vector of RaySensor shared pointers
     typedef std::vector<RaySensorPtr> RaySensor_V;
 
+    /// \def AltimeterSensor_V
+    /// \brief Vector of AltimeterSensor shared pointers
+    typedef std::vector<AltimeterSensor> AltimeterSensor_V;
+
     /// \def CameraSensor_V
     /// \brief Vector of CameraSensor shared pointers
     typedef std::vector<CameraSensorPtr> CameraSensor_V;
@@ -222,29 +228,49 @@ namespace gazebo
       /// \sa RaySensor
       RAY_NOISE = 9,
 
+      /// \brief Vertical noise stream for the altimeter sensor
+      /// \sa AltimeterSensor
+      ALTIMETER_POSITION_NOISE_METERS = 10,
+
+      /// \brief Velocity noise streams for the altimeter sensor
+      /// \sa AltimeterSensor
+      ALTIMETER_VELOCITY_NOISE_METERS_PER_S = 11,
+      
+      /// \brief Magnetometer body-frame X axis noise in Tesla
+      /// \sa MagnetometerSensor
+      MAGNETOMETER_X_NOISE_TESLA = 12,
+
+      /// \brief Magnetometer body-frame Y axis noise in Tesla
+      /// \sa MagnetometerSensor
+      MAGNETOMETER_Y_NOISE_TESLA = 13,
+
+      /// \brief Magnetometer body-frame Z axis noise in Tesla
+      /// \sa MagnetometerSensor
+      MAGNETOMETER_Z_NOISE_TESLA = 14,
+
       /// \brief IMU angular velocity X noise stream
       /// \sa ImuSensor
-      IMU_ANGVEL_X_NOISE_RADIANS_PER_S = 10,
+      IMU_ANGVEL_X_NOISE_RADIANS_PER_S = 15,
 
       /// \brief IMU angular velocity Y noise stream
       /// \sa ImuSensor
-      IMU_ANGVEL_Y_NOISE_RADIANS_PER_S = 11,
+      IMU_ANGVEL_Y_NOISE_RADIANS_PER_S = 16,
 
       /// \brief IMU angular velocity Z noise stream
       /// \sa ImuSensor
-      IMU_ANGVEL_Z_NOISE_RADIANS_PER_S = 12,
+      IMU_ANGVEL_Z_NOISE_RADIANS_PER_S = 17,
 
       /// \brief IMU linear acceleration X noise stream
       /// \sa ImuSensor
-      IMU_LINACC_X_NOISE_METERS_PER_S_SQR = 10,
+      IMU_LINACC_X_NOISE_METERS_PER_S_SQR = 18,
 
       /// \brief IMU linear acceleration Y noise stream
       /// \sa ImuSensor
-      IMU_LINACC_Y_NOISE_METERS_PER_S_SQR = 11,
+      IMU_LINACC_Y_NOISE_METERS_PER_S_SQR = 19,
 
       /// \brief IMU linear acceleration Z noise stream
       /// \sa ImuSensor
-      IMU_LINACC_Z_NOISE_METERS_PER_S_SQR = 12
+      IMU_LINACC_Z_NOISE_METERS_PER_S_SQR = 20
 
     };
     /// \}
