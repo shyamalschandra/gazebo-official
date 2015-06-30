@@ -15,6 +15,7 @@
  *
 */
 
+#include "gazebo/common/Assert.hh"
 #include "gazebo/gui/building/WallInspectorDialog.hh"
 
 using namespace gazebo;
@@ -34,21 +35,7 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
 
   QHBoxLayout *nameLayout = new QHBoxLayout;
   nameLayout->addWidget(wallLabel);
-  nameLayout->addWidget(wallNameLabel);
-
-  QLabel *lengthLabel = new QLabel(tr("Length: "));
-  this->lengthSpinBox = new QDoubleSpinBox;
-  this->lengthSpinBox->setRange(-1000, 1000);
-  this->lengthSpinBox->setSingleStep(0.001);
-  this->lengthSpinBox->setDecimals(3);
-  this->lengthSpinBox->setValue(0.000);
-
-  QHBoxLayout *lengthLayout = new QHBoxLayout;
-  lengthLayout->addWidget(lengthLabel);
-  lengthLayout->addWidget(lengthSpinBox);
-
-  QLabel *lengthCaptionLabel = new QLabel(
-    tr("(Distance from Start to End point)\n"));
+  nameLayout->addWidget(this->wallNameLabel);
 
   QLabel *startLabel = new QLabel(tr("Start Point"));
   QLabel *endLabel = new QLabel(tr("End Point"));
@@ -64,12 +51,18 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   this->startXSpinBox->setSingleStep(0.001);
   this->startXSpinBox->setDecimals(3);
   this->startXSpinBox->setValue(0.000);
+  this->startXSpinBox->setAlignment(Qt::AlignRight);
+  QLabel *startXUnitLabel = new QLabel(tr("m "));
+  startXUnitLabel->setMaximumWidth(40);
 
   this->startYSpinBox = new QDoubleSpinBox;
   this->startYSpinBox->setRange(-1000, 1000);
   this->startYSpinBox->setSingleStep(0.001);
   this->startYSpinBox->setDecimals(3);
   this->startYSpinBox->setValue(0.000);
+  this->startYSpinBox->setAlignment(Qt::AlignRight);
+  QLabel *startYUnitLabel = new QLabel(tr("m "));
+  startYUnitLabel->setMaximumWidth(40);
 
   QLabel *endXLabel = new QLabel(tr("x: "));
   QLabel *endYLabel = new QLabel(tr("y: "));
@@ -79,38 +72,45 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   this->endXSpinBox->setSingleStep(0.001);
   this->endXSpinBox->setDecimals(3);
   this->endXSpinBox->setValue(0.000);
+  this->endXSpinBox->setAlignment(Qt::AlignRight);
+  QLabel *endXUnitLabel = new QLabel(tr("m"));
+  endXUnitLabel->setMaximumWidth(40);
 
   this->endYSpinBox = new QDoubleSpinBox;
   this->endYSpinBox->setRange(-1000, 1000);
   this->endYSpinBox->setSingleStep(0.001);
   this->endYSpinBox->setDecimals(3);
   this->endYSpinBox->setValue(0.000);
+  this->endYSpinBox->setAlignment(Qt::AlignRight);
+  QLabel *endYUnitLabel = new QLabel(tr("m"));
+  endYUnitLabel->setMaximumWidth(40);
 
   QGridLayout *startXYLayout = new QGridLayout;
   startXYLayout->addWidget(startXLabel, 0, 0);
-  startXYLayout->addWidget(startXSpinBox, 0, 1);
+  startXYLayout->addWidget(this->startXSpinBox, 0, 1);
+  startXYLayout->addWidget(startXUnitLabel, 0, 2);
   startXYLayout->addWidget(startYLabel, 1, 0);
-  startXYLayout->addWidget(startYSpinBox, 1, 1);
+  startXYLayout->addWidget(this->startYSpinBox, 1, 1);
+  startXYLayout->addWidget(startYUnitLabel, 1, 2);
   startXYLayout->setColumnStretch(1, 1);
-  startXYLayout->setAlignment(startXSpinBox, Qt::AlignLeft);
-  startXYLayout->setAlignment(startYSpinBox, Qt::AlignLeft);
+  startXYLayout->setAlignment(this->startXSpinBox, Qt::AlignLeft);
+  startXYLayout->setAlignment(this->startYSpinBox, Qt::AlignLeft);
 
   QGridLayout *endXYLayout = new QGridLayout;
   endXYLayout->addWidget(endXLabel, 0, 0);
-  endXYLayout->addWidget(endXSpinBox, 0, 1);
+  endXYLayout->addWidget(this->endXSpinBox, 0, 1);
+  endXYLayout->addWidget(endXUnitLabel, 0, 2);
   endXYLayout->addWidget(endYLabel, 1, 0);
-  endXYLayout->addWidget(endYSpinBox, 1, 1);
+  endXYLayout->addWidget(this->endYSpinBox, 1, 1);
+  endXYLayout->addWidget(endYUnitLabel, 1, 2);
   endXYLayout->setColumnStretch(1, 1);
-  endXYLayout->setAlignment(endXSpinBox, Qt::AlignLeft);
-  endXYLayout->setAlignment(endYSpinBox, Qt::AlignLeft);
+  endXYLayout->setAlignment(this->endXSpinBox, Qt::AlignLeft);
+  endXYLayout->setAlignment(this->endYSpinBox, Qt::AlignLeft);
 
   QHBoxLayout *xyLayout = new QHBoxLayout;
   xyLayout->addLayout(startXYLayout);
   xyLayout->addLayout(endXYLayout);
 
-  QVBoxLayout *lengthGroupLayout = new QVBoxLayout;
-  lengthGroupLayout->addLayout(lengthLayout);
-  lengthGroupLayout->addWidget(lengthCaptionLabel);
 
   QVBoxLayout *positionGroupLayout = new QVBoxLayout;
   positionGroupLayout->addLayout(startEndLayout);
@@ -119,28 +119,51 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   QGroupBox *positionGroupBox = new QGroupBox(tr("Position"));
   positionGroupBox->setLayout(positionGroupLayout);
 
-  QGroupBox *lengthGroupBox = new QGroupBox(tr("Length"));
-  lengthGroupBox->setLayout(lengthGroupLayout);
+  QLabel *lengthLabel = new QLabel(tr("Length: "));
+  this->lengthSpinBox = new QDoubleSpinBox;
+  this->lengthSpinBox->setRange(0, 1000);
+  this->lengthSpinBox->setSingleStep(0.001);
+  this->lengthSpinBox->setDecimals(3);
+  this->lengthSpinBox->setValue(0.000);
+  this->lengthSpinBox->setAlignment(Qt::AlignRight);
+
+  QLabel *lengthUnitLabel = new QLabel(tr("m"));
+  lengthUnitLabel->setMaximumWidth(40);
+
+  QHBoxLayout *lengthLayout = new QHBoxLayout;
+  lengthLayout->addWidget(lengthLabel);
+  lengthLayout->addWidget(this->lengthSpinBox);
+  lengthLayout->addWidget(lengthUnitLabel);
 
   QLabel *heightLabel = new QLabel(tr("Height: "));
   this->heightSpinBox = new QDoubleSpinBox;
-  this->heightSpinBox->setRange(-1000, 1000);
+  this->heightSpinBox->setRange(0, 1000);
   this->heightSpinBox->setSingleStep(0.001);
   this->heightSpinBox->setDecimals(3);
   this->heightSpinBox->setValue(0.000);
+  this->heightSpinBox->setAlignment(Qt::AlignRight);
+
+  QLabel *heightUnitLabel = new QLabel(tr("m"));
+  heightUnitLabel->setMaximumWidth(40);
 
   QLabel *thicknessLabel = new QLabel(tr("Thickness "));
   this->thicknessSpinBox = new QDoubleSpinBox;
-  this->thicknessSpinBox->setRange(-1000, 1000);
+  this->thicknessSpinBox->setRange(0, 1000);
   this->thicknessSpinBox->setSingleStep(0.001);
   this->thicknessSpinBox->setDecimals(3);
   this->thicknessSpinBox->setValue(0.000);
+  this->thicknessSpinBox->setAlignment(Qt::AlignRight);
+
+  QLabel *thicknessUnitLabel = new QLabel(tr("m"));
+  thicknessUnitLabel->setMaximumWidth(40);
 
   QGridLayout *heightThicknessLayout = new QGridLayout;
   heightThicknessLayout->addWidget(heightLabel, 0, 0);
-  heightThicknessLayout->addWidget(heightSpinBox, 0, 1);
+  heightThicknessLayout->addWidget(this->heightSpinBox, 0, 1);
+  heightThicknessLayout->addWidget(heightUnitLabel, 0, 2);
   heightThicknessLayout->addWidget(thicknessLabel, 1, 0);
-  heightThicknessLayout->addWidget(thicknessSpinBox, 1, 1);
+  heightThicknessLayout->addWidget(this->thicknessSpinBox, 1, 1);
+  heightThicknessLayout->addWidget(thicknessUnitLabel, 1, 2);
 
   // TODO Color and texture code is repeated on all dialogs.
   // Make a generalized widget
@@ -162,9 +185,13 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
     this->colorComboBox->addItem(colorIcon, QString(""));
   }
 
+  QLabel *colorDummyLabel = new QLabel(tr(""));
+  colorDummyLabel->setMaximumWidth(40);
+
   QHBoxLayout *colorLayout = new QHBoxLayout;
   colorLayout->addWidget(colorLabel);
-  colorLayout->addWidget(colorComboBox);
+  colorLayout->addWidget(this->colorComboBox);
+  colorLayout->addWidget(colorDummyLabel);
 
   QLabel *textureLabel = new QLabel(tr("Texture: "));
   this->textureComboBox = new QComboBox;
@@ -183,9 +210,13 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   this->textureComboBox->addItem("X");
   this->textureComboBox->setCurrentIndex(this->textureComboBox->count()-1);
 
+  QLabel *textureDummyLabel = new QLabel(tr(""));
+  textureDummyLabel->setMaximumWidth(40);
+
   QHBoxLayout *textureLayout = new QHBoxLayout;
   textureLayout->addWidget(textureLabel);
-  textureLayout->addWidget(textureComboBox);
+  textureLayout->addWidget(this->textureComboBox);
+  textureLayout->addWidget(textureDummyLabel);
 
   QHBoxLayout *buttonsLayout = new QHBoxLayout;
   QPushButton *cancelButton = new QPushButton(tr("&Cancel"));
@@ -203,7 +234,7 @@ WallInspectorDialog::WallInspectorDialog(QWidget *_parent)
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->addLayout(nameLayout);
   mainLayout->addWidget(positionGroupBox);
-  mainLayout->addWidget(lengthGroupBox);
+  mainLayout->addLayout(lengthLayout);
   mainLayout->addLayout(heightThicknessLayout);
   mainLayout->addLayout(colorLayout);
   mainLayout->addLayout(textureLayout);
@@ -310,8 +341,7 @@ void WallInspectorDialog::SetThickness(double _thickness)
 /////////////////////////////////////////////////
 void WallInspectorDialog::SetColor(const QColor _color)
 {
-  // Find index corresponding to color (only a few colors allowed so far)
-  int index = 0;
+  int index = -1;
   for (unsigned int i = 0; i < this->colorList.size(); ++i)
   {
     if (this->colorList[i] == _color)
@@ -320,6 +350,17 @@ void WallInspectorDialog::SetColor(const QColor _color)
       break;
     }
   }
+
+  if (index == -1)
+  {
+    // Add a new color
+    this->colorList.push_back(_color);
+    QPixmap colorIcon(15, 15);
+    colorIcon.fill(this->colorList.back());
+    this->colorComboBox->addItem(colorIcon, QString(""));
+    index = this->colorComboBox->count()-1;
+  }
+  GZ_ASSERT(index >= 0, "Color index is broken < 0");
   this->colorComboBox->setCurrentIndex(index);
 }
 

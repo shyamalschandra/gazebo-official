@@ -345,6 +345,11 @@ math::Vector3 ODEJoint::GetLinkTorque(unsigned int _index) const
   }
 
   dJointFeedback *jointFeedback = dJointGetFeedback(this->jointId);
+  if (!jointFeedback)
+  {
+    gzerr << "Joint feedback uninitialized" << std::endl;
+    return result;
+  }
 
   if (_index == 0)
     result.Set(jointFeedback->t1[0], jointFeedback->t1[1],
@@ -1079,19 +1084,22 @@ void ODEJoint::SetProvideFeedback(bool _enable)
 
   if (this->provideFeedback)
   {
-    this->feedback = new dJointFeedback;
-    this->feedback->f1[0] = 0;
-    this->feedback->f1[1] = 0;
-    this->feedback->f1[2] = 0;
-    this->feedback->t1[0] = 0;
-    this->feedback->t1[1] = 0;
-    this->feedback->t1[2] = 0;
-    this->feedback->f2[0] = 0;
-    this->feedback->f2[1] = 0;
-    this->feedback->f2[2] = 0;
-    this->feedback->t2[0] = 0;
-    this->feedback->t2[1] = 0;
-    this->feedback->t2[2] = 0;
+    if (this->feedback == NULL)
+    {
+      this->feedback = new dJointFeedback;
+      this->feedback->f1[0] = 0;
+      this->feedback->f1[1] = 0;
+      this->feedback->f1[2] = 0;
+      this->feedback->t1[0] = 0;
+      this->feedback->t1[1] = 0;
+      this->feedback->t1[2] = 0;
+      this->feedback->f2[0] = 0;
+      this->feedback->f2[1] = 0;
+      this->feedback->f2[2] = 0;
+      this->feedback->t2[0] = 0;
+      this->feedback->t2[1] = 0;
+      this->feedback->t2[2] = 0;
+    }
 
     if (this->jointId)
       dJointSetFeedback(this->jointId, this->feedback);
