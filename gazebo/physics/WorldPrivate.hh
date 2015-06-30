@@ -108,6 +108,9 @@ namespace gazebo
       /// \brief Subscriber to world control messages.
       public: transport::SubscriberPtr controlSub;
 
+      /// \brief Subscriber to log playback control messages.
+      public: transport::SubscriberPtr playbackControlSub;
+
       /// \brief Subscriber to factory messages.
       public: transport::SubscriberPtr factorySub;
 
@@ -285,6 +288,9 @@ namespace gazebo
       /// this flag is set to trigger Entity::SetWorldPose on the
       /// physics::Link in World::Update.
       public: std::list<Entity*> dirtyPoses;
+
+      /// \brief Class to manage preset simulation parameter profiles.
+      public: PresetManagerPtr presetManager;
     };
   }
 }
