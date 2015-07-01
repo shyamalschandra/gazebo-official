@@ -497,6 +497,9 @@ void World::LogStep()
 {
   if (this->dataPtr->stepInc < 0)
   {
+    this->dataPtr->logNextIteration =
+        util::LogPlay::Instance()->GetInitialIterations();
+
     // Step back: This is implemented by going to the beginning of the log file,
     // and then, step forward up to the target frame.
     // ToDo: Use keyframes in the log file to speed up this process.
@@ -516,7 +519,7 @@ void World::LogStep()
     if (util::LogPlay::Instance()->HasIterations())
     {
       this->dataPtr->stepInc +=
-        2 - util::LogPlay::Instance()->GetInitialIterations();
+        1 - util::LogPlay::Instance()->GetInitialIterations();
     }
 
     if (this->dataPtr->stepInc < 1)
@@ -524,31 +527,62 @@ void World::LogStep()
     this->dataPtr->iterations = 0;
   }
 
+  // If less than initial, set it to right before initial so the step goes there
+  if (this->dataPtr->iterations <
+      util::LogPlay::Instance()->GetInitialIterations())
+  {
+    this->dataPtr->iterations =
+        util::LogPlay::Instance()->GetInitialIterations() - 1;
+  }
+
   while (!this->IsPaused() || this->dataPtr->stepInc > 0)
   {
+    // Step log when previous iteration has already been processed
     std::string data;
-    if (!util::LogPlay::Instance()->Step(data))
+    if (this->dataPtr->stepToNextChunk)
     {
-      // There are no more chunks, time to exit.
-      this->SetPaused(true);
-      this->dataPtr->stepInc = 0;
-      break;
-    }
-    else
-    {
-      this->dataPtr->logPlayStateSDF->ClearElements();
-      sdf::readString(data, this->dataPtr->logPlayStateSDF);
-
-      this->dataPtr->logPlayState.Load(this->dataPtr->logPlayStateSDF);
-
-      // If the log file does not contain iterations we have to manually
-      // increase the iteration counter in logPlayState.
-      if (!util::LogPlay::Instance()->HasIterations())
+      if (!util::LogPlay::Instance()->Step(data))
       {
-        this->dataPtr->logPlayState.SetIterations(
-          this->dataPtr->iterations + 1);
+        // There are no more chunks, time to exit.
+        this->SetPaused(true);
+        this->dataPtr->stepInc = 0;
+        break;
       }
+      else
+      {
+        // Update state with next chunk
+        this->dataPtr->logPlayStateSDF->ClearElements();
+        sdf::readString(data, this->dataPtr->logPlayStateSDF);
 
+        this->dataPtr->logPlayState.Load(this->dataPtr->logPlayStateSDF);
+        this->dataPtr->logNextIteration =
+            this->dataPtr->logPlayState.GetIterations();
+
+        // If the log file does not contain iterations we have to manually
+        // increase the iteration counter in logPlayState.
+        if (!util::LogPlay::Instance()->HasIterations())
+        {
+          this->dataPtr->logPlayState.SetIterations(
+            this->dataPtr->iterations + 1);
+        }
+      }
+    }
+
+    // Process current chunk if we match the following iteration
+    this->dataPtr->processCurrentChunk = this->dataPtr->logNextIteration ==
+        this->dataPtr->iterations + 1;
+
+    // If next step is too far, don't use it yet and increase state by 1 iter
+    if (!this->dataPtr->processCurrentChunk || !this->dataPtr->stepToNextChunk)
+    {
+      this->dataPtr->logPlayState.SetIterations(this->dataPtr->iterations + 1);
+      // TODO: Record step size on log and use it here
+      this->dataPtr->logPlayState.SetSimTime(this->dataPtr->simTime +
+          common::Time::Millisecond);
+    }
+
+    if (this->dataPtr->processCurrentChunk)
+    {
       // Process insertions
       if (this->dataPtr->logPlayStateSDF->HasElement("insertions"))
       {
@@ -583,10 +617,15 @@ void World::LogStep()
           nameElem = nameElem->GetNextElement("name");
         }
       }
-
-      this->SetState(this->dataPtr->logPlayState);
-      this->Update();
     }
+
+    // If next available step is too far, don't go to the next chunk yet
+    this->dataPtr->stepToNextChunk = !(this->dataPtr->logNextIteration >
+          this->dataPtr->iterations + 1);
+
+    this->SetState(this->dataPtr->logPlayState);
+    this->Update();
+
 
     if (this->dataPtr->stepInc > 0)
       this->dataPtr->stepInc--;
