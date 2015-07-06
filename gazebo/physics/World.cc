@@ -32,6 +32,7 @@
 
 #include <sdf/sdf.hh>
 
+#include <climits>
 #include <deque>
 #include <list>
 #include <set>
@@ -124,6 +125,7 @@ World::World(const std::string &_name)
   this->dataPtr->thread = NULL;
   this->dataPtr->logThread = NULL;
   this->dataPtr->stop = false;
+  this->dataPtr->seekPending = false;
 
   this->dataPtr->currentStateBuffer = 0;
   this->dataPtr->stateToggle = 0;
@@ -495,6 +497,8 @@ void World::RunLoop()
 //////////////////////////////////////////////////
 void World::LogStep()
 {
+  bool stay;
+
   if (this->dataPtr->stepInc < 0)
   {
     // Step back: This is implemented by going to the beginning of the log file,
@@ -524,11 +528,27 @@ void World::LogStep()
     this->dataPtr->iterations = 0;
   }
 
-  while (!this->IsPaused() || this->dataPtr->stepInc > 0)
+  {
+    boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+    // There are two main reasons to keep iterating in the following loop:
+    //   1. If "stepInc" is positive: This means that a client requested to
+    //      advanced the simulation some steps.
+    //   2. If "seekPending" is true: This means that a client requested to
+    //      advance the simulation to a given simulation time ("seek"). We will
+    //      have to check at the end of each iteration if we reached the target
+    //      simulation time.
+    //   Note that if the simulation is not paused (play mode) we will enter
+    //   the loop. However, the code will only execute one iteration (one step).
+    stay = !this->IsPaused() || this->dataPtr->stepInc > 0 ||
+           this->dataPtr->seekPending;
+  }
+  while (stay)
   {
     std::string data;
     if (!util::LogPlay::Instance()->Step(data))
     {
+      boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+
       // There are no more chunks, time to exit.
       this->SetPaused(true);
       this->dataPtr->stepInc = 0;
@@ -588,8 +608,24 @@ void World::LogStep()
       this->Update();
     }
 
-    if (this->dataPtr->stepInc > 0)
-      this->dataPtr->stepInc--;
+    {
+      boost::recursive_mutex::scoped_lock lk(*this->dataPtr->worldUpdateMutex);
+      if (this->dataPtr->stepInc > 0)
+        this->dataPtr->stepInc--;
+
+      // We may have entered into the loop because a "seek" command was
+      // requested. At this point we have executed one more step. Now, it's time
+      // to check if we have reached the target simulation time specified in the
+      // "seek" command.
+      if (this->dataPtr->seekPending)
+      {
+        this->dataPtr->seekPending =
+          this->GetSimTime() < this->dataPtr->targetSimTime;
+      }
+
+      stay = !this->IsPaused() || this->dataPtr->stepInc > 0 ||
+             this->dataPtr->seekPending;
+    }
 
     // We only run one step if we are in play mode.
     if (!this->IsPaused())
@@ -1242,6 +1278,28 @@ void World::OnPlaybackControl(ConstLogPlaybackControlPtr &_data)
     this->SetPaused(true);
     boost::recursive_mutex::scoped_lock lock(*this->dataPtr->worldUpdateMutex);
     this->dataPtr->stepInc += _data->multi_step();
+  }
+
+  if (_data->has_seek())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    this->dataPtr->targetSimTime = msgs::Convert(_data->seek());
+    if (this->GetSimTime() > this->dataPtr->targetSimTime)
+      util::LogPlay::Instance()->Rewind();
+    this->dataPtr->seekPending = true;
+  }
+
+  if (_data->has_rewind() && _data->rewind())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    util::LogPlay::Instance()->Rewind();
+    this->dataPtr->stepInc = 1;
+  }
+
+  if (_data->has_forward() && _data->forward())
+  {
+    boost::recursive_mutex::scoped_lock(*this->dataPtr->worldUpdateMutex);
+    this->dataPtr->stepInc = INT_MAX;
   }
 }
 
