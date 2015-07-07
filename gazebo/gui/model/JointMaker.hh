@@ -48,6 +48,7 @@ namespace gazebo
   namespace gui
   {
     class JointData;
+    class JointCreationDialog;
     class JointInspector;
 
     /// \addtogroup gazebo_gui
@@ -255,6 +256,12 @@ namespace gazebo
       private: void OnSetSelectedJoint(const std::string &_name,
           const bool _selected);
 
+      private: void ParentLinkChosen(rendering::VisualPtr _parentLink);
+      private: void ChildLinkChosen(rendering::VisualPtr _childLink);
+      private: void OnJointParentChosenDialog(const std::string &_name);
+      private: void OnJointChildChosenDialog(const std::string &_name);
+      private: void OnJointCreateDialog();
+
       /// \brief Create a joint line.
       /// \param[in] _name Name to give the visual that contains the joint line.
       /// \param[in] _parent Parent of the joint.
@@ -284,8 +291,11 @@ namespace gazebo
       /// \brief Visual that is previously hovered over by the mouse
       private: rendering::VisualPtr prevHoverVis;
 
-      /// \brief Currently selected visual
-      private: rendering::VisualPtr selectedVis;
+      /// \brief Visual currently selected to be the parent link.
+      private: rendering::VisualPtr parentLinkVis;
+
+      /// \brief Visual currently selected to be the child link.
+      private: rendering::VisualPtr childLinkVis;
 
       /// \brief Name of joint that is currently being inspected.
       private: std::string inspectName;
@@ -294,7 +304,7 @@ namespace gazebo
       private: std::map<std::string, JointData *> joints;
 
       /// \brief Joint currently being created.
-      private: JointData *mouseJoint;
+      private: JointData *jointBeingCreated;
 
       /// \brief All the event connections.
       private: std::vector<event::ConnectionPtr> connections;
@@ -326,6 +336,12 @@ namespace gazebo
 
       /// \brief A map of joint type to its string value.
       private: static std::map<JointMaker::JointType, std::string> jointTypes;
+
+      /// \brief Inspector for configuring joint properties.
+      public: JointCreationDialog *jointCreationDialog;
+
+      private: bool mouseMoveEnabled = false;
+      private: bool creatingJoint = false;
     };
     /// \}
 
