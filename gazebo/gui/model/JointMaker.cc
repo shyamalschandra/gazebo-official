@@ -57,6 +57,7 @@ JointMaker::JointMaker()
   this->modelSDF.reset();
   this->jointType = JointMaker::JOINT_NONE;
   this->jointCounter = 0;
+  this->modelName = "";
 
   this->jointMaterials[JOINT_FIXED]     = "Gazebo/Red";
   this->jointMaterials[JOINT_HINGE]     = "Gazebo/Orange";
@@ -139,7 +140,6 @@ void JointMaker::Reset()
   this->jointType = JointMaker::JOINT_NONE;
   this->selectedVis.reset();
   this->hoverVis.reset();
-  this->prevHoverVis.reset();
   this->inspectName = "";
   this->selectedJoints.clear();
 
@@ -187,6 +187,16 @@ void JointMaker::RemoveJoint(const std::string &_jointId)
   if (jointIt != this->joints.end())
   {
     JointData *joint = jointIt->second;
+
+    std::string jointParentName = joint->parent->GetName();
+    size_t pIdx = jointParentName.find_last_of("::");
+    if (pIdx != std::string::npos)
+      jointParentName = jointParentName.substr(pIdx+1);
+    std::string jointChildName = joint->child->GetName();
+    size_t cIdx = jointChildName.find_last_of("::");
+    if (cIdx != std::string::npos)
+      jointChildName = jointChildName.substr(cIdx+1);
+
     rendering::ScenePtr scene = joint->hotspot->GetScene();
     scene->GetManager()->destroyBillboardSet(joint->handles);
     scene->RemoveVisual(joint->hotspot);
@@ -215,6 +225,7 @@ void JointMaker::RemoveJoint(const std::string &_jointId)
     delete joint->inspector;
     delete joint;
     this->joints.erase(jointIt);
+
     gui::model::Events::modelChanged();
     gui::model::Events::jointRemoved(_jointId);
   }
@@ -232,6 +243,7 @@ void JointMaker::RemoveJointsByLink(const std::string &_linkName)
         joint->parent->GetName() == _linkName)
     {
       toDelete.push_back(it.first);
+      std::cerr << " remove nested model jjjjjoint " <<it.first << std::endl;
     }
   }
 
@@ -373,6 +385,15 @@ bool JointMaker::OnMouseRelease(const common::MouseEvent &_event)
           this->Stop();
           this->mouseJoint = newJoint;
           this->newJointCreated = true;
+
+          std::string jointParentName = this->mouseJoint->parent->GetName();
+          size_t pIdx = jointParentName.find_last_of("::");
+          if (pIdx != std::string::npos)
+            jointParentName = jointParentName.substr(pIdx+1);
+          std::string jointChildName = this->mouseJoint->child->GetName();
+          size_t cIdx = jointChildName.find_last_of("::");
+          if (cIdx != std::string::npos)
+            jointChildName = jointChildName.substr(cIdx+1);
           gui::model::Events::modelChanged();
         }
       }
@@ -550,7 +571,6 @@ void JointMaker::AddJoint(JointMaker::JointType _type)
   {
     // Remove the event filters.
     MouseEventHandler::Instance()->RemoveMoveFilter("model_joint");
-
     // signal the end of a joint action.
     emit JointAdded();
   }
@@ -785,6 +805,25 @@ void JointMaker::CreateHotSpot(JointData *_joint)
 
   gui::model::Events::jointInserted(jointId, _joint->name,
       jointTypes[_joint->type], parentName, childName);
+
+  /// for nested model
+  bool nested = false;
+  if (_joint->parent->GetParent() != _joint->parent->GetRootVisual())
+  {
+    parentName = _joint->parent->GetParent()->GetName();
+    nested = true;
+  }
+  if (_joint->child->GetParent() != _joint->child->GetRootVisual())
+  {
+    childName = _joint->child->GetParent()->GetName();
+    nested = true;
+  }
+
+  if (nested)
+  {
+    gui::model::Events::jointInserted(jointId +"_nested", _joint->name,
+        jointTypes[_joint->type], parentName, childName);
+  }
 }
 
 /////////////////////////////////////////////////
@@ -940,6 +979,12 @@ std::string JointMaker::GetScopedLinkName(const std::string &_name)
 }
 
 /////////////////////////////////////////////////
+void JointMaker::SetModelName(const std::string &_modelName)
+{
+  this->modelName = _modelName;
+}
+
+/////////////////////////////////////////////////
 void JointMaker::GenerateSDF()
 {
   this->modelSDF.reset(new sdf::Element);
@@ -965,11 +1010,28 @@ void JointMaker::GenerateSDF()
 
     sdf::ElementPtr parentElem = jointElem->GetElement("parent");
     std::string parentName = joint->parent->GetName();
+    size_t pIdx = parentName.find("::");
+    if (pIdx != std::string::npos)
+      parentName = parentName.substr(pIdx+2);
+    //parentLeafName = this->GetScopedLinkName(parentLeafName);
+    parentName = this->modelName + "::" + parentName;
+    parentElem->Set(parentName);
+
+    sdf::ElementPtr childElem = jointElem->GetElement("child");
+    std::string childName = joint->child->GetName();
+    size_t cIdx = childName.find("::");
+    if (cIdx != std::string::npos)
+      childName = childName.substr(cIdx+2);
+//    childLeafName = this->GetScopedLinkName(childLeafName);
+    childName = this->modelName + "::" + childName;
+    childElem->Set(childName);
+
+/*    sdf::ElementPtr parentElem = jointElem->GetElement("parent");
+    std::string parentName = joint->parent->GetName();
     std::string parentLeafName = parentName;
     size_t pIdx = parentName.find_last_of("::");
     if (pIdx != std::string::npos)
       parentLeafName = parentName.substr(pIdx+1);
-
     parentLeafName = this->GetScopedLinkName(parentLeafName);
     parentElem->Set(parentLeafName);
 
@@ -980,7 +1042,7 @@ void JointMaker::GenerateSDF()
     if (cIdx != std::string::npos)
       childLeafName = childName.substr(cIdx+1);
     childLeafName = this->GetScopedLinkName(childLeafName);
-    childElem->Set(childLeafName);
+    childElem->Set(childLeafName);*/
   }
 }
 
@@ -1196,16 +1258,31 @@ void JointMaker::CreateJointFromSDF(sdf::ElementPtr _jointElem,
   std::string parentName = _modelName + "::" + jointMsg.parent();
   rendering::VisualPtr parentVis =
       gui::get_active_camera()->GetScene()->GetVisual(parentName);
+  if (!parentVis)
+  {
+    std::string unscopedName =
+        jointMsg.parent().substr(jointMsg.parent().find("::")+2);
+    parentVis = gui::get_active_camera()->GetScene()->GetVisual(
+        _modelName + "::" + unscopedName);
+  }
 
   // Child
   std::string childName = _modelName + "::" + jointMsg.child();
   rendering::VisualPtr childVis =
       gui::get_active_camera()->GetScene()->GetVisual(childName);
+  if (!childVis)
+  {
+    std::string unscopedName =
+        jointMsg.child().substr(jointMsg.child().find("::")+2);
+    childVis = gui::get_active_camera()->GetScene()->GetVisual(
+        _modelName + "::" + unscopedName);
+  }
+
 
   if (!parentVis || !childVis)
   {
-    gzerr << "Unable to load joint. Joint child / parent not found"
-        << std::endl;
+    gzerr << "Unable to load joint. Joint child [" << childName <<
+        "] or parent [" << parentName << "] not found" << std::endl;
     return;
   }
 
@@ -1246,6 +1323,16 @@ void JointMaker::CreateJointFromSDF(sdf::ElementPtr _jointElem,
   joint->dirty = true;
 
   this->CreateHotSpot(joint);
+
+  std::string jointParentName = joint->parent->GetName();
+  size_t pIdx = jointParentName.find_last_of("::");
+  if (pIdx != std::string::npos)
+    jointParentName = jointParentName.substr(pIdx+1);
+  std::string jointChildName = joint->child->GetName();
+  size_t cIdx = jointChildName.find_last_of("::");
+  if (cIdx != std::string::npos)
+    jointChildName = jointChildName.substr(cIdx+1);
+
 }
 
 /////////////////////////////////////////////////
