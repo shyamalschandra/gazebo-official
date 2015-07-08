@@ -1629,6 +1629,14 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
     }
   }
 
+  {
+    for (int i = 0; i < _msg.model_size(); ++i)
+    {
+      boost::shared_ptr<msgs::Model> mm(new msgs::Model(_msg.model(i)));
+      this->dataPtr->modelMsgs.push_back(mm);
+    }
+  }
+
   return true;
 }
 
@@ -1925,7 +1933,8 @@ void Scene::PreRender()
         // If an object is selected, don't let the physics engine move it.
         if (!this->dataPtr->selectedVis
             || this->dataPtr->selectionMode != "move" ||
-            iter->first != this->dataPtr->selectedVis->GetId())
+            (iter->first != this->dataPtr->selectedVis->GetId() &&
+            !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
         {
           math::Pose pose = msgs::Convert(pIter->second);
           GZ_ASSERT(iter->second, "Visual pointer is NULL");
@@ -1957,7 +1966,8 @@ void Scene::PreRender()
             // If an object is selected, don't let the physics engine move it.
             if (!this->dataPtr->selectedVis ||
                 this->dataPtr->selectionMode != "move" ||
-                iter->first != this->dataPtr->selectedVis->GetId())
+                (iter->first != this->dataPtr->selectedVis->GetId() &&
+                !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
             {
               math::Pose pose = msgs::Convert(pose_msg);
               iter2->second->SetPose(pose);
@@ -2473,6 +2483,8 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg, Visual::VisualType _type)
   }
   else
   {
+//    std::cerr << "process visual _msg " << _msg->name() << " " << _msg->id() << std::endl;
+
     VisualPtr visual;
 
     // TODO: A bit of a hack.
@@ -2640,6 +2652,8 @@ void Scene::OnModelMsg(ConstModelPtr &_msg)
 {
   boost::mutex::scoped_lock lock(*this->dataPtr->receiveMutex);
   this->dataPtr->modelMsgs.push_back(_msg);
+
+//  std::cerr << "model msg " << _msg->DebugString() << std::endl;
 }
 
 /////////////////////////////////////////////////
