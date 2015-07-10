@@ -338,7 +338,7 @@ void ModelEditor::OnAddJoint(const QString &_type)
 /////////////////////////////////////////////////
 void ModelEditor::OnJointAdded()
 {
-  if (this->dataPtr->jointAct->isChecked())
+  if (this->dataPtr->jointAct && this->dataPtr->jointAct->isChecked())
   {
     this->dataPtr->jointAct->setChecked(false);
     g_arrowAct->trigger();
