@@ -1536,25 +1536,6 @@ void dJointSetScrewThreadPitch (dxJoint *joint, dReal thread_pitch)
   }
 }
 
-void dJointSetDamping (dxJoint *joint, dReal damping)
-{
-  dAASSERT (joint);
-
-  if (joint->type() == dJointTypeHinge || joint->type() == dJointTypeSlider ||
-      joint->type() == dJointTypeScrew)
-  {
-    if (!_dequal(damping, 0.0))
-    {
-      if (damping < 0.0) printf("bad to have negative viscous joint damping, make sure you know what's going on.\n");
-      // set use_damping to true
-      joint->use_damping = true;
-      // damping coefficient is in jicurr->info.damping_coefficient);
-      joint->damping_coefficient = damping;
-      // FIXME: only hinge, slider, screw(rotational) are implemented at this time, extend?
-    }
-  }
-}
-
 dJointFeedback *dJointGetFeedback (dxJoint *joint)
 {
   dAASSERT (joint);
@@ -1675,7 +1656,7 @@ dxWorld * dWorldCreate()
   w->qs.w = REAL(1.3);
   w->qs.num_chunks = 1;
   w->qs.num_overlap = 0;
-  w->qs.sor_lcp_tolerance = -1;
+  w->qs.pgs_lcp_tolerance = -1;
   w->qs.rms_dlambda[0] = 0;
   w->qs.rms_dlambda[1] = 0;
   w->qs.rms_dlambda[2] = 0;
@@ -1687,9 +1668,11 @@ dxWorld * dWorldCreate()
   w->qs.num_contacts = 0;
   w->qs.dynamic_inertia_reduction = true;
   w->qs.smooth_contacts = 0.01;
+  w->qs.thread_position_correction = false;
   w->qs.row_reorder1 = true;
   w->qs.warm_start = 0.5;
   w->qs.friction_iterations = 10;
+  w->qs.friction_model = pyramid_friction;
 
   w->contactp.max_vel = dInfinity;
   w->contactp.min_depth = 0;
@@ -2204,13 +2187,13 @@ void dWorldSetMaxAngularSpeed(dWorldID w, dReal max_speed)
 double dWorldGetQuickStepTolerance (dWorldID w)
 {
 	dAASSERT(w);
-	return w->qs.sor_lcp_tolerance;
+	return w->qs.pgs_lcp_tolerance;
 }
 
 void dWorldSetQuickStepTolerance (dWorldID w, dReal tol)
 {
 	dAASSERT(w);
-	w->qs.sor_lcp_tolerance = tol;
+	w->qs.pgs_lcp_tolerance = tol;
 }
 
 void dWorldSetQuickStepNumChunks (dWorldID w, int num)
@@ -2305,6 +2288,12 @@ dReal  dWorldGetQuickStepContactResidualSmoothing (dWorldID w)
   return w->qs.smooth_contacts;
 }
 
+bool  dWorldGetQuickStepThreadPositionCorrection (dWorldID w)
+{
+	dAASSERT(w);
+  return w->qs.thread_position_correction;
+}
+
 bool  dWorldGetQuickStepExperimentalRowReordering (dWorldID w)
 {
 	dAASSERT(w);
@@ -2323,6 +2312,12 @@ int  dWorldGetQuickStepExtraFrictionIterations (dWorldID w)
   return w->qs.friction_iterations;
 }
 
+Friction_Model dWorldGetQuickStepFrictionModel (dWorldID w)
+{
+  dAASSERT(w);
+  return w->qs.friction_model;
+}
+
 void dWorldSetQuickStepInertiaRatioReduction (dWorldID w, bool irr)
 {
 	dAASSERT(w);
@@ -2333,6 +2328,12 @@ void dWorldSetQuickStepContactResidualSmoothing (dWorldID w, dReal smoo)
 {
 	dAASSERT(w);
   w->qs.smooth_contacts = smoo;
+}
+
+void dWorldSetQuickStepThreadPositionCorrection (dWorldID w, bool thread)
+{
+	dAASSERT(w);
+  w->qs.thread_position_correction = thread;
 }
 
 void dWorldSetQuickStepExperimentalRowReordering (dWorldID w, bool order)
@@ -2354,6 +2355,11 @@ void dWorldSetQuickStepExtraFrictionIterations (dWorldID w, int iters)
 }
 
 
+void dWorldSetQuickStepFrictionModel (dWorldID w, Friction_Model fricmodel)
+{
+  dAASSERT(w);
+  w->qs.friction_model = fricmodel;
+}
 
 
 
