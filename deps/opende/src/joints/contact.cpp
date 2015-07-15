@@ -36,10 +36,10 @@ dxJointContact::dxJointContact( dxWorld *w ) :
 }
 
 
-void 
+void
 dxJointContact::getSureMaxInfo( SureMaxInfo* info )
 {
-    info->max_m = 3; // ...as the actual m is very likely to hit the maximum
+    info->max_m = 4; // ...as the actual m is very likely to hit the maximum
 }
 
 
@@ -60,8 +60,19 @@ dxJointContact::getInfo1( dxJoint::Info1 *info )
     }
     else
     {
-        if ( contact.surface.mu > 0 ) m += 2;
-        if (_dequal(contact.surface.mu, dInfinity)) nub += 2;
+        if ( contact.surface.mu > 0 ) m++;
+        if (_dequal(contact.surface.mu, dInfinity)) nub++;
+    }
+    if ( contact.surface.mode & dContactMu3 )
+    {
+        if ( contact.surface.mu3 < 0 ) contact.surface.mu3 = 0;
+        if ( contact.surface.mu3 > 0 ) m++;
+        if (_dequal(contact.surface.mu3, dInfinity)) nub ++;
+    }
+    else
+    {
+        if ( contact.surface.mu > 0 ) m++;
+        if (_dequal(contact.surface.mu, dInfinity)) nub++;
     }
 
     the_m = m;
@@ -75,6 +86,7 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
 {
     int s = info->rowskip;
     int s2 = 2 * s;
+    int s3 = 3 * s;
 
     // get normal, with sign adjusted for body1/body2 polarity
     dVector3 normal;
@@ -293,6 +305,82 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
         // set slip (constraint force mixing)
         if ( contact.surface.mode & dContactSlip2 )
             info->cfm[2] = contact.surface.slip2;
+    }
+
+    // now do jacobian for rotational forces
+    dVector3 t3 = {0, 0, 0};
+
+    // third friction direction (torsional)
+    if ( the_m >= 4 )
+    {
+        // Linear, body 1
+        info->J1l[s3+0] = t3[0];
+        info->J1l[s3+1] = t3[1];
+        info->J1l[s3+2] = t3[2];
+
+        // Angular, body 1
+        info->J1a[s3+0] = normal[0];
+        info->J1a[s3+1] = normal[1];
+        info->J1a[s3+2] = normal[2];
+        if ( node[1].body )
+        {
+            // Linear, body 2
+            info->J2l[s3+0] = -t3[0];
+            info->J2l[s3+1] = -t3[1];
+            info->J2l[s3+2] = -t3[2];
+
+            // Angular, body 2
+            info->J2a[s3+0] = -normal[0];
+            info->J2a[s3+1] = -normal[1];
+            info->J2a[s3+2] = -normal[2];
+        }
+        // set LCP bounds and friction index. this depends on the approximation
+        // mode
+        if ( contact.surface.mode & dContactMu3 )
+        {
+            // Use user defined torsional patch radius
+            //
+            // M = torsional moment
+            // F = normal force
+            // a = patch radius
+            // R = curvature radius
+            // d = depth
+            // mu = torsional friction coefficient
+            //
+            // M = (3 * pi * a * mu)/16 * F
+            //
+            // When using curvature:
+            //
+            // a = R * d
+            //
+            // M = (3 * pi * R * d * mu)/16 * F
+
+            dReal patch = contact.surface.patch_radius;
+
+            if (contact.surface.use_curvature)
+              patch = contact.surface.curvature_radius * depth;
+
+            if (fabs(patch) < 0.00001)
+            {
+              contact.surface.patch_radius = 2.0;
+            }
+
+            double rhs = (3 * M_PI * patch * contact.surface.mu3)/16;
+
+            info->lo[3] = -rhs;
+            info->hi[3] = rhs;
+        }
+        else
+        {
+            info->lo[3] = -contact.surface.mu;
+            info->hi[3] = contact.surface.mu;
+        }
+        if ( contact.surface.mode & dContactApprox1_2 )
+            info->findex[3] = 0;
+
+        // set slip (constraint force mixing)
+        if ( contact.surface.mode & dContactSlip3 )
+            info->cfm[3] = contact.surface.slip3;
     }
 }
 
