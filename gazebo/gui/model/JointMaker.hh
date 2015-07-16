@@ -78,7 +78,9 @@ namespace gazebo
         /// \brief Universal joint
         JOINT_UNIVERSAL,
         /// \brief Revolute joint
-        JOINT_BALL
+        JOINT_BALL,
+        /// \brief Gearbox joint
+        JOINT_GEARBOX
       };
 
       /// \brief Constructor
@@ -133,6 +135,10 @@ namespace gazebo
       public: std::vector<JointData *> GetJointDataByLink(
           const std::string &_linkName) const;
 
+      /// \brief Set the model name this joint will be attached to.
+      /// \param[in] _modelName Model name.
+      public: void SetModelName(const std::string &_modelName);
+
       /// \brief Generate SDF for all joints.
       public: void GenerateSDF();
 
@@ -153,6 +159,11 @@ namespace gazebo
       /// \param[in] _type Joint type in string.
       /// \return Joint type enum.
       public: static JointType ConvertJointType(const std::string &_type);
+
+      /// \brief Get the material for the joint type.
+      /// \param[in] _type Type of joint.
+      /// \return Name of material.
+      public: static std::string GetJointMaterial(const std::string &_type);
 
       /// \brief Get state
       /// \return State of JointType if joint creation is in process, otherwise
@@ -281,9 +292,6 @@ namespace gazebo
       /// \brief Visual that is currently hovered over by the mouse
       private: rendering::VisualPtr hoverVis;
 
-      /// \brief Visual that is previously hovered over by the mouse
-      private: rendering::VisualPtr prevHoverVis;
-
       /// \brief Currently selected visual
       private: rendering::VisualPtr selectedVis;
 
@@ -301,10 +309,6 @@ namespace gazebo
 
       /// \brief Flag set to true when a joint has been connected.
       private: bool newJointCreated;
-
-      /// \brief A map of joint type to its corresponding material.
-      private: std::map<JointMaker::JointType, std::string>
-          jointMaterials;
 
       /// \brief The SDF element pointer to the model that contains the joints.
       private: sdf::ElementPtr modelSDF;
@@ -326,6 +330,13 @@ namespace gazebo
 
       /// \brief A map of joint type to its string value.
       private: static std::map<JointMaker::JointType, std::string> jointTypes;
+
+      /// \brief A map of joint type to its corresponding material.
+      private: static std::map<JointMaker::JointType, std::string>
+          jointMaterials;
+
+      /// \brief Name of the model the joints are attached to.
+      private: std::string modelName;
     };
     /// \}
 
