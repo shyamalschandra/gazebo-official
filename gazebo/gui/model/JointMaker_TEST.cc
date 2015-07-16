@@ -352,6 +352,7 @@ void JointMaker_TEST::ShowJoints()
   delete mainWindow;
 }
 
+
 /////////////////////////////////////////////////
 void JointMaker_TEST::Selection()
 {
@@ -361,7 +362,6 @@ void JointMaker_TEST::Selection()
   this->Load("worlds/shapes.world", false, false, false);
 
   gui::JointMaker *jointMaker = new gui::JointMaker();
-
   QCOMPARE(jointMaker->GetState(), gui::JointMaker::JOINT_NONE);
   QCOMPARE(jointMaker->GetJointCount(), 0u);
 
@@ -447,6 +447,35 @@ void JointMaker_TEST::Selection()
   delete jointMaker;
   mainWindow->close();
   delete mainWindow;
+}
+
+/////////////////////////////////////////////////
+void JointMaker_TEST::JointMaterial()
+{
+  this->Load("worlds/empty.world");
+
+  gui::JointMaker *jointMaker = new gui::JointMaker();
+
+  // all currently supported joint types.
+  std::vector<std::string> jointTypes;
+  jointTypes.push_back("revolute");
+  jointTypes.push_back("revolute2");
+  jointTypes.push_back("prismatic");
+  jointTypes.push_back("ball");
+  jointTypes.push_back("universal");
+  jointTypes.push_back("screw");
+  jointTypes.push_back("gearbox");
+
+  // verify joint materials are not empty and they are all unique
+  std::set<std::string> jointMaterials;
+  for (auto &j : jointTypes)
+  {
+    std::string mat = jointMaker->GetJointMaterial(j);
+    QVERIFY(mat != "");
+    QVERIFY(jointMaterials.find(mat) == jointMaterials.end());
+    jointMaterials.insert(mat);
+  }
+  delete jointMaker;
 }
 
 // Generate a main function for the test
