@@ -145,7 +145,7 @@ struct dxJoint : public dObject
     virtual void getInfo1( Info1* info ) = 0;
     virtual void getInfo2( Info2* info ) = 0;
     // This call quickly!!! estimates maximum value of "m" that could be returned by getInfo1()
-	// See comments at definition of SureMaxInfo for defails.
+    // See comments at definition of SureMaxInfo for defails.
     virtual void getSureMaxInfo( SureMaxInfo* info ) = 0;
     virtual dJointType type() const = 0;
     virtual size_t size() const = 0;
@@ -154,9 +154,9 @@ struct dxJoint : public dObject
     /// Each dxJoint should redefine it if needed.
     virtual void setRelativeValues() {};
 
-	// Test if this joint should be used in the simulation step
-	// (has the enabled flag set, and is attached to at least one dynamic body)
-	bool isEnabled() const;
+    // Test if this joint should be used in the simulation step
+    // (has the enabled flag set, and is attached to at least one dynamic body)
+    bool isEnabled() const;
 
     // Moved from ball.h and fixed.h by OSRF
     dReal erp;          // error reduction
@@ -182,6 +182,7 @@ struct dxJointLimitMotor
     dReal fudge_factor;     // when powering away from joint limits
     dReal normal_cfm;       // cfm to use when not at a stop
     dReal stop_erp, stop_cfm; // erp and cfm for when at joint limit
+    dReal stop_min_depth; // surface contact layer for joint stops
     dReal bounce;           // restitution factor
     // variables used between getInfo1() and getInfo2()
     int limit;          // 0=free, 1=at lo limit, 2=at hi limit
