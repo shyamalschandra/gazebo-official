@@ -58,7 +58,7 @@ dReal dJointGetSliderPosition ( dJointID j )
     {
         // get body2 + offset point in global coordinates
         dMultiply0_331 ( q, joint->node[1].body->posr.R, joint->offset );
-        for ( int i = 0; i < 3; ++i)
+        for ( int i = 0; i < 3; i++ )
             q[i] = joint->node[0].body->posr.pos[i]
                    - q[i]
                    - joint->node[1].body->posr.pos[i];
@@ -162,12 +162,11 @@ dxJointSlider::getInfo2 ( dxJoint::Info2 *info )
       info->erp = erp;
     if (this->cfm >= 0)
     {
-      dxJoint::Info1 *info1 = new Info1();
-      getInfo1(info1);
-      for (int i=0; i<info1->m; ++i)
-      {
-        info->cfm[i] = cfm;
-      }
+      info->cfm[0] = cfm;
+      info->cfm[1] = cfm;
+      info->cfm[2] = cfm;
+      info->cfm[3] = cfm;
+      info->cfm[4] = cfm;
     }
 
     int i, s = info->rowskip;
@@ -251,6 +250,7 @@ dxJointSlider::getInfo2 ( dxJoint::Info2 *info )
     // joint damping
     if (this->use_damping)
     {
+      info->cfm[5] = cfm;
       // added J1ld and J2ld for damping, only 1 row
       info->J1ld[0] = ax1[0];
       info->J1ld[1] = ax1[1];
