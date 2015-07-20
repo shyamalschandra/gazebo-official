@@ -14,11 +14,10 @@
  * limitations under the License.
  *
 */
-#ifndef _BOXMAKER_HH_
-#define _BOXMAKER_HH_
+#ifndef _GAZEBO_BOXMAKER_HH_
+#define _GAZEBO_BOXMAKER_HH_
 
 #include <string>
-#include "gazebo/math/Vector2i.hh"
 #include "gazebo/gui/EntityMaker.hh"
 #include "gazebo/util/system.hh"
 
@@ -52,30 +51,14 @@ namespace gazebo
       /// Documentation inherited
       public: virtual void Stop();
 
-      /// Documentation inherited
-      public: virtual bool IsActive() const;
-
-      /// Documentation inherited
-      public: virtual void OnMousePush(const common::MouseEvent &_event);
-
-      /// Documentation inherited
-      public: virtual void OnMouseRelease(const common::MouseEvent &_event);
-
-      /// Documentation inherited
-      public: virtual void OnMouseDrag(const common::MouseEvent &_event);
-
-      /// Documentation inherited
-      public: virtual void OnMouseMove(const common::MouseEvent &_event);
-
       /// \brief Get the SDF information for the box.
       /// \return The SDF as a string.
       public: std::string GetSDFString();
 
       /// Documentation inherited
       private: virtual void CreateTheEntity();
+
       private: int state;
-      private: bool leftMousePressed;
-      private: math::Vector2i mousePushPos, mouseReleasePos;
       private: msgs::Visual *visualMsg;
 
       private: static unsigned int counter;

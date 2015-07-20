@@ -14,8 +14,10 @@
  * limitations under the License.
  *
 */
-#ifndef _ENTITYMAKER_HH_
-#define _ENTITYMAKER_HH_
+#ifndef _GAZEBO_ENTITYMAKER_HH_
+#define _GAZEBO_ENTITYMAKER_HH_
+
+#include <ignition/math/Vector3.hh>
 
 #include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/transport/TransportTypes.hh"
@@ -40,11 +42,6 @@ namespace gazebo
     /// \brief to make an entity base class
     class GAZEBO_VISIBLE EntityMaker
     {
-      /// \def CreateCallback
-      /// \brief boost::function with vector3 pos and vector3 scale
-      public: typedef boost::function<void(const math::Vector3 &pos,
-                  const math::Vector3 &scale)> CreateCallback;
-
       /// \brief Constructor
       public: EntityMaker();
 
@@ -54,38 +51,32 @@ namespace gazebo
       /// \brief Set whether to snap to grid
       public: static void SetSnapToGrid(bool _snap);
 
-      /// \brief
+      /// \brief Start the maker.
       /// \param[in] _camera Pointer to the user camera
       public: virtual void Start(const rendering::UserCameraPtr _camera) = 0;
-      /// \brief
+
+      /// \brief Stop the maker.
       public: virtual void Stop() = 0;
 
-      /// \brief Checks if entity is active
-      public: virtual bool IsActive() const = 0;
-
-      /// \brief Callback for pushing entity with mouse
-      /// \param[in] _event MouseEvent object
-      public: virtual void OnMousePush(const common::MouseEvent &_event);
-
-      /// \brief Callback for releasing mouse button
+      /// \brief Callback when mouse button is released
       /// \param[in] _event MouseEvent object
       public: virtual void OnMouseRelease(const common::MouseEvent &_event);
-
-      /// \brief Callback for dragging with mouse
-      /// \param[in] _event MouseEvent object
-      public: virtual void OnMouseDrag(const common::MouseEvent &_event);
 
       /// \brief Callback when moving mouse
       /// \param[in] _event MouseEvent object
       public: virtual void OnMouseMove(const common::MouseEvent &_event);
 
-      /// \brief Get a point snapped to a grid
-      /// \param[in] _p input point to be snapped
-      /// \return math::Vector3 with the point on the grid
-      protected: math::Vector3 GetSnappedPoint(math::Vector3 _p);
-
       /// \brief Creates the entity
       protected: virtual void CreateTheEntity() = 0;
+
+      /// \brief Returns the entity world position.
+      /// \return Entity's position in the world frame.
+      protected: virtual ignition::math::Vector3d EntityPosition() const;
+
+      /// \brief Sets the entity world position.
+      /// \param[in] _pos New position in the world frame.
+      protected: virtual void SetEntityPosition(
+          const ignition::math::Vector3d &_pos);
 
       protected: rendering::UserCameraPtr camera;
 
@@ -93,12 +84,8 @@ namespace gazebo
       protected: transport::PublisherPtr visPub;
       protected: transport::PublisherPtr makerPub;
       protected: transport::PublisherPtr requestPub;
-      protected: CreateCallback createCB;
-
 
       private: static bool snapToGrid;
-      private: static double snapDistance;
-      private: static double snapGridSize;
     };
   }
 }

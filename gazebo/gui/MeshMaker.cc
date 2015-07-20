@@ -45,8 +45,6 @@ unsigned int MeshMaker::counter = 0;
 MeshMaker::MeshMaker()
 : EntityMaker()
 {
-  this->state = 0;
-  this->leftMousePressed = false;
   this->visualMsg = new msgs::Visual();
   this->visualMsg->mutable_geometry()->set_type(msgs::Geometry::MESH);
   msgs::Set(this->visualMsg->mutable_pose()->mutable_orientation(),
@@ -78,8 +76,6 @@ void MeshMaker::Start(const rendering::UserCameraPtr _camera)
   this->visualMsg->set_name(stream.str());
   this->visualMsg->set_name(stream.str());
   this->visPub->Publish(*this->visualMsg);
-
-  this->state = 1;
 }
 
 /////////////////////////////////////////////////
@@ -91,76 +87,7 @@ void MeshMaker::Stop()
   this->requestPub->Publish(*msg);
   delete msg;
 
-  this->state = 0;
   gui::Events::moveMode(true);
-}
-
-/////////////////////////////////////////////////
-bool MeshMaker::IsActive() const
-{
-  return this->state > 0;
-}
-
-/////////////////////////////////////////////////
-void MeshMaker::OnMousePush(const common::MouseEvent &/*_event*/)
-{
-}
-
-/////////////////////////////////////////////////
-void MeshMaker::OnMouseRelease(const common::MouseEvent &/*_event*/)
-{
-  this->CreateTheEntity();
-  this->Stop();
-}
-
-/////////////////////////////////////////////////
-void MeshMaker::OnMouseMove(const common::MouseEvent &_event)
-{
-  ignition::math::Pose3d pose = msgs::ConvertIgn(this->visualMsg->pose());
-
-  math::Vector3 origin1, dir1, p1;
-  math::Vector3 origin2, dir2, p2;
-
-  // Cast two rays from the camera into the world
-  this->camera->GetCameraToViewportRay(_event.Pos().X(), _event.Pos().Y(),
-                                       origin1, dir1);
-
-  // Compute the distance from the camera to plane of translation
-  math::Plane plane(math::Vector3(0, 0, 1), 0);
-
-  double dist1 = plane.Distance(origin1, dir1);
-
-  // Compute two points on the plane. The first point is the current
-  // mouse position, the second is the previous mouse position
-  p1 = origin1 + dir1 * dist1;
-  pose.Pos() = p1.Ign();
-
-  if (!_event.Shift())
-  {
-    if (ceil(pose.Pos().X()) - pose.Pos().X() <= .4)
-      pose.Pos().X() = ceil(pose.Pos().X());
-    else if (pose.Pos().X() - floor(pose.Pos().X()) <= .4)
-      pose.Pos().X() = floor(pose.Pos().X());
-
-    if (ceil(pose.Pos().Y()) - pose.Pos().Y() <= .4)
-      pose.Pos().Y() = ceil(pose.Pos().Y());
-    else if (pose.Pos().Y() - floor(pose.Pos().Y()) <= .4)
-      pose.Pos().Y() = floor(pose.Pos().Y());
-
-    if (ceil(pose.Pos().Z()) - pose.Pos().Z() <= .4)
-      pose.Pos().Z() = ceil(pose.Pos().Z());
-    else if (pose.Pos().Z() - floor(pose.Pos().Z()) <= .4)
-      pose.Pos().Z() = floor(pose.Pos().Z());
-  }
-
-  msgs::Set(this->visualMsg->mutable_pose(), pose);
-  this->visPub->Publish(*this->visualMsg);
-}
-
-/////////////////////////////////////////////////
-void MeshMaker::OnMouseDrag(const common::MouseEvent &/*_event*/)
-{
-  this->visPub->Publish(*this->visualMsg);
 }
 
 /////////////////////////////////////////////////

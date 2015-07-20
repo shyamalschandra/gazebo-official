@@ -26,7 +26,6 @@
 #include "gazebo/msgs/msgs.hh"
 
 #include "gazebo/common/Console.hh"
-#include "gazebo/common/MouseEvent.hh"
 #include "gazebo/common/Exception.hh"
 
 #include "gazebo/rendering/UserCamera.hh"
@@ -50,8 +49,6 @@ using namespace gui;
   ModelMaker::ModelMaker()
 : EntityMaker()
 {
-  this->state = 0;
-  this->leftMousePressed = false;
   this->clone = false;
 }
 
@@ -248,7 +245,6 @@ bool ModelMaker::Init()
 void ModelMaker::Start(const rendering::UserCameraPtr _camera)
 {
   this->camera = _camera;
-  this->state = 1;
 }
 
 /////////////////////////////////////////////////
@@ -262,55 +258,7 @@ void ModelMaker::Stop()
   this->visuals.clear();
   this->modelSDF.reset();
 
-  this->state = 0;
   gui::Events::moveMode(true);
-}
-
-/////////////////////////////////////////////////
-bool ModelMaker::IsActive() const
-{
-  return this->state > 0;
-}
-
-/////////////////////////////////////////////////
-void ModelMaker::OnMousePush(const common::MouseEvent &/*_event*/)
-{
-}
-
-/////////////////////////////////////////////////
-void ModelMaker::OnMouseRelease(const common::MouseEvent &_event)
-{
-  if (_event.Button() == common::MouseEvent::LEFT)
-  {
-    // Place if not dragging, or if dragged for less than 50 pixels.
-    // The 50 pixels is used to account for accidental mouse movement
-    // when placing an object.
-    if (!_event.Dragging() || _event.PressPos().Distance(_event.Pos()) < 50)
-    {
-      this->CreateTheEntity();
-      this->Stop();
-    }
-  }
-}
-
-/////////////////////////////////////////////////
-void ModelMaker::OnMouseMove(const common::MouseEvent &_event)
-{
-  math::Pose pose = this->modelVisual->GetWorldPose();
-  pose.pos = ModelManipulator::GetMousePositionOnPlane(this->camera, _event);
-
-  if (!_event.Shift())
-  {
-    pose.pos = ModelManipulator::SnapPoint(pose.pos);
-  }
-  pose.pos.z = this->modelVisual->GetWorldPose().pos.z;
-
-  this->modelVisual->SetWorldPose(pose);
-}
-
-/////////////////////////////////////////////////
-void ModelMaker::OnMouseDrag(const common::MouseEvent &/*_event*/)
-{
 }
 
 /////////////////////////////////////////////////
@@ -365,4 +313,16 @@ void ModelMaker::CreateTheEntity()
   }
 
   this->makerPub->Publish(msg);
+}
+
+/////////////////////////////////////////////////
+ignition::math::Vector3d ModelMaker::EntityPosition() const
+{
+  return this->modelVisual->GetWorldPose().pos.Ign();
+}
+
+/////////////////////////////////////////////////
+void ModelMaker::SetEntityPosition(const ignition::math::Vector3d &_pos)
+{
+  this->modelVisual->SetWorldPosition(_pos);
 }

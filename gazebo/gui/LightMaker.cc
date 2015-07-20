@@ -26,7 +26,6 @@
 
 #include "gazebo/transport/Node.hh"
 #include "gazebo/gui/GuiEvents.hh"
-#include "gazebo/common/MouseEvent.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Light.hh"
 #include "gazebo/rendering/Scene.hh"
@@ -43,8 +42,6 @@ unsigned int LightMaker::counter = 0;
 LightMaker::LightMaker() : EntityMaker()
 {
   this->lightPub = this->node->Advertise<msgs::Light>("~/light");
-
-  this->state = 0;
 
   msgs::Set(this->msg.mutable_diffuse(), common::Color(0.5, 0.5, 0.5, 1));
   msgs::Set(this->msg.mutable_specular(), common::Color(0.1, 0.1, 0.1, 1));
@@ -126,7 +123,6 @@ void LightMaker::Start(const rendering::UserCameraPtr _camera)
     this->Init();
 
   this->camera = _camera;
-  this->state = 1;
 }
 
 /////////////////////////////////////////////////
@@ -138,19 +134,7 @@ void LightMaker::Stop()
     scene->RemoveLight(this->light);
     this->light.reset();
   }
-  this->state = 0;
   gui::Events::moveMode(true);
-}
-
-/////////////////////////////////////////////////
-bool LightMaker::IsActive() const
-{
-  return this->state > 0;
-}
-
-/////////////////////////////////////////////////
-void LightMaker::OnMousePush(const common::MouseEvent &/*_event*/)
-{
 }
 
 /////////////////////////////////////////////////
@@ -165,39 +149,14 @@ void LightMaker::CreateTheEntity()
 }
 
 /////////////////////////////////////////////////
-void LightMaker::OnMouseRelease(const common::MouseEvent &_event)
+ignition::math::Vector3d LightMaker::EntityPosition() const
 {
-  if (_event.Button() == common::MouseEvent::LEFT && !_event.Dragging())
-  {
-    this->CreateTheEntity();
-    this->Stop();
-  }
+  return this->light->GetPosition().Ign();
 }
 
 /////////////////////////////////////////////////
-// \TODO: This was copied from ModelMaker. Figure out a better way to
-// prevent code duplication.
-void LightMaker::OnMouseMove(const common::MouseEvent &_event)
+void LightMaker::SetEntityPosition(const ignition::math::Vector3d &_pos)
 {
-  math::Vector3 origin1, dir1, p1;
-
-  // Cast two rays from the camera into the world
-  this->camera->GetCameraToViewportRay(_event.Pos().X(), _event.Pos().Y(),
-                                       origin1, dir1);
-
-  // Compute the distance from the camera to plane of translation
-  math::Plane plane(math::Vector3(0, 0, 1), 0);
-
-  double dist1 = plane.Distance(origin1, dir1);
-
-  // Calculate position
-  p1 = origin1 + dir1 * dist1;
-
-  // Get snap point
-  if (!_event.Shift())
-    p1 = this->GetSnappedPoint(p1);
-
-  p1.z = this->light->GetPosition().z;
-
-  this->light->SetPosition(p1);
+  this->light->SetPosition(_pos);
 }
+
