@@ -1,10 +1,20 @@
 ## Gazebo 6.0
+
+1. Added magnetometer sensor. A contribution from Andrew Symington.
+    * [Pull request #1788](https://bitbucket.org/osrf/gazebo/pull-request/1788)
+
+1. Added altimeter sensor. A contribution from Andrew Symington.
+    * [Pull request #1792](https://bitbucket.org/osrf/gazebo/pull-request/1792)
+
 1. Implement more control options for log playback:
   1. Rewind: The simulation starts from the beginning.
   1. Forward: The simulation jumps to the end of the log file.
   1. Seek: The simulation jumps to a specific point specified by its simulation
   time.
       * [Pull request #1737](https://bitbucket.org/osrf/gazebo/pull-request/1737)
+
+1. Added Gazebo splash screen
+    * [Pull request #1745](https://bitbucket.org/osrf/gazebo/pull-request/1745)
 
 1. Added a transporter plugin which allows models to move from one location
    to another based on their location and the location of transporter pads.
@@ -347,6 +357,10 @@ compilation on Windows.
 ## Gazebo 5.0
 
 ### Gazebo 5.x.x
+
+1. Added lines to laser sensor visualization
+    * [Pull request #1742](https://bitbucket.org/osrf/gazebo/pull-request/1742)
+    * [Issue #935](https://bitbucket.org/osrf/gazebo/issue/935)
 
 1. Fix BulletSliderJoint friction for bullet 2.83
     * [Pull request #1686](https://bitbucket.org/osrf/gazebo/pull-request/1686)
