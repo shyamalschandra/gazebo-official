@@ -41,11 +41,10 @@ using namespace gui;
 
 unsigned int BoxMaker::counter = 0;
 
+/////////////////////////////////////////////////
 BoxMaker::BoxMaker()
 : EntityMaker()
 {
-  this->state = 0;
-  this->leftMousePressed = false;
   this->visualMsg = new msgs::Visual();
   this->visualMsg->mutable_geometry()->set_type(msgs::Geometry::BOX);
   this->visualMsg->mutable_material()->mutable_script()->add_uri(
@@ -56,12 +55,14 @@ BoxMaker::BoxMaker()
             ignition::math::Quaterniond());
 }
 
+/////////////////////////////////////////////////
 BoxMaker::~BoxMaker()
 {
   this->camera.reset();
   delete this->visualMsg;
 }
 
+/////////////////////////////////////////////////
 void BoxMaker::Start(const rendering::UserCameraPtr _camera)
 {
   this->camera = _camera;
@@ -69,10 +70,9 @@ void BoxMaker::Start(const rendering::UserCameraPtr _camera)
   std::ostringstream stream;
   stream << "__GZ_USER_box_" << counter++;
   this->visualMsg->set_name(stream.str());
-
-  this->state = 1;
 }
 
+/////////////////////////////////////////////////
 void BoxMaker::Stop()
 {
   msgs::Request *msg = msgs::CreateRequest("entity_delete",
@@ -81,106 +81,7 @@ void BoxMaker::Stop()
   this->requestPub->Publish(*msg);
   delete msg;
 
-  this->state = 0;
   gui::Events::moveMode(true);
-}
-
-bool BoxMaker::IsActive() const
-{
-  return this->state > 0;
-}
-
-void BoxMaker::OnMousePush(const common::MouseEvent &_event)
-{
-  if (this->state == 0)
-    return;
-
-  this->mousePushPos = _event.PressPos();
-}
-
-/////////////////////////////////////////////////
-void BoxMaker::OnMouseRelease(const common::MouseEvent &_event)
-{
-  if (this->state == 0)
-    return;
-
-  this->state++;
-
-  this->mouseReleasePos = _event.Pos();
-
-  if (this->state == 3)
-  {
-    this->CreateTheEntity();
-    this->Stop();
-  }
-}
-
-/////////////////////////////////////////////////
-void BoxMaker::OnMouseMove(const common::MouseEvent &_event)
-{
-  if (this->state != 2)
-    return;
-
-  ignition::math::Vector3d p =
-    msgs::ConvertIgn(this->visualMsg->pose().position());
-  ignition::math::Vector3d scale =
-    msgs::ConvertIgn(this->visualMsg->geometry().box().size());
-
-  scale.Z((this->mouseReleasePos.y - _event.Pos().Y())*0.01);
-  if (!_event.Shift())
-    scale.Z(rint(scale.Z()));
-  p.Z(scale.Z()/2.0);
-
-  msgs::Set(this->visualMsg->mutable_pose()->mutable_position(), p);
-  msgs::Set(this->visualMsg->mutable_geometry()->mutable_box()->mutable_size(),
-      scale);
-
-  this->visPub->Publish(*this->visualMsg);
-}
-
-/////////////////////////////////////////////////
-void BoxMaker::OnMouseDrag(const common::MouseEvent &_event)
-{
-  if (this->state != 1)
-    return;
-
-  math::Vector3 norm(0, 0, 1);
-  math::Vector3 p1, p2;
-
-  if (!this->camera->GetWorldPointOnPlane(this->mousePushPos.x,
-                                          this->mousePushPos.y,
-                                          math::Plane(norm), p1))
-  {
-    gzerr << "Invalid mouse point\n";
-    return;
-  }
-
-  p1 = this->GetSnappedPoint(p1);
-
-  if (!this->camera->GetWorldPointOnPlane(
-        _event.Pos().X(), _event.Pos().Y() , math::Plane(norm), p2))
-  {
-    gzerr << "Invalid mouse point\n";
-    return;
-  }
-
-  p2 = this->GetSnappedPoint(p2);
-
-  msgs::Set(this->visualMsg->mutable_pose()->mutable_position(), p1.Ign());
-
-  math::Vector3 scale = p1-p2;
-  math::Vector3 p = msgs::ConvertIgn(this->visualMsg->pose().position());
-
-  scale.z = 0.01;
-  p.x = p1.x - scale.x/2.0;
-  p.y = p1.y - scale.y/2.0;
-
-
-  msgs::Set(this->visualMsg->mutable_pose()->mutable_position(), p.Ign());
-  msgs::Set(this->visualMsg->mutable_geometry()->mutable_box()->mutable_size(),
-      scale.GetAbs().Ign());
-
-  this->visPub->Publish(*this->visualMsg);
 }
 
 /////////////////////////////////////////////////
@@ -205,6 +106,9 @@ std::string BoxMaker::GetSDFString()
 void BoxMaker::CreateTheEntity()
 {
   msgs::Factory msg;
+
+  math::Vector3 p = msgs::Convert(this->visualMsg->pose().position());
+  math::Vector3 size = msgs::Convert(this->visualMsg->geometry().box().size());
 
   msg.set_sdf(this->GetSDFString());
 

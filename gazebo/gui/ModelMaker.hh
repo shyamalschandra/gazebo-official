@@ -14,8 +14,8 @@
  * limitations under the License.
  *
 */
-#ifndef _MODEL_MAKER_HH_
-#define _MODEL_MAKER_HH_
+#ifndef _GAZEBO_MODEL_MAKER_HH_
+#define _GAZEBO_MODEL_MAKER_HH_
 
 #include <list>
 #include <string>
@@ -33,9 +33,13 @@ namespace gazebo
 
   namespace gui
   {
+    /// \brief
     class GAZEBO_VISIBLE ModelMaker : public EntityMaker
     {
+      /// \brief Constructor
       public: ModelMaker();
+
+      /// \brief Destructor
       public: virtual ~ModelMaker();
 
       /// \brief Initialize the model maker with an existing model
@@ -49,20 +53,20 @@ namespace gazebo
       public: virtual void Start(const rendering::UserCameraPtr _camera);
 
       public: virtual void Stop();
-      public: virtual bool IsActive() const;
-
-      public: virtual void OnMousePush(const common::MouseEvent &_event);
-      public: virtual void OnMouseRelease(const common::MouseEvent &_event);
-      public: virtual void OnMouseDrag(const common::MouseEvent &_event);
-      public: virtual void OnMouseMove(const common::MouseEvent &_event);
 
       /// \brief Internal init function.
       private: bool Init();
 
       private: virtual void CreateTheEntity();
+
+      // Documentation inherited
+      protected: virtual ignition::math::Vector3d EntityPosition() const;
+
+      // Documentation inherited
+      protected: virtual void SetEntityPosition(
+          const ignition::math::Vector3d &_pos);
+
       private: int state;
-      private: bool leftMousePressed;
-      private: math::Vector2i mousePushPos, mouseReleasePos;
 
       private: rendering::VisualPtr modelVisual;
       private: std::list<rendering::VisualPtr> visuals;
