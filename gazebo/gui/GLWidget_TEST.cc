@@ -55,14 +55,8 @@ void GLWidget_TEST::SelectObject()
   QVERIFY(mainWindow != NULL);
 
   mainWindow->Load();
-
-  gazebo::rendering::create_scene(
-      gazebo::physics::get_world()->GetName(), false);
-
   mainWindow->Init();
   mainWindow->show();
-
-  gazebo::rendering::Events::createScene("default");
 
   // Process some events, and draw the screen
   for (unsigned int i = 0; i < 10; ++i)
@@ -84,6 +78,13 @@ void GLWidget_TEST::SelectObject()
 
   // Verify the box was selected
   QVERIFY(g_gotBoxSelection);
+
+  // Check the selected visuals list
+  std::vector<gazebo::rendering::VisualPtr> selectedVisuals =
+      glWidget->SelectedVisuals();
+
+  QVERIFY(selectedVisuals.size() == 1u);
+  QVERIFY(selectedVisuals[0]->GetName() == "box");
 
   mainWindow->close();
   delete mainWindow;
