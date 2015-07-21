@@ -108,6 +108,10 @@ ModelEditor::ModelEditor(MainWindow *_mainWindow)
       this->mainWindow->CloneAction(g_showToolbarsAct, this);
   this->dataPtr->fullScreenAct =
       this->mainWindow->CloneAction(g_fullScreenAct, this);
+  this->dataPtr->cameraOrthoAct =
+      this->mainWindow->CloneAction(g_cameraOrthoAct, this);
+  this->dataPtr->cameraPerspectiveAct =
+      this->mainWindow->CloneAction(g_cameraPerspectiveAct, this);
 
   connect(g_editModelAct, SIGNAL(toggled(bool)), this, SLOT(OnEdit(bool)));
 
@@ -242,6 +246,26 @@ void ModelEditor::AddItemToPalette(QWidget *_item,
 }
 
 ////////////////////////////////////////////////
+void ModelEditor::SpawnEntity(sdf::ElementPtr _sdf)
+{
+  event::Events::setSelectedEntity("", "normal");
+  g_arrowAct->trigger();
+  this->dataPtr->modelPalette->GetModelCreator()->AddEntity(_sdf);
+}
+
+////////////////////////////////////////////////
+void ModelEditor::RemoveEntity(const std::string &_name)
+{
+  this->dataPtr->modelPalette->GetModelCreator()->RemoveEntity(_name);
+}
+
+////////////////////////////////////////////////
+sdf::ElementPtr ModelEditor::GetEntitySDF(const std::string &_name)
+{
+  return this->dataPtr->modelPalette->GetModelCreator()->GetEntitySDF(_name);
+}
+
+////////////////////////////////////////////////
 void ModelEditor::Save()
 {
   gui::model::Events::saveModelEditor();
@@ -297,6 +321,10 @@ void ModelEditor::CreateMenus()
   fileMenu->addAction(this->dataPtr->saveAct);
   fileMenu->addAction(this->dataPtr->saveAsAct);
   fileMenu->addAction(this->dataPtr->exitAct);
+
+  QMenu *cameraMenu = this->dataPtr->menuBar->addMenu(tr("&Camera"));
+  cameraMenu->addAction(this->dataPtr->cameraOrthoAct);
+  cameraMenu->addAction(this->dataPtr->cameraPerspectiveAct);
 
   QMenu *viewMenu = this->dataPtr->menuBar->addMenu(tr("&View"));
   viewMenu->addAction(this->dataPtr->showJointsAct);
@@ -406,6 +434,7 @@ void ModelEditor::ToggleToolbar()
         actions[i] == g_copyAct ||
         actions[i] == g_pasteAct ||
         actions[i] == g_alignButtonAct ||
+        actions[i] == g_viewAngleButtonAct ||
         actions[i] == g_snapAct ||
         actions[i]->objectName() == "toolbarSpacerAction")
     {
@@ -424,4 +453,12 @@ void ModelEditor::ToggleToolbar()
   this->dataPtr->jointAct->setVisible(this->dataPtr->active);
   this->dataPtr->jointTypeAct->setVisible(this->dataPtr->active);
   this->dataPtr->jointSeparatorAct->setVisible(this->dataPtr->active);
+}
+
+/////////////////////////////////////////////////
+void ModelEditor::AppendPluginElement(const std::string &_name,
+    const std::string &_filename, sdf::ElementPtr _element)
+{
+  this->dataPtr->modelPalette->GetModelCreator()->
+      AppendPluginElement(_name, _filename, _element);
 }

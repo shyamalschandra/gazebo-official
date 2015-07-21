@@ -35,6 +35,7 @@
 #include "gazebo/rendering/JointVisual.hh"
 #include "gazebo/rendering/COMVisual.hh"
 #include "gazebo/rendering/InertiaVisual.hh"
+#include "gazebo/rendering/LinkFrameVisual.hh"
 #include "gazebo/rendering/ContactVisual.hh"
 #include "gazebo/rendering/Conversions.hh"
 #include "gazebo/rendering/Light.hh"
@@ -96,6 +97,7 @@ Scene::Scene(const std::string &_name, bool _enableVisualizations,
   this->dataPtr->initialized = false;
   this->dataPtr->showCOMs = false;
   this->dataPtr->showInertias = false;
+  this->dataPtr->showLinkFrames = false;
   this->dataPtr->showCollisions = false;
   this->dataPtr->showJoints = false;
   this->dataPtr->transparent = false;
@@ -1629,6 +1631,14 @@ bool Scene::ProcessModelMsg(const msgs::Model &_msg)
     }
   }
 
+  {
+    for (int i = 0; i < _msg.model_size(); ++i)
+    {
+      boost::shared_ptr<msgs::Model> mm(new msgs::Model(_msg.model(i)));
+      this->dataPtr->modelMsgs.push_back(mm);
+    }
+  }
+
   return true;
 }
 
@@ -1925,7 +1935,8 @@ void Scene::PreRender()
         // If an object is selected, don't let the physics engine move it.
         if (!this->dataPtr->selectedVis
             || this->dataPtr->selectionMode != "move" ||
-            iter->first != this->dataPtr->selectedVis->GetId())
+            (iter->first != this->dataPtr->selectedVis->GetId() &&
+            !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
         {
           math::Pose pose = msgs::Convert(pIter->second);
           GZ_ASSERT(iter->second, "Visual pointer is NULL");
@@ -1957,7 +1968,8 @@ void Scene::PreRender()
             // If an object is selected, don't let the physics engine move it.
             if (!this->dataPtr->selectedVis ||
                 this->dataPtr->selectionMode != "move" ||
-                iter->first != this->dataPtr->selectedVis->GetId())
+                (iter->first != this->dataPtr->selectedVis->GetId() &&
+                !this->dataPtr->selectedVis->IsAncestorOf(iter->second)))
             {
               math::Pose pose = msgs::Convert(pose_msg);
               iter2->second->SetPose(pose);
@@ -2157,6 +2169,11 @@ bool Scene::ProcessLinkMsg(ConstLinkPtr &_msg)
   if (!this->GetVisual(_msg->name() + "_INERTIA_VISUAL__"))
   {
     this->CreateInertiaVisual(_msg, linkVis);
+  }
+
+  if (!this->GetVisual(_msg->name() + "_LINK_FRAME_VISUAL__"))
+  {
+    this->CreateLinkFrameVisual(_msg, linkVis);
   }
 
   for (int i = 0; i < _msg->projector_size(); ++i)
@@ -2390,6 +2407,30 @@ void Scene::ProcessRequestMsg(ConstRequestPtr &_msg)
         vis->ShowInertia(false);
     }
   }
+  else if (_msg->request() == "show_link_frame")
+  {
+    if (_msg->data() == "all")
+      this->ShowLinkFrames(true);
+    else
+    {
+      VisualPtr vis = this->GetVisual(_msg->data());
+      if (vis)
+        vis->ShowLinkFrame(true);
+      else
+        gzerr << "Unable to find link frame visual[" << _msg->data() << "]\n";
+    }
+  }
+  else if (_msg->request() == "hide_link_frame")
+  {
+    if (_msg->data() == "all")
+      this->ShowLinkFrames(false);
+    else
+    {
+      VisualPtr vis = this->GetVisual(_msg->data());
+      if (vis)
+        vis->ShowLinkFrame(false);
+    }
+  }
   else if (_msg->request() == "set_transparent")
   {
     if (_msg->data() == "all")
@@ -2473,6 +2514,8 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg, Visual::VisualType _type)
   }
   else
   {
+//    std::cerr << "process visual _msg " << _msg->name() << " " << _msg->id() << std::endl;
+
     VisualPtr visual;
 
     // TODO: A bit of a hack.
@@ -2549,6 +2592,7 @@ bool Scene::ProcessVisualMsg(ConstVisualPtr &_msg, Visual::VisualType _type)
 
       visual->ShowCOM(this->dataPtr->showCOMs);
       visual->ShowInertia(this->dataPtr->showInertias);
+      visual->ShowLinkFrame(this->dataPtr->showLinkFrames);
       visual->ShowCollision(this->dataPtr->showCollisions);
       visual->ShowJoints(this->dataPtr->showJoints);
       visual->SetTransparency(this->dataPtr->transparent ? 0.5 : 0.0);
@@ -2640,6 +2684,8 @@ void Scene::OnModelMsg(ConstModelPtr &_msg)
 {
   boost::mutex::scoped_lock lock(*this->dataPtr->receiveMutex);
   this->dataPtr->modelMsgs.push_back(_msg);
+
+//  std::cerr << "model msg " << _msg->DebugString() << std::endl;
 }
 
 /////////////////////////////////////////////////
@@ -3035,6 +3081,16 @@ void Scene::CreateInertiaVisual(sdf::ElementPtr _elem, VisualPtr _linkVisual)
 }
 
 /////////////////////////////////////////////////
+void Scene::CreateLinkFrameVisual(ConstLinkPtr &_msg, VisualPtr _linkVisual)
+{
+  LinkFrameVisualPtr linkFrameVis(new LinkFrameVisual(_msg->name() +
+      "_LINK_FRAME_VISUAL__", _linkVisual));
+  linkFrameVis->Load();
+  linkFrameVis->SetVisible(this->dataPtr->showLinkFrames);
+  this->dataPtr->visuals[linkFrameVis->GetId()] = linkFrameVis;
+}
+
+/////////////////////////////////////////////////
 void Scene::RemoveVisualizations(rendering::VisualPtr _vis)
 {
   std::vector<VisualPtr> toRemove;
@@ -3070,7 +3126,12 @@ void Scene::SetTransparent(bool _show)
   this->dataPtr->transparent = _show;
   for (auto visual : this->dataPtr->visuals)
   {
-    visual.second->SetTransparency(_show ? 0.5 : 0.0);
+    if (visual.second->GetType() != Visual::VT_GUI &&
+        visual.second->GetType() != Visual::VT_PHYSICS &&
+        visual.second->GetType() != Visual::VT_SENSOR)
+    {
+      visual.second->SetTransparency(_show ? 0.5 : 0.0);
+    }
   }
 }
 
@@ -3091,6 +3152,16 @@ void Scene::ShowInertias(bool _show)
   for (auto visual : this->dataPtr->visuals)
   {
     visual.second->ShowInertia(_show);
+  }
+}
+
+/////////////////////////////////////////////////
+void Scene::ShowLinkFrames(bool _show)
+{
+  this->dataPtr->showLinkFrames = _show;
+  for (auto visual : this->dataPtr->visuals)
+  {
+    visual.second->ShowLinkFrame(_show);
   }
 }
 

@@ -23,12 +23,15 @@
 
 #include <sstream>
 
+#include <sdf/sdf.hh>
+
 #include "gazebo/msgs/msgs.hh"
 
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/MouseEvent.hh"
 #include "gazebo/common/Exception.hh"
 
+#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/rendering/UserCamera.hh"
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/Scene.hh"
@@ -150,7 +153,7 @@ bool ModelMaker::Init()
 
   // Load the world file
   std::string modelName;
-  math::Pose modelPose, linkPose, visualPose;
+  math::Pose modelPose;
   sdf::ElementPtr modelElem;
 
   if (this->modelSDF->Root()->HasElement("model"))
@@ -166,11 +169,13 @@ bool ModelMaker::Init()
   if (modelElem->HasElement("pose"))
     modelPose = modelElem->Get<math::Pose>("pose");
 
-  modelName = this->node->GetTopicNamespace() + "::" +
-    modelElem->Get<std::string>("name");
+//  modelName = this->node->GetTopicNamespace() + "::" +
+//    modelElem->Get<std::string>("name");
+  modelName = modelElem->Get<std::string>("name");
 
-  this->modelVisual.reset(new rendering::Visual(modelName,
-                          scene->GetWorldVisual()));
+  this->modelVisual.reset(new rendering::Visual(
+      this->node->GetTopicNamespace() + "::" + modelName,
+      scene->GetWorldVisual()));
   this->modelVisual->Load();
   this->modelVisual->SetPose(modelPose);
 
@@ -179,7 +184,8 @@ bool ModelMaker::Init()
 
   if (modelElem->GetName() == "model")
   {
-    sdf::ElementPtr linkElem = modelElem->GetElement("link");
+    this->CreateModelFromSDF(modelElem);
+/*    sdf::ElementPtr linkElem = modelElem->GetElement("link");
 
     try
     {
@@ -230,7 +236,7 @@ bool ModelMaker::Init()
     {
       this->visuals.clear();
       return false;
-    }
+    }*/
   }
   else if (modelElem->GetName() == "light")
   {
@@ -242,6 +248,111 @@ bool ModelMaker::Init()
   }
 
   return true;
+}
+
+/////////////////////////////////////////////////
+void ModelMaker::CreateModelFromSDF(sdf::ElementPtr _modelElem)
+{
+  math::Pose linkPose, visualPose;
+  std::list<std::pair<sdf::ElementPtr, rendering::VisualPtr> > modelElemList;
+
+  std::pair<sdf::ElementPtr, rendering::VisualPtr> pair(
+      _modelElem, this->modelVisual);
+  modelElemList.push_back(pair);
+
+  while (!modelElemList.empty())
+  {
+    sdf::ElementPtr modelElem = modelElemList.front().first;
+    rendering::VisualPtr modelVis = modelElemList.front().second;
+    modelElemList.pop_front();
+
+    std::string modelName = modelVis->GetName();
+
+    // create model
+    sdf::ElementPtr linkElem;
+    if (modelElem->HasElement("link"))
+      linkElem = modelElem->GetElement("link");
+
+    try
+    {
+      while (linkElem)
+      {
+        std::string linkName = linkElem->Get<std::string>("name");
+        if (linkElem->HasElement("pose"))
+          linkPose = linkElem->Get<math::Pose>("pose");
+        else
+          linkPose.Set(0, 0, 0, 0, 0, 0);
+
+        rendering::VisualPtr linkVisual(new rendering::Visual(modelName + "::" +
+              linkName, modelVis));
+        linkVisual->Load();
+        linkVisual->SetPose(linkPose);
+        this->visuals.push_back(linkVisual);
+
+        int visualIndex = 0;
+        sdf::ElementPtr visualElem;
+
+        if (linkElem->HasElement("visual"))
+          visualElem = linkElem->GetElement("visual");
+
+        while (visualElem)
+        {
+          if (visualElem->HasElement("pose"))
+            visualPose = visualElem->Get<math::Pose>("pose");
+          else
+            visualPose.Set(0, 0, 0, 0, 0, 0);
+
+          std::ostringstream visualName;
+          visualName << modelName << "::" << linkName << "::Visual_"
+            << visualIndex++;
+          rendering::VisualPtr visVisual(new rendering::Visual(visualName.str(),
+                linkVisual));
+
+          visVisual->Load(visualElem);
+          visVisual->SetPose(visualPose);
+          this->visuals.push_back(visVisual);
+
+          visualElem = visualElem->GetNextElement("visual");
+        }
+
+        linkElem = linkElem->GetNextElement("link");
+      }
+    }
+    catch(common::Exception &_e)
+    {
+      this->Stop();
+    }
+
+    // append other model elems to the list
+    if (modelElem->HasElement("model"))
+    {
+      sdf::ElementPtr childElem = modelElem->GetElement("model");
+      while (childElem)
+      {
+        rendering::VisualPtr childVis;
+        std::string childName = childElem->Get<std::string>("name");
+        childVis.reset(new rendering::Visual(modelName + "::" + childName,
+            modelVis));
+        childVis->Load();
+        this->visuals.push_back(childVis);
+
+        math::Pose childPose;
+        if (childElem->HasElement("pose"))
+          childPose = childElem->Get<math::Pose>("pose");
+        childVis->SetPose(childPose);
+
+//        std::string childName = modelVis->GetName() + "::" +
+//            childElem->Get<std::string>("name");
+//        childElem->GetAttribute("name")->Set(childName);
+
+        std::pair<sdf::ElementPtr, rendering::VisualPtr> childPair(
+            childElem, childVis);
+        modelElemList.push_back(childPair);
+
+        childElem = childElem->GetNextElement("model");
+      }
+    }
+  }
 }
 
 /////////////////////////////////////////////////
@@ -259,6 +370,8 @@ void ModelMaker::Stop()
   for (auto vis : this->visuals)
     scene->RemoveVisual(vis);
   this->modelVisual.reset();
+  for (auto vis : this->visuals)
+    scene->RemoveVisual(vis);
   this->visuals.clear();
   this->modelSDF.reset();
 
@@ -280,12 +393,12 @@ void ModelMaker::OnMousePush(const common::MouseEvent &/*_event*/)
 /////////////////////////////////////////////////
 void ModelMaker::OnMouseRelease(const common::MouseEvent &_event)
 {
-  if (_event.button == common::MouseEvent::LEFT)
+  if (_event.Button() == common::MouseEvent::LEFT)
   {
     // Place if not dragging, or if dragged for less than 50 pixels.
     // The 50 pixels is used to account for accidental mouse movement
     // when placing an object.
-    if (!_event.dragging || _event.pressPos.Distance(_event.pos) < 50)
+    if (!_event.Dragging() || _event.PressPos().Distance(_event.Pos()) < 50)
     {
       this->CreateTheEntity();
       this->Stop();
@@ -299,7 +412,7 @@ void ModelMaker::OnMouseMove(const common::MouseEvent &_event)
   math::Pose pose = this->modelVisual->GetWorldPose();
   pose.pos = ModelManipulator::GetMousePositionOnPlane(this->camera, _event);
 
-  if (!_event.shift)
+  if (!_event.Shift())
   {
     pose.pos = ModelManipulator::SnapPoint(pose.pos);
   }
