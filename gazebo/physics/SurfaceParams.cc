@@ -28,6 +28,8 @@ FrictionPyramid::FrictionPyramid()
 {
   this->mu[0] = 1.0;
   this->mu[1] = 1.0;
+  this->mu[2] = 1.0;
+  this->patchRadius = 0.0;
 }
 
 //////////////////////////////////////////////////
@@ -48,6 +50,30 @@ double FrictionPyramid::GetMuSecondary()
 }
 
 //////////////////////////////////////////////////
+double FrictionPyramid::GetMuTorsion()
+{
+  return this->GetMu(2);
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::GetPatchRadius()
+{
+  return this->patchRadius;
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::GetCurvatureRadius()
+{
+  return this->curvatureRadius;
+}
+
+//////////////////////////////////////////////////
+bool FrictionPyramid::GetUseCurvature()
+{
+  return this->useCurvature;
+}
+
+//////////////////////////////////////////////////
 void FrictionPyramid::SetMuPrimary(double _mu)
 {
   this->SetMu(0, _mu);
@@ -60,16 +86,40 @@ void FrictionPyramid::SetMuSecondary(double _mu)
 }
 
 //////////////////////////////////////////////////
+void FrictionPyramid::SetMuTorsion(double _mu)
+{
+  this->SetMu(2, _mu);
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetPatchRadius(double _radius)
+{
+  this->patchRadius = _radius;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetCurvatureRadius(double _radius)
+{
+  this->curvatureRadius = _radius;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetUseCurvature(bool _use)
+{
+  this->useCurvature = _use;
+}
+
+//////////////////////////////////////////////////
 double FrictionPyramid::GetMu(unsigned int _index)
 {
-  GZ_ASSERT(_index < 2, "Invalid _index to GetMu");
+  GZ_ASSERT(_index < 3, "Invalid _index to GetMu");
   return this->mu[_index];
 }
 
 //////////////////////////////////////////////////
 void FrictionPyramid::SetMu(unsigned int _index, double _mu)
 {
-  GZ_ASSERT(_index < 2, "Invalid _index to SetMu");
+  GZ_ASSERT(_index < 3, "Invalid _index to SetMu");
   if (_mu < 0)
   {
     this->mu[_index] = GZ_FLT_MAX;
