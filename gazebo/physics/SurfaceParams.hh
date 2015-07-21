@@ -49,6 +49,22 @@ namespace gazebo
       /// \return Friction coefficient in secondary direction.
       public: double GetMuSecondary();
 
+      /// \brief Get the torsional friction coefficient.
+      /// \return Torsional friction coefficient.
+      public: double GetMuTorsion();
+
+      /// \brief Get the torsional friction coefficient.
+      /// \return Torsional friction coefficient.
+      public: double GetPatchRadius();
+
+      /// \brief Get the torsional friction coefficient.
+      /// \return Torsional friction coefficient.
+      public: double GetCurvatureRadius();
+
+      /// \brief Get the torsional friction coefficient.
+      /// \return Torsional friction coefficient.
+      public: bool GetUseCurvature();
+
       /// \brief Set the friction coefficient in the primary direction.
       /// \param[in] _mu Friction coefficient.
       public: void SetMuPrimary(double _mu);
@@ -56,6 +72,22 @@ namespace gazebo
       /// \brief Set the friction coefficient in the secondary direction.
       /// \param[in] _mu Friction coefficient.
       public: void SetMuSecondary(double _mu);
+
+      /// \brief Set the torsional friction coefficient.
+      /// \param[in] _mu Torsional friction coefficient.
+      public: void SetMuTorsion(double _mu);
+
+      /// \brief Set the torsional patch radius.
+      /// \param[in] _radius Torsional patch radius.
+      public: void SetPatchRadius(double _radius);
+
+      /// \brief Set the surface.
+      /// \param[in] _radius Curvature radius.
+      public: void SetCurvatureRadius(double _radius);
+
+      /// \brief Set whether to use the curvature radius.
+      /// \param[in] _use True to use the curvature radius.
+      public: void SetUseCurvature(bool _use);
 
       /// \brief Get the friction coefficient in a single direction.
       /// \param[in] _index Index of friction direction, 0 for primary,
@@ -84,7 +116,20 @@ namespace gazebo
       /// \brief Array of dry friction coefficients. mu[0] is in the
       /// primary direction as defined by the friction pyramid.
       /// mu[1] is in the second direction.
-      private: double mu[2];
+      /// mu[2] is in the torsional friction.
+      private: double mu[3];
+
+      /// \brief Radius of the contact patch used to calculate torsional
+      /// friction.
+      private: double patchRadius;
+
+      /// \brief Radius of the surface to be used to calculate torsional
+      /// friction.
+      private: double curvatureRadius;
+
+      /// \brief True to use the curvature * contact depth, false to use the
+      /// patch radius.
+      private: bool useCurvature;
     };
 
     /// \class SurfaceParams SurfaceParams.hh physics/physics.hh
