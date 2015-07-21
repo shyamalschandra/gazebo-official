@@ -1,10 +1,22 @@
 ## Gazebo 7.0
 
 1. Model editor updates
+    1. Color-coded edges in Schematic View to match joint color.
+        * [Pull request #1781](https://bitbucket.org/osrf/gazebo/pull-request/1781)
+        
     1. Added support for selecting links and joints, opening context menu and inspectors in Schematic View.
         * [Pull request #1787](https://bitbucket.org/osrf/gazebo/pull-request/1787)
 
 ## Gazebo 6.0
+1. Implement more control options for log playback:
+  1. Rewind: The simulation starts from the beginning.
+  1. Forward: The simulation jumps to the end of the log file.
+  1. Seek: The simulation jumps to a specific point specified by its simulation
+  time.
+      * [Pull request #1737](https://bitbucket.org/osrf/gazebo/pull-request/1737)
+
+1. Added Gazebo splash screen
+    * [Pull request #1745](https://bitbucket.org/osrf/gazebo/pull-request/1745)
 
 1. Added a transporter plugin which allows models to move from one location
    to another based on their location and the location of transporter pads.
@@ -48,6 +60,7 @@ world with the Cessna model and the two previous plugins loaded
 
 1. Added a plugin to control an elevator (ElevatorPlugin), and an OccupiedEvent plugin that sends a message when a model is within a specified region.
     * [Pull request #1694](https://bitbucket.org/osrf/gazebo/pull-request/1694)
+    * [Pull request #1775](https://bitbucket.org/osrf/gazebo/pull-request/1775)
 
 1. Added Layers tab and meta information for visuals.
     * [Pull request #1674](https://bitbucket.org/osrf/gazebo/pull-request/1674)
@@ -69,6 +82,10 @@ to corrected for position projection errors.
 1. Get/Set user camera pose in GUI.
     * [Pull request #1649](https://bitbucket.org/osrf/gazebo/pull-request/1649)
     * [Issue #1595](https://bitbucket.org/osrf/gazebo/issue/1595)
+
+1. Added ViewAngleWidget, removed hard-coded reset view and removed MainWindow::Reset(). Also added GLWidget::GetSelectedVisuals().
+    * [Pull request #1768](https://bitbucket.org/osrf/gazebo/pull-request/1768)
+    * [Issue #1507](https://bitbucket.org/osrf/gazebo/issue/1507)
 
 1. Windows support. This consists mostly of numerous small changes to support
 compilation on Windows.
@@ -124,6 +141,9 @@ compilation on Windows.
 1. Detect uuid library during compilation.
     * [Pull request #1655](https://bitbucket.org/osrf/gazebo/pull-request/1655)
     * [Issue #1572](https://bitbucket.org/osrf/gazebo/issue/1572)
+
+1. Install `libgazebo_server_fixture`. This will facilitate tests external to the main gazebo repository. See `examples/stand_alone/test_fixture`.
+    * [Pull request #1606](https://bitbucket.org/osrf/gazebo/pull-request/1606)
 
 1. New accessors in LogPlay class.
     * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
@@ -222,6 +242,10 @@ compilation on Windows.
 1. Added View Inertia and InertiaVisual, changed COMVisual to sphere proportional to mass.
     * [Pull request #1445](https://bitbucket.org/osrf/gazebo/pull-request/1445)
 
+1. Added View Link Frame and LinkFrameVisual. Visual::SetTransparency goes into texture_unit.
+    * [Pull request #1762](https://bitbucket.org/osrf/gazebo/pull-request/1762)
+    * [Issue #853](https://bitbucket.org/osrf/gazebo/issue/853)
+
 1. Changed the position of Save and Cancel buttons on editor dialogs
     * [Pull request #1442](https://bitbucket.org/osrf/gazebo/pull-request/1442)
     * [Issue #1377](https://bitbucket.org/osrf/gazebo/issue/1377)
@@ -253,6 +277,9 @@ compilation on Windows.
 
 1. Added Apply Force/Torque OnMouseRelease and ActivateWindow
     * [Pull request #1699](https://bitbucket.org/osrf/gazebo/pull-request/1699)
+
+1. Added Apply Force/Torque mouse interactions, modes, activation
+    * [Pull request #1731](https://bitbucket.org/osrf/gazebo/pull-request/1731)
 
 1. Added inertia pose getter for COMVisual and COMVisual_TEST
     * [Pull request #1581](https://bitbucket.org/osrf/gazebo/pull-request/1581)
@@ -313,12 +340,18 @@ compilation on Windows.
     1. Expose API to support adding items to the palette.
         * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
+    1. Add schematic view to model editor
+        * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
     1. Added menu for toggling joint visualization
         * [Pull request #1551](https://bitbucket.org/osrf/gazebo/pull-request/1551)
         * [Issue #1483](https://bitbucket.org/osrf/gazebo/issue/1483)
 
     1. Add schematic view to model editor
         * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+        
+    1. Expose API to support adding items to the palette.
+        * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.

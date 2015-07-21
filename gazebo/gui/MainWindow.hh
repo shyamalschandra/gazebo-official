@@ -32,10 +32,6 @@
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/util/system.hh"
 
-#ifdef HAVE_OCULUS
-#include "gazebo/gui/OculusWindow.hh"
-#endif
-
 namespace gazebo
 {
   namespace gui
@@ -45,6 +41,7 @@ namespace gazebo
     class ModelListWidget;
     class Editor;
     class SpaceNav;
+    class OculusWindow;
 
     class GAZEBO_VISIBLE MainWindow : public QMainWindow
     {
@@ -191,7 +188,8 @@ namespace gazebo
       /// \brief Qt callback when the show inertia action is triggered.
       private slots: void ShowInertia();
 
-      private slots: void Reset();
+      /// \brief Qt callback when the show link frame action is triggered.
+      private slots: void ShowLinkFrame();
 
       /// \brief Qt callback when the full screen action is triggered.
       private slots: void FullScreen();

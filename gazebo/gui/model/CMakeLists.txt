@@ -43,6 +43,7 @@ set (headers
 
 set (install_headers
   ModelEditor.hh
+  ModelEditorEvents.hh
 )
 
 if (ENABLE_SCREEN_TESTS)
@@ -87,6 +88,7 @@ if (HAVE_GRAPHVIZ)
   )
 endif()
 
+
 # Generate executables for each of the QT unit tests
 gz_build_qt_tests(${qt_tests})
 
@@ -111,3 +113,4 @@ target_link_libraries(gazebo_gui_model
 
 gz_install_library(gazebo_gui_model)
 gz_install_includes("gui/model" ${install_headers})
+

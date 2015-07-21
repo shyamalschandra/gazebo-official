@@ -500,10 +500,9 @@ QTabBar::tab:!selected
   margin-top: 2px;
 }
 
-QTabWidget#mainTab::pane,
-QTabWidget#buildingEditorTab::pane,
-QTabWidget#modelEditorTab::pane,
-QTabWidget#terrainEditorTab::pane,
+
+QTabWidget::pane,
+QTabWidget#mainTab::pane
 QTabWidget#linkInspectorTab::pane
 {
   border-left: 1px solid #101010;
@@ -686,6 +685,11 @@ QwtScaleWidget
   font-size: 11px;
 }
 
+QRadioButton::indicator
+{
+  color: #d0d0d0;
+}
+
 #configWidget
 {
   background-color: #808080;
@@ -758,4 +762,10 @@ QLineEdit#logPlayCurrentTime
 QLineEdit#logPlayCurrentTime:focus
 {
   background-color: #707070;
+}
+
+QTextEdit#splashVersionTextEdit
+{
+  color: #f58113;
+  font-size: 10px;
 }

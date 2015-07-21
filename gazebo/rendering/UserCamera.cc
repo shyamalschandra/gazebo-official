@@ -204,6 +204,19 @@ void UserCamera::Init()
 }
 
 //////////////////////////////////////////////////
+void UserCamera::SetDefaultPose(const math::Pose &_pose)
+{
+  this->dataPtr->defaultPose = _pose;
+  this->SetWorldPose(_pose);
+}
+
+//////////////////////////////////////////////////
+math::Pose UserCamera::DefaultPose() const
+{
+  return this->dataPtr->defaultPose;
+}
+
+//////////////////////////////////////////////////
 void UserCamera::SetWorldPose(const math::Pose &_pose)
 {
   Camera::SetWorldPose(_pose);
@@ -374,6 +387,8 @@ void UserCamera::SetViewController(const std::string &_type)
     gzthrow("Invalid view controller type: " + _type);
 
   this->dataPtr->prevViewControllerName = vc;
+
+  this->dataPtr->prevViewControllerName = vc;
 }
 
 //////////////////////////////////////////////////
@@ -483,13 +498,25 @@ void UserCamera::MoveToVisual(VisualPtr _visual)
     this->scene->GetManager()->destroyAnimation("cameratrack");
   }
 
-  math::Box box = _visual->GetBoundingBox();
+  rendering::VisualPtr moveToVisual;
+
+  // TODO zoom into model instead of visual as nested model currently has
+  // incorrect bounding box
+  rendering::VisualPtr topLevelVis = _visual->GetNthAncestor(2);
+
+  if (topLevelVis)
+    moveToVisual = topLevelVis;
+  else
+    moveToVisual = _visual;
+
+  math::Box box = moveToVisual->GetBoundingBox();
+
   math::Vector3 size = box.GetSize();
   double maxSize = std::max(std::max(size.x, size.y), size.z);
 
   math::Vector3 start = this->GetWorldPose().pos;
   start.Correct();
-  math::Vector3 end = box.GetCenter() + _visual->GetWorldPose().pos;
+  math::Vector3 end = box.GetCenter() + moveToVisual->GetWorldPose().pos;
   end.Correct();
   math::Vector3 dir = end - start;
   dir.Correct();

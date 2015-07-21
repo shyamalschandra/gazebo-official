@@ -126,13 +126,32 @@ RenderWidget::RenderWidget(QWidget *_parent)
     connect(alignButton, SIGNAL(pressed()), g_alignAct, SLOT(trigger()));
   }
 
-  this->toolbar->addSeparator();
-
   // Snap
   if (g_snapAct)
   {
     actionGroup->addAction(g_snapAct);
     this->toolbar->addAction(g_snapAct);
+  }
+
+  this->toolbar->addSeparator();
+
+  // View angle
+  if (g_viewAngleAct)
+  {
+    QToolButton *viewAngleButton = new QToolButton;
+    viewAngleButton->setObjectName("viewAngleToolBarButton");
+    viewAngleButton->setStyleSheet(
+        "#viewAngleToolBarButton{padding-right:10px}");
+    viewAngleButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    viewAngleButton->setIcon(QIcon(":/images/view_angle_front.png"));
+    viewAngleButton->setToolTip(tr("Change the view angle"));
+
+    QMenu *viewAngleMenu = new QMenu(viewAngleButton);
+    viewAngleMenu->addAction(g_viewAngleAct);
+
+    viewAngleButton->setMenu(viewAngleMenu);
+    viewAngleButton->setPopupMode(QToolButton::InstantPopup);
+    g_viewAngleButtonAct = this->toolbar->addWidget(viewAngleButton);
   }
 
   // Empty space to push whatever comes next to the right
@@ -159,9 +178,12 @@ RenderWidget::RenderWidget(QWidget *_parent)
       "QLabel { background-color : white; color : gray; }");
   this->msgOverlayLabel->setVisible(false);
 
+
+  this->bottomRow = new QStackedWidget(this);
   QHBoxLayout *bottomPanelLayout = new QHBoxLayout;
 
   this->timePanel = new TimePanel(this);
+//  this->AddToBottomRow("default", timePanel);
 
   this->bottomFrame = new QFrame;
   this->bottomFrame->setObjectName("renderBottomFrame");
@@ -172,6 +194,7 @@ RenderWidget::RenderWidget(QWidget *_parent)
   bottomPanelLayout->setSpacing(0);
   bottomPanelLayout->setContentsMargins(0, 0, 0, 0);
   this->bottomFrame->setLayout(bottomPanelLayout);
+
 
   QFrame *render3DFrame = new QFrame;
   render3DFrame->setObjectName("render3DFrame");
@@ -281,6 +304,12 @@ void RenderWidget::InsertWidget(unsigned int _index, QWidget *_widget)
 }
 
 /////////////////////////////////////////////////
+unsigned RenderWidget::GetWidgetCount()
+{
+  return static_cast<unsigned int>(this->splitter->count());
+}
+
+/////////////////////////////////////////////////
 void RenderWidget::ShowTimePanel(bool _show)
 {
   if (_show)
@@ -381,6 +410,26 @@ void RenderWidget::OnFollow(const std::string &_modelName)
     g_translateAct->setEnabled(false);
     g_rotateAct->setEnabled(false);
   }
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::AddToBottomRow(const std::string &_name, QWidget *_widget)
+{
+  this->bottomRow->addWidget(_widget);
+  this->bottomRowStack[_name] = this->bottomRow->count()-1;
+}
+
+/////////////////////////////////////////////////
+void RenderWidget::ShowBottomRow(const std::string &_name)
+{
+  std::map<std::string, int>::iterator iter =
+      this->bottomRowStack.find(_name);
+
+  if (iter != this->bottomRowStack.end())
+    this->bottomRow->setCurrentIndex(iter->second);
+  else
+    gzerr << "Widget with name[" << _name << "] has not been added to the"
+      << " bottom row stack.\n";
 }
 
 /////////////////////////////////////////////////

@@ -92,6 +92,7 @@ void RestUiWidget::Update()
   // Login problem?
   while (!this->msgRespQ.empty())
   {
+    std::string titleStr = this->title;
     ConstRestErrorPtr msg = this->msgRespQ.front();
     std::string msgStr = msg->msg();
     this->msgRespQ.pop_front();
@@ -108,13 +109,13 @@ void RestUiWidget::Update()
       msgStr += "\n\nIf the server is not available, ";
       msgStr += "logout to hide theses messages.";
       QMessageBox::critical(this,
-                            tr(this->title.c_str()),
+                            tr(titleStr.c_str()),
                             tr(msgStr.c_str()));
     }
     else
     {
       QMessageBox::information(this,
-                               tr(this->title.c_str()),
+                               tr(titleStr.c_str()),
                                tr(msgStr.c_str()));
     }
   }

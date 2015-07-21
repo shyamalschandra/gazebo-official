@@ -64,17 +64,19 @@ namespace gazebo
       public: void RemoveNode(const std::string &_node);
 
       /// \brief Check if a node exists in the scene in the widget.
-      /// \param[in] _name Name of the name.
+      /// \param[in] _name Name of the node.
       /// \return True if the node exists.
       public: bool HasNode(const std::string &_name) const;
 
       /// \brief Add an edge to the scene in the widget
       /// \param[in] _id Unique id of edge.
       /// \param[in] _name Name of edge.
+      /// \param[in] _name Type of edge.
       /// \param[in] _parent Name of parent node.
       /// \param[in] _child Name of child node.
       public: void AddEdge(const std::string &_id, const std::string &_name,
-          const std::string &_parent, const std::string &_child);
+          const std::string &_type, const std::string &_parent,
+          const std::string &_child);
 
       /// \brief Remove an edge from the scene in the widget
       /// \param[in] _id Unique id of edge.
@@ -84,6 +86,16 @@ namespace gazebo
       /// \param[in] _id Joint Id.
       /// \return True if the edge exists.
       public: bool HasEdge(const std::string &_id) const;
+
+      /// \brief Update an edge in the scene
+      /// \param[in] _id Unique id of edge.
+      /// \param[in] _name Name of edge.
+      /// \param[in] _name Type of edge.
+      /// \param[in] _parent Name of parent node.
+      /// \param[in] _child Name of child node.
+      public: void UpdateEdge(const std::string &_id, const std::string &_name,
+          const std::string &_type, const std::string &_parent,
+          const std::string &_child);
 
       /// \brief Get number of nodes in the scene.
       /// \return Number of nodes.
@@ -100,6 +112,12 @@ namespace gazebo
       /// \param[in] _scopedName Scoped name.
       /// \return Leaf name.
       private: std::string GetLeafName(const std::string &_scopedName);
+
+      /// \brief Helper function to get the entity scopd name without the
+      ///model name prefix.
+      /// \param[in] _scopedName Scoped name.
+      /// \return Scopd name without model prefix.
+      private: std::string GetScopedName(const std::string &_scopedName);
 
       /// \brief Callback when a link is selected.
       /// \param[in] _name Name of link.
