@@ -24,6 +24,7 @@
 #include <sdf/sdf.hh>
 
 #include "gazebo/math/Pose.hh"
+#include "gazebo/rendering/RenderTypes.hh"
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/KeyEvent.hh"
 #include "gazebo/gui/EntityMaker.hh"
@@ -32,11 +33,6 @@
 
 namespace gazebo
 {
-  namespace msgs
-  {
-    class Visual;
-  }
-
   namespace gui
   {
     class EntityMaker;
@@ -211,17 +207,8 @@ namespace gazebo
       /// \brief Reset the building maker and the SDF.
       public: void Reset();
 
-      // Documentation inherited
-      public: virtual void Start(const rendering::UserCameraPtr _camera);
-
-      // Documentation inherited
-      public: virtual void Stop();
-
       /// \brief Generate the SDF from building part visuals.
       public: void GenerateSDF();
-
-      // Documentation inherited
-      public: virtual bool IsActive() const;
 
       /// \brief Set save state upon a change to the building.
       public: void BuildingChanged();
