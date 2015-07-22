@@ -8,11 +8,13 @@ include_directories(SYSTEM
   ${TBB_INCLUDEDIR}
   ${tinyxml_INCLUDE_DIRS}
 )
+include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/deps/opende/include)
 
 link_directories(
   ${ogre_library_dirs}
   ${Boost_LIBRARY_DIRS}
   ${SDFormat_LIBRARY_DIRS}
+  ${IGNITION-MATH_LIBRARY_DIRS}
   ${PROJECT_BINARY_DIR}/test
   ${TBB_LIBRARY_DIR}
   ${CURL_LIBDIR}
@@ -42,21 +44,9 @@ add_subdirectory(util)
 add_subdirectory(test)
 
 add_dependencies(gazebo_physics gazebo_msgs)
-add_dependencies(gazebo_physics_ode gazebo_msgs)
 add_dependencies(gazebo_gui gazebo_msgs)
 add_dependencies(gazebo_rendering gazebo_msgs)
 add_dependencies(gazebo_sensors gazebo_rendering)
-
-if(HAVE_BULLET)
-  add_dependencies(gazebo_physics_bullet gazebo_msgs)
-endif()
-if (HAVE_SIMBODY)
-  add_dependencies(gazebo_physics_simbody gazebo_msgs)
-endif()
-if(HAVE_DART)
-  add_dependencies(gazebo_physics_dart gazebo_msgs)
-endif()
-
 
 gz_add_executable(gzserver server_main.cc)
 
@@ -69,23 +59,9 @@ target_link_libraries(gzserver
   gazebo_sensors
   gazebo_rendering
   gazebo_msgs
-  # Extra libs needed when linking statically (e.g., on WIN32)
-  gazebo_physics_ode
   ${freeimage_LIBRARIES}
   ${TBB_LIBRARIES}
 )
-
-if (HAVE_SIMBODY)
-  target_link_libraries(gzserver gazebo_physics_simbody)
-endif()
-
-if (HAVE_DART)
-  target_link_libraries(gzserver gazebo_physics_dart)
-endif()
-
-if (HAVE_BULLET)
-  target_link_libraries(gzserver gazebo_physics_bullet)
-endif()
 
 if (UNIX)
   target_link_libraries(gzserver pthread)
@@ -158,3 +134,5 @@ set(headers
   Server.hh
 )
 gz_install_includes("" ${headers})
+
+message (STATUS "\n\n PROTO: ${PROTOBUF_LIBRARY}\n\n")
