@@ -23,33 +23,46 @@
 
 #include "gazebo/transport/TransportIface.hh"
 #include "gazebo/transport/Node.hh"
+
+#include "gazebo/common/MouseEvent.hh"
+
+#include "gazebo/rendering/UserCamera.hh"
+
+#include "gazebo/gui/ModelManipulator.hh"
+#include "gazebo/gui/GuiEvents.hh"
+#include "gazebo/gui/GuiIface.hh"
 #include "gazebo/gui/EntityMaker.hh"
 
 using namespace gazebo;
 using namespace gui;
 
-bool EntityMaker::snapToGrid = true;
-double EntityMaker::snapDistance = 0.4;
-double EntityMaker::snapGridSize = 1.0;
+bool EntityMaker::snapToGrid = false;
 
 //////////////////////////////////////////////////
 EntityMaker::EntityMaker()
 {
   this->node = transport::NodePtr(new transport::Node());
   this->node->Init();
-  this->visPub = this->node->Advertise<msgs::Visual>("~/visual");
   this->makerPub = this->node->Advertise<msgs::Factory>("~/factory");
-  this->requestPub = this->node->Advertise<msgs::Request>("~/request");
 }
 
 //////////////////////////////////////////////////
 EntityMaker::~EntityMaker()
 {
-  this->camera.reset();
   this->node->Fini();
   this->node.reset();
-  this->visPub.reset();
-  this->requestPub.reset();
+  this->makerPub.reset();
+}
+
+/////////////////////////////////////////////////
+void EntityMaker::Start()
+{
+}
+
+/////////////////////////////////////////////////
+void EntityMaker::Stop()
+{
+  gui::Events::moveMode(true);
 }
 
 //////////////////////////////////////////////////
@@ -58,41 +71,45 @@ void EntityMaker::SetSnapToGrid(bool _snap)
   snapToGrid = _snap;
 }
 
-
 //////////////////////////////////////////////////
-void EntityMaker::OnMousePush(const common::MouseEvent &/*event*/)
+void EntityMaker::OnMouseRelease(const common::MouseEvent &_event)
 {
-}
-
-//////////////////////////////////////////////////
-void EntityMaker::OnMouseRelease(const common::MouseEvent &/*event*/)
-{
-}
-
-//////////////////////////////////////////////////
-void EntityMaker::OnMouseDrag(const common::MouseEvent &/*event*/)
-{
-}
-
-//////////////////////////////////////////////////
-void EntityMaker::OnMouseMove(const common::MouseEvent &/*_event*/)
-{
-}
-
-//////////////////////////////////////////////////
-math::Vector3 EntityMaker::GetSnappedPoint(math::Vector3 _p)
-{
-  math::Vector3 result = _p;
-
-  if (this->snapToGrid)
+  // Place if not dragging, or if dragged for less than 50 pixels.
+  // The 50 pixels is used to account for accidental mouse movement
+  // when placing an object.
+  if (_event.Button() == common::MouseEvent::LEFT &&
+      (!_event.Dragging() || _event.PressPos().Distance(_event.Pos()) < 50))
   {
-    math::Vector3 rounded = (_p / this->snapGridSize).GetRounded() *
-      this->snapGridSize;
-    if (fabs(_p.x - rounded.x) < this->snapDistance)
-      result.x = rounded.x;
-    if (fabs(_p.y - rounded.y) < this->snapDistance)
-      result.y = rounded.y;
+    this->CreateTheEntity();
+    this->Stop();
   }
-
-  return result;
 }
+
+//////////////////////////////////////////////////
+void EntityMaker::OnMouseMove(const common::MouseEvent &_event)
+{
+  rendering::UserCameraPtr camera = gui::get_active_camera();
+
+  ignition::math::Vector3d pos =
+      (ModelManipulator::GetMousePositionOnPlane(camera, _event)).Ign();
+
+  if (_event.Control() || this->snapToGrid)
+  {
+    pos = ModelManipulator::SnapPoint(math::Vector3(pos)).Ign();
+  }
+ pos.Z(this->EntityPosition().Z());
+
+  this->SetEntityPosition(pos);
+}
+
+/////////////////////////////////////////////////
+ignition::math::Vector3d EntityMaker::EntityPosition() const
+{
+  return ignition::math::Vector3d();
+}
+
+/////////////////////////////////////////////////
+void EntityMaker::SetEntityPosition(const ignition::math::Vector3d &/*_pos*/)
+{
+}
+
