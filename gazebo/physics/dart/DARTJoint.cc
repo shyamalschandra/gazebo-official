@@ -477,14 +477,6 @@ double DARTJoint::GetParam(const std::string &_key, unsigned int _index)
 //////////////////////////////////////////////////
 void DARTJoint::CacheForceTorque()
 {
-  // Does nothing for now, will add when recovering pull request #1721
-}
-
-//////////////////////////////////////////////////
-JointWrench DARTJoint::GetForceTorque(unsigned int /*_index*/)
-{
-  JointWrench jointWrench;
-
   //---------------------------------------------
   // Parent and child link information
   //---------------------------------------------
@@ -516,12 +508,16 @@ JointWrench DARTJoint::GetForceTorque(unsigned int /*_index*/)
 
   // kind of backwards here, body1 (parent) corresponds go f2, t2
   // and body2 (child) corresponds go f1, t1
-  jointWrench.body1Force.Set(F1(3), F1(4), F1(5));
-  jointWrench.body1Torque.Set(F1(0), F1(1), F1(2));
-  jointWrench.body2Force.Set(F2(3), F2(4), F2(5));
-  jointWrench.body2Torque.Set(F2(0), F2(1), F2(2));
+  this->wrench.body1Force.Set(F1(3), F1(4), F1(5));
+  this->wrench.body1Torque.Set(F1(0), F1(1), F1(2));
+  this->wrench.body2Force.Set(F2(3), F2(4), F2(5));
+  this->wrench.body2Torque.Set(F2(0), F2(1), F2(2));
+}
 
-  return jointWrench;
+//////////////////////////////////////////////////
+JointWrench DARTJoint::GetForceTorque(unsigned int /*_index*/)
+{
+  return this->wrench;
 }
 
 /////////////////////////////////////////////////
