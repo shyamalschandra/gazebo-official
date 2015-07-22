@@ -42,7 +42,6 @@ extern void addObjectToList( dObject *obj, dObject **first );
 dxJoint::dxJoint( dxWorld *w ) :
         dObject( w )
 {
-    //printf("constructing %p\n", this);
     dIASSERT( w );
     flags = 0;
     node[0].joint = this;
@@ -477,6 +476,7 @@ void dxJointLimitMotor::init( dxWorld *world )
     normal_cfm = world->global_cfm;
     stop_erp = world->global_erp;
     stop_cfm = world->global_cfm;
+    stop_min_depth = world->contactp.min_depth;
     bounce = 0;
     limit = 0;
     limit_err = 0;
@@ -514,6 +514,9 @@ void dxJointLimitMotor::set( int num, dReal value )
     case dParamStopCFM:
         stop_cfm = value;
         break;
+    case dParamStopMinDepth:
+        stop_min_depth = value;
+        break;
     default:
         break;
     }
@@ -542,6 +545,8 @@ dReal dxJointLimitMotor::get( int num )
         return stop_erp;
     case dParamStopCFM:
         return stop_cfm;
+    case dParamStopMinDepth:
+        return stop_min_depth;
     default:
         return 0;
     }
@@ -610,9 +615,12 @@ int dxJointLimitMotor::addLimot( dxJoint *joint,
     if ( !rotational && joint->node[1].body )
     {
       dVector3 c;
-      c[0] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[0] - joint->node[0].body->posr.pos[0] );
-      c[1] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[1] - joint->node[0].body->posr.pos[1] );
-      c[2] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[2] - joint->node[0].body->posr.pos[2] );
+      c[0] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[0]
+                           - joint->node[0].body->posr.pos[0] );
+      c[1] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[1]
+                           - joint->node[0].body->posr.pos[1] );
+      c[2] = REAL( 0.5 ) * ( joint->node[1].body->posr.pos[2]
+                           - joint->node[0].body->posr.pos[2] );
       dCalcVectorCross3( ltd, c, ax1 );
       info->J1a[srow+0] = ltd[0];
       info->J1a[srow+1] = ltd[1];
@@ -650,27 +658,30 @@ int dxJointLimitMotor::addLimot( dxJoint *joint,
         if (( vel > 0 ) || (_dequal(vel, 0.0) && limit == 2 ) ) fm = -fm;
 
         // if we're powering away from the limit, apply the fudge factor
-        if (( limit == 1 && vel > 0 ) || ( limit == 2 && vel < 0 ) ) fm *= fudge_factor;
+        if (( limit == 1 && vel > 0 ) || ( limit == 2 && vel < 0 ) )
+          fm *= fudge_factor;
 
         if ( rotational )
         {
           dBodyAddTorque( joint->node[0].body, -fm*ax1[0], -fm*ax1[1],
               -fm*ax1[2] );
           if ( joint->node[1].body )
-            dBodyAddTorque( joint->node[1].body, fm*ax1[0], fm*ax1[1], fm*ax1[2] );
+            dBodyAddTorque(joint->node[1].body, fm*ax1[0], fm*ax1[1], fm*ax1[2]);
         }
         else
         {
-          dBodyAddForce( joint->node[0].body, -fm*ax1[0], -fm*ax1[1], -fm*ax1[2] );
+          dBodyAddForce(
+            joint->node[0].body, -fm*ax1[0], -fm*ax1[1], -fm*ax1[2]);
           if ( joint->node[1].body )
           {
-            dBodyAddForce( joint->node[1].body, fm*ax1[0], fm*ax1[1], fm*ax1[2] );
+            dBodyAddForce(
+              joint->node[1].body, fm*ax1[0], fm*ax1[1], fm*ax1[2]);
 
             // linear limot torque decoupling step: refer to above discussion
-            dBodyAddTorque( joint->node[0].body, -fm*ltd[0], -fm*ltd[1],
-                -fm*ltd[2] );
-            dBodyAddTorque( joint->node[1].body, -fm*ltd[0], -fm*ltd[1],
-                -fm*ltd[2] );
+            dBodyAddTorque(joint->node[0].body, -fm*ltd[0], -fm*ltd[1],
+                -fm*ltd[2]);
+            dBodyAddTorque(joint->node[1].body, -fm*ltd[0], -fm*ltd[1],
+                -fm*ltd[2]);
           }
         }
       }
@@ -679,6 +690,23 @@ int dxJointLimitMotor::addLimot( dxJoint *joint,
     if ( limit )
     {
       dReal k = info->fps * stop_erp;
+      // do something similar to surface layer margin for contact
+      // printf("stop_min_depth %f limit_err %f, ", stop_min_depth, limit_err);
+      if (limit == 1)
+      {
+        // violating lostop, limit_error is (negative, 0)
+        limit_err += stop_min_depth;
+        if (limit_err > 0)
+          limit_err = 0;
+      }
+      else // safe to assume if (limit == 2)
+      {
+        // violating histop, limit_error is (0, positive)
+        limit_err -= stop_min_depth;
+        if (limit_err < 0)
+          limit_err = 0;
+      }
+      // printf("%f\n", limit_err);
       info->c[row] = -k * limit_err;
       info->cfm[row] = stop_cfm;
 

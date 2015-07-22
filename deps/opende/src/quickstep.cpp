@@ -48,34 +48,39 @@ using namespace quickstep;
 
 void computeRHSPrecon(dxWorldProcessContext *context, const int m, const int nb,
                       dRealPtr MOI, dxBody * const *body,
-                      const dReal /*stepsize1*/, dRealMutablePtr /*c*/, dRealMutablePtr J,
+                      const dReal /*stepsize1*/, dRealMutablePtr /*c*/,
+                      dRealMutablePtr J,
                       int *jb, dRealMutablePtr rhs_precon)
 {
-    /************************************************************************************/
-    /*                                                                                  */
-    /*               compute preconditioned rhs                                         */
-    /*                                                                                  */
-    /*  J J' lambda = J * ( M * dv / dt + fe )                                          */
-    /*                                                                                  */
-    /************************************************************************************/
-    // mimic computation of rhs, but do it with J*M*inv(J) prefixed for preconditioned case.
+    /**************************************************************************/
+    /*                                                                        */
+    /*               compute preconditioned rhs                               */
+    /*                                                                        */
+    /*  J J' lambda = J * ( M * dv / dt + fe )                                */
+    /*                                                                        */
+    /**************************************************************************/
+    // mimic computation of rhs, but do it with J*M*inv(J) prefixed for
+    // preconditioned case.
     BEGIN_STATE_SAVE(context, tmp2state) {
       IFTIMING (dTimerNow ("compute rhs_precon"));
 
       // compute the "preconditioned" right hand side `rhs_precon'
       dReal *tmp1 = context->AllocateArray<dReal> (nb*6);
-      // this is slightly different than non precon, where M is left multiplied by the pre J terms
+      // this is slightly different than non precon, where M is
+      // left multiplied by the pre J terms
       //
       // tmp1 = M*v/h + fe
       //
       dReal *tmp1curr = tmp1;
       const dReal *MOIrow = MOI;
       dxBody *const *const bodyend = body + nb;
-      for (dxBody *const *bodycurr = body; bodycurr != bodyend; tmp1curr+=6, MOIrow+=12, bodycurr++) {
+      for (dxBody *const *bodycurr = body; bodycurr != bodyend;
+        tmp1curr+=6, MOIrow+=12, ++bodycurr)
+      {
         dxBody *b_ptr = *bodycurr;
         // dReal body_mass = b_ptr->mass.mass;
         for (int j=0; j<3; j++)
-          tmp1curr[j] = b_ptr->facc[j]; // +  body_mass * b_ptr->lvel[j] * stepsize1;
+          tmp1curr[j] = b_ptr->facc[j]; // +body_mass*b_ptr->lvel[j]*stepsize1;
         dReal tmpa[3];
         for (int j=0; j<3; j++) tmpa[j] = 0; //b_ptr->avel[j] * stepsize1;
         dMultiply0_331 (tmp1curr + 3,MOIrow,tmpa);
@@ -87,7 +92,8 @@ void computeRHSPrecon(dxWorldProcessContext *context, const int m, const int nb,
       multiply_J (m,J,jb,tmp1,rhs_precon);
 
       //
-      // no need to add constraint violation correction tterm if we assume acceleration is 0
+      // no need to add constraint violation correction term
+      // if we assume acceleration is 0
       //
       for (int i=0; i<m; i++) rhs_precon[i] = - rhs_precon[i];
 
@@ -115,18 +121,22 @@ void dxQuickStepper (dxWorldProcessContext *context,
 
   // for all bodies, compute the inertia tensor and its inverse in the global
   // frame, and compute the rotational force and add it to the torque
-  // accumulator. MOI and invMOI are a vertical stack of 3x4 matrices, one per body.
+  // accumulator. MOI and invMOI are a vertical stack of 3x4 matrices,
+  // one per body.
   dReal *invMOI = context->AllocateArray<dReal> (3*4*nb);
   dReal *MOI = context->AllocateArray<dReal> (3*4*nb);
 
-  // TODO: possible optimization: move this to inside joint getInfo2, for inertia tweaking
+  // TODO: possible optimization: move this to inside joint getInfo2,
+  // for inertia tweaking
   // update tacc from external force and inertia tensor in inerial frame
   // for now, modify MOI and invMOI after getInfo2 is called
   {
     dReal *invMOIrow = invMOI;
     dReal *MOIrow = MOI;
     dxBody *const *const bodyend = body + nb;
-    for (dxBody *const *bodycurr = body; bodycurr != bodyend; invMOIrow += 12, MOIrow += 12, bodycurr++) {
+    for (dxBody *const *bodycurr = body; bodycurr != bodyend;
+      invMOIrow += 12, MOIrow += 12, ++bodycurr)
+    {
       dMatrix3 tmp;
       dxBody *b_ptr = *bodycurr;
 
@@ -151,7 +161,9 @@ void dxQuickStepper (dxWorldProcessContext *context,
   {
     dReal *invMrow = invM;
     dxBody *const *const bodyend = body + nb;
-    for (dxBody *const *bodycurr = body; bodycurr != bodyend; invMrow++, bodycurr++) {
+    for (dxBody *const *bodycurr = body; bodycurr != bodyend;
+      ++invMrow, ++bodycurr)
+    {
       dxBody *b_ptr = *bodycurr;
       //*invMrow = b_ptr->mass.mass;
       *invMrow = b_ptr->invMass;
@@ -194,10 +206,12 @@ void dxQuickStepper (dxWorldProcessContext *context,
     }
   }
 
-  // get joint information (m = total constraint dimension, nub = number of unbounded variables).
+  // get joint information (m = total constraint dimension,
+  // nub = number of unbounded variables).
   // joints with m=0 are inactive and are removed from the joints array
   // entirely, so that the code that follows does not consider them.
-  dJointWithInfo1 *const jointiinfos = context->AllocateArray<dJointWithInfo1> (_nj);
+  dJointWithInfo1 *const jointiinfos =
+    context->AllocateArray<dJointWithInfo1> (_nj);
   int nj;
 
   {
@@ -294,7 +308,9 @@ void dxQuickStepper (dxWorldProcessContext *context,
       for (int i=0; i<mlocal; i++) findex[i] = -1;
 
       c_v_max = context->AllocateArray<dReal> (mlocal);
-      for (int i=0; i<mlocal; i++) c_v_max[i] = world->contactp.max_vel; // init all to world max surface vel
+      // init all c_v_max[:] to world max surface vel
+      for (int i=0; i<mlocal; ++i)
+        c_v_max[i] = world->contactp.max_vel;
 
       const unsigned jbelements = mlocal*2;
       jb = context->AllocateArray<int> (jbelements);
@@ -317,10 +333,10 @@ void dxQuickStepper (dxWorldProcessContext *context,
         // format:
         //
         //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2 \    .
-        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2  )-- jacobian for joint 0, body 1 and body 2 (3 rows)
-        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2 /
-        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2 )--- jacobian for joint 1, body 1 and body 2 (3 rows)
-        //   etc...
+        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2  )-- jacobian for joint 0,
+        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2 /    body 1 and body 2 (3 rows)
+        //   l1 l1 l1 a1 a1 a1 l2 l2 l2 a2 a2 a2 )--- jacobian for joint 1,
+        //   etc...                                   body 1 and body 2 (3 rows)
         //
         //   (lll) = linear jacobian data
         //   (aaa) = angular jacobian data
@@ -415,7 +431,8 @@ void dxQuickStepper (dxWorldProcessContext *context,
           dxBody *b_ptr = *bodycurr;
           dReal body_invMass = b_ptr->invMass;
           for (int j=0; j<3; j++)
-            tmp1curr[j] = b_ptr->facc[j]*body_invMass + b_ptr->lvel[j]*stepsize1;
+            tmp1curr[j] = b_ptr->facc[j]*body_invMass
+              + b_ptr->lvel[j]*stepsize1;
           dMultiply0_331 (tmp1curr + 3,invMOIrow,b_ptr->tacc);
           for (int k=0; k<3; k++) tmp1curr[3+k] += b_ptr->avel[k] * stepsize1;
         }
@@ -445,7 +462,8 @@ void dxQuickStepper (dxWorldProcessContext *context,
     } END_STATE_SAVE(context, cstate);
 
 #ifdef PENETRATION_JVERROR_CORRECTION
-    // allocate and populate vnew with v(n+1) due to non-constraint forces as the starting value
+    // allocate and populate vnew with v(n+1) due to non-constraint
+    // forces as the starting value
     vnew = context->AllocateArray<dReal> (nb*6);
     {
       dRealMutablePtr vnewcurr = vnew;
@@ -459,7 +477,8 @@ void dxQuickStepper (dxWorldProcessContext *context,
         // add stepsize * invM * fe to the body velocity
         dReal body_invMass_mul_stepsize = stepsize * b_ptr->invMass;
         for (int j=0; j<3; j++) {
-          vnewcurr[j]   = b_ptr->lvel[j] + body_invMass_mul_stepsize * b_ptr->facc[j];
+          vnewcurr[j]   = b_ptr->lvel[j]
+            + body_invMass_mul_stepsize * b_ptr->facc[j];
           vnewcurr[j+3] = b_ptr->avel[j];
           tmp_tacc[j]   = b_ptr->tacc[j]*stepsize;
         }
@@ -479,9 +498,9 @@ void dxQuickStepper (dxWorldProcessContext *context,
       const dJointWithInfo1 *const jiend = jicurr + nj;
       for (; jicurr != jiend; jicurr++) {
         int infom = jicurr->info.m;
-        memcpy (lambdacurr, jicurr->joint->lambda, infom * sizeof(dReal));
+        memcpy(lambdacurr, jicurr->joint->lambda, infom*sizeof(dReal));
         lambdacurr += infom;
-        memcpy (lambda_erpcurr, jicurr->joint->lambda_erp, infom * sizeof(dReal));
+        memcpy(lambda_erpcurr, jicurr->joint->lambda_erp, infom*sizeof(dReal));
         lambda_erpcurr += infom;
       }
 
@@ -607,7 +626,7 @@ size_t dxEstimateQuickStepMemoryRequirements (
       {
         size_t sub2_res1 = dEFFICIENT_SIZE(sizeof(dReal) * m); // for c
         {
-          size_t sub3_res1 = dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for tmp1
+          size_t sub3_res1 = dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // tmp1
 
           size_t sub3_res2 = 0;
 
@@ -618,9 +637,9 @@ size_t dxEstimateQuickStepMemoryRequirements (
         sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * m); // for lambda_erp
         sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for cforce
         sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for caccel
-        sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for caccel_erp
+        sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // caccel_erp
 #ifdef POST_UPDATE_CONSTRAINT_VIOLATION_CORRECTION
-        sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for caccel_corr
+        sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // caccel_corr
         sub2_res2 = dEFFICIENT_SIZE(sizeof(dReal) * 6 * nb); // for vel
         sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * m); // for tmp
         sub2_res2 += dEFFICIENT_SIZE(sizeof(dReal) * 12 * m); // for iMJ
