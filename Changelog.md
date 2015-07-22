@@ -3,6 +3,9 @@
 1. Model editor updates
     1. Color-coded edges in Schematic View to match joint color.
         * [Pull request #1781](https://bitbucket.org/osrf/gazebo/pull-request/1781)
+1. Tweaks to Data Logger, such as multiline text edit for path
+
+    * [Pull request #1800](https://bitbucket.org/osrf/gazebo/pull-request/1800)
 
 ## Gazebo 6.0
 
