@@ -183,9 +183,9 @@ namespace gazebo
           break;
       };
 
-      _s->set_latitude_deg(_v.GetLatitudeReference().Degree());
-      _s->set_longitude_deg(_v.GetLongitudeReference().Degree());
-      _s->set_heading_deg(_v.GetHeadingOffset().Degree());
+      _s->set_latitude_deg(_v.LatitudeReference().Degree());
+      _s->set_longitude_deg(_v.LongitudeReference().Degree());
+      _s->set_heading_deg(_v.HeadingOffset().Degree());
       _s->set_elevation(_v.GetElevationReference());
     }
 
@@ -1279,6 +1279,11 @@ namespace gazebo
         result.set_grid(_sdf->Get<bool>("grid"));
       else
         result.set_grid(true);
+
+      if (_sdf->HasElement("origin_visual"))
+        result.set_origin_visual(_sdf->Get<bool>("origin_visual"));
+      else
+        result.set_origin_visual(true);
 
       if (_sdf->HasElement("ambient"))
         result.mutable_ambient()->CopyFrom(
