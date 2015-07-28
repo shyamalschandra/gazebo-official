@@ -157,8 +157,17 @@ namespace gazebo
       /// \brief String form of the id.
       public: std::string idString;
 
+      /// \brief List of model visual messages to process.
+      public: VisualMsgs_L modelVisualMsgs;
+
+      /// \brief List of link visual messages to process.
+      public: VisualMsgs_L linkVisualMsgs;
+
       /// \brief List of visual messages to process.
       public: VisualMsgs_L visualMsgs;
+
+      /// \brief List of collision visual messages to process.
+      public: VisualMsgs_L collisionVisualMsgs;
 
       /// \brief List of light message to process.
       public: LightMsgs_L lightMsgs;
@@ -250,6 +259,9 @@ namespace gazebo
       /// \brief The top level in our tree of visuals
       public: VisualPtr worldVisual;
 
+      /// \brief Visual representing the world origin frame.
+      public: OriginVisualPtr originVisual;
+
       /// \brief Pointer to a visual selected by a user via the GUI.
       public: VisualPtr selectedVis;
 
@@ -283,6 +295,9 @@ namespace gazebo
 
       /// \brief True when all inertias should be visualized.
       public: bool showInertias;
+
+      /// \brief True when all link frames should be visualized.
+      public: bool showLinkFrames;
 
       /// \brief True when all collisions should be visualized.
       public: bool showCollisions;

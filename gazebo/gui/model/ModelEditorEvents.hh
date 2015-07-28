@@ -204,6 +204,19 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { jointInserted.Disconnect(_subscriber); }
 
+        /// \brief Connect a Gazebo event to the joint changed signal.
+        /// \param[in] _subscriber the subscriber to this event
+        /// \return a connection
+        public: template<typename T>
+            static event::ConnectionPtr ConnectJointChanged(T _subscriber)
+          { return jointChanged.Connect(_subscriber); }
+
+        /// \brief Disconnect a Gazebo event from the joint changed signal.
+        /// \param[in] _subscriber the subscriber to this event
+        public: static void DisconnectJointChanged(
+            event::ConnectionPtr _subscriber)
+          { jointChanged.Disconnect(_subscriber); }
+
         /// \brief Connect a Gazebo event to the nestedModel removed signal.
         /// \param[in] _subscriber the subscriber to this event
         /// \return a connection
@@ -344,18 +357,18 @@ namespace gazebo
             event::ConnectionPtr _subscriber)
           { showJointContextMenu.Disconnect(_subscriber); }
 
-        /// \brief Connect a Gazebo event to the set selected signal.
+        /// \brief Connect a Gazebo event to the set selected link signal.
         /// \param[in] _subscriber the subscriber to this event
         /// \return a connection
         public: template<typename T> static event::ConnectionPtr
-            ConnectSetSelected(T _subscriber)
-          { return setSelected.Connect(_subscriber); }
+            ConnectSetSelectedLink(T _subscriber)
+          { return setSelectedLink.Connect(_subscriber); }
 
-        /// \brief Disconnect a Gazebo event from the set selected signal.
+        /// \brief Disconnect a Gazebo event from the set selected link signal.
         /// \param[in] _subscriber the subscriber to this event
-        public: static void DisconnectSetSelected(
+        public: static void DisconnectSetSelectedLink(
             event::ConnectionPtr _subscriber)
-          { setSelected.Disconnect(_subscriber); }
+          { setSelectedLink.Disconnect(_subscriber); }
 
         /// \brief Connect a Gazebo event to the set selected joint signal.
         /// \param[in] _subscriber the subscriber to this event
@@ -421,21 +434,26 @@ namespace gazebo
         /// \brief Notify that a link has been inserted.
         public: static event::EventT<void (std::string)> linkInserted;
 
-        /// \brief Notify that a joint has been inserted. The first string is
-        /// the joint's unique id, the second string is the joint name, the
-        /// third is the parent link's name, the fourth is the child link's
-        /// name. All names scoped.
-        public: static event::EventT<void (std::string, std::string,
-            std::string, std::string)> jointInserted;
 
         /// \brief Notify that a nested model has been removed.
         public: static event::EventT<void (std::string)> nestedModelRemoved;
-
         /// \brief Notify that a link has been removed.
         public: static event::EventT<void (std::string)> linkRemoved;
 
+        /// \brief Notify that a joint has been inserted. The parameters are:
+        /// joint's unique id, joint name, joint type, parent link's name, and
+        /// child link's name. All names are scoped.
+        public: static event::EventT<void (std::string, std::string,
+            std::string, std::string, std::string)> jointInserted;
+
         /// \brief Notify that a joint has been removed.
         public: static event::EventT<void (std::string)> jointRemoved;
+
+        /// \brief Notify that a joint has been changed. The parameters are:
+        /// joint's unique id, joint name, joint type, parent link's name, and
+        /// child link's name. All names are scoped.
+        public: static event::EventT<void (std::string, std::string,
+            std::string, std::string, std::string)> jointChanged;
 
         /// \brief Request to open the nestedModel inspector.
         public: static event::EventT<void (std::string)>
@@ -464,7 +482,7 @@ namespace gazebo
         public: static event::EventT<void (std::string)> showJointContextMenu;
 
         /// \brief Request to select or deselect an entity.
-        public: static event::EventT<void (std::string, bool)> setSelected;
+        public: static event::EventT<void (std::string, bool)> setSelectedLink;
 
         /// \brief Request to select or deselect a joint.
         public: static event::EventT<void (std::string, bool)> setSelectedJoint;
