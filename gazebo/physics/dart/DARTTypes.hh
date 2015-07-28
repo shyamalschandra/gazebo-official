@@ -47,6 +47,11 @@ namespace gazebo
     typedef boost::shared_ptr<DARTRayShape>  DARTRayShapePtr;
     typedef boost::shared_ptr<DARTSurfaceParams> DARTSurfaceParamsPtr;
 
+    using DARTBodyNodePropPtr =
+      std::shared_ptr<dart::dynamics::BodyNode::Properties>;
+    using DARTJointPropPtr =
+      std::shared_ptr<dart::dynamics::Joint::Properties>;
+
     /// \addtogroup gazebo_physics_dart
     /// \{
 
@@ -102,6 +107,17 @@ namespace gazebo
             pose.rot = ConvQuat(Eigen::Quaterniond(_T.linear()));
             return pose;
         }
+
+      /// \brief Convert pitch between two different definitions of Gazebo and
+      /// DART.
+      ///
+      /// Gazebo and DART use different definitions of pitch: Gazebo version
+      /// means NEGATIVE angular motion per linear motion while DART version
+      /// means linear motion per single rotation.
+      public: static double ConvPitch(double _pitch)
+      {
+        return -2.0 * M_PI / _pitch;
+      }
     };
   }
 }
