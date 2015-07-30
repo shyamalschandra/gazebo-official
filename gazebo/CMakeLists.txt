@@ -8,11 +8,13 @@ include_directories(SYSTEM
   ${TBB_INCLUDEDIR}
   ${tinyxml_INCLUDE_DIRS}
 )
+# include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/deps/opende/include)
 
 link_directories(
   ${ogre_library_dirs}
   ${Boost_LIBRARY_DIRS}
   ${SDFormat_LIBRARY_DIRS}
+  ${IGNITION-MATH_LIBRARY_DIRS}
   ${PROJECT_BINARY_DIR}/test
   ${TBB_LIBRARY_DIR}
   ${CURL_LIBDIR}
