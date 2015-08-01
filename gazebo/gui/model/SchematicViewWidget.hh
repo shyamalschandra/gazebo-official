@@ -113,6 +113,12 @@ namespace gazebo
       /// \return Leaf name.
       private: std::string GetLeafName(const std::string &_scopedName);
 
+      /// \brief Helper function to get the entity scopd name without the
+      ///model name prefix.
+      /// \param[in] _scopedName Scoped name.
+      /// \return Scopd name without model prefix.
+      private: std::string GetScopedName(const std::string &_scopedName);
+
       /// \brief Callback when a link is selected.
       /// \param[in] _name Name of link.
       /// \param[in] _selected True if the link is selected, false if

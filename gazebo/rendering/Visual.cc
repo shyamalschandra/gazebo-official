@@ -234,11 +234,9 @@ VisualPtr Visual::Clone(const std::string &_name, VisualPtr _newParent)
 {
   VisualPtr result(new Visual(_name, _newParent));
   result->Load(this->dataPtr->sdf);
-  std::vector<VisualPtr>::iterator iter;
-  for (iter = this->dataPtr->children.begin();
-      iter != this->dataPtr->children.end(); ++iter)
+  for (auto iter: this->dataPtr->children)
   {
-    (*iter)->Clone((*iter)->GetName(), result);
+    iter->Clone(iter->GetName(), result);
   }
 
   if (_newParent == this->dataPtr->scene->GetWorldVisual())
@@ -329,6 +327,7 @@ void Visual::Load()
   std::string subMesh = this->GetSubMeshName();
   bool centerSubMesh = this->GetCenterSubMesh();
 
+//  std::cerr << " LOAD " << this->GetName() << std::endl;
   if (!mesh.empty())
   {
     try
@@ -590,6 +589,9 @@ void Visual::AttachObject(Ogre::MovableObject *_obj)
 
   if (!this->HasAttachedObject(_obj->getName()))
   {
+//    std::cerr << this->GetName() << " " << this->GetId() <<
+//        " attach " << _obj->getName() << std::endl;
+
     // update to use unique materials
     Ogre::Entity *entity = dynamic_cast<Ogre::Entity *>(_obj);
     if (entity)
@@ -1869,6 +1871,10 @@ std::string Visual::GetMaterialName() const
 //////////////////////////////////////////////////
 math::Box Visual::GetBoundingBox() const
 {
+/*  rendering::VisualPtr rootVis = this->GetRootVisual();
+  rootVis->GetSceneNode()->_updateBounds();
+  rootVis->GetSceneNode()->_update(true, true);*/
+
   math::Box box;
   this->GetBoundsHelper(this->GetSceneNode(), box);
   return box;
@@ -1908,6 +1914,9 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
       math::Vector3 min;
       math::Vector3 max;
 
+      min = Conversions::Convert(bb.getMinimum());
+      max = Conversions::Convert(bb.getMaximum());
+
       // Ogre does not return a valid bounding box for lights.
       if (obj->getMovableType() == "Light")
       {
@@ -1923,6 +1932,7 @@ void Visual::GetBoundsHelper(Ogre::SceneNode *node, math::Box &box) const
         transform[3][3] = 1;
         // get oriented bounding box in object's local space
         bb.transformAffine(transform);
+
 
         min = Conversions::Convert(bb.getMinimum());
         max = Conversions::Convert(bb.getMaximum());
@@ -3106,4 +3116,21 @@ msgs::Visual::Type Visual::ConvertVisualType(const Visual::VisualType &_type)
       break;
   }
   return visualType;
+}
+
+/////////////////////////////////////////////////
+bool Visual::IsAncestorOf(rendering::VisualPtr _visual)
+{
+  if (!_visual)
+    return false;
+
+  rendering::VisualPtr vis = _visual->GetParent();
+  while (vis)
+  {
+    if (vis->GetName() == this->GetName())
+      return true;
+    vis = vis->GetParent();
+  }
+
+  return false;
 }
