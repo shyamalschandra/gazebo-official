@@ -597,11 +597,6 @@ void ModelData_TEST::LinkScale()
           inertiaElem->Get<double>("ixz"), newIxz, 1e-3));
       QVERIFY(ignition::math::equal(
           inertiaElem->Get<double>("iyz"), newIyz, 1e-3));
-
-      // update variables for next scale operation
-      scale = newScale;
-      mass = newMass;
-      radius = newRadius;
     }
     delete link;
   }
