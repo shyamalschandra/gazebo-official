@@ -18,6 +18,7 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Assert.hh"
 
+#include "gazebo/physics/PhysicsEvents.hh"
 #include "gazebo/physics/World.hh"
 #include "gazebo/physics/Link.hh"
 #include "gazebo/physics/PhysicsEngine.hh"
@@ -643,12 +644,6 @@ void ODEJoint::Reset()
 //////////////////////////////////////////////////
 void ODEJoint::CacheForceTorque()
 {
-  // Does nothing for now, will add when recovering pull request #1721
-}
-
-//////////////////////////////////////////////////
-JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
-{
   // Note that:
   // f2, t2 are the force torque measured on parent body's cg
   // f1, t1 are the force torque measured on child body's cg
@@ -815,7 +810,7 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
       if (!this->childLink)
       {
         gzerr << "Both parent and child links are invalid, abort.\n";
-        return JointWrench();
+        this->wrench = JointWrench();
       }
       else
       {
@@ -841,10 +836,14 @@ JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
   }
   else
   {
-    // forgot to set provide_feedback?
+    // provide_feedback not set
     gzwarn << "GetForceTorque: forgot to set <provide_feedback>?\n";
   }
+}
 
+//////////////////////////////////////////////////
+JointWrench ODEJoint::GetForceTorque(unsigned int /*_index*/)
+{
   return this->wrench;
 }
 
@@ -1092,6 +1091,10 @@ void ODEJoint::SetProvideFeedback(bool _enable)
 {
   Joint::SetProvideFeedback(_enable);
 
+  // Disconnect feedback connection if it exists.
+  if (this->jointFeedbackConnection)
+    physics::Events::DisconnectUpdatePhysicsEnd(this->jointFeedbackConnection);
+
   if (this->provideFeedback)
   {
     if (this->feedback == NULL)
@@ -1112,7 +1115,13 @@ void ODEJoint::SetProvideFeedback(bool _enable)
     }
 
     if (this->jointId)
+    {
       dJointSetFeedback(this->jointId, this->feedback);
+
+      // Create feedback connection
+      this->jointFeedbackConnection = physics::Events::ConnectUpdatePhysicsEnd(
+          std::bind(&Joint::CacheForceTorque, this));
+    }
     else
       gzerr << "ODE Joint ID is invalid\n";
   }
