@@ -22,6 +22,7 @@
 
 #include "gazebo/transport/Publisher.hh"
 
+#include "gazebo/physics/PhysicsEvents.hh"
 #include "gazebo/physics/Collision.hh"
 #include "gazebo/physics/ContactManager.hh"
 #include "gazebo/physics/Entity.hh"
@@ -248,6 +249,7 @@ void DARTPhysics::UpdatePhysics()
     }
   }
 
+  physics::Events::updatePhysicsEnd();
   // this->lastUpdateTime = currTime;
 }
 

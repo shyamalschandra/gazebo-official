@@ -43,6 +43,7 @@
 
 #include "gazebo/transport/Publisher.hh"
 
+#include "gazebo/physics/PhysicsEvents.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/PhysicsFactory.hh"
 #include "gazebo/physics/World.hh"
@@ -462,6 +463,8 @@ void ODEPhysics::UpdatePhysics()
              col2->GetLink()->GetWorldPose().rot.RotateVectorReverse(t2);
       }
     }
+
+    physics::Events::updatePhysicsEnd();
   }
 
   DIAG_TIMER_STOP("ODEPhysics::UpdatePhysics");
