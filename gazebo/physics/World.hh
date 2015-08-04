@@ -42,6 +42,7 @@
 #include "gazebo/common/UpdateInfo.hh"
 #include "gazebo/common/Event.hh"
 
+#include "gazebo/physics/PhysicsPlugin.h"
 #include "gazebo/physics/Base.hh"
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/physics/WorldState.hh"
@@ -79,7 +80,10 @@ namespace gazebo
       /// \brief Load the world using SDF parameters.
       /// Load a world from and SDF pointer.
       /// \param[in] _sdf SDF parameters.
-      public: void Load(sdf::ElementPtr _sdf);
+      /// \param[in] _physicsPlugin Shared library filensmae that is a
+      /// physics plugin.
+      public: void Load(sdf::ElementPtr _sdf,
+                        const std::string &_physicsPlugin = "");
 
       /// \brief Save a world to a file.
       /// Save the current world and its state to a file.
@@ -473,6 +477,11 @@ namespace gazebo
       /// \brief Callback when a light message is received.
       /// \param[in] _msg Pointer to the light message.
       private: void OnLightMsg(ConstLightPtr &_msg);
+
+      /// \brief Create a pointer to the dlopen physics plugin
+      /// \param[in] _filename plugin filename
+      /// \return a pointer to the dlopen physics plugin
+      private: PhysicsPlugin *CreatePhysicsPlugin(const std::string &_filename);
 
       /// \internal
       /// \brief Private data pointer.

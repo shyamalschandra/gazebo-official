@@ -298,6 +298,9 @@ namespace gazebo
 
       /// \brief Class to manage preset simulation parameter profiles.
       public: PresetManagerPtr presetManager;
+
+      /// \brief Pointer to the physics plugin
+      private: PhysicsPlugin *physicsPlugin;
     };
   }
 }
