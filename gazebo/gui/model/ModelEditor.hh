@@ -19,6 +19,8 @@
 
 #include <string>
 
+#include <sdf/sdf.hh>
+
 #include "gazebo/gui/qt.h"
 #include "gazebo/gui/Editor.hh"
 #include "gazebo/util/system.hh"
@@ -27,6 +29,7 @@ namespace gazebo
 {
   namespace gui
   {
+    class SchematicViewWidget;
     class ModelEditorPrivate;
 
     /// \class ModelEditor ModelEditor.hh gui/gui.hh
@@ -47,6 +50,22 @@ namespace gazebo
       /// \param[in] _category Category to add the item too.
       public: void AddItemToPalette(QWidget *_item,
           const std::string &_category = "");
+
+      /// \brief Spawn an entity in the editor
+      /// \param[in] _sdf SDF describing the entity.
+      public: void SpawnEntity(sdf::ElementPtr _sdf);
+
+      /// \brief Remove an entity from the editor
+      /// \param[in] _name Name of the entity.
+      public: void RemoveEntity(const std::string &_name);
+
+      /// \brief Get an entity in the model
+      /// \param[in] _name Name of entity.
+      /// \return _sdf SDF describing the entity.
+      public: sdf::ElementPtr GetEntitySDF(const std::string &_name);
+
+      public: void AppendPluginElement(const std::string &_name,
+          const std::string &_filename, sdf::ElementPtr _element);
 
       /// \brief Qt callback when the model editor's save action is
       /// triggered.
@@ -98,6 +117,7 @@ namespace gazebo
       /// \internal
       /// \brief Pointer to private data.
       private: ModelEditorPrivate *dataPtr;
+
     };
   }
 }
