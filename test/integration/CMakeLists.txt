@@ -75,6 +75,7 @@ set(tests
   sensor.cc
   server_fixture.cc
   sim_events.cc
+  region_events.cc
   speed.cc
   speed_thread_pr2.cc
   stress_spawn_models.cc

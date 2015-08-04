@@ -37,8 +37,6 @@ void InRegionEventSource::Load(const sdf::ElementPtr _sdf)
 
   if (_sdf->HasElement("region"))
     this->regionName = _sdf->Get<std::string>("region");
-  else
-    gzerr << this->name << " is missing a region element" << std::endl;
 
   // Listen to the update event. This event is broadcast every
   // simulation iteration.
@@ -49,13 +47,6 @@ void InRegionEventSource::Load(const sdf::ElementPtr _sdf)
 ////////////////////////////////////////////////////////////////////////////////
 void InRegionEventSource::Init()
 {
-  this->model = this->world->GetModel(this->modelName);
-  if (!model)
-  {
-    gzerr << this->name << ": Model '" << this->modelName
-        << "' does not exist" << std::endl;
-  }
-
   std::map<std::string, RegionPtr>::const_iterator it =
     this->regions.find(this->regionName);
   if (it != this->regions.end())
@@ -94,6 +85,24 @@ void InRegionEventSource::Info() const
 ////////////////////////////////////////////////////////////////////////////////
 void InRegionEventSource::Update()
 {
+//  if (!this->model)
+  {
+    this->model = this->world->GetModel(this->modelName);
+    if (!this->model)
+    {
+      for (unsigned int i = 0; i < this->world->GetModelCount(); ++i)
+      {
+        physics::ModelPtr m = this->world->GetModel(i);
+        size_t pos = m->GetName().find(this->modelName);
+        if (pos == 0)
+        {
+          this->model = m;
+          break;
+        }
+      }
+    }
+  }
+
   // model must exist
   if (!this->model)
     return;

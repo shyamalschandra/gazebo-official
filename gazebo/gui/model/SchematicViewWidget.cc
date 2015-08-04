@@ -20,6 +20,10 @@
 #include "gazebo/common/Events.hh"
 #include "gazebo/common/Color.hh"
 
+#include "gazebo/gui/model/JointMaker.hh"
+#include "gazebo/gui/model/qgv/QGVNode.h"
+#include "gazebo/gui/model/qgv/QGVEdge.h"
+
 #include "gazebo/gui/model/qgv/QGVNode.h"
 #include "gazebo/gui/model/qgv/QGVEdge.h"
 
@@ -87,6 +91,12 @@ void SchematicViewWidget::Init()
   this->connections.push_back(gui::model::Events::ConnectLinkRemoved(
       boost::bind(&SchematicViewWidget::RemoveNode, this, _1)));
 
+  this->connections.push_back(gui::model::Events::ConnectNestedModelInserted(
+      boost::bind(&SchematicViewWidget::AddNode, this, _1)));
+
+  this->connections.push_back(gui::model::Events::ConnectNestedModelRemoved(
+      boost::bind(&SchematicViewWidget::RemoveNode, this, _1)));
+
   this->connections.push_back(gui::model::Events::ConnectJointInserted(
       boost::bind(&SchematicViewWidget::AddEdge, this, _1, _2, _3, _4, _5)));
 
@@ -123,9 +133,24 @@ std::string SchematicViewWidget::GetLeafName(const std::string &_scopedName)
 }
 
 /////////////////////////////////////////////////
+std::string SchematicViewWidget::GetScopedName(const std::string &_scopedName)
+{
+  if (_scopedName.empty())
+    return "";
+
+  std::string name = _scopedName;
+  size_t idx = _scopedName.find("::");
+  if (idx != std::string::npos)
+    name = _scopedName.substr(idx+2);
+  return name;
+}
+
+/////////////////////////////////////////////////
 void SchematicViewWidget::AddNode(const std::string &_node)
 {
-  std::string name = this->GetLeafName(_node);
+  //  std::string name = this->GetLeafName(_node);
+  std::string name = this->GetScopedName(_node);
+  std::cerr << " add node " << name << std::endl;
 
   if (this->scene->HasNode(name))
     return;
@@ -155,7 +180,7 @@ void SchematicViewWidget::RemoveNode(const std::string &_node)
   auto it = this->nodes.find(_node);
   if (it != this->nodes.end())
   {
-    std::string node = this->GetLeafName(_node);
+    std::string node = this->GetScopedName(_node);
 
     if (!this->scene->HasNode(node))
       return;
@@ -182,9 +207,12 @@ void SchematicViewWidget::AddEdge(const std::string &_id,
     const std::string &/*_name*/, const std::string &_type,
     const std::string &_parent, const std::string &_child)
 {
-  std::string parentNode = this->GetLeafName(_parent);
-  std::string childNode = this->GetLeafName(_child);
+//  std::string parentNode = this->GetLeafName(_parent);
+//  std::string childNode = this->GetLeafName(_child);
+  std::string parentNode = this->GetScopedName(_parent);
+  std::string childNode = this->GetScopedName(_child);
 
+  std::cerr << " add edge " << parentNode << " VS " << childNode << std::endl;
   // this must be called before making changes to the graph
   this->scene->clearLayout();
 

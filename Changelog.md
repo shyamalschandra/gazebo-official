@@ -2,6 +2,9 @@
 1. Set window flags for dialogs and file dialogs
     * [Pull request #1816](https://bitbucket.org/osrf/gazebo/pull-request/1816)
 
+1. Sim events for joint position, velocity and applied force
+    * [Pull request #](https://bitbucket.org/osrf/gazebo/pull-request/)
+
 1. Log playback GUI for multistep, rewind, forward and seek
     * [Pull request #1791](https://bitbucket.org/osrf/gazebo/pull-request/1791)
 
@@ -162,6 +165,9 @@ compilation on Windows.
 1. Detect uuid library during compilation.
     * [Pull request #1655](https://bitbucket.org/osrf/gazebo/pull-request/1655)
     * [Issue #1572](https://bitbucket.org/osrf/gazebo/issue/1572)
+
+1. Install `libgazebo_server_fixture`. This will facilitate tests external to the main gazebo repository. See `examples/stand_alone/test_fixture`.
+    * [Pull request #1606](https://bitbucket.org/osrf/gazebo/pull-request/1606)
 
 1. New accessors in LogPlay class.
     * [Pull request #1577](https://bitbucket.org/osrf/gazebo/pull-request/1577)
@@ -358,12 +364,18 @@ compilation on Windows.
     1. Expose API to support adding items to the palette.
         * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
+    1. Add schematic view to model editor
+        * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+
     1. Added menu for toggling joint visualization
         * [Pull request #1551](https://bitbucket.org/osrf/gazebo/pull-request/1551)
         * [Issue #1483](https://bitbucket.org/osrf/gazebo/issue/1483)
 
     1. Add schematic view to model editor
         * [Pull request #1562](https://bitbucket.org/osrf/gazebo/pull-request/1562)
+        
+    1. Expose API to support adding items to the palette.
+        * [Pull request #1565](https://bitbucket.org/osrf/gazebo/pull-request/1565)
 
 1. Building editor updates
     1. Make palette tips tooltip clickable to open.
