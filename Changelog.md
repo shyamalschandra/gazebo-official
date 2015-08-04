@@ -1,4 +1,8 @@
 ## Gazebo 7.0
+
+1. Display gearbox and screw joint properties in property tree
+    * [Pull request #1838](https://bitbucket.org/osrf/gazebo/pull-request/1838)
+
 1. Set window flags for dialogs and file dialogs
     * [Pull request #1816](https://bitbucket.org/osrf/gazebo/pull-request/1816)
 
@@ -24,6 +28,12 @@
         * [Pull request #1781](https://bitbucket.org/osrf/gazebo/pull-request/1781)
 
 ## Gazebo 6.0
+
+1. Added logical_camera sensor.
+    * [Pull request #1845](https://bitbucket.org/osrf/gazebo/pull-request/1845)
+
+1. Added RandomVelocityPlugin, which applies a random velocity to a model's link.
+    * [Pull request #1839](https://bitbucket.org/osrf/gazebo/pull-request/1839)
 
 1. Added magnetometer sensor. A contribution from Andrew Symington.
     * [Pull request #1788](https://bitbucket.org/osrf/gazebo/pull-request/1788)
@@ -382,6 +392,15 @@ compilation on Windows.
 ## Gazebo 5.0
 
 ### Gazebo 5.x.x
+
+1. Initialize sigact struct fields that valgrind said were being used uninitialized
+    * [Pull request #1809](https://bitbucket.org/osrf/gazebo/pull-request/1809)
+
+1. Add missing ogre includes to ensure macros are properly defined
+    * [Pull request #1813](https://bitbucket.org/osrf/gazebo/pull-request/1813)
+
+1. Use ToSDF functions to simplify physics_friction test
+    * [Pull request #1808](https://bitbucket.org/osrf/gazebo/pull-request/1808)
 
 1. Added lines to laser sensor visualization
     * [Pull request #1742](https://bitbucket.org/osrf/gazebo/pull-request/1742)
