@@ -101,73 +101,54 @@ MainWindow::MainWindow()
   this->node->Init();
   gui::set_world(this->node->GetTopicNamespace());
 
-  QWidget *mainWidget = new QWidget;
-  QVBoxLayout *mainLayout = new QVBoxLayout;
-  mainWidget->show();
-  this->setCentralWidget(mainWidget);
+  //QWidget *mainWidget = new QWidget(this);
+  //mainWidget->show();
+
+  /*QHBoxLayout *mainLayout = new QHBoxLayout;
+  mainLayout->setSpacing(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  */
+
 
   this->setDockOptions(QMainWindow::AnimatedDocks);
 
-  this->leftColumn = new QStackedWidget(this);
+  //this->leftColumn = new QStackedWidget(this);
 
-  this->modelListWidget = new ModelListWidget(this);
-  InsertModelWidget *insertModel = new InsertModelWidget(this);
-  LayersWidget *layersWidget = new LayersWidget(this);
+  QDockWidget *dock = new QDockWidget(tr("Tree"), this);
+  dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+  dock->setContentsMargins(4, 4, 4, 4);
+  this->modelListWidget = new ModelListWidget(dock);
+  dock->setWidget(this->modelListWidget);
+  this->addDockWidget(Qt::LeftDockWidgetArea, dock);
 
-  this->tabWidget = new QTabWidget();
-  this->tabWidget->setObjectName("mainTab");
-  this->tabWidget->addTab(this->modelListWidget, "World");
-  this->tabWidget->addTab(insertModel, "Insert");
-  this->tabWidget->addTab(layersWidget, "Layers");
-  this->tabWidget->setSizePolicy(QSizePolicy::Expanding,
-                                 QSizePolicy::Expanding);
-  this->tabWidget->setMinimumWidth(MINIMUM_TAB_WIDTH);
-  this->AddToLeftColumn("default", this->tabWidget);
+  dock = new QDockWidget(tr("Insert"), this);
+  dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+  dock->setContentsMargins(4, 4, 4, 4);
+  InsertModelWidget *insertModel = new InsertModelWidget(dock);
+  dock->setWidget(insertModel);
+  this->addDockWidget(Qt::LeftDockWidgetArea, dock);
 
-  this->toolsWidget = new ToolsWidget();
+  dock = new QDockWidget(tr("Layers"), this);
+  dock->setContentsMargins(4, 4, 4, 4);
+  LayersWidget *layersWidget = new LayersWidget(dock);
+  dock->setWidget(layersWidget);
+  this->addDockWidget(Qt::LeftDockWidgetArea, dock);
 
-  this->renderWidget = new RenderWidget(mainWidget);
+  dock = new QDockWidget(tr("Control"), this);
+  dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+  dock->setContentsMargins(4, 4, 4, 4);
+  TimeWidget *timeWidget = new TimeWidget(dock);
+  dock->setWidget(timeWidget);
+  this->addDockWidget(Qt::LeftDockWidgetArea, dock);
 
-  this->CreateEditors();
+  // this->toolsWidget = new ToolsWidget();
 
-  QHBoxLayout *centerLayout = new QHBoxLayout;
+  this->renderWidget = new RenderWidget(this);
+  this->setCentralWidget(this->renderWidget);
 
-  this->splitter = new QSplitter(this);
-  this->splitter->addWidget(this->leftColumn);
-  this->splitter->addWidget(this->renderWidget);
-  this->splitter->addWidget(this->toolsWidget);
-  this->splitter->setContentsMargins(0, 0, 0, 0);
-
-#ifdef _WIN32
-  // The splitter appears solid white in Windows, so we make it transparent.
-  this->splitter->setStyleSheet(
-  "QSplitter { color: #ffffff; background-color: transparent; }"
-  "QSplitter::handle { color: #ffffff; background-color: transparent; }");
-#endif
-
-  QList<int> sizes;
-  sizes.push_back(MINIMUM_TAB_WIDTH);
-  sizes.push_back(this->width() - MINIMUM_TAB_WIDTH);
-  sizes.push_back(0);
-  this->splitter->setSizes(sizes);
-
-  this->splitter->setStretchFactor(0, 0);
-  this->splitter->setStretchFactor(1, 2);
-  this->splitter->setStretchFactor(2, 0);
-  this->splitter->setHandleWidth(10);
-
-  centerLayout->addWidget(splitter);
-  centerLayout->setContentsMargins(0, 0, 0, 0);
-  centerLayout->setSpacing(0);
-
-  mainLayout->setSpacing(0);
-  mainLayout->addLayout(centerLayout, 1);
-  mainLayout->addWidget(new QSizeGrip(mainWidget), 0,
-                        Qt::AlignBottom | Qt::AlignRight);
-  mainWidget->setLayout(mainLayout);
+  // this->CreateEditors();
 
   this->setWindowIcon(QIcon(":/images/gazebo.svg"));
-
   std::string title = "Gazebo";
   this->setWindowIconText(tr(title.c_str()));
   this->setWindowTitle(tr(title.c_str()));
@@ -288,6 +269,7 @@ void MainWindow::Init()
   int winYPos = getINIProperty<int>("geometry.y", 0);
 
   this->setGeometry(winXPos, winYPos, winWidth, winHeight);
+  //this->renderWidget->setMinimumSize(winWidth, winHeight);
 
   this->worldControlPub =
     this->node->Advertise<msgs::WorldControl>("~/world_control");
@@ -319,7 +301,7 @@ void MainWindow::closeEvent(QCloseEvent * /*_event*/)
 {
   this->renderWidget->hide();
   this->tabWidget->hide();
-  this->toolsWidget->hide();
+  // this->toolsWidget->hide();
 
   this->connections.clear();
 
@@ -768,7 +750,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showFullScreen();
     this->leftColumn->hide();
-    this->toolsWidget->hide();
+    // this->toolsWidget->hide();
     this->menuBar->hide();
     this->setContentsMargins(0, 0, 0, 0);
     this->centralWidget()->layout()->setContentsMargins(0, 0, 0, 0);
@@ -777,7 +759,7 @@ void MainWindow::OnFullScreen(bool _value)
   {
     this->showNormal();
     this->leftColumn->show();
-    this->toolsWidget->show();
+    // this->toolsWidget->show();
     this->menuBar->show();
   }
   g_fullScreenAct->setChecked(_value);
@@ -2124,7 +2106,7 @@ void MainWindow::CreateDisabledIcon(const std::string &_pixmap, QAction *_act)
 /////////////////////////////////////////////////
 void MainWindow::SetLeftPaneVisibility(bool _on)
 {
-  int leftPane = _on ? MINIMUM_TAB_WIDTH : 0;
+  /*int leftPane = _on ? MINIMUM_TAB_WIDTH : 0;
   int rightPane = this->splitter->sizes().at(2);
 
   QList<int> sizes;
@@ -2133,6 +2115,7 @@ void MainWindow::SetLeftPaneVisibility(bool _on)
   sizes.push_back(rightPane);
 
   this->splitter->setSizes(sizes);
+  */
 }
 
 /////////////////////////////////////////////////
