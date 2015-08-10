@@ -9,6 +9,7 @@ link_directories(
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/deps
+  ${QWT_INCLUDE_DIR}
 )
 
 include_directories(${tinyxml_INCLUDE_DIRS})
@@ -56,6 +57,7 @@ set (sources
   TimePanel.cc
   TimeWidget.cc
   ToolsWidget.cc
+  TopicPlot.cc
   TopicSelector.cc
   ViewAngleWidget.cc
 )
@@ -93,6 +95,7 @@ set (qt_headers
   TimePanel.hh
   TimeWidget.hh
   ToolsWidget.hh
+  TopicPlot.hh
   TopicSelector.hh
   ViewAngleWidget.hh
 )
@@ -123,16 +126,16 @@ if (HAVE_OCULUS)
   )
 endif ()
 
-#if (HAVE_QWT)
-#  set (sources ${sources}
-#    Diagnostics.cc
-#    IncrementalPlot.cc
-#  )
-#  set (qt_headers ${qt_headers}
-#    Diagnostics.hh
-#    IncrementalPlot.hh
-#  )
-#endif()
+if (HAVE_QWT)
+  set (sources ${sources}
+    Diagnostics.cc
+    IncrementalPlot.cc
+  )
+  set (qt_headers ${qt_headers}
+    Diagnostics.hh
+    IncrementalPlot.hh
+  )
+endif()
 
 set (qt_tests
   DataLogger_TEST.cc
@@ -196,6 +199,7 @@ target_link_libraries(gazebo_gui
   ${QT_LIBRARIES}
   ${ogre_libraries}
   ${Boost_LIBRARIES}
+  ${QWT_LIBRARY}
   ${tinyxml_LIBRARIES}
 )
 

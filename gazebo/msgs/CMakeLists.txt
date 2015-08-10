@@ -15,6 +15,7 @@ set (msgs
   contactsensor.proto
   cylindergeom.proto
   diagnostics.proto
+  diagnostic_control.proto
   distortion.proto
   factory.proto
   fluid.proto
@@ -61,6 +62,11 @@ set (msgs
   model_v.proto
   packet.proto
   physics.proto
+  physics_custom.proto
+  physics_bullet.proto
+  physics_dart.proto
+  physics_ode.proto
+  physics_simbody.proto
   planegeom.proto
   pid.proto
   plugin.proto
