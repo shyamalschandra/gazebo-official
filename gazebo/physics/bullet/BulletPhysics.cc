@@ -387,17 +387,17 @@ void BulletPhysics::OnRequest(ConstRequestPtr &_msg)
     // min_step_size is defined but not yet used
     physicsMsg.set_min_step_size(
       boost::any_cast<double>(this->GetParam("min_step_size")));
-    physicsMsg.set_iters(
+    physicsMsg.mutable_bullet()->set_iters(
       boost::any_cast<int>(this->GetParam("iters")));
     physicsMsg.set_enable_physics(this->world->GetEnablePhysicsEngine());
-    physicsMsg.set_sor(
+    physicsMsg.mutable_bullet()->set_sor(
       boost::any_cast<double>(this->GetParam("sor")));
-    physicsMsg.set_cfm(
+    physicsMsg.mutable_bullet()->set_cfm(
       boost::any_cast<double>(this->GetParam("cfm")));
-    physicsMsg.set_erp(
+    physicsMsg.mutable_bullet()->set_erp(
       boost::any_cast<double>(this->GetParam("erp")));
 
-    physicsMsg.set_contact_surface_layer(
+    physicsMsg.mutable_bullet()->set_contact_surface_layer(
       boost::any_cast<double>(this->GetParam("contact_surface_layer")));
 
     physicsMsg.mutable_gravity()->CopyFrom(
@@ -422,30 +422,18 @@ void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
   // can be over-ridden by other message parameters.
   PhysicsEngine::OnPhysicsMsg(_msg);
 
-  if (_msg->has_min_step_size())
-    this->SetParam("min_step_size", _msg->min_step_size());
-
   if (_msg->has_solver_type())
-    this->SetParam("solver_type", _msg->solver_type());
+  {
+    this->SetRealTimeUpdateRate(_msg->real_time_update_rate());
+  }
 
-  if (_msg->has_iters())
-    this->SetParam("iters", _msg->iters());
+  // Check if below is already in PhysicsEngine::OnPhysicsMsg(_msg)
+  if (_msg->has_min_step_size())
+  {
+    this->SetParam("min_step_size", _msg->min_step_size());
+  }
 
-  if (_msg->has_sor())
-    this->SetParam("sor", _msg->sor());
-
-  if (_msg->has_cfm())
-    this->SetParam("cfm", _msg->cfm());
-
-  if (_msg->has_erp())
-    this->SetParam("erp", _msg->erp());
-
-  if (_msg->has_enable_physics())
-    this->world->EnablePhysicsEngine(_msg->enable_physics());
-
-  if (_msg->has_contact_surface_layer())
-    this->SetParam("contact_surface_layer", _msg->contact_surface_layer());
-
+  /* Check if below is already in PhysicsEngine::OnPhysicsMsg(_msg)
   if (_msg->has_gravity())
     this->SetGravity(msgs::ConvertIgn(_msg->gravity()));
 
@@ -460,6 +448,48 @@ void BulletPhysics::OnPhysicsMsg(ConstPhysicsPtr &_msg)
   if (_msg->has_max_step_size())
   {
     this->SetMaxStepSize(_msg->max_step_size());
+  }
+  */
+
+  if (_msg->has_bullet())
+  {
+    const msgs::PhysicsBullet *msgBullet = &_msg->bullet();
+
+    if (msgBullet->has_iters())
+    {
+      this->SetParam("iters", msgBullet->iters());
+    }
+
+    if (msgBullet->has_sor())
+    {
+      this->SetParam("sor", msgBullet->sor());
+    }
+
+    if (msgBullet->has_cfm())
+    {
+      this->SetParam("cfm", msgBullet->cfm());
+    }
+
+    if (msgBullet->has_erp())
+    {
+      this->SetParam("erp", msgBullet->erp());
+    }
+
+    if (msgBullet->has_contact_surface_layer())
+    {
+      this->SetParam("contact_surface_layer", msgBullet->contact_surface_layer());
+    }
+
+    if (msgBullet->has_split_impulse())
+    {
+      this->SetParam("split_impulse", msgBullet->split_impulse());
+    }
+
+    if (msgBullet->has_split_impulse_penetration_threshold())
+    {
+      this->SetParam("split_impulse_penetration_threshold",
+        msgBullet->split_impulse_penetration_threshold());
+    }
   }
 
   /// Make sure all models get at least one update cycle.
@@ -589,6 +619,10 @@ bool BulletPhysics::SetParam(const std::string &_key, const boost::any &_value)
       /// TODO: Implement min step size param
       double value = boost::any_cast<double>(_value);
       bulletElem->GetElement("solver")->GetElement("min_step_size")->Set(value);
+    }
+    else if (_key == "max_step_size")
+    {
+      this->SetMaxStepSize(boost::any_cast<double>(_value));
     }
     else
     {
