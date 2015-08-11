@@ -52,6 +52,7 @@
 
 #include "gazebo/gui/model/ModelData.hh"
 #include "gazebo/gui/model/LinkInspector.hh"
+#include "gazebo/gui/model/ModelPluginInspector.hh"
 #include "gazebo/gui/model/JointMaker.hh"
 #include "gazebo/gui/model/ModelEditorEvents.hh"
 #include "gazebo/gui/model/ModelCreator.hh"
@@ -125,6 +126,10 @@ ModelCreator::ModelCreator()
   this->connections.push_back(
       gui::model::Events::ConnectOpenLinkInspector(
       boost::bind(&ModelCreator::OpenInspector, this, _1)));
+
+  this->connections.push_back(
+      gui::model::Events::ConnectOpenModelPluginInspector(
+      boost::bind(&ModelCreator::OpenModelPluginInspector, this, _1)));
 
   this->connections.push_back(
       gui::Events::ConnectAlignMode(
@@ -346,16 +351,26 @@ void ModelCreator::LoadSDF(sdf::ElementPtr _modelElem)
   }
 
   // Joints
-  std::stringstream preivewModelName;
-  preivewModelName << this->previewName << "_" << this->modelCounter;
+  std::stringstream previewModelName;
+  previewModelName << this->previewName << "_" << this->modelCounter;
   sdf::ElementPtr jointElem;
   if (_modelElem->HasElement("joint"))
      jointElem = _modelElem->GetElement("joint");
 
   while (jointElem)
   {
-    this->jointMaker->CreateJointFromSDF(jointElem, preivewModelName.str());
+    this->jointMaker->CreateJointFromSDF(jointElem, previewModelName.str());
     jointElem = jointElem->GetNextElement("joint");
+  }
+
+  // Plugins
+  sdf::ElementPtr pluginElem;
+  if (_modelElem->HasElement("plugin"))
+    pluginElem = _modelElem->GetElement("plugin");
+  while (pluginElem)
+  {
+    this->AddModelPlugin(pluginElem);
+    pluginElem = pluginElem->GetNextElement("plugin");
   }
 }
 
@@ -703,6 +718,7 @@ std::string ModelCreator::AddShape(LinkType _type,
       gzwarn << "Unknown link type '" << _type << "'. " <<
           "Adding a box" << std::endl;
     }
+
     ((geomElem->AddElement("box"))->GetElement("size"))->Set(_size);
   }
 
@@ -730,6 +746,20 @@ std::string ModelCreator::AddShape(LinkType _type,
 void ModelCreator::CreateLink(const rendering::VisualPtr &_visual)
 {
   LinkData *link = new LinkData();
+
+  msgs::Model model;
+  double mass = 1.0;
+
+  // set reasonable inertial values based on geometry
+  std::string geomType = _visual->GetGeometryType();
+  if (geomType == "cylinder")
+    msgs::AddCylinderLink(model, mass, 0.5, 1.0);
+  else if (geomType == "sphere")
+    msgs::AddSphereLink(model, mass, 0.5);
+  else
+    msgs::AddBoxLink(model, mass, ignition::math::Vector3d::One);
+  link->Load(msgs::LinkToSDF(model.link(0)));
+
   MainWindow *mainWindow = gui::get_main_window();
   if (mainWindow)
   {
@@ -853,7 +883,7 @@ void ModelCreator::CreateLinkFromSDF(sdf::ElementPtr _linkElem)
   rendering::VisualPtr linkVisual(new rendering::Visual(linkName,
       this->previewVisual));
   linkVisual->Load();
-  linkVisual->SetPose(link->GetPose());
+  linkVisual->SetPose(link->Pose());
   link->linkVisual = linkVisual;
 
   // Visuals
@@ -1338,7 +1368,7 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
         this->allLinks.end())
     {
       LinkData *link = this->allLinks[this->mouseVisual->GetName()];
-      link->SetPose(this->mouseVisual->GetWorldPose()-this->modelPose);
+      link->SetPose((this->mouseVisual->GetWorldPose()-this->modelPose).Ign());
       gui::model::Events::linkInserted(this->mouseVisual->GetName());
     }
 
@@ -1546,7 +1576,7 @@ void ModelCreator::OpenInspector(const std::string &_name)
     gzerr << "Link [" << _name << "] not found." << std::endl;
     return;
   }
-  link->SetPose(link->linkVisual->GetWorldPose()-this->modelPose);
+  link->SetPose((link->linkVisual->GetWorldPose()-this->modelPose).Ign());
   link->UpdateConfig();
   link->inspector->move(QCursor::pos());
   link->inspector->show();
@@ -1643,7 +1673,7 @@ void ModelCreator::GenerateSDF()
     for (auto &linksIt : this->allLinks)
     {
       LinkData *link = linksIt.second;
-      mid += link->GetPose().pos;
+      mid += link->Pose().Pos();
     }
     if (!this->allLinks.empty())
       mid /= this->allLinks.size();
@@ -1655,8 +1685,8 @@ void ModelCreator::GenerateSDF()
   {
     this->previewVisual->SetWorldPose(this->modelPose);
     LinkData *link = linksIt.second;
-    link->SetPose(link->linkVisual->GetWorldPose() - this->modelPose);
-    link->linkVisual->SetPose(link->GetPose());
+    link->SetPose((link->linkVisual->GetWorldPose() - this->modelPose).Ign());
+    link->linkVisual->SetPose(link->Pose());
   }
 
   // generate canonical link sdf first.
@@ -1870,20 +1900,20 @@ void ModelCreator::Update()
   for (auto &linksIt : this->allLinks)
   {
     LinkData *link = linksIt.second;
-    if (link->GetPose() != link->linkVisual->GetPose())
+    if (link->Pose() != link->linkVisual->GetPose().Ign())
     {
-      link->SetPose(link->linkVisual->GetWorldPose() - this->modelPose);
+      link->SetPose((link->linkVisual->GetWorldPose() - this->modelPose).Ign());
       this->ModelChanged();
     }
     for (auto &scaleIt : this->linkScaleUpdate)
     {
       if (link->linkVisual->GetName() == scaleIt.first)
-        link->SetScale(scaleIt.second);
+        link->SetScale(scaleIt.second.Ign());
     }
-    if (!this->linkScaleUpdate.empty())
-      this->ModelChanged();
-    this->linkScaleUpdate.clear();
   }
+  if (!this->linkScaleUpdate.empty())
+    this->ModelChanged();
+  this->linkScaleUpdate.clear();
 }
 
 /////////////////////////////////////////////////
@@ -1946,3 +1976,51 @@ ModelCreator::SaveState ModelCreator::GetCurrentSaveState() const
 {
   return this->currentSaveState;
 }
+
+/////////////////////////////////////////////////
+void ModelCreator::AddModelPlugin(sdf::ElementPtr _pluginElem)
+{
+  if (_pluginElem->HasAttribute("name"))
+  {
+    std::string name = _pluginElem->Get<std::string>("name");
+
+    std::string filename;
+    if (_pluginElem->HasAttribute("filename"))
+      filename = _pluginElem->Get<std::string>("filename");
+
+    // Create data
+    msgs::Plugin pluginMsg = msgs::PluginFromSDF(_pluginElem);
+    msgs::PluginPtr pluginPtr(new msgs::Plugin);
+    pluginPtr->CopyFrom(pluginMsg);
+
+    ModelPluginData *modelPlugin = new ModelPluginData();
+    modelPlugin->inspector->Update(pluginPtr);
+
+    // Add to map
+    {
+      boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+      this->allModelPlugins[name] = modelPlugin;
+    }
+
+    // Notify addition
+    gui::model::Events::modelPluginInserted(name);
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::OpenModelPluginInspector(const std::string &_name)
+{
+  boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
+
+  auto it = this->allModelPlugins.find(_name);
+  if (it == this->allModelPlugins.end())
+  {
+    gzerr << "Model plugin [" << _name << "] not found." << std::endl;
+    return;
+  }
+
+  ModelPluginData *modelPlugin = it->second;
+  modelPlugin->inspector->move(QCursor::pos());
+  modelPlugin->inspector->show();
+}
+
