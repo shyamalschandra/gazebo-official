@@ -66,7 +66,7 @@ JointMaker::JointMaker()
   this->jointMaterials[JOINT_SCREW]     = "Gazebo/DarkGrey";
   this->jointMaterials[JOINT_UNIVERSAL] = "Gazebo/Blue";
   this->jointMaterials[JOINT_BALL]      = "Gazebo/Purple";
-  this->jointMaterials[JOINT_GEARBOX]   = "Gazebo/Turquoise";
+  this->jointMaterials[JOINT_GEARBOX]   = "Gazebo/Indigo";
 
   this->jointTypes[JOINT_FIXED]     = "fixed";
   this->jointTypes[JOINT_HINGE]     = "revolute";
@@ -513,8 +513,15 @@ JointData *JointMaker::CreateJoint(rendering::VisualPtr _parent,
             << std::endl;
       continue;
     }
-    msgs::Set(axisMsg->mutable_xyz(),
-        this->unitVectors[i%this->unitVectors.size()]);
+    if (jointData->type == JointMaker::JOINT_GEARBOX)
+      msgs::Set(axisMsg->mutable_xyz(), ignition::math::Vector3d::UnitZ);
+
+    else
+    {
+      msgs::Set(axisMsg->mutable_xyz(),
+          this->unitVectors[i%this->unitVectors.size()]);
+    }
+
     axisMsg->set_use_parent_model_frame(false);
     axisMsg->set_limit_lower(-GZ_DBL_MAX);
     axisMsg->set_limit_upper(GZ_DBL_MAX);
@@ -802,33 +809,14 @@ void JointMaker::CreateHotSpot(JointData *_joint)
 
   _joint->hotspot = hotspotVisual;
 
-  std::string parentName = _joint->parent->GetName();
-  std::string childName = _joint->child->GetName();
-
-  // for nested model
-  bool nested = false;
-  std::string nestedParentName = parentName;
-  std::string nestedChildName = childName;
-  if (_joint->parent->GetParent() != _joint->parent->GetRootVisual())
-  {
-    nestedParentName = _joint->parent->GetParent()->GetName();
-    nested = true;
-  }
-  if (_joint->child->GetParent() != _joint->child->GetRootVisual())
-  {
-    nestedChildName = _joint->child->GetParent()->GetName();
-    nested = true;
-  }
-
-  if (nested)
-  {
-    gui::model::Events::jointInserted(jointId +"_nested", _joint->name,
-        jointTypes[_joint->type], nestedParentName, nestedChildName);
-  }
-  else
+  // notify others of joints between top level links
+  rendering::VisualPtr parentTopLevelLink = _joint->parent->GetNthAncestor(2);
+  rendering::VisualPtr childTopLevelLink  = _joint->child->GetNthAncestor(2);
+  if (parentTopLevelLink && childTopLevelLink)
   {
     gui::model::Events::jointInserted(jointId, _joint->name,
-        jointTypes[_joint->type], parentName, childName);
+        jointTypes[_joint->type], parentTopLevelLink->GetName(),
+        childTopLevelLink->GetName());
   }
 }
 
@@ -907,8 +895,18 @@ void JointMaker::Update()
             // notify joint changes
             std::string parentName = joint->parent->GetName();
             std::string childName = joint->child->GetName();
-            gui::model::Events::jointChanged(it.first, joint->name,
-                jointTypes[joint->type], parentName, childName);
+
+            // notify others of joints between top level links
+            rendering::VisualPtr parentTopLevelLink =
+                joint->parent->GetNthAncestor(2);
+            rendering::VisualPtr childTopLevelLink  =
+                joint->child->GetNthAncestor(2);
+            if (parentTopLevelLink && childTopLevelLink)
+            {
+              gui::model::Events::jointChanged(it.first, joint->name,
+                  jointTypes[joint->type], parentTopLevelLink->GetName(),
+                  childTopLevelLink->GetName());
+            }
           }
 
           // set pos of joint handle
