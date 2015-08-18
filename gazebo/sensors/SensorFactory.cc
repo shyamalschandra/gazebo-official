@@ -30,23 +30,21 @@
 #include "gazebo/sensors/SensorFactory.hh"
 #include "gazebo/sensors/Sensor.hh"
 
-void RegisterAltimeterSensor();
 void RegisterCameraSensor();
 void RegisterContactSensor();
 void RegisterDepthCameraSensor();
-void RegisterForceTorqueSensor();
+void RegisterWideAngleCameraSensor();
+void RegisterMultiCameraSensor();
 void RegisterGpsSensor();
 void RegisterGpuRaySensor();
 void RegisterImuSensor();
-void RegisterLogicalCameraSensor();
-void RegisterMagnetometerSensor();
-void RegisterMultiCameraSensor();
 void RegisterRaySensor();
 void RegisterRFIDSensor();
 void RegisterRFIDTag();
 void RegisterSonarSensor();
-void RegisterWirelessReceiver();
+void RegisterForceTorqueSensor();
 void RegisterWirelessTransmitter();
+void RegisterWirelessReceiver();
 
 using namespace gazebo;
 using namespace sensors;
@@ -56,23 +54,21 @@ std::map<std::string, SensorFactoryFn> SensorFactory::sensorMap;
 /////////////////////////////////////////////////
 void SensorFactory::RegisterAll()
 {
-  RegisterAltimeterSensor();
   RegisterCameraSensor();
   RegisterContactSensor();
   RegisterDepthCameraSensor();
-  RegisterForceTorqueSensor();
-  RegisterImuSensor();
+  RegisterWideAngleCameraSensor();
+  RegisterMultiCameraSensor();
   RegisterGpsSensor();
   RegisterGpuRaySensor();
-  RegisterLogicalCameraSensor();
-  RegisterMultiCameraSensor();
-  RegisterMagnetometerSensor();
+  RegisterImuSensor();
   RegisterRaySensor();
   RegisterRFIDSensor();
   RegisterRFIDTag();
   RegisterSonarSensor();
-  RegisterWirelessReceiver();
+  RegisterForceTorqueSensor();
   RegisterWirelessTransmitter();
+  RegisterWirelessReceiver();
 }
 
 /////////////////////////////////////////////////

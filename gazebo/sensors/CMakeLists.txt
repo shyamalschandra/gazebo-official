@@ -26,6 +26,7 @@ set (sources
   SensorFactory.cc
   SensorManager.cc
   SonarSensor.cc
+  WideAngleCameraSensor.cc
   WirelessReceiver.cc
   WirelessTransceiver.cc
   WirelessTransmitter.cc
@@ -54,6 +55,7 @@ set (headers
   SensorFactory.hh
   SensorManager.hh
   SonarSensor.hh
+  WideAngleCameraSensor.hh
   WirelessReceiver.hh
   WirelessTransceiver.hh
   WirelessTransmitter.hh
