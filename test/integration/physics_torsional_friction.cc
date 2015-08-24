@@ -319,15 +319,7 @@ void PhysicsTorsionalFrictionTest::CoefficientTest(
       }
       else
       {
-        // gzerr << "accz anly [" << frictionAcc
-        //       << "] actual [" << acc.z
-        //       << "] app [" << appliedTorque
-        //       << "] fri [" << frictionTorque
-        //       << "] izz [" << sphere.izz
-        //       << "] coef [" << frictionCoef
-        //       << "]\n";
         sphere.error.InsertData(acc.z - frictionAcc);
-        EXPECT_NEAR(acc.z, frictionAcc, g_friction_tolerance);
       }
     }
   }
@@ -336,7 +328,7 @@ void PhysicsTorsionalFrictionTest::CoefficientTest(
   for (auto sphere : spheres)
   {
     gzdbg << "Model " << sphere.model->GetName() << std::endl;
-    // EXPECT_NEAR(sphere.error.Map()["maxAbs"], 0.0, g_friction_tolerance);
+    EXPECT_NEAR(sphere.error.Map()["maxAbs"], 0.0, g_friction_tolerance);
   }
 }
 

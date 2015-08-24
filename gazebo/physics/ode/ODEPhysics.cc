@@ -1144,8 +1144,6 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
 
   if (contact.surface.mu3 > 0)
   {
-    // gzerr << _collision1->GetScopedName()
-    //       << " mu3 " << contact.surface.mu3 << "\n";
     contact.surface.mode |= dContactMu3;
     contact.surface.patch_radius =
         std::max(surf1->FrictionPyramid()->PatchRadius(),
@@ -1162,8 +1160,6 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
 
     if (contact.surface.slip3 > 0)
     {
-      // gzerr << _collision1->GetScopedName()
-      //       << " slip3 " << contact.surface.slip3 << "\n";
       contact.surface.mode |= dContactSlip3;
     }
   }
