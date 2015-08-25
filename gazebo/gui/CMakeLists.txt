@@ -57,6 +57,7 @@ set (sources
   TimeWidget.cc
   ToolsWidget.cc
   TopicSelector.cc
+  TopToolbar.cc
   ViewAngleWidget.cc
 )
 
@@ -94,6 +95,7 @@ set (qt_headers
   TimeWidget.hh
   ToolsWidget.hh
   TopicSelector.hh
+  TopToolbar.hh
   ViewAngleWidget.hh
 )
 
@@ -146,6 +148,7 @@ set (qt_tests
   SplashScreen_TEST.cc
   TimePanel_TEST.cc
   TimeWidget_TEST.cc
+  TopToolbar_TEST.cc
   ViewAngleWidget_TEST.cc
 )
 
