@@ -48,6 +48,7 @@ namespace gazebo
   namespace gui
   {
     class JointData;
+    class JointCreationDialog;
     class JointInspector;
 
     /// \addtogroup gazebo_gui
@@ -115,7 +116,7 @@ namespace gazebo
 
       /// \brief Helper method to create hotspot visual for mouse interaction.
       /// \param[in] _joint Joint data used for creating the hotspot
-      public: void CreateHotSpot(JointData *_joint);
+      public: std::string CreateHotSpot(JointData *_joint);
 
       /// \brief Update callback on PreRender.
       public: void Update();
@@ -123,6 +124,9 @@ namespace gazebo
       /// \brief Remove joint by name
       /// \param[in] _jointName Name of joint to be removed.
       public: void RemoveJoint(const std::string &_jointName);
+
+      /// \brief Remove joint being created
+      public: void RemoveJointBeingCreated();
 
       /// \brief Remove all joints connected to link.
       /// \param[in] _linkName Name of the link.
@@ -179,6 +183,8 @@ namespace gazebo
       /// \param[in] _modelName Name of the model that contains this joint.
       public: void CreateJointFromSDF(sdf::ElementPtr _jointElem,
           const std::string &_modelName = "");
+
+      public: static msgs::Joint SetupDefaultJointMsg(JointType _type);
 
       /// \brief Add a scoped link name. Nested model's link names are scoped
       /// but the parent and child field in the joint SDF element may not be.
@@ -274,6 +280,13 @@ namespace gazebo
       /// \param[in] _linkId Unique link identifying name.
       private: void OnLinkRemoved(const std::string &_linkName);
 
+      private: void ParentLinkChosen(rendering::VisualPtr _parentLink);
+      private: void ChildLinkChosen(rendering::VisualPtr _childLink);
+      private: void OnJointTypeChosenDialog(JointType _type);
+      private: void OnJointParentChosenDialog(const std::string &_name);
+      private: void OnJointChildChosenDialog(const std::string &_name);
+      private: void OnJointCreateDialog();
+
       /// \brief Create a joint line.
       /// \param[in] _name Name to give the visual that contains the joint line.
       /// \param[in] _parent Parent of the joint.
@@ -311,8 +324,11 @@ namespace gazebo
       /// \brief Visual that is previously hovered over by the mouse
       private: rendering::VisualPtr prevHoverVis;
 
-      /// \brief Currently selected visual
-      private: rendering::VisualPtr selectedVis;
+      /// \brief Visual currently selected to be the parent link.
+      private: rendering::VisualPtr parentLinkVis;
+
+      /// \brief Visual currently selected to be the child link.
+      private: rendering::VisualPtr childLinkVis;
 
       /// \brief Name of joint that is currently being inspected.
       private: std::string inspectName;
@@ -321,7 +337,7 @@ namespace gazebo
       private: std::map<std::string, JointData *> joints;
 
       /// \brief Joint currently being created.
-      private: JointData *mouseJoint;
+      private: JointData *jointBeingCreated;
 
       /// \brief All the event connections.
       private: std::vector<event::ConnectionPtr> connections;
@@ -357,6 +373,12 @@ namespace gazebo
       /// \brief List of all links currently in the editor. The first string is
       /// the link's fully scoped name and the second is the leaf name.
       private: std::map<std::string, std::string> linkList;
+
+      /// \brief Inspector for configuring joint properties.
+      public: JointCreationDialog *jointCreationDialog;
+
+      private: bool mouseMoveEnabled = false;
+      private: bool creatingJoint = false;
     };
     /// \}
 
@@ -367,8 +389,18 @@ namespace gazebo
     {
       Q_OBJECT
 
+      /// \brief Open the joint inspector.
+      public: void OpenInspector();
+
       /// \brief Update this joint data.
       public: void Update();
+
+      /// \brief Update joint.
+      public: void UpdateJointLine();
+
+      public: void SetType(JointMaker::JointType _type);
+      public: void SetParent(rendering::VisualPtr _vis);
+      public: void SetChild(rendering::VisualPtr _vis);
 
       /// \brief Name of the joint.
       public: std::string name;
@@ -417,9 +449,6 @@ namespace gazebo
 
       /// \brief Inspector for configuring joint properties.
       public: JointInspector *inspector;
-
-      /// \brief Open the joint inspector.
-      public: void OpenInspector();
 
       /// \brief Qt Callback when joint inspector is to be opened.
       private slots: void OnOpenInspector();
