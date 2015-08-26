@@ -40,11 +40,6 @@ COMVisual::COMVisual(const std::string &_name, VisualPtr _vis)
 }
 
 /////////////////////////////////////////////////
-COMVisual::~COMVisual()
-{
-}
-
-/////////////////////////////////////////////////
 void COMVisual::Load(sdf::ElementPtr _elem)
 {
   Visual::Load();
@@ -132,7 +127,7 @@ void COMVisual::Load()
   sphereObj->setCastShadows(false);
 
   dPtr->sphereNode =
-      dPtr->sceneNode->createChildSceneNode(this->GetName() + "_SPHERE");
+      dPtr->sceneNode->createChildSceneNode(this->GetName() + "_SPHERE_");
 
   dPtr->sphereNode->attachObject(sphereObj);
   dPtr->sphereNode->setScale(sphereRadius*2, sphereRadius*2, sphereRadius*2);
