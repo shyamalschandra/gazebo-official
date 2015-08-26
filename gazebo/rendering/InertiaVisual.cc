@@ -37,11 +37,6 @@ InertiaVisual::InertiaVisual(const std::string &_name, VisualPtr _vis)
 }
 
 /////////////////////////////////////////////////
-InertiaVisual::~InertiaVisual()
-{
-}
-
-/////////////////////////////////////////////////
 void InertiaVisual::Load(sdf::ElementPtr _elem)
 {
   Visual::Load();
@@ -137,7 +132,7 @@ void InertiaVisual::Load(const math::Pose &_pose,
   ((Ogre::Entity*)boxObj)->setMaterialName("__GAZEBO_TRANS_PURPLE_MATERIAL__");
 
   dPtr->boxNode =
-      dPtr->sceneNode->createChildSceneNode(this->GetName() + "_BOX");
+      dPtr->sceneNode->createChildSceneNode(this->GetName() + "_BOX_");
 
   dPtr->boxNode->attachObject(boxObj);
   dPtr->boxNode->setScale(_scale.x, _scale.y, _scale.z);
