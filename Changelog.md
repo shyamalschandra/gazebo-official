@@ -1,5 +1,8 @@
 ## Gazebo 7.0
 
+1. Add function to get the derived scale of a Visual
+    * [Pull request #1881](https://bitbucket.org/osrf/gazebo/pull-request/1881)
+
 1. Added LoadArgs() function to ServerFixture for being able to load a server
 using the same arguments used in the command line.
     * [Pull request #1874](https://bitbucket.org/osrf/gazebo/pull-request/1874
