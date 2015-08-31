@@ -1,4 +1,6 @@
 ## Gazebo 7.0
+1. Added torsional friction
+    * [Pull request #1831](https://bitbucket.org/osrf/gazebo/pull-request/1831)
 
 1. Added LoadArgs() function to ServerFixture for being able to load a server
 using the same arguments used in the command line.
