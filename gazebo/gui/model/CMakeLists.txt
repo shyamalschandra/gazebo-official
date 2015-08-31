@@ -38,6 +38,7 @@ set (headers_install
 
 if (ENABLE_SCREEN_TESTS)
   set (qt_tests_local
+    JointInspector_TEST.cc
     JointMaker_TEST.cc
     ExtrudeDialog_TEST.cc
     ModelCreator_TEST.cc
