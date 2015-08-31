@@ -127,13 +127,13 @@ ModelEditor::ModelEditor(MainWindow *_mainWindow)
   this->dataPtr->jointAct->setObjectName("modelEditorJointAct");
 
   // set up the action group so that only one action is active at one time.
-  QActionGroup *actionGroup = g_arrowAct->actionGroup();
-  if (actionGroup)
-  {
-    this->dataPtr->jointAct->setActionGroup(actionGroup);
-    connect(actionGroup, SIGNAL(triggered(QAction *)),
-        this, SLOT(OnAction(QAction *)));
-  }
+//  QActionGroup *actionGroup = g_arrowAct->actionGroup();
+//  if (actionGroup)
+//  {
+//    this->dataPtr->jointAct->setActionGroup(actionGroup);
+//    connect(actionGroup, SIGNAL(triggered(QAction *)),
+//        this, SLOT(OnAction(QAction *)));
+//  }
 
   QToolButton *jointButton = new QToolButton();
   jointButton->setObjectName("jointToolButton");
@@ -347,6 +347,7 @@ void ModelEditor::CreateMenus()
 /////////////////////////////////////////////////
 void ModelEditor::OnAddSelectedJoint()
 {
+  g_arrowAct->trigger();
   this->OnAddJoint(tr(this->dataPtr->selectedJointType.c_str()));
 }
 
@@ -357,13 +358,13 @@ void ModelEditor::OnAddJoint(const QString &_type)
   this->dataPtr->modelPalette->CreateJoint(type);
   this->dataPtr->selectedJointType = type;
   this->dataPtr->jointAct->setChecked(true);
-  gui::Events::manipMode("joint");
+  //gui::Events::manipMode("joint");
 }
 
 /////////////////////////////////////////////////
 void ModelEditor::OnJointAdded()
 {
-  if (this->dataPtr->jointAct->isChecked())
+  if (this->dataPtr->jointAct && this->dataPtr->jointAct->isChecked())
   {
     this->dataPtr->jointAct->setChecked(false);
     g_arrowAct->trigger();
@@ -416,10 +417,10 @@ void ModelEditor::OnFinish()
 }
 
 /////////////////////////////////////////////////
-void ModelEditor::OnAction(QAction *_action)
+void ModelEditor::OnAction(QAction */*_action*/)
 {
-  if (_action != this->dataPtr->jointAct)
-    this->dataPtr->modelPalette->CreateJoint("none");
+ // if (_action != this->dataPtr->jointAct)
+   // this->dataPtr->modelPalette->CreateJoint("none");
 }
 
 /////////////////////////////////////////////////

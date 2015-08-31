@@ -49,6 +49,9 @@ class ConfigWidget_TEST : public QTestFixture
   /// messages.
   private slots: void CreatedExternally();
 
+  /// \brief Test functions related to enum config widgets.
+  private slots: void EnumConfigWidget();
+
   /// \brief Test receiving a signal from child uint widget.
   private slots: void ChildUIntSignal();
 
