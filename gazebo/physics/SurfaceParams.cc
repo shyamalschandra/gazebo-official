@@ -17,7 +17,6 @@
 
 #include "gazebo/common/Assert.hh"
 #include "gazebo/common/Console.hh"
-#include "gazebo/math/Helpers.hh"
 #include "gazebo/physics/SurfaceParams.hh"
 
 using namespace gazebo;
@@ -25,9 +24,16 @@ using namespace physics;
 
 //////////////////////////////////////////////////
 FrictionPyramid::FrictionPyramid()
+  : patchRadius(0.0)
+  , surfaceRadius(IGN_DBL_MAX)
+  , usePatchRadius(1)
+  , poissonsRatio(0.3)
+  , elasticModulus(0)
+  , elasticModulusReferenceLength(1.0)
 {
   this->mu[0] = 1.0;
   this->mu[1] = 1.0;
+  this->mu[2] = 1.0;
 }
 
 //////////////////////////////////////////////////
@@ -38,13 +44,49 @@ FrictionPyramid::~FrictionPyramid()
 //////////////////////////////////////////////////
 double FrictionPyramid::GetMuPrimary()
 {
-  return this->GetMu(0);
+  return this->Mu(0);
 }
 
 //////////////////////////////////////////////////
 double FrictionPyramid::GetMuSecondary()
 {
-  return this->GetMu(1);
+  return this->Mu(1);
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::MuPrimary() const
+{
+  return this->Mu(0);
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::MuSecondary() const
+{
+  return this->Mu(1);
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::MuTorsion() const
+{
+  return this->Mu(2);
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::PatchRadius() const
+{
+  return this->patchRadius;
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::SurfaceRadius() const
+{
+  return this->surfaceRadius;
+}
+
+//////////////////////////////////////////////////
+bool FrictionPyramid::UsePatchRadius() const
+{
+  return this->usePatchRadius;
 }
 
 //////////////////////////////////////////////////
@@ -60,16 +102,111 @@ void FrictionPyramid::SetMuSecondary(double _mu)
 }
 
 //////////////////////////////////////////////////
+void FrictionPyramid::SetMuTorsion(const double _mu)
+{
+  this->SetMu(2, _mu);
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetPatchRadius(const double _radius)
+{
+  this->patchRadius = _radius;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetSurfaceRadius(const double _radius)
+{
+  this->surfaceRadius = _radius;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetUsePatchRadius(const bool _use)
+{
+  this->usePatchRadius = _use;
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::PoissonsRatio() const
+{
+  return this->poissonsRatio;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetPoissonsRatio(double _ratio)
+{
+  if (_ratio <= -1.0)
+  {
+    this->poissonsRatio = -0.99;
+    gzwarn << "Poisson's ratio out of bounds [" << _ratio
+           << "] default to [" << this->poissonsRatio << "]\n";
+  }
+  else if (_ratio >= 0.5)
+  {
+    this->poissonsRatio = 0.4999;
+    gzwarn << "Poisson's ratio out of bounds [" << _ratio
+           << "] default to [" << this->poissonsRatio << "]\n";
+  }
+  else
+  {
+    this->poissonsRatio = _ratio;
+  }
+}
+//////////////////////////////////////////////////
+double FrictionPyramid::ElasticModulus() const
+{
+  return this->elasticModulus;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetElasticModulus(double _modulus)
+{
+  if (_modulus < 0)
+  {
+    this->elasticModulus = 0;
+  }
+  else
+  {
+    this->elasticModulus = _modulus;
+  }
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::ElasticModulusReferenceLength() const
+{
+  return this->elasticModulusReferenceLength;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetElasticModulusReferenceLength(double _modulusRefLen)
+{
+  if (_modulusRefLen < 0)
+  {
+    this->elasticModulusReferenceLength = 0;
+  }
+  else
+  {
+    this->elasticModulusReferenceLength = _modulusRefLen;
+  }
+}
+
+//////////////////////////////////////////////////
 double FrictionPyramid::GetMu(unsigned int _index)
 {
-  GZ_ASSERT(_index < 2, "Invalid _index to GetMu");
+  GZ_ASSERT(_index < 3, "Invalid _index to GetMu");
+  return this->mu[_index];
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::Mu(const unsigned int _index) const
+{
+  GZ_ASSERT(_index < 3, "Invalid _index to Mu");
   return this->mu[_index];
 }
 
 //////////////////////////////////////////////////
 void FrictionPyramid::SetMu(unsigned int _index, double _mu)
 {
-  GZ_ASSERT(_index < 2, "Invalid _index to SetMu");
+  GZ_ASSERT(_index < 3, "Invalid _index to SetMu");
   if (_mu < 0)
   {
     this->mu[_index] = GZ_FLT_MAX;
@@ -140,6 +277,12 @@ void SurfaceParams::ProcessMsg(const msgs::Surface &_msg)
 
 /////////////////////////////////////////////////
 FrictionPyramidPtr SurfaceParams::GetFrictionPyramid() const
+{
+  return FrictionPyramidPtr();
+}
+
+/////////////////////////////////////////////////
+FrictionPyramidPtr SurfaceParams::FrictionPyramid() const
 {
   return FrictionPyramidPtr();
 }

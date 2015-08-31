@@ -1064,6 +1064,7 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
                          dContactSoftERP |
                          dContactSoftCFM |
                          dContactApprox1 |
+                         dContactApprox3 |
                          dContactSlip1 |
                          dContactSlip2;
 
@@ -1086,7 +1087,7 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
   //                                _collision2->surface->softCFM);
 
   // assign fdir1 if not set as 0
-  math::Vector3 fd = surf1->GetFrictionPyramid()->direction1;
+  math::Vector3 fd = surf1->FrictionPyramid()->direction1;
   if (fd != math::Vector3::Zero)
   {
     // fdir1 is in body local frame, rotate it into world frame
@@ -1100,10 +1101,10 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
   /// As a hack, we'll simply compare mu1 from
   /// both surfaces for now, and use fdir1 specified by
   /// surface with smaller mu1.
-  math::Vector3 fd2 = surf2->GetFrictionPyramid()->direction1;
+  math::Vector3 fd2 = surf2->FrictionPyramid()->direction1;
   if (fd2 != math::Vector3::Zero && (fd == math::Vector3::Zero ||
-        surf1->GetFrictionPyramid()->GetMuPrimary() >
-        surf2->GetFrictionPyramid()->GetMuPrimary()))
+        surf1->FrictionPyramid()->MuPrimary() >
+        surf2->FrictionPyramid()->MuPrimary()))
   {
     // fdir1 is in body local frame, rotate it into world frame
     fd2 = _collision2->GetWorldPose().rot.RotateVector(fd2);
@@ -1126,17 +1127,59 @@ void ODEPhysics::Collide(ODECollision *_collision1, ODECollision *_collision2,
   }
 
   // Set the friction coefficients.
-  contact.surface.mu = std::min(surf1->GetFrictionPyramid()->GetMuPrimary(),
-                                surf2->GetFrictionPyramid()->GetMuPrimary());
-  contact.surface.mu2 = std::min(surf1->GetFrictionPyramid()->GetMuSecondary(),
-                                 surf2->GetFrictionPyramid()->GetMuSecondary());
-
+  contact.surface.mu = std::min(surf1->FrictionPyramid()->MuPrimary(),
+                                surf2->FrictionPyramid()->MuPrimary());
+  contact.surface.mu2 = std::min(surf1->FrictionPyramid()->MuSecondary(),
+                                 surf2->FrictionPyramid()->MuSecondary());
+  contact.surface.mu3 = std::min(surf1->FrictionPyramid()->MuTorsion(),
+                                 surf2->FrictionPyramid()->MuTorsion());
 
   // Set the slip values
   contact.surface.slip1 = std::min(surf1->slip1,
                                    surf2->slip1);
   contact.surface.slip2 = std::min(surf1->slip2,
                                    surf2->slip2);
+  contact.surface.slip3 = std::min(surf1->slipTorsion,
+                                   surf2->slipTorsion);
+
+  if (contact.surface.mu3 > 0)
+  {
+    contact.surface.mode |= dContactMu3;
+    contact.surface.patch_radius =
+        std::max(surf1->FrictionPyramid()->PatchRadius(),
+                 surf2->FrictionPyramid()->PatchRadius());
+    // the curvature is combined using 1/R = 1/R1 + 1/R2
+    // we can consider doing the same for the patch radius
+    contact.surface.surface_radius = 1/
+        (1/surf1->FrictionPyramid()->SurfaceRadius()+
+        1/surf2->FrictionPyramid()->SurfaceRadius());
+    // not sure how to combine these logic flags
+    contact.surface.use_patch_radius =
+        surf1->FrictionPyramid()->UsePatchRadius() &&
+        surf2->FrictionPyramid()->UsePatchRadius();
+
+    if (contact.surface.slip3 > 0)
+    {
+      contact.surface.mode |= dContactSlip3;
+    }
+  }
+
+  // Set the elastic modulus
+  // Using Hertzian contact
+  //   equation 5.26 form Contact Mechanics and Friction by Popov
+  double nu1 = surf1->FrictionPyramid()->PoissonsRatio();
+  double nu2 = surf2->FrictionPyramid()->PoissonsRatio();
+  double E1 = surf1->FrictionPyramid()->ElasticModulus();
+  double E2 = surf2->FrictionPyramid()->ElasticModulus();
+  contact.surface.elastic_modulus = 1.0 /
+    ((1.0 - nu1*nu1)/E1 + (1.0 - nu2*nu2)/E2);
+  // Not sure if this is correct / useful.
+  double L1 = surf1->FrictionPyramid()->ElasticModulusReferenceLength();
+  double L2 = surf2->FrictionPyramid()->ElasticModulusReferenceLength();
+  contact.surface.elastic_modulus_reference_length = 0.5 * (L1 + L2);
+  // Turn on Contact Elastic Modulus model if elastic modulus > 0
+  if (contact.surface.elastic_modulus > 0.0)
+    contact.surface.mode |= dContactEM;
 
   // Set the bounce values
   contact.surface.bounce = std::min(surf1->bounce,
