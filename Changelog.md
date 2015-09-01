@@ -1,4 +1,6 @@
 ## Gazebo 7.0
+1. Added torsional friction
+    * [Pull request #1831](https://bitbucket.org/osrf/gazebo/pull-request/1831)
 
 1. Added RegionEventBoxPlugin - fires events when models enter / exit the region
     * [Pull request #1856](https://bitbucket.org/osrf/gazebo/pull-request/1856)
