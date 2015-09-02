@@ -48,6 +48,7 @@ namespace gazebo
   namespace gui
   {
     class JointData;
+    class JointCreationDialog;
     class JointInspector;
 
     /// \addtogroup gazebo_gui
@@ -115,7 +116,7 @@ namespace gazebo
 
       /// \brief Helper method to create hotspot visual for mouse interaction.
       /// \param[in] _joint Joint data used for creating the hotspot
-      public: void CreateHotSpot(JointData *_joint);
+      public: std::string CreateHotSpot(JointData *_joint);
 
       /// \brief Update callback on PreRender.
       public: void Update();
@@ -180,6 +181,8 @@ namespace gazebo
       public: void CreateJointFromSDF(sdf::ElementPtr _jointElem,
           const std::string &_modelName = "");
 
+      public: static msgs::Joint SetupDefaultJointMsg(JointType _type);
+
       /// \brief Add a scoped link name. Nested model's link names are scoped
       /// but the parent and child field in the joint SDF element may not be.
       /// So keep track of scoped link names in order to generate the correct
@@ -201,6 +204,10 @@ namespace gazebo
       /// \param[in] _selected True to select the joint.
       public: void SetSelected(rendering::VisualPtr _jointVis,
           const bool selected);
+
+      /// \brief Get the list of links.
+      /// \return The list of links, with the link scoped name and leaf name.
+      public: std::map<std::string, std::string> LinkList() const;
 
       /// \brief Mouse event filter callback when mouse button is pressed.
       /// \param[in] _event The mouse event.
@@ -262,6 +269,23 @@ namespace gazebo
       private: void OnSetSelectedJoint(const std::string &_name,
           const bool _selected);
 
+      /// \brief Add a link to the list.
+      /// \param[in] _linkName Scoped link name.
+      private: void OnLinkInserted(const std::string &_linkName);
+
+      /// \brief Remove a link from the list.
+      /// \param[in] _linkId Unique link identifying name.
+      private: void OnLinkRemoved(const std::string &_linkName);
+
+      private: void ParentLinkChosen(rendering::VisualPtr _parentLink);
+      private: void ChildLinkChosen(rendering::VisualPtr _childLink);
+      private: void OnJointTypeChosenDialog(JointType _type);
+      private: void OnJointParentChosenDialog(const std::string &_name);
+      private: void OnJointChildChosenDialog(const std::string &_name);
+      private: void OnJointPoseChosenDialog(
+          const ignition::math::Pose3d &_pose);
+      private: void OnJointCreateDialog();
+
       /// \brief Create a joint line.
       /// \param[in] _name Name to give the visual that contains the joint line.
       /// \param[in] _parent Parent of the joint.
@@ -271,6 +295,14 @@ namespace gazebo
 
       /// \brief Qt signal when the joint creation process has ended.
       Q_SIGNALS: void JointAdded();
+
+      /// \brief Qt signal to notify that a link has been inserted.
+      /// \param[in] _linkId Link's unique name.
+      Q_SIGNALS: void EmitLinkInserted(const std::string &_linkId);
+
+      /// \brief Qt signal to notify that a link has been removed.
+      /// \param[in] _linkId Link's unique name.
+      Q_SIGNALS: void EmitLinkRemoved(const std::string &_linkId);
 
       /// \brief Qt Callback to open joint inspector
       private slots: void OnOpenInspector();
@@ -291,8 +323,11 @@ namespace gazebo
       /// \brief Visual that is previously hovered over by the mouse
       private: rendering::VisualPtr prevHoverVis;
 
-      /// \brief Currently selected visual
-      private: rendering::VisualPtr selectedVis;
+      /// \brief Visual currently selected to be the parent link.
+      private: rendering::VisualPtr parentLinkVis;
+
+      /// \brief Visual currently selected to be the child link.
+      private: rendering::VisualPtr childLinkVis;
 
       /// \brief Name of joint that is currently being inspected.
       private: std::string inspectName;
@@ -301,7 +336,7 @@ namespace gazebo
       private: std::map<std::string, JointData *> joints;
 
       /// \brief Joint currently being created.
-      private: JointData *mouseJoint;
+      private: JointData *jointBeingCreated;
 
       /// \brief All the event connections.
       private: std::vector<event::ConnectionPtr> connections;
@@ -328,11 +363,21 @@ namespace gazebo
       private: std::vector<std::string> scopedLinkedNames;
 
       /// \brief A map of joint type to its string value.
-      private: static std::map<JointMaker::JointType, std::string> jointTypes;
+      public: static std::map<JointMaker::JointType, std::string> jointTypes;
 
       /// \brief A map of joint type to its corresponding material.
-      private: static std::map<JointMaker::JointType, std::string>
+      public: static std::map<JointMaker::JointType, std::string>
           jointMaterials;
+
+      /// \brief List of all links currently in the editor. The first string is
+      /// the link's fully scoped name and the second is the leaf name.
+      private: std::map<std::string, std::string> linkList;
+
+      /// \brief Inspector for configuring joint properties.
+      public: JointCreationDialog *jointCreationDialog;
+
+      private: bool mouseMoveEnabled = false;
+      private: bool creatingJoint = false;
     };
     /// \}
 
@@ -342,6 +387,19 @@ namespace gazebo
     class GZ_GUI_VISIBLE JointData : public QObject
     {
       Q_OBJECT
+
+      /// \brief Open the joint inspector.
+      public: void OpenInspector();
+
+      /// \brief Update this joint data.
+      public: void Update();
+
+      /// \brief Update joint.
+      public: void UpdateJointLine();
+
+      public: void SetType(JointMaker::JointType _type);
+      public: void SetParent(rendering::VisualPtr _vis);
+      public: void SetChild(rendering::VisualPtr _vis);
 
       /// \brief Name of the joint.
       public: std::string name;
@@ -390,9 +448,6 @@ namespace gazebo
 
       /// \brief Inspector for configuring joint properties.
       public: JointInspector *inspector;
-
-      /// \brief Open the joint inspector.
-      public: void OpenInspector();
 
       /// \brief Qt Callback when joint inspector is to be opened.
       private slots: void OnOpenInspector();
