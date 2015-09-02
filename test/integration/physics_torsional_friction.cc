@@ -178,7 +178,16 @@ void PhysicsTorsionalFrictionTest::DepthTest(
   // Step for spheres to sink and rest at the final depth
   world->Step(1000);
 
-  EXPECT_GT(this->contactsMsg.contact().size(), 0);
+  // Wait for contact messages to be received
+  int maxSleep = 30;
+  int sleep = 0;
+  while (this->contactsMsg.contact().size() < 20 && sleep < maxSleep)
+  {
+    common::Time::MSleep(100);
+    sleep++;
+  }
+
+  ASSERT_EQ(this->contactsMsg.contact().size(), 20);
 
   // Load the spheres
   std::vector<PhysicsTorsionalFrictionTest::SphereData>
@@ -202,14 +211,31 @@ void PhysicsTorsionalFrictionTest::DepthTest(
 
   std::vector<bool> contactsChecked = {false, false, false, false, false};
   // Check relevant contacts from message
-  for (auto contact : this->contactsMsg.contact())
+  ASSERT_EQ(this->contactsMsg.contact().size(), 20);
+  for (int i = 0; i < this->contactsMsg.contact().size(); ++i)
   {
-    if (!(contact.has_collision1() &&
-        contact.collision1().find("sphere_mass") == 0))
+    gzdbg << "Checking contact [" << i << "]" << std::endl;
+    auto contact = this->contactsMsg.contact(i);
+
+    // Check if the contact has a sphere for this test
+    int number = 0;
+    if (contact.has_collision1() &&
+        contact.collision1().find("sphere_mass") == 0)
+    {
+      number = std::stoi(contact.collision1().substr(12, 1));
+    }
+    else if (contact.has_collision2() &&
+        contact.collision2().find("sphere_mass") == 0)
+    {
+      number = std::stoi(contact.collision2().substr(12, 1));
+    }
+    else
+    {
+      gzdbg << contact.collision1() << "     " << contact.collision2() << std::endl;
       continue;
+    }
 
     // Get corresponding sphere
-    int number = std::stoi(contact.collision1().substr(12, 1));
     ASSERT_GE(number, 1);
     ASSERT_LE(number, 5);
     contactsChecked[number-1] = true;
@@ -224,7 +250,7 @@ void PhysicsTorsionalFrictionTest::DepthTest(
     double expectedDepth = sphere.mass * -g.z / sphere.kp;
     double relativeError =
       std::abs(contact.depth(0) - expectedDepth)/expectedDepth;
-    gzdbg << contact.collision1()
+    gzdbg << "sphere_mass_" << number
           << " expected " << expectedDepth
           << " actual " << contact.depth(0)
           << std::endl;
