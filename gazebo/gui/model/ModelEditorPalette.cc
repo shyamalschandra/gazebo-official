@@ -279,7 +279,8 @@ ModelEditorPalette::ModelEditorPalette(QWidget *_parent)
 
   this->connections.push_back(
       gui::model::Events::ConnectJointInserted(
-      boost::bind(&ModelEditorPalette::OnJointInserted, this, _1, _2, _3, _4)));
+      boost::bind(&ModelEditorPalette::OnJointInserted, this, _1, _2, _3, _4,
+          _5)));
 
   this->connections.push_back(
       gui::model::Events::ConnectNestedModelRemoved(
@@ -647,9 +648,15 @@ void ModelEditorPalette::OnNestedModelInserted(
     const std::string &_nestedModelName)
 {
   std::string leafName = _nestedModelName;
-  size_t idx = _nestedModelName.find_last_of("::");
+  size_t idx = _nestedModelName.find("::");
   if (idx != std::string::npos)
-    leafName = _nestedModelName.substr(idx+1);
+    leafName = _nestedModelName.substr(idx+2);
+
+  // check if nested model already exists
+  auto treeItems = this->modelTreeWidget->findItems(tr(leafName.c_str()),
+      Qt::MatchExactly | Qt::MatchRecursive);
+  if (!treeItems.empty())
+    return;
 
   QTreeWidgetItem *newNestedModelItem =
       new QTreeWidgetItem(this->nestedModelsItem,
@@ -666,9 +673,15 @@ void ModelEditorPalette::OnNestedModelInserted(
 void ModelEditorPalette::OnLinkInserted(const std::string &_linkName)
 {
   std::string leafName = _linkName;
-  size_t idx = _linkName.find_last_of("::");
+  size_t idx = _linkName.find("::");
   if (idx != std::string::npos)
-    leafName = _linkName.substr(idx+1);
+    leafName = _linkName.substr(idx+2);
+
+  // check if link already exists
+  auto treeItems = this->modelTreeWidget->findItems(tr(leafName.c_str()),
+      Qt::MatchExactly | Qt::MatchRecursive);
+  if (!treeItems.empty())
+    return;
 
   QTreeWidgetItem *newLinkItem = new QTreeWidgetItem(this->linksItem,
       QStringList(QString("%1").arg(QString::fromStdString(leafName))));
@@ -682,13 +695,19 @@ void ModelEditorPalette::OnLinkInserted(const std::string &_linkName)
 
 /////////////////////////////////////////////////
 void ModelEditorPalette::OnJointInserted(const std::string &_jointId,
-    const std::string &_jointName, const std::string &/*_parentName*/,
-    const std::string &/*_childName*/)
+    const std::string &_jointName, const std::string &/*_type*/,
+    const std::string &/*_parentName*/, const std::string &/*_childName*/)
 {
   std::string leafName = _jointName;
-  size_t idx = _jointName.find_last_of("::");
+  size_t idx = _jointName.find("::");
   if (idx != std::string::npos)
-    leafName = _jointName.substr(idx+1);
+    leafName = _jointName.substr(idx+2);
+
+  // check if joint already exists
+  auto treeItems = this->modelTreeWidget->findItems(tr(leafName.c_str()),
+      Qt::MatchExactly | Qt::MatchRecursive);
+  if (!treeItems.empty())
+    return;
 
   QTreeWidgetItem *newJointItem = new QTreeWidgetItem(this->jointsItem,
       QStringList(QString("%1").arg(QString::fromStdString(leafName))));
