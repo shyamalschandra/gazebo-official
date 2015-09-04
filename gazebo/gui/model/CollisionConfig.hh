@@ -107,8 +107,8 @@ namespace gazebo
       /// \param[in] _name Name of collision.
       /// \param[in] _size Size of the geometry.
       /// \param[in] _uri URI of the geometry.
-      public: void GetGeometry(const std::string &_name,
-          ignition::math::Vector3d &_size, std::string &_uri);
+      public: void Geometry(const std::string &_name,
+          ignition::math::Vector3d &_size, std::string &_uri) const;
 
       /// \brief Get collision configuration data
       public: std::map<int, const CollisionConfigData *> GetConfigData() const;
