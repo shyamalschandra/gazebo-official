@@ -122,12 +122,6 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
         dNegateVector3( info->J2a );
     }
 
-    // set right hand side and cfm value for normal
-    dReal local_erp = info->erp;
-    if ( contact.surface.mode & dContactSoftERP )
-        local_erp = contact.surface.soft_erp;
-    dReal k = info->fps * local_erp;
-
     // experimental - check relative acceleration at the contact
 
     dReal depth;
@@ -160,6 +154,44 @@ dxJointContact::getInfo2( dxJoint::Info2 *info )
     dReal motionN = 0;
     if ( contact.surface.mode & dContactMotionN )
         motionN = contact.surface.motionN;
+
+    // set right hand side and cfm value for normal
+    dReal local_erp = info->erp;
+    if ( contact.surface.mode & dContactSoftERP )
+        local_erp = contact.surface.soft_erp;
+
+    if ( contact.surface.mode & dContactEM )
+    {
+        // get patch radius for surface area calculation
+        dReal patch_radius;
+        if (!contact.surface.use_patch_radius)
+        {
+          patch_radius = sqrt(contact.surface.surface_radius * depth);
+        }
+        else
+        {
+          patch_radius = contact.surface.patch_radius;
+        }
+
+        // use elastic modulus
+        dReal e_star = contact.surface.elastic_modulus;
+        /// \TODO Using Hertzian contact, but ignoring the ^1.5 power!!!
+        /// We should fix this by either linearizing about x, or try
+        /// to rederive the cfm/erp -> kp/kd equivalence (per Catto)
+        /// for stiffness term = K*x^1.5.
+        /// For now, pretend it's just x.
+        ///   equation 5.23 form Contact Mechanics and Friction by Popov
+        dReal stiffness = 4.0 / 3.0 * e_star * sqrt(patch_radius);
+
+        // convert stiffness to erp (known cfm, h, kp)
+        // get kd using:
+        //   cfm = 1 / ( dt * kp + kd )
+        dReal kd = 1.0/info->cfm[0] - stiffness/info->fps;
+        // get erp using:
+        //   kd = (1 - erp) / cfm
+        local_erp = 1.0 - kd * info->cfm[0];
+    }
+    dReal k = info->fps * local_erp;
 
     const dReal pushout = k * depth + motionN;
     info->c[0] = pushout;

@@ -27,6 +27,8 @@ FrictionPyramid::FrictionPyramid()
   : patchRadius(0.0)
   , surfaceRadius(IGN_DBL_MAX)
   , usePatchRadius(1)
+  , poissonsRatio(0.3)
+  , elasticModulus(0)
 {
   this->mu[0] = 1.0;
   this->mu[1] = 1.0;
@@ -120,6 +122,51 @@ void FrictionPyramid::SetSurfaceRadius(const double _radius)
 void FrictionPyramid::SetUsePatchRadius(const bool _use)
 {
   this->usePatchRadius = _use;
+}
+
+//////////////////////////////////////////////////
+double FrictionPyramid::PoissonsRatio() const
+{
+  return this->poissonsRatio;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetPoissonsRatio(double _ratio)
+{
+  if (_ratio <= -1.0)
+  {
+    this->poissonsRatio = -0.99;
+    gzwarn << "Poisson's ratio out of bounds [" << _ratio
+           << "] default to [" << this->poissonsRatio << "]\n";
+  }
+  else if (_ratio >= 0.5)
+  {
+    this->poissonsRatio = 0.4999;
+    gzwarn << "Poisson's ratio out of bounds [" << _ratio
+           << "] default to [" << this->poissonsRatio << "]\n";
+  }
+  else
+  {
+    this->poissonsRatio = _ratio;
+  }
+}
+//////////////////////////////////////////////////
+double FrictionPyramid::ElasticModulus() const
+{
+  return this->elasticModulus;
+}
+
+//////////////////////////////////////////////////
+void FrictionPyramid::SetElasticModulus(double _modulus)
+{
+  if (_modulus < 0)
+  {
+    this->elasticModulus = 0;
+  }
+  else
+  {
+    this->elasticModulus = _modulus;
+  }
 }
 
 //////////////////////////////////////////////////
