@@ -1,4 +1,9 @@
 ## Gazebo 7.0
+1. Added torsional friction
+    * [Pull request #1831](https://bitbucket.org/osrf/gazebo/pull-request/1831)
+
+1. Support loading and spawning nested models
+    * [Pull request #1868](https://bitbucket.org/osrf/gazebo/pull-request/1868)
 
 1. Added RegionEventBoxPlugin - fires events when models enter / exit the region
     * [Pull request #1856](https://bitbucket.org/osrf/gazebo/pull-request/1856)
@@ -53,6 +58,10 @@ using the same arguments used in the command line.
     * [Pull request #1828](https://bitbucket.org/osrf/gazebo/pull-request/1828)
 
 1. Model editor updates
+    1. Choose / swap parent and child links in joint inspector
+        * [Pull request #1887](https://bitbucket.org/osrf/gazebo/pull-request/1887)
+        * [Issue #1500](https://bitbucket.org/osrf/gazebo/issue/1500)
+
     1. Added support for more joint types (gearbox and fixed joints).
         * [Pull request #1794](https://bitbucket.org/osrf/gazebo/pull-request/1794)
     1. Added support for selecting links and joints, opening context menu and inspectors in Schematic View.
