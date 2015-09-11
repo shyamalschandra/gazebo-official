@@ -139,7 +139,6 @@ void JointMaker::Reset()
   this->jointType = JointMaker::JOINT_NONE;
   this->selectedVis.reset();
   this->hoverVis.reset();
-  this->prevHoverVis.reset();
   this->inspectName = "";
   this->selectedJoints.clear();
 
@@ -973,22 +972,17 @@ void JointMaker::GenerateSDF()
 
     sdf::ElementPtr parentElem = jointElem->GetElement("parent");
     std::string parentName = joint->parent->GetName();
-    std::string parentLeafName = parentName;
-    size_t pIdx = parentName.find_last_of("::");
+    size_t pIdx = parentName.find("::");
     if (pIdx != std::string::npos)
-      parentLeafName = parentName.substr(pIdx+1);
-
-    parentLeafName = this->GetScopedLinkName(parentLeafName);
-    parentElem->Set(parentLeafName);
+      parentName = parentName.substr(pIdx+2);
+    parentElem->Set(parentName);
 
     sdf::ElementPtr childElem = jointElem->GetElement("child");
     std::string childName = joint->child->GetName();
-    std::string childLeafName = childName;
-    size_t cIdx = childName.find_last_of("::");
+    size_t cIdx = childName.find("::");
     if (cIdx != std::string::npos)
-      childLeafName = childName.substr(cIdx+1);
-    childLeafName = this->GetScopedLinkName(childLeafName);
-    childElem->Set(childLeafName);
+      childName = childName.substr(cIdx+2);
+    childElem->Set(childName);
   }
 }
 
@@ -1198,22 +1192,38 @@ void JointMaker::DeselectAll()
 void JointMaker::CreateJointFromSDF(sdf::ElementPtr _jointElem,
     const std::string &_modelName)
 {
+  auto scene = gui::get_active_camera()->GetScene();
+  if (!scene)
+    return;
+
   msgs::Joint jointMsg = msgs::JointFromSDF(_jointElem);
 
   // Parent
   std::string parentName = _modelName + "::" + jointMsg.parent();
-  rendering::VisualPtr parentVis =
-      gui::get_active_camera()->GetScene()->GetVisual(parentName);
+  rendering::VisualPtr parentVis = scene->GetVisual(parentName);
+  if (!parentVis)
+  {
+    // Try to remove one level of scope
+    std::string unscopedName =
+        jointMsg.parent().substr(jointMsg.parent().find("::")+2);
+    parentVis = scene->GetVisual(_modelName + "::" + unscopedName);
+  }
 
   // Child
   std::string childName = _modelName + "::" + jointMsg.child();
-  rendering::VisualPtr childVis =
-      gui::get_active_camera()->GetScene()->GetVisual(childName);
+  rendering::VisualPtr childVis = scene->GetVisual(childName);
+  if (!childVis)
+  {
+    // Try to remove one level of scope
+    std::string unscopedName =
+        jointMsg.child().substr(jointMsg.child().find("::")+2);
+    childVis = scene->GetVisual(_modelName + "::" + unscopedName);
+  }
 
   if (!parentVis || !childVis)
   {
-    gzerr << "Unable to load joint. Joint child / parent not found"
-        << std::endl;
+    gzerr << "Unable to load joint. Joint child [" << childName <<
+        "] or parent [" << parentName << "] not found" << std::endl;
     return;
   }
 
