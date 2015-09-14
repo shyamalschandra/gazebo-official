@@ -827,6 +827,12 @@ void MainWindow_TEST::ActionCreationDestruction()
 
   QVERIFY(gazebo::gui::g_cameraPerspectiveAct);
 
+  QVERIFY(gazebo::gui::g_undoAct);
+
+  QVERIFY(gazebo::gui::g_redoAct);
+
+  QVERIFY(gazebo::gui::g_cmdHistoryAct);
+
   mainWindow->close();
   delete mainWindow;
 
@@ -935,6 +941,12 @@ void MainWindow_TEST::ActionCreationDestruction()
   QVERIFY(!gazebo::gui::g_cameraOrthoAct);
 
   QVERIFY(!gazebo::gui::g_cameraPerspectiveAct);
+
+  QVERIFY(!gazebo::gui::g_undoAct);
+
+  QVERIFY(!gazebo::gui::g_redoAct);
+
+  QVERIFY(!gazebo::gui::g_cmdHistoryAct);
 }
 
 /////////////////////////////////////////////////
