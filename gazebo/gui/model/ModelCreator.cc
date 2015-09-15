@@ -238,7 +238,7 @@ void ModelCreator::OnEdit(bool _checked)
     MouseEventHandler::Instance()->RemoveMoveFilter("model_creator");
     MouseEventHandler::Instance()->RemoveDoubleClickFilter("model_creator");
     this->jointMaker->DisableEventHandlers();
-    this->jointMaker->Stop();
+    this->jointMaker->Reset();
 
     this->DeselectAll();
   }
@@ -747,7 +747,7 @@ std::string ModelCreator::AddShape(LinkType _type,
   // than inserting it in the model frame.
   linkVisual->SetWorldPose(math::Pose(linkPos, math::Quaternion()));
 
-  this->mouseVisual = linkVisual;
+  this->visualBeingInserted = linkVisual;
 
   return linkName;
 }
@@ -1234,10 +1234,10 @@ void ModelCreator::AddLink(LinkType _type)
 /////////////////////////////////////////////////
 void ModelCreator::Stop()
 {
-  if (this->addLinkType != LINK_NONE && this->mouseVisual)
+  if (this->addLinkType != LINK_NONE && this->visualBeingInserted)
   {
-    this->RemoveLinkImpl(this->mouseVisual->GetName());
-    this->mouseVisual.reset();
+    this->RemoveLinkImpl(this->visualBeingInserted->GetName());
+    this->visualBeingInserted.reset();
     emit LinkAdded();
   }
   if (this->jointMaker)
@@ -1371,11 +1371,11 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
   if (!userCamera)
     return false;
 
-  if (this->jointMaker->GetState() != JointMaker::JOINT_NONE)
-  {
-    userCamera->HandleMouseEvent(_event);
-    return true;
-  }
+ // if (this->jointMaker->GetState() != JointMaker::JOINT_NONE)
+ // {
+  //  userCamera->HandleMouseEvent(_event);
+  //  return true;
+ // }
 
   rendering::VisualPtr vis = userCamera->GetVisual(_event.Pos());
   if (vis)
@@ -1404,23 +1404,23 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
 
   boost::recursive_mutex::scoped_lock lock(*this->updateMutex);
 
-  if (this->mouseVisual)
+  if (this->visualBeingInserted)
   {
     if (_event.Button() == common::MouseEvent::RIGHT)
       return true;
 
     // set the link data pose
-    if (this->allLinks.find(this->mouseVisual->GetName()) !=
+    if (this->allLinks.find(this->visualBeingInserted->GetName()) !=
         this->allLinks.end())
     {
-      LinkData *link = this->allLinks[this->mouseVisual->GetName()];
-      link->SetPose((this->mouseVisual->GetWorldPose()-this->modelPose).Ign());
-      gui::model::Events::linkInserted(this->mouseVisual->GetName());
+      LinkData *link = this->allLinks[this->visualBeingInserted->GetName()];
+      link->SetPose((this->visualBeingInserted->GetWorldPose()-this->modelPose).Ign());
+      gui::model::Events::linkInserted(this->visualBeingInserted->GetName());
     }
 
     // reset and return
     emit LinkAdded();
-    this->mouseVisual.reset();
+    this->visualBeingInserted.reset();
     this->AddLink(LINK_NONE);
     return true;
   }
@@ -1580,7 +1580,7 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
   if (!userCamera)
     return false;
 
-  if (!this->mouseVisual)
+  if (!this->visualBeingInserted)
   {
     rendering::VisualPtr vis = userCamera->GetVisual(_event.Pos());
     if (vis && !vis->IsPlane())
@@ -1608,7 +1608,7 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
     return false;
   }
 
-  math::Pose pose = this->mouseVisual->GetWorldPose();
+  math::Pose pose = this->visualBeingInserted->GetWorldPose();
   pose.pos = ModelManipulator::GetMousePositionOnPlane(
       userCamera, _event);
 
@@ -1616,9 +1616,9 @@ bool ModelCreator::OnMouseMove(const common::MouseEvent &_event)
   {
     pose.pos = ModelManipulator::SnapPoint(pose.pos);
   }
-  pose.pos.z = this->mouseVisual->GetWorldPose().pos.z;
+  pose.pos.z = this->visualBeingInserted->GetWorldPose().pos.z;
 
-  this->mouseVisual->SetWorldPose(pose);
+  this->visualBeingInserted->SetWorldPose(pose);
 
   return true;
 }
@@ -1727,7 +1727,7 @@ void ModelCreator::OnPaste()
 
     clonedLink->linkVisual->SetWorldPose(clonePose);
     this->addLinkType = LINK_MESH;
-    this->mouseVisual = clonedLink->linkVisual;
+    this->visualBeingInserted = clonedLink->linkVisual;
   }
 }
 
