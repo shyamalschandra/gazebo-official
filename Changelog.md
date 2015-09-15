@@ -5,12 +5,18 @@
 1. Support loading and spawning nested models
     * [Pull request #1868](https://bitbucket.org/osrf/gazebo/pull-request/1868)
 
+1. Added EnumIface, which supports iterators over enums.
+    * [Pull request #1847](https://bitbucket.org/osrf/gazebo/pull-request/1847)
+
 1. Added RegionEventBoxPlugin - fires events when models enter / exit the region
     * [Pull request #1856](https://bitbucket.org/osrf/gazebo/pull-request/1856)
 
+1. Added tests for checking the playback control via messages.
+    * [Pull request #1885](https://bitbucket.org/osrf/gazebo/pull-request/1885)
+
 1. Added LoadArgs() function to ServerFixture for being able to load a server
 using the same arguments used in the command line.
-    * [Pull request #1874](https://bitbucket.org/osrf/gazebo/pull-request/1874
+    * [Pull request #1874](https://bitbucket.org/osrf/gazebo/pull-request/1874)
 
 1. Added battery class, plugins and test world.
     * [Pull request #1872](https://bitbucket.org/osrf/gazebo/pull-request/1872)
@@ -51,10 +57,17 @@ using the same arguments used in the command line.
 1. AddItem / RemoveItem / Clear enum config widgets
     * [Pull request #1878](https://bitbucket.org/osrf/gazebo/pull-request/1878)
 
+1. Make all child ConfigWidgets emit signals.
+    * [Pull request #1884](https://bitbucket.org/osrf/gazebo/pull-request/1884)
+
 1. Refactored makers
     * [Pull request #1828](https://bitbucket.org/osrf/gazebo/pull-request/1828)
 
 1. Model editor updates
+    1. Choose / swap parent and child links in joint inspector
+        * [Pull request #1887](https://bitbucket.org/osrf/gazebo/pull-request/1887)
+        * [Issue #1500](https://bitbucket.org/osrf/gazebo/issue/1500)
+
     1. Added support for more joint types (gearbox and fixed joints).
         * [Pull request #1794](https://bitbucket.org/osrf/gazebo/pull-request/1794)
     1. Added support for selecting links and joints, opening context menu and inspectors in Schematic View.
