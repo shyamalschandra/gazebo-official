@@ -107,6 +107,14 @@ namespace gazebo
       /// \return True if the ModelState exists.
       public: bool HasModelState(const std::string &_modelName) const;
 
+      public: const std::vector<std::string> &GetInsertions() const;
+
+      public: void SetInsertions(const std::vector<std::string> &_insertions);
+
+      public: const std::vector<std::string> &GetDeletions() const;
+
+      public: void SetDeletions(const std::vector<std::string> &_deletions);
+
       /// \brief Return true if the values in the state are zero.
       ///
       /// This will check to see if the all model states are zero.
@@ -206,7 +214,7 @@ namespace gazebo
 
       /// \brief List of new added models. The
       /// value is the SDF that describes the model.
-      private: std::vector<std::string> insertions;
+      public: std::vector<std::string> insertions;
 
       /// \brief List of deleted models. Each string is the name of the
       /// deleted model.
