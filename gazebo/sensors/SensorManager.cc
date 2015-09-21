@@ -102,20 +102,24 @@ void SensorManager::Update(bool _force)
   {
     boost::recursive_mutex::scoped_lock lock(this->mutex);
 
-    // in case things are spawn, sensors length changes
-    for (Sensor_V::iterator iter = this->initSensors.begin();
-         iter != this->initSensors.end(); ++iter)
+    if (!this->initSensors.empty())
     {
-      GZ_ASSERT((*iter) != NULL, "Sensor pointer is NULL");
-      GZ_ASSERT((*iter)->GetCategory() < 0 ||
-          (*iter)->GetCategory() < CATEGORY_COUNT, "Sensor category is empty");
-      GZ_ASSERT(this->sensorContainers[(*iter)->GetCategory()] != NULL,
-                "Sensor container is NULL");
+      // in case things are spawn, sensors length changes
+      for (auto &iter : this->initSensors)
+      {
+        GZ_ASSERT(iter != NULL, "Sensor pointer is NULL");
+        GZ_ASSERT(iter->GetCategory() < 0 ||
+            iter->GetCategory() < CATEGORY_COUNT, "Sensor category is empty");
+        GZ_ASSERT(this->sensorContainers[iter->GetCategory()] != NULL,
+            "Sensor container is NULL");
 
-      (*iter)->Init();
-      this->sensorContainers[(*iter)->GetCategory()]->AddSensor(*iter);
+        iter->Init();
+        this->sensorContainers[iter->GetCategory()]->AddSensor(iter);
+      }
+      this->initSensors.clear();
+      for (auto &iter : this->worlds)
+        iter.second->SetSensorsInitialized(false);
     }
-    this->initSensors.clear();
 
     for (std::vector<std::string>::iterator iter = this->removeSensors.begin();
          iter != this->removeSensors.end(); ++iter)
@@ -149,6 +153,8 @@ void SensorManager::Update(bool _force)
         (*iter2)->RemoveSensors();
       }
       this->initSensors.clear();
+      for (auto &iter : this->worlds)
+        iter.second->SetSensorsInitialized(false);
       this->removeAllSensors = false;
     }
   }
@@ -193,6 +199,20 @@ void SensorManager::Init()
     (*iter)->Init();
   }
 
+  // Connect to the time reset event.
+  this->timeResetConnection = event::Events::ConnectTimeReset(
+      boost::bind(&SensorManager::ResetLastUpdateTimes, this));
+
+  // Connect to the remove sensor event.
+  this->removeSensorConnection = event::Events::ConnectRemoveSensor(
+      boost::bind(&SensorManager::RemoveSensor, this, _1));
+
+  // Connect to the create sensor event.
+  this->createSensorConnection = event::Events::ConnectCreateSensor(
+      std::bind(&SensorManager::OnCreateSensor, this,
+        std::placeholders::_1, std::placeholders::_2,
+        std::placeholders::_3, std::placeholders::_4));
+
   this->initialized = true;
 }
 
@@ -225,6 +245,15 @@ void SensorManager::GetSensorTypes(std::vector<std::string> &_types) const
 }
 
 //////////////////////////////////////////////////
+void SensorManager::OnCreateSensor(sdf::ElementPtr _elem,
+    const std::string &_worldName,
+    const std::string &_parentName,
+    const uint32_t _parentId)
+{
+  this->CreateSensor(_elem, _worldName, _parentName, _parentId);
+}
+
+//////////////////////////////////////////////////
 std::string SensorManager::CreateSensor(sdf::ElementPtr _elem,
                                         const std::string &_worldName,
                                         const std::string &_parentName,
@@ -244,6 +273,7 @@ std::string SensorManager::CreateSensor(sdf::ElementPtr _elem,
 
   // Load the sensor
   sensor->Load(_worldName, _elem);
+  this->worlds[_worldName] = physics::get_world(_worldName);
 
   // If the SensorManager has not been initialized, then it's okay to push
   // the sensor into one of the sensor vectors because the sensor will get
@@ -256,6 +286,7 @@ std::string SensorManager::CreateSensor(sdf::ElementPtr _elem,
   // initialized during the next SensorManager::Update call.
   else
   {
+    this->worlds[_worldName]->SetSensorsInitialized(false);
     boost::recursive_mutex::scoped_lock lock(this->mutex);
     this->initSensors.push_back(sensor);
   }
