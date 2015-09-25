@@ -20,6 +20,7 @@ set (files
   heightmap.world
   hydra_demo.world
   initial_velocity.world
+  iris_standoff_demo.world
   joint_damping_demo.world
   joint_friction_demo.world
   joints.world
@@ -35,6 +36,7 @@ set (files
   pioneer2dx_laser.world
   pioneer2dx_laser_camera.world
   plane_demo.world
+  plane_propeller_demo.world
   plugin.world
   polyline.world
   population.world
