@@ -38,6 +38,7 @@ endif()
 
 set (plugins
   ActuatorPlugin
+  ArduCopterPlugin
   ArrangePlugin
   BreakableJointPlugin
   BuoyancyPlugin
@@ -58,12 +59,14 @@ set (plugins
   LinearBatteryPlugin
   ModelPropShop
   MudPlugin
+  PlaneDemoPlugin
   PressurePlugin
   RandomVelocityPlugin
   RayPlugin
   RaySensorNoisePlugin
   RubblePlugin
   SkidSteerDrivePlugin
+  Small2dGimbalPlugin
   SonarPlugin
   SphereAtlasDemoPlugin
   TransporterPlugin
