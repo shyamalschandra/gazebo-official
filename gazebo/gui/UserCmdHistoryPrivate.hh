@@ -14,30 +14,33 @@
  * limitations under the License.
  *
 */
-#ifndef _GAZEBO_ENTITYMAKER_PRIVATE_HH_
-#define _GAZEBO_ENTITYMAKER_PRIVATE_HH_
+#ifndef _GAZEBO_USER_COMMAND_WIDGET_PRIVATE_HH_
+#define _GAZEBO_USER_COMMAND_WIDGET_PRIVATE_HH_
 
-#include <ignition/math/Vector3.hh>
-
+#include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/TransportTypes.hh"
-#include "gazebo/gui/EntityMaker.hh"
+
+#include "gazebo/gui/qt.h"
 
 namespace gazebo
 {
   namespace gui
   {
-    /// \brief Private data for the EntityMaker class
-    class EntityMakerPrivate
+    /// \internal
+    /// \brief Private data for the UserCmdHistory class
+    class UserCmdHistoryPrivate
     {
-      /// \brief Node to publish messages and spawn the entity. Each derived
-      /// class must create its own publisher to the appropriate topic.
+      /// \brief Node for communication.
       public: transport::NodePtr node;
 
-      /// \brief Publish user command messages for the server to place in the
-      /// undo queue.
-      public: transport::PublisherPtr userCmdPub;
+      /// \brief Publish undo / redo messages.
+      public: transport::PublisherPtr undoRedoPub;
+
+      /// \brief Subscriber to user command stats.
+      public: transport::SubscriberPtr userCmdStatsSub;
+
+      public: msgs::UserCmdStats msg;
     };
   }
 }
 #endif
-

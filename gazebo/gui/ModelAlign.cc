@@ -65,6 +65,7 @@ void ModelAlign::Clear()
   this->dataPtr->scene.reset();
   this->dataPtr->node.reset();
   this->dataPtr->modelPub.reset();
+  this->dataPtr->userCmdPub.reset();
   this->dataPtr->selectedVisuals.clear();
   this->dataPtr->connections.clear();
   this->dataPtr->originalVisualPose.clear();
@@ -91,6 +92,8 @@ void ModelAlign::Init()
   this->dataPtr->node->Init();
   this->dataPtr->modelPub =
       this->dataPtr->node->Advertise<msgs::Model>("~/model/modify");
+  this->dataPtr->userCmdPub =
+      this->dataPtr->node->Advertise<msgs::UserCmd>("~/user_cmd");
 
   this->dataPtr->initialized = true;
 }
@@ -290,6 +293,18 @@ void ModelAlign::AlignVisuals(std::vector<rendering::VisualPtr> _visuals,
     if (_publish)
       this->PublishVisualPose(vis);
   }
+
+  // Register user command on server
+  if (_publish)
+  {
+  gzdbg << "ModelAlign::AlignVisuals" << std::endl;
+    msgs::UserCmd userCmdMsg;
+    userCmdMsg.set_id("Align to [" + this->dataPtr->targetVis->GetName() + "]");
+    userCmdMsg.set_description(
+        "Align to [" + this->dataPtr->targetVis->GetName() + "]");
+    userCmdMsg.set_type(msgs::UserCmd::MOVING);
+    this->dataPtr->userCmdPub->Publish(userCmdMsg);
+  }
 }
 
 /////////////////////////////////////////////////
@@ -301,6 +316,7 @@ void ModelAlign::PublishVisualPose(rendering::VisualPtr _vis)
   // Check to see if the visual is a model.
   if (gui::get_entity_id(_vis->GetName()))
   {
+    // Publish model modify message
     msgs::Model msg;
     msg.set_id(gui::get_entity_id(_vis->GetName()));
     msg.set_name(_vis->GetName());

@@ -56,6 +56,7 @@
 #include "gazebo/gui/ToolsWidget.hh"
 #include "gazebo/gui/TopicSelector.hh"
 #include "gazebo/gui/TopToolbar.hh"
+#include "gazebo/gui/UserCmdHistory.hh"
 #include "gazebo/gui/ViewAngleWidget.hh"
 #include "gazebo/gui/building/BuildingEditor.hh"
 #include "gazebo/gui/model/ModelEditor.hh"
@@ -1461,6 +1462,30 @@ void MainWindow::CreateActions()
 
   g_viewAngleAct = new QWidgetAction(this);
   g_viewAngleAct->setDefaultWidget(viewAngleWidget);
+
+  // Undo / Redo
+  g_undoAct = new QAction(QIcon(":/images/log_step_back.png"),
+      tr("Undo (Ctrl + Z)"), this);
+  g_undoAct->setStatusTip(tr("Undo last command"));
+  g_undoAct->setCheckable(false);
+  this->CreateDisabledIcon(":/images/log_step_back.png", g_undoAct);
+  g_undoAct->setEnabled(false);
+
+  g_redoAct = new QAction(QIcon(":/images/log_step_forward.png"),
+      tr("Redo (Shift + Ctrl + Z)"), this);
+  g_redoAct->setStatusTip(tr("Redo last undone command"));
+  g_redoAct->setCheckable(false);
+  this->CreateDisabledIcon(":/images/log_step_forward.png", g_redoAct);
+  g_redoAct->setEnabled(false);
+
+  // Command history
+  g_cmdHistoryAct = new QAction(QIcon(":/images/down_spin_arrow.png"),
+      tr("Command history"), this);
+  g_cmdHistoryAct->setStatusTip(tr("Show list of user commands"));
+  g_cmdHistoryAct->setCheckable(false);
+  this->CreateDisabledIcon(":/images/down_spin_arrow.png", g_cmdHistoryAct);
+  g_cmdHistoryAct->setEnabled(false);
+  new UserCmdHistory();
 }
 
 /////////////////////////////////////////////////
@@ -1681,6 +1706,15 @@ void MainWindow::DeleteActions()
 
   delete g_viewAngleAct;
   g_viewAngleAct = 0;
+
+  delete g_undoAct;
+  g_undoAct = 0;
+
+  delete g_redoAct;
+  g_redoAct = 0;
+
+  delete g_cmdHistoryAct;
+  g_cmdHistoryAct = 0;
 }
 
 
