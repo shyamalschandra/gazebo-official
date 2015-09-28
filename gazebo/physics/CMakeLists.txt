@@ -61,6 +61,8 @@ set (sources ${sources}
   JointState.cc
   Link.cc
   LinkState.cc
+  Light.cc
+  LightState.cc
   MapShape.cc
   MeshShape.cc
   Model.cc
@@ -79,6 +81,7 @@ set (sources ${sources}
   SphereShape.cc
   State.cc
   SurfaceParams.cc
+  UserCmdManager.cc
   World.cc
   WorldState.cc
 )
@@ -105,6 +108,8 @@ set (headers
   JointController.hh
   JointWrench.hh
   JointState.hh
+  Light.hh
+  LightState.hh
   Link.hh
   LinkState.hh
   MapShape.hh
@@ -129,6 +134,7 @@ set (headers
   State.hh
   SurfaceParams.hh
   UniversalJoint.hh
+  UserCmdManager.hh
   World.hh
   WorldState.hh)
 
