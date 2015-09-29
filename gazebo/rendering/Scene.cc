@@ -18,6 +18,7 @@
 
 #include "gazebo/rendering/skyx/include/SkyX.h"
 #include "gazebo/rendering/ogre_gazebo.h"
+#include "gazebo/rendering/MovableText.hh"
 
 #include "gazebo/msgs/msgs.hh"
 
@@ -211,27 +212,39 @@ void Scene::Clear()
   delete this->dataPtr->terrain;
   this->dataPtr->terrain = NULL;
 
-  while (!this->dataPtr->visuals.empty())
-    this->RemoveVisual(this->dataPtr->visuals.begin()->first);
-
-  this->dataPtr->visuals.clear();
-
   if (this->dataPtr->originVisual)
   {
-    this->dataPtr->originVisual->Fini();
+    this->RemoveVisual(this->dataPtr->originVisual);
     this->dataPtr->originVisual.reset();
-  }
-
-  if (this->dataPtr->worldVisual)
-  {
-    this->dataPtr->worldVisual->Fini();
-    this->dataPtr->worldVisual.reset();
   }
 
   while (!this->dataPtr->lights.empty())
     if (this->dataPtr->lights.begin()->second)
       this->RemoveLight(this->dataPtr->lights.begin()->second);
   this->dataPtr->lights.clear();
+
+  std::cout << "Scene REmove World Visual. Count[" << this->dataPtr->visuals.size() << "]\n";
+  // Remove the root of the visual tree. This will recursively remove most
+  // of the visuals.
+  if (this->dataPtr->worldVisual)
+  {
+    this->RemoveVisual(this->dataPtr->worldVisual);
+    // this->dataPtr->worldVisual->Fini();
+    this->dataPtr->worldVisual.reset();
+    // this->dataPtr->visuals.erase(this->dataPtr->visuals.begin());
+  }
+  std::cout << "Scene World Visual removed. Count[" << this->dataPtr->visuals.size() << "]\n\n";
+
+
+  // Remove any remaining visuals.
+  for (auto &visual : this->dataPtr->visuals)
+  {
+    std::cout << "Scene -> Fini[" << visual.second->GetName() << "]\n";
+    // this->RemoveVisualizations(visual.second);
+    visual.second->Fini();
+  }
+  this->dataPtr->visuals.clear();
+  this->dataPtr->worldVisual.reset();
 
   for (uint32_t i = 0; i < this->dataPtr->grids.size(); ++i)
     delete this->dataPtr->grids[i];
@@ -249,7 +262,6 @@ void Scene::Clear()
   this->dataPtr->skyx = NULL;
 
   RTShaderSystem::Instance()->RemoveScene(this->GetName());
-  RTShaderSystem::Instance()->Clear();
 
   this->dataPtr->connections.clear();
 
@@ -288,6 +300,8 @@ void Scene::Load()
 {
   this->dataPtr->initialized = false;
   Ogre::Root *root = RenderEngine::Instance()->root;
+
+  root->addMovableObjectFactory(new MovableTextFactory());
 
   if (this->dataPtr->manager)
     root->destroySceneManager(this->dataPtr->manager);
@@ -2313,14 +2327,14 @@ void Scene::ProcessRequestMsg(ConstRequestPtr &_msg)
         Visual_M::iterator iter;
         iter = this->dataPtr->visuals.find(
             boost::lexical_cast<uint32_t>(_msg->data()));
-        visPtr = iter->second;
+        if (iter != this->dataPtr->visuals.end())
+          visPtr = iter->second;
       } catch(...)
       {
         visPtr = this->GetVisual(_msg->data());
       }
 
-      if (visPtr)
-        this->RemoveVisual(visPtr);
+      this->RemoveVisual(visPtr);
     }
   }
   else if (_msg->request() == "show_contact")
@@ -2943,6 +2957,7 @@ void Scene::RemoveVisual(uint32_t _id)
   if (iter != this->dataPtr->visuals.end())
   {
     VisualPtr vis = iter->second;
+    std::cout << "Scene::REmoveVisual[" << vis->GetName() << "]\n";
     // Remove all projectors attached to the visual
     auto piter = this->dataPtr->projectors.begin();
     while (piter != this->dataPtr->projectors.end())
@@ -2962,7 +2977,11 @@ void Scene::RemoveVisual(uint32_t _id)
     this->RemoveVisualizations(vis);
 
     vis->Fini();
-    this->dataPtr->visuals.erase(iter);
+
+    {
+      std::lock_guard<std::mutex> lock(this->dataPtr->visualsMutex);
+      this->dataPtr->visuals.erase(iter);
+    }
     if (this->dataPtr->selectedVis && this->dataPtr->selectedVis->GetId() ==
         vis->GetId())
       this->dataPtr->selectedVis.reset();
@@ -2972,7 +2991,8 @@ void Scene::RemoveVisual(uint32_t _id)
 /////////////////////////////////////////////////
 void Scene::RemoveVisual(VisualPtr _vis)
 {
-  this->RemoveVisual(_vis->GetId());
+  if (_vis)
+    this->RemoveVisual(_vis->GetId());
 }
 
 /////////////////////////////////////////////////
@@ -3120,7 +3140,10 @@ void Scene::RemoveVisualizations(rendering::VisualPtr _vis)
     }
   }
   for (auto vis : toRemove)
+  {
+    this->RemoveVisualizations(vis);
     this->RemoveVisual(vis);
+  }
 }
 
 /////////////////////////////////////////////////

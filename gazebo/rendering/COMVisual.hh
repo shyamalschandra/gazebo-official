@@ -58,7 +58,7 @@ namespace gazebo
 
       /// \brief Load using previously set member variables.
       private: void Load();
-    };
+   };
     /// \}
   }
 }

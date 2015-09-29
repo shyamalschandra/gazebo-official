@@ -289,7 +289,6 @@ void ApplyWrenchDialog_TEST::ApplyForceTorqueFromDialog()
 
   delete applyWrenchDialog;
 
-  cam->Fini();
   mainWindow->close();
   delete mainWindow;
 }

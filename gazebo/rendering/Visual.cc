@@ -168,8 +168,6 @@ void Visual::Init(const std::string &_name, VisualPtr _parent,
 //////////////////////////////////////////////////
 Visual::~Visual()
 {
-  RTShaderSystem::Instance()->DetachEntity(this);
-
   if (this->dataPtr->preRenderConnection)
     event::Events::DisconnectPreRender(this->dataPtr->preRenderConnection);
 
@@ -181,15 +179,6 @@ Visual::~Visual()
     delete *iter;
     */
   this->dataPtr->lines.clear();
-
-  if (this->dataPtr->sceneNode != NULL)
-  {
-    this->DestroyAllAttachedMovableObjects(this->dataPtr->sceneNode);
-    this->dataPtr->sceneNode->removeAndDestroyAllChildren();
-    this->dataPtr->scene->GetManager()->destroySceneNode(
-        this->dataPtr->sceneNode->getName());
-    this->dataPtr->sceneNode = NULL;
-  }
 
   this->dataPtr->scene.reset();
   this->dataPtr->sdf->Reset();
@@ -204,19 +193,8 @@ Visual::~Visual()
 /////////////////////////////////////////////////
 void Visual::Fini()
 {
+  std::cout << "Visual::Fini[" << this->GetName() << "]\n";
   this->dataPtr->plugins.clear();
-
-  // Detach from the parent
-  if (this->dataPtr->parent)
-    this->dataPtr->parent->DetachVisual(this->GetName());
-
-  if (this->dataPtr->sceneNode)
-  {
-    this->dataPtr->sceneNode->detachAllObjects();
-    this->dataPtr->scene->GetManager()->destroySceneNode(
-        this->dataPtr->sceneNode);
-    this->dataPtr->sceneNode = NULL;
-  }
 
   if (this->dataPtr->preRenderConnection)
   {
@@ -224,8 +202,49 @@ void Visual::Fini()
     this->dataPtr->preRenderConnection.reset();
   }
 
-  RTShaderSystem::Instance()->DetachEntity(this);
+  std::cout << "    Children Count[" << this->dataPtr->children.size() << "]\n";
+  std::vector<uint32_t> visualIds;
+  for (auto visual: this->dataPtr->children)
+  {
+    if (!visual)
+      continue;
+
+    // Only remove non-gui visuals. We don't want to delete the
+    // SelectionObj.
+    if (visual->GetType() != VT_GUI)
+    {
+      std::cout << "VisualId[" << visual->GetName() << "]\n";
+      visualIds.push_back(visual->GetId());
+    }
+    else
+      this->DetachVisual(visual->GetName());
+  }
+
+  for (auto visualId: visualIds)
+    this->dataPtr->scene->RemoveVisual(visualId);
+
+  // Detach from the parent
+  if (this->dataPtr->parent)
+  {
+    std::cout << "    ParentVisual["
+              << this->dataPtr->parent->GetName() << "]\n";
+    this->dataPtr->parent->DetachVisual(this->GetName());
+  }
+
+  if (this->dataPtr->sceneNode &&
+      this->dataPtr->scene->GetManager()->hasSceneNode(this->GetName()))
+  {
+    this->DestroyAllAttachedMovableObjects(this->dataPtr->sceneNode);
+    this->DestroyAllChildSceneNodes(this->dataPtr->sceneNode);
+    this->dataPtr->sceneNode->removeAndDestroyAllChildren();
+    this->dataPtr->sceneNode->detachAllObjects();
+    this->dataPtr->scene->GetManager()->destroySceneNode(
+        this->dataPtr->sceneNode);
+    this->dataPtr->sceneNode = NULL;
+  }
+
   this->dataPtr->scene.reset();
+  this->dataPtr->lines.clear();
 }
 
 /////////////////////////////////////////////////
@@ -271,9 +290,25 @@ void Visual::DestroyAllAttachedMovableObjects(Ogre::SceneNode *_sceneNode)
 
   while (itChild.hasMoreElements())
   {
-    Ogre::SceneNode* pChildNode =
+    Ogre::SceneNode *pChildNode =
         static_cast<Ogre::SceneNode*>(itChild.getNext());
     this->DestroyAllAttachedMovableObjects(pChildNode);
+  }
+}
+
+/////////////////////////////////////////////////
+void Visual::DestroyAllChildSceneNodes(Ogre::SceneNode *_sceneNode)
+{
+  // Recurse to child SceneNodes
+  Ogre::SceneNode::ChildNodeIterator itChild = _sceneNode->getChildIterator();
+
+  while (itChild.hasMoreElements())
+  {
+    Ogre::SceneNode *pChildNode =
+        static_cast<Ogre::SceneNode*>(itChild.getNext());
+    this->DestroyAllAttachedMovableObjects(pChildNode);
+    this->DestroyAllChildSceneNodes(pChildNode);
+    this->dataPtr->scene->GetManager()->destroySceneNode(pChildNode);
   }
 }
 
@@ -289,9 +324,7 @@ void Visual::Init()
   this->dataPtr->layer = -1;
   this->dataPtr->scale = ignition::math::Vector3d::One;
 
-  if (this->dataPtr->useRTShader)
-    RTShaderSystem::Instance()->AttachEntity(this);
-
+  std::cout << "VIsual::Init[" << this->GetName() << "]\n";
   this->dataPtr->initialized = true;
 }
 
@@ -542,16 +575,21 @@ std::string Visual::GetName() const
 //////////////////////////////////////////////////
 void Visual::AttachVisual(VisualPtr _vis)
 {
+  std::cout << "AttachVisual[" << _vis->GetName()  << "] to [" << this->GetName() << "]\n";
   if (!_vis)
-    gzerr << "Visual is null\n";
+    gzerr << "Visual is null.\n";
   else
   {
-    if (_vis->GetSceneNode()->getParentSceneNode())
+    if (_vis->GetSceneNode())
     {
-      _vis->GetSceneNode()->getParentSceneNode()->removeChild(
-          _vis->GetSceneNode());
+      if (_vis->GetSceneNode()->getParentSceneNode())
+      {
+        _vis->GetSceneNode()->getParentSceneNode()->removeChild(
+            _vis->GetSceneNode());
+      }
+      this->dataPtr->sceneNode->addChild(_vis->GetSceneNode());
     }
-    this->dataPtr->sceneNode->addChild(_vis->GetSceneNode());
+
     this->dataPtr->children.push_back(_vis);
     _vis->dataPtr->parent = shared_from_this();
   }
@@ -573,10 +611,18 @@ void Visual::DetachVisual(const std::string &_name)
     if ((*iter)->GetName() == _name)
     {
       VisualPtr childVis = (*iter);
+      if (childVis)
+      {
+        std::cout << "DetachVisual[" << childVis->GetName() << "] from["
+                  << this->GetName() << "]\n";
+        //std::cout << "  SceneNode Me[" << this->dataPtr->sceneNode << "] Child[" << childVis->GetSceneNode() << "]\n";
+        //std::cout << "  SceneNOde Name[" << this->dataPtr->sceneNode->getName() << "]\n";
+        //std::cout << "  CHild SceneNOde Name[" << childVis->GetSceneNode()->getName() << "]\n";
+        if (this->dataPtr->sceneNode && childVis->GetSceneNode())
+          this->dataPtr->sceneNode->removeChild(childVis->GetSceneNode());
+        childVis->GetParent().reset();
+      }
       this->dataPtr->children.erase(iter);
-      if (this->dataPtr->sceneNode)
-        this->dataPtr->sceneNode->removeChild(childVis->GetSceneNode());
-      childVis->GetParent().reset();
       break;
     }
   }
@@ -841,18 +887,6 @@ void Visual::SetLighting(bool _lighting)
     return;
 
   this->dataPtr->lighting = _lighting;
-
-  if (this->dataPtr->useRTShader)
-  {
-    if (this->dataPtr->lighting)
-      RTShaderSystem::Instance()->AttachEntity(this);
-    else
-    {
-      // Detach from RTShaderSystem otherwise setting lighting here will have
-      // no effect if shaders are used.
-      RTShaderSystem::Instance()->DetachEntity(this);
-    }
-  }
 
   try
   {
@@ -1608,7 +1642,9 @@ bool Visual::GetCastShadows() const
 //////////////////////////////////////////////////
 void Visual::SetVisible(bool _visible, bool _cascade)
 {
-  this->dataPtr->sceneNode->setVisible(_visible, _cascade);
+  if (this->dataPtr->sceneNode)
+    this->dataPtr->sceneNode->setVisible(_visible, _cascade);
+
   if (_cascade)
   {
     for (auto child: this->dataPtr->children)
@@ -1646,20 +1682,22 @@ void Visual::SetPosition(const math::Vector3 &_pos)
     this->staticGeom = NULL;
     // this->staticGeom->setOrigin(Ogre::Vector3(pos.x, pos.y, pos.z));
   }*/
-  GZ_ASSERT(this->dataPtr->sceneNode, "Visual SceneNode is NULL");
-  this->dataPtr->sceneNode->setPosition(_pos.x, _pos.y, _pos.z);
-
-  this->dataPtr->sdf->GetElement("pose")->Set(this->GetPose());
+  if (this->dataPtr->sceneNode)
+  {
+    this->dataPtr->sceneNode->setPosition(_pos.x, _pos.y, _pos.z);
+    this->dataPtr->sdf->GetElement("pose")->Set(this->GetPose());
+  }
 }
 
 //////////////////////////////////////////////////
 void Visual::SetRotation(const math::Quaternion &_rot)
 {
-  GZ_ASSERT(this->dataPtr->sceneNode, "Visual SceneNode is NULL");
-  this->dataPtr->sceneNode->setOrientation(
-      Ogre::Quaternion(_rot.w, _rot.x, _rot.y, _rot.z));
-
-  this->dataPtr->sdf->GetElement("pose")->Set(this->GetPose());
+  if (this->dataPtr->sceneNode)
+  {
+    this->dataPtr->sceneNode->setOrientation(
+        Ogre::Quaternion(_rot.w, _rot.x, _rot.y, _rot.z));
+    this->dataPtr->sdf->GetElement("pose")->Set(this->GetPose());
+  }
 }
 
 //////////////////////////////////////////////////
