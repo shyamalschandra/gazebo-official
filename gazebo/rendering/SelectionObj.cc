@@ -135,6 +135,12 @@ void SelectionObj::Fini()
 /////////////////////////////////////////////////
 void SelectionObj::Attach(rendering::VisualPtr _vis)
 {
+  if (!_vis || !_vis->GetSceneNode())
+  {
+    gzerr << "Invalid visual pointer.\n";
+    return;
+  }
+
   SelectionObjPrivate *dPtr =
       reinterpret_cast<SelectionObjPrivate *>(this->dataPtr);
 

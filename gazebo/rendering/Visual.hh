@@ -298,7 +298,7 @@ namespace gazebo
       /// \brief Set whether the visual is visible.
       /// \param[in] _visible set this node visible.
       /// \param[in] _cascade setting this parameter in children too.
-      public: void SetVisible(bool _visible, bool _cascade = true);
+      public: virtual void SetVisible(bool _visible, bool _cascade = true);
 
       /// \brief Toggle whether this visual is visible.
       public: void ToggleVisible();
@@ -662,6 +662,11 @@ namespace gazebo
       /// \param[in] _sceneNode Pointer to the scene node to process.
       private: void DestroyAllAttachedMovableObjects(
                    Ogre::SceneNode *_sceneNode);
+
+      /// \brief Destroy all the scene nodes that are children of the given
+      /// _sceneNode.
+      /// \param[in] _sceneNode Pointer to the scene node to process.
+      private: void DestroyAllChildSceneNodes(Ogre::SceneNode *_sceneNode);
 
       /// \brief Helper function to update the geometry object size based on
       /// the scale of the visual.
