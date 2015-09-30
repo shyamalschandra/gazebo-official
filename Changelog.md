@@ -1,5 +1,10 @@
 ## Gazebo 7.0
 
+1. Resolve issue #1702
+    * [Issue #1702](https://bitbucket.org/osrf/gazebo/issue/1702)
+    * [Pull request #1905](https://bitbucket.org/osrf/gazebo/pull-request/1905)
+    * [Pull request #1914](https://bitbucket.org/osrf/gazebo/pull-request/1914)
+
 1. Update physics when the world is reset
     * [Pull request #1903](https://bitbucket.org/osrf/gazebo/pull-request/1903)
 
@@ -84,6 +89,7 @@ using the same arguments used in the command line.
 
     1. Added support for more joint types (gearbox and fixed joints).
         * [Pull request #1794](https://bitbucket.org/osrf/gazebo/pull-request/1794)
+
     1. Added support for selecting links and joints, opening context menu and inspectors in Schematic View.
         * [Pull request #1787](https://bitbucket.org/osrf/gazebo/pull-request/1787)
 
@@ -92,6 +98,9 @@ using the same arguments used in the command line.
 
     1. Scale link mass and inertia when a link is scaled
         * [Pull request #1836](https://bitbucket.org/osrf/gazebo/pull-request/1836)
+
+    1. Load and save nested models
+        * [Pull request #1894](https://bitbucket.org/osrf/gazebo/pull-request/1894)
 
     1. Display model plugins on the left panel and added model plugin inspector
         * [Pull request #1863](https://bitbucket.org/osrf/gazebo/pull-request/1863)
