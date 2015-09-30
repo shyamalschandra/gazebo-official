@@ -247,7 +247,7 @@ void ModelCreator::OnEdit(bool _checked)
     MouseEventHandler::Instance()->RemoveMoveFilter("model_creator");
     MouseEventHandler::Instance()->RemoveDoubleClickFilter("model_creator");
     this->jointMaker->DisableEventHandlers();
-    this->jointMaker->Stop();
+    this->jointMaker->Reset();
 
     this->DeselectAll();
   }
@@ -1475,12 +1475,6 @@ bool ModelCreator::OnMousePress(const common::MouseEvent &_event)
   if (!userCamera)
     return false;
 
-  if (this->jointMaker->GetState() != JointMaker::JOINT_NONE)
-  {
-    userCamera->HandleMouseEvent(_event);
-    return true;
-  }
-
   rendering::VisualPtr vis = userCamera->GetVisual(_event.Pos());
   if (vis)
   {
@@ -2307,3 +2301,4 @@ void ModelCreator::OpenModelPluginInspector(const std::string &_name)
   modelPlugin->inspector->move(QCursor::pos());
   modelPlugin->inspector->show();
 }
+
