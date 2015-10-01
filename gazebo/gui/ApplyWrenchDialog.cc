@@ -49,7 +49,8 @@ ApplyWrenchDialog::ApplyWrenchDialog(QWidget *_parent)
   this->dataPtr->mainWindow = gui::get_main_window();
 
   this->setWindowTitle(tr("Apply Force and Torque"));
-  this->setWindowFlags(Qt::WindowStaysOnTopHint);
+  this->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint |
+      Qt::WindowStaysOnTopHint | Qt::CustomizeWindowHint);
   this->setWindowModality(Qt::NonModal);
   this->setStyleSheet(
       "QPushButton {\
