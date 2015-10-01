@@ -4,6 +4,7 @@
     * [Issue #1702](https://bitbucket.org/osrf/gazebo/issue/1702)
     * [Pull request #1905](https://bitbucket.org/osrf/gazebo/pull-request/1905)
     * [Pull request #1914](https://bitbucket.org/osrf/gazebo/pull-request/1914)
+    * [Pull request #1915](https://bitbucket.org/osrf/gazebo/pull-request/1915)
 
 1. Update physics when the world is reset
     * [Pull request #1903](https://bitbucket.org/osrf/gazebo/pull-request/1903)
