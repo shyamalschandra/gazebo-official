@@ -19,12 +19,16 @@
 
 #include <boost/thread/recursive_mutex.hpp>
 #include <string>
+#include <functional>
+#include <typeinfo>
+#include <map>
 
 #include "gazebo/transport/TransportTypes.hh"
 #include "gazebo/msgs/msgs.hh"
 
 #include "gazebo/physics/PhysicsTypes.hh"
 #include "gazebo/util/system.hh"
+#include "gazebo/common/Console.hh"
 
 namespace gazebo
 {
@@ -99,7 +103,7 @@ namespace gazebo
 
       /// \brief Set max step size.
       /// \param[in] _stepSize Max step size.
-      public: void SetMaxStepSize(double _stepSize);
+      public: void SetMaxStepSize(const double &_stepSize);
 
       /// \brief Update the physics engine.
       public: virtual void UpdatePhysics() {}
@@ -144,6 +148,10 @@ namespace gazebo
       /// \param[in] _gravity New gravity vector.
       public: virtual void SetGravity(
                   const gazebo::math::Vector3 &_gravity) = 0;
+
+      /// \brief Set the magnetic field vector.
+      /// \param[in] _value New magnetic field.
+      public: void SetMagneticField(const ignition::math::Vector3d &_value);
 
       /// \brief Return the magnetic field vector.
       /// \return The magnetic field vector.
@@ -258,22 +266,151 @@ namespace gazebo
       ///
       /// \param[in] _value The value to set to
       /// \return true if SetParam is successful, false if operation fails.
-      public: virtual bool SetParam(const std::string &_key,
-                  const boost::any &_value);
+      public: template<typename T>
+              bool SetParam(const std::string &_key,
+                            const T &_value)
+              {
+                return this->params.Set(_key, _value);
+              }
+
+      /// \brief Set a parameter of the physics engine.
+      /// See SetParam documentation for descriptions of duplicate parameters.
+      /// \param[in] _key String key
+      /// Below is a list of _key parameter definitions:
+      ///       -# "solver_type" (string) - returns solver used by engine, e.g.
+      ///          "sequential_impulse' for Bullet, "quick" for ODE
+      ///          "Featherstone and Lemkes" for DART and
+      ///          "Spatial Algebra and Elastic Foundation" for Simbody.
+      ///       -# "cfm" (double) - global CFM (ODE/Bullet)
+      ///       -# "erp" (double) - global ERP (ODE/Bullet)
+      ///       -# "precon_iters" (bool) - precondition iterations
+      ///          (experimental). (ODE)
+      ///       -# "iters" (int) - number of LCP PGS iterations. If
+      ///          sor_lcp_tolerance is negative, full iteration count is
+      ///          executed.  Otherwise, PGS may stop iteration early if
+      ///          sor_lcp_tolerance is satisfied by the total RMS residual.
+      ///       -# "sor" (double) - relaxation parameter for Projected
+      ///          Gauss-Seidel (PGS) updates. (ODE/Bullet)
+      ///       -# "contact_max_correcting_vel" (double) - truncates correction
+      ///          impulses from ERP by this value. (ODE)
+      ///       -# "contact_surface_layer" (double) - ERP is 0 for
+      ///          interpenetration depths below this value. (ODE/Bullet)
+      ///       -# "max_contacts" (int) - max number of contact constraints
+      ///          between any pair of collision bodies.
+      ///       -# "min_step_size" (double) - minimum internal step size.
+      ///          (defined but not used in ode).
+      ///       -# "max_step_size" (double) - maximum physics step size when
+      ///          physics update step must return.
+      ///
+      /// \param[in] _value The value to set to
+      /// \return true if SetParam is successful, false if operation fails.
+      /// \deprecated Use template<typename T>
+      //              bool SetParam(const std::string &_key, const T &_value);
+      public: bool SetParam(const std::string &_key,
+                            const boost::any &_value) GAZEBO_DEPRECATED(7.0)
+              {
+                try
+                {
+                  double value;
+                  value = boost::any_cast<double>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  float value;
+                  value = boost::any_cast<float>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  int value;
+                  value = boost::any_cast<int>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  bool value;
+                  value = boost::any_cast<bool>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  std::string value;
+                  value = boost::any_cast<std::string>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  ignition::math::Vector3d value;
+                  value = boost::any_cast<ignition::math::Vector3d>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                try
+                {
+                  gazebo::math::Vector3 value;
+                  value = boost::any_cast<gazebo::math::Vector3>(_value);
+                  return this->params.Set(_key, value);
+                }
+                catch(...)
+                {
+                }
+
+                return false;
+              }
+
 
       /// \brief Get an parameter of the physics engine
       /// \param[in] _attr String key
       /// \sa SetParam
       /// \return The value of the parameter
-      public: virtual boost::any GetParam(const std::string &_key) const;
+      /// \deprecated Use template<typename T>
+      ///             bool Param(const std::string &_key, T &_value);
+      public: virtual boost::any GetParam(const std::string &_key) const
+              GAZEBO_DEPRECATED(7.0);
 
       /// \brief Get a parameter from the physics engine with a boolean to
       /// indicate success or failure
       /// \param[in] _key Key of the accessed param
       /// \param[out] _value Value of the accessed param
       /// \return True if the parameter was successfully retrieved
+      /// \deprecated Use template<typename T>
+      ///             bool Param(const std::string &_key, T &_value);
       public: virtual bool GetParam(const std::string &_key,
-                  boost::any &_value) const;
+                  boost::any &_value) const GAZEBO_DEPRECATED(7.0);
+
+      /// \brief Get an parameter of the physics engine
+      /// \param[in] _attr String key
+      /// \sa SetParam
+      /// \return The value of the parameter
+      public: template<typename T>
+              bool Param(const std::string &_key, T &_value) const
+              {
+                return this->params.Get<T>(_key, _value);
+              }
 
       /// \brief Debug print out of the physic engine state.
       public: virtual void DebugPrint() const = 0;
@@ -332,6 +469,109 @@ namespace gazebo
 
       /// \brief Real time update rate.
       protected: double maxStepSize;
+
+      protected: template<typename T>
+                 struct GetParamFn
+                 {
+                   typedef std::function<T ()> Type;
+                 };
+
+      protected: template<typename T>
+                 struct SetParamFn
+                 {
+                   typedef std::function<void (const T &_value)> Type;
+                 };
+
+      protected: class ParamDispatcherBase
+                 {
+                   public: ParamDispatcherBase() = default;
+                   public: virtual ~ParamDispatcherBase() = default;
+                 };
+
+      protected: template<typename T>
+                 class ParamDispatcher : public ParamDispatcherBase
+                 {
+                   public: ParamDispatcher(typename GetParamFn<T>::Type _getFn,
+                                           typename SetParamFn<T>::Type _setFn)
+                           : getFn(_getFn), setFn(_setFn)
+                           {
+                           }
+
+                   public: const typename GetParamFn<T>::Type getFn;
+                   public: typename SetParamFn<T>::Type setFn;
+                 };
+
+      protected: class ParamManager
+                 {
+                   public: ParamManager()
+                           {
+                           }
+
+                   public: virtual ~ParamManager()
+                           {
+                           }
+
+                   public: template<typename T>
+                           void Add(const std::string &_key,
+                                   typename GetParamFn<T>::Type _getFn,
+                                   typename SetParamFn<T>::Type _setFn)
+                           {
+                             this->params[_key] =
+                               new ParamDispatcher<T>(_getFn, _setFn);
+                           }
+
+                   public: template<typename T>
+                           bool Set(const std::string &_key,
+                                    const T &_value)
+                           {
+                             // Find the parameter dispatcher
+                             auto iter = this->params.find(_key);
+
+                             // Make sure it exists
+                             if (iter != this->params.end())
+                             {
+                               // Attempt a cast to the correct type.
+                               ParamDispatcher<T> *dispatcher =
+                                 dynamic_cast<ParamDispatcher<T>*>(
+                                     iter->second);
+
+                               // Call the function used to set the
+                               // parameter.
+                               if (dispatcher)
+                               {
+                                 dispatcher->setFn(_value);
+                                 return true;
+                               }
+                               else
+                               {
+                                 gzerr << "Invalid type[" << typeid(T).name()
+                                   << "] for key[" << _key << "]\n";
+                               }
+                             }
+                             else
+                               gzerr << "Invalid key[" << _key << "]\n";
+
+                             return false;
+                           }
+
+                   public: template<typename T>
+                           bool Get(const std::string &_key, T &_value) const
+                           {
+                             std::map<std::string, ParamDispatcherBase*>::const_iterator iter = this->params.find(_key);
+                             if (iter != this->params.end())
+                             {
+                               _value =
+                                 static_cast<ParamDispatcher<T>*>(iter->second)->getFn();
+                             }
+
+                             return true;
+                             //return this->dblParams[_key].Get();
+                           }
+
+                   public: std::map<std::string, ParamDispatcherBase*> params;
+                 };
+
+      protected: ParamManager params;
     };
     /// \}
   }
