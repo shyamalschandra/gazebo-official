@@ -136,7 +136,8 @@ void WorldResetTest::WorldName(const std::string &_physicsEngine,
           << std::endl;
     return;
   }
-  if (_physicsEngine == "dart")
+  if (_physicsEngine == "dart" &&
+      _world.find("pr2") != std::string::npos)
   {
     gzerr << "Abort test since dart does not support ray sensor in PR2, "
           << "Please see issue #911.\n";
