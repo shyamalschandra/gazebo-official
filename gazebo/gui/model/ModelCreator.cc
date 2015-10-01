@@ -690,7 +690,7 @@ void ModelCreator::AddJoint(const std::string &_type)
 }
 
 /////////////////////////////////////////////////
-std::string ModelCreator::AddShape(LinkType _type,
+std::string ModelCreator::AddShape(EntityType _type,
     const math::Vector3 &_size, const math::Pose &_pose,
     const std::string &_uri, unsigned int _samples)
 {
@@ -701,7 +701,7 @@ std::string ModelCreator::AddShape(LinkType _type,
 
   std::stringstream linkNameStream;
   linkNameStream << this->previewName << "_" << this->modelCounter
-      << "::link_" << this->linkCounter++;
+      << "::ENTITY_" << this->linkCounter++;
   std::string linkName = linkNameStream.str();
 
   rendering::VisualPtr linkVisual(new rendering::Visual(linkName,
@@ -719,23 +719,23 @@ std::string ModelCreator::AddShape(LinkType _type,
   sdf::ElementPtr geomElem =  visualElem->GetElement("geometry");
   geomElem->ClearElements();
 
-  if (_type == LINK_CYLINDER)
+  if (_type == ENTITY_CYLINDER)
   {
     sdf::ElementPtr cylinderElem = geomElem->AddElement("cylinder");
     (cylinderElem->GetElement("radius"))->Set(_size.x*0.5);
     (cylinderElem->GetElement("length"))->Set(_size.z);
   }
-  else if (_type == LINK_SPHERE)
+  else if (_type == ENTITY_SPHERE)
   {
     ((geomElem->AddElement("sphere"))->GetElement("radius"))->Set(_size.x*0.5);
   }
-  else if (_type == LINK_MESH)
+  else if (_type == ENTITY_MESH)
   {
     sdf::ElementPtr meshElem = geomElem->AddElement("mesh");
     meshElem->GetElement("scale")->Set(_size);
     meshElem->GetElement("uri")->Set(_uri);
   }
-  else if (_type == LINK_POLYLINE)
+  else if (_type == ENTITY_POLYLINE)
   {
     QFileInfo info(QString::fromStdString(_uri));
     if (!info.isFile() || info.completeSuffix().toLower() != "svg")
@@ -809,7 +809,7 @@ std::string ModelCreator::AddShape(LinkType _type,
   }
   else
   {
-    if (_type != LINK_BOX)
+    if (_type != ENTITY_BOX)
     {
       gzwarn << "Unknown link type '" << _type << "'. " <<
           "Adding a box" << std::endl;
@@ -825,7 +825,7 @@ std::string ModelCreator::AddShape(LinkType _type,
 
   // insert over ground plane for now
   math::Vector3 linkPos = linkVisual->GetWorldPose().pos;
-  if (_type == LINK_BOX || _type == LINK_CYLINDER || _type == LINK_SPHERE)
+  if (_type == ENTITY_BOX || _type == ENTITY_CYLINDER || _type == ENTITY_SPHERE)
   {
     linkPos.z = _size.z * 0.5;
   }
@@ -1309,7 +1309,7 @@ void ModelCreator::CreateTheEntity()
 }
 
 /////////////////////////////////////////////////
-void ModelCreator::AddLink(LinkType _type)
+void ModelCreator::AddEntity(sdf::ElementPtr _sdf)
 {
   if (!this->previewVisual)
   {
@@ -1318,15 +1318,38 @@ void ModelCreator::AddLink(LinkType _type)
 
   this->Stop();
 
-  this->addLinkType = _type;
-  if (_type != LINK_NONE)
+  if (_sdf->GetName() == "model")
+  {
+    // Create a top-level nested model
+    NestedModelData *modelData =
+        this->CreateModelFromSDF(_sdf, this->previewVisual/*, true*/);
+
+    rendering::VisualPtr entityVisual = modelData->modelVisual;
+
+    this->addEntityType = ENTITY_MODEL;
+    this->mouseVisual = entityVisual;
+  }
+}
+
+/////////////////////////////////////////////////
+void ModelCreator::AddLink(EntityType _type)
+{
+  if (!this->previewVisual)
+  {
+    this->Reset();
+  }
+
+  this->Stop();
+
+  this->addEntityType = _type;
+  if (_type != ENTITY_NONE)
     this->AddShape(_type);
 }
 
 /////////////////////////////////////////////////
 void ModelCreator::Stop()
 {
-  if (this->addLinkType != LINK_NONE && this->mouseVisual)
+  if (this->addEntityType != ENTITY_NONE && this->mouseVisual)
   {
     this->RemoveLinkImpl(this->mouseVisual->GetName());
     this->mouseVisual.reset();
@@ -1514,7 +1537,7 @@ bool ModelCreator::OnMouseRelease(const common::MouseEvent &_event)
     // reset and return
     emit LinkAdded();
     this->mouseVisual.reset();
-    this->AddLink(LINK_NONE);
+    this->AddLink(ENTITY_NONE);
     return true;
   }
 
@@ -1828,7 +1851,7 @@ void ModelCreator::OnPaste()
     }
 
     clonedLink->linkVisual->SetWorldPose(clonePose);
-    this->addLinkType = LINK_MESH;
+    this->addEntityType = ENTITY_MESH;
     this->mouseVisual = clonedLink->linkVisual;
   }
 }

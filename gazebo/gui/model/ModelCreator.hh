@@ -63,22 +63,24 @@ namespace gazebo
     {
       Q_OBJECT
 
-      /// \enum Link types
+      /// \enum Entity types
       /// \brief Unique identifiers for link types that can be created.
-      public: enum LinkType
+      public: enum EntityType
       {
         /// \brief none
-        LINK_NONE,
+        ENTITY_NONE,
         /// \brief Box
-        LINK_BOX,
+        ENTITY_BOX,
         /// \brief Sphere
-        LINK_SPHERE,
+        ENTITY_SPHERE,
         /// \brief Cylinder
-        LINK_CYLINDER,
+        ENTITY_CYLINDER,
         /// \brief Imported 3D mesh
-        LINK_MESH,
+        ENTITY_MESH,
         /// \brief Extruded polyline
-        LINK_POLYLINE
+        ENTITY_POLYLINE,
+        /// \brief Nested model
+        ENTITY_MODEL
       };
 
       /// \enum SaveState
@@ -145,7 +147,7 @@ namespace gazebo
       /// \param[in] _pose Pose of the link.
       /// \param[in] _samples Number of samples for polyline.
       /// \return Name of the link that has been added.
-      public: std::string AddShape(LinkType _type,
+      public: std::string AddShape(EntityType _type,
           const math::Vector3 &_size = math::Vector3::One,
           const math::Pose &_pose = math::Pose::Zero,
           const std::string &_uri = "", unsigned int _samples = 5);
@@ -227,9 +229,13 @@ namespace gazebo
       /// \return Current save state.
       public: enum SaveState GetCurrentSaveState() const;
 
+      /// \brief Add an entity to the model
+      /// \param[in] _sdf SDF describing the entity.
+      public: void AddEntity(sdf::ElementPtr _sdf);
+
       /// \brief Add a link to the model
       /// \param[in] _type Type of link to be added
-      public: void AddLink(LinkType _type);
+      public: void AddLink(EntityType _type);
 
       /// \brief Add a model plugin to the model
       /// \param[in] _pluginElem Pointer to plugin SDF element
@@ -338,7 +344,7 @@ namespace gazebo
       /// \param[in] _name Name of model plugin.
       private: void OpenModelPluginInspector(const std::string &_name);
 
-      // Documentation inherited
+      /// Spawn the entity in simulation.
       private: virtual void CreateTheEntity();
 
       /// \brief Internal init function.
@@ -466,8 +472,8 @@ namespace gazebo
       /// \brief Counter for generating a unique model name.
       private: int modelCounter;
 
-      /// \brief Type of link being added.
-      private: LinkType addLinkType;
+      /// \brief Type of entity being added.
+      private: EntityType addEntityType;
 
       /// \brief A map of nested model names to and their visuals.
       private: std::map<std::string, NestedModelData *> allNestedModels;
