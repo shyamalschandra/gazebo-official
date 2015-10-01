@@ -172,7 +172,6 @@ void TimeWidget_TEST::Reset()
   delete mainWindow;
 }
 
-
 /////////////////////////////////////////////////
 void TimeWidget_TEST::ValidTimes()
 {
