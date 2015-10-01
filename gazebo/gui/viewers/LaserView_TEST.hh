@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Open Source Robotics Foundation
+ * Copyright (C) 2015 Open Source Robotics Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,21 @@
  *
 */
 
-#ifndef _TIMEPANEL_TEST_HH_
-#define _TIMEPANEL_TEST_HH_
+#ifndef _GAZEBO_LASERVIEW_TEST_HH_
+#define _GAZEBO_LASERVIEW_TEST_HH_
 
 #include "gazebo/gui/QTestFixture.hh"
+#include "gazebo/gui/viewers/LaserView.hh"
 
-/// \brief A test class for the TimeWidget widget.
-class TimeWidget_TEST : public QTestFixture
+/// \brief A test class for the LaserView widget.
+class LaserView_TEST : public QTestFixture
 {
   Q_OBJECT
 
-  /// \brief Test that the TimeWidget gets correct time from the server
-  /// on reset.
-  private slots: void Reset();
+  /// \brief Test construction and usage in a world with a laser.
+  private slots: void Construction();
 
-  /// \brief Test that the TimeWidget gets valid times from the server.
-  private slots: void ValidTimes();
-
-  /// \brief Test setting the visibility of TimeWidget child widgets.
-  private slots: void Visibility();
+  /// \brief Test invoking buttons in the laser view widget.
+  private slots: void Buttons();
 };
-
 #endif
